@@ -6,7 +6,6 @@ from enum import Enum
 
 from .models import Bill, Member, WitnessSlip
 
-
 # ── Status classification ────────────────────────────────────────────────────
 
 
@@ -31,13 +30,13 @@ class PipelineStage(str, Enum):
     Moneyball engine to compute average pipeline depth per member.
     """
 
-    FILED = "filed"              # depth 0: introduced but never moved
-    COMMITTEE = "committee"      # depth 1: assigned/referred to committee
+    FILED = "filed"  # depth 0: introduced but never moved
+    COMMITTEE = "committee"  # depth 1: assigned/referred to committee
     COMMITTEE_PASSED = "committee_passed"  # depth 2: passed out of committee
-    SECOND_READING = "second_reading"      # depth 3: reached 2nd/3rd reading
-    CHAMBER_PASSED = "chamber_passed"      # depth 4: passed originating chamber
-    CROSSED = "crossed"          # depth 5: passed both chambers
-    SIGNED = "signed"            # depth 6: signed by Governor / Public Act
+    SECOND_READING = "second_reading"  # depth 3: reached 2nd/3rd reading
+    CHAMBER_PASSED = "chamber_passed"  # depth 4: passed originating chamber
+    CROSSED = "crossed"  # depth 5: passed both chambers
+    SIGNED = "signed"  # depth 6: signed by Governor / Public Act
 
     @property
     def depth(self) -> int:
@@ -204,12 +203,16 @@ class MemberScorecard:
 
     # ── Phase 3: Legislative DNA metrics ──
     law_heat_score: int = 0  # count of primary HB/SB only
-    law_passed_count: int = 0  # count of primary HB/SB that passed (so law_success_rate = this / law_heat_score)
+    law_passed_count: int = (
+        0  # count of primary HB/SB that passed (so law_success_rate = this / law_heat_score)
+    )
     law_success_rate: float = 0.0  # passage rate of HB/SB only: law_passed_count / law_heat_score
     magnet_score: float = 0.0  # avg co-sponsors per primary law
     bridge_score: float = 0.0  # % of primary laws with cross-party co-sponsor
     resolutions_count: int = 0  # count of HR/SR/SJR/HJR
-    resolutions_passed_count: int = 0  # count of primary resolutions that passed (passed_count = law_passed_count + this)
+    resolutions_passed_count: int = (
+        0  # count of primary resolutions that passed (passed_count = law_passed_count + this)
+    )
     resolution_pass_rate: float = 0.0  # resolutions_passed_count / resolutions_count
 
 
@@ -235,12 +238,9 @@ def compute_scorecard(member: Member) -> MemberScorecard:
     resolutions = [b for b in bills if not is_substantive(b.bill_number)]
     law_count = len(laws)
 
-    law_passed = sum(
-        1 for b in laws if classify_bill_status(b.last_action) == BillStatus.PASSED
-    )
+    law_passed = sum(1 for b in laws if classify_bill_status(b.last_action) == BillStatus.PASSED)
     resolutions_passed = sum(
-        1 for b in resolutions
-        if classify_bill_status(b.last_action) == BillStatus.PASSED
+        1 for b in resolutions if classify_bill_status(b.last_action) == BillStatus.PASSED
     )
     law_sr = law_passed / law_count if law_count > 0 else 0.0
     res_count = len(resolutions)
@@ -307,12 +307,10 @@ def compute_all_scorecards(
         law_count = len(laws)
 
         law_passed = sum(
-            1 for b in laws
-            if classify_bill_status(b.last_action) == BillStatus.PASSED
+            1 for b in laws if classify_bill_status(b.last_action) == BillStatus.PASSED
         )
         resolutions_passed = sum(
-            1 for b in resolutions
-            if classify_bill_status(b.last_action) == BillStatus.PASSED
+            1 for b in resolutions if classify_bill_status(b.last_action) == BillStatus.PASSED
         )
         law_sr = law_passed / law_count if law_count > 0 else 0.0
 
@@ -454,6 +452,7 @@ def _normalise_bill_number(bn: str) -> str:
 
 # ── Advanced Analytics: Slip Volume vs. Advancement ───────────────────────────
 
+
 def compute_advancement_analytics(
     bills: list[Bill],
     witness_slips: list[WitnessSlip],
@@ -492,21 +491,23 @@ def compute_advancement_analytics(
         depth = pipeline_depth(bill.last_action)
         status = classify_bill_status(bill.last_action)
 
-        bill_metrics.append({
-            "bill_number": bill.bill_number,
-            "normalized_bill_number": normalized_bill_number,
-            "volume": volume,
-            "controversy_score": controversy,
-            "pipeline_depth": depth,
-            "status": status,
-        })
+        bill_metrics.append(
+            {
+                "bill_number": bill.bill_number,
+                "normalized_bill_number": normalized_bill_number,
+                "volume": volume,
+                "controversy_score": controversy,
+                "pipeline_depth": depth,
+                "status": status,
+            }
+        )
 
     if not bill_metrics:
         return {"high_volume_stalled": [], "high_volume_passed": []}
 
     # Determine high volume threshold based on percentile
     sorted_volumes = sorted([m["volume"] for m in bill_metrics], reverse=True)
-    if not sorted_volumes: # Should not happen if bill_metrics is not empty, but for safety
+    if not sorted_volumes:  # Should not happen if bill_metrics is not empty, but for safety
         return {"high_volume_stalled": [], "high_volume_passed": []}
 
     # Calculate the index for the percentile. E.g., 0.9 percentile means top 10%.
@@ -523,9 +524,10 @@ def compute_advancement_analytics(
     # Ensure threshold is at least 1 if there are any volumes > 0
     # If the highest volume is 1, and N=5, index=4, threshold=1. If N=100, index=90, threshold=1.
     # This logic captures bills WITH at least one slip.
-    if volume_threshold == 0: # If top volumes are all 0 (shouldn't happen if volume > 0 filter applied)
-         volume_threshold = 1 # Ensure at least 1 slip counts as 'some' volume
-
+    if (
+        volume_threshold == 0
+    ):  # If top volumes are all 0 (shouldn't happen if volume > 0 filter applied)
+        volume_threshold = 1  # Ensure at least 1 slip counts as 'some' volume
 
     # Categorize bills
     high_volume_stalled_bills = []
@@ -536,7 +538,7 @@ def compute_advancement_analytics(
         if metrics["volume"] >= volume_threshold:
             if metrics["status"] == BillStatus.PASSED:
                 high_volume_passed_bills.append(metrics["bill_number"])
-            else: # IN_PROGRESS, STUCK, VETOED, etc. are considered 'stalled' in this context
+            else:  # IN_PROGRESS, STUCK, VETOED, etc. are considered 'stalled' in this context
                 high_volume_stalled_bills.append(metrics["bill_number"])
 
     return {

@@ -64,9 +64,7 @@ def compute_bill_vote_timeline(
     Returns ``None`` when no vote events match.
     """
     events = vote_lookup.get(bill_number, [])
-    chamber_events = [
-        e for e in events if e.chamber.lower() == chamber.lower()
-    ]
+    chamber_events = [e for e in events if e.chamber.lower() == chamber.lower()]
     if not chamber_events:
         return None
 
@@ -175,7 +173,8 @@ def compute_bill_vote_timeline(
     _dn = lambda nk: norm_to_display.get(nk, nk)  # noqa: E731
 
     committee_to_floor_flips = sorted(
-        _dn(nk) for nk in committee_all_norms
+        _dn(nk)
+        for nk in committee_all_norms
         if (
             (nk in committee_yea_norms and nk in floor_nay_norms)
             or (nk in committee_nay_norms and nk in floor_yea_norms)
@@ -184,38 +183,29 @@ def compute_bill_vote_timeline(
 
     committee_voted_norms = committee_yea_norms | committee_nay_norms
     committee_to_floor_dropoffs = sorted(
-        _dn(nk) for nk in committee_voted_norms
+        _dn(nk)
+        for nk in committee_voted_norms
         if nk in floor_nv_norms and nk not in floor_yea_norms and nk not in floor_nay_norms
     )
 
-    floor_newcomers = sorted(
-        _dn(nk) for nk in floor_all_norms if nk not in committee_all_norms
-    )
+    floor_newcomers = sorted(_dn(nk) for nk in floor_all_norms if nk not in committee_all_norms)
 
     consistent_yea = sorted(
         _dn(nk)
         for nk in all_norm_names
         if all(
-            _vote_code(nk, chamber_events[idx]) in ("Y", "--")
-            for idx in range(len(chamber_events))
+            _vote_code(nk, chamber_events[idx]) in ("Y", "--") for idx in range(len(chamber_events))
         )
-        and any(
-            _vote_code(nk, chamber_events[idx]) == "Y"
-            for idx in range(len(chamber_events))
-        )
+        and any(_vote_code(nk, chamber_events[idx]) == "Y" for idx in range(len(chamber_events)))
     )
 
     consistent_nay = sorted(
         _dn(nk)
         for nk in all_norm_names
         if all(
-            _vote_code(nk, chamber_events[idx]) in ("N", "--")
-            for idx in range(len(chamber_events))
+            _vote_code(nk, chamber_events[idx]) in ("N", "--") for idx in range(len(chamber_events))
         )
-        and any(
-            _vote_code(nk, chamber_events[idx]) == "N"
-            for idx in range(len(chamber_events))
-        )
+        and any(_vote_code(nk, chamber_events[idx]) == "N" for idx in range(len(chamber_events)))
     )
 
     return BillVoteTimelineType(

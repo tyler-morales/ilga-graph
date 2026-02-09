@@ -23,15 +23,11 @@ from .models import Member, VoteEvent
 LOGGER = logging.getLogger(__name__)
 
 # Suffixes that appear after a last name (either in member.name or in vote PDFs).
-_SUFFIX_RE = re.compile(
-    r",?\s+(?:Jr\.?|Sr\.?|III|II|IV)\s*$", re.IGNORECASE
-)
+_SUFFIX_RE = re.compile(r",?\s+(?:Jr\.?|Sr\.?|III|II|IV)\s*$", re.IGNORECASE)
 # Matches suffix when embedded *inside* a comma-delimited vote name, e.g.
 # "Harris III, Napoleon" → suffix = "III", last = "Harris"
 # "Sims Jr., Elgie R"   → suffix = "Jr.", last = "Sims"
-_VOTE_SUFFIX_RE = re.compile(
-    r"\s+(?:Jr\.?|Sr\.?|III|II|IV)$", re.IGNORECASE
-)
+_VOTE_SUFFIX_RE = re.compile(r"\s+(?:Jr\.?|Sr\.?|III|II|IV)$", re.IGNORECASE)
 
 
 # ── Key-building helpers ─────────────────────────────────────────────────────

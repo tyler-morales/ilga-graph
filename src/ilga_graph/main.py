@@ -17,15 +17,16 @@ from strawberry.fastapi import GraphQLRouter
 
 from .analytics import (
     MemberScorecard,
+    compute_advancement_analytics,  # Import the new function
     compute_all_scorecards,
     controversial_score,
     lobbyist_alignment,
-    compute_advancement_analytics,  # Import the new function
 )
 from .exporter import ObsidianExporter
 from .models import Bill, Committee, CommitteeMemberRole, Member, VoteEvent, WitnessSlip
 from .moneyball import MoneyballReport, compute_moneyball
 from .schema import (
+    BillAdvancementAnalyticsType,  # Import the new GraphQL type
     BillConnection,
     BillSlipAnalyticsType,
     BillSortField,
@@ -48,7 +49,6 @@ from .schema import (
     WitnessSlipSummaryType,
     WitnessSlipType,
     paginate,
-    BillAdvancementAnalyticsType,  # Import the new GraphQL type
 )
 from .scraper import ILGAScraper, extract_and_normalize, save_normalized_cache
 from .scrapers.votes import scrape_specific_bills
@@ -828,11 +828,7 @@ class Query:
     ) -> WitnessSlipSummaryType:
         pro = sum(1 for s in slips if s.position == "Proponent")
         opp = sum(1 for s in slips if s.position == "Opponent")
-        no_pos = sum(
-            1
-            for s in slips
-            if s.position and "no position" in s.position.lower()
-        )
+        no_pos = sum(1 for s in slips if s.position and "no position" in s.position.lower())
         return WitnessSlipSummaryType(
             bill_number=bill_number,
             total_count=len(slips),
@@ -869,9 +865,7 @@ class Query:
     @strawberry.field(
         description="Witness-slip analytics for a bill (controversy score 0–1).",
     )
-    def bill_slip_analytics(
-        self, bill_number: str
-    ) -> BillSlipAnalyticsType | None:
+    def bill_slip_analytics(self, bill_number: str) -> BillSlipAnalyticsType | None:
         if not state.witness_slips_lookup.get(bill_number):
             return None
         score = controversial_score(state.witness_slips, bill_number)
@@ -881,11 +875,9 @@ class Query:
         )
 
     @strawberry.field(
-        description="Organisations that file as proponents on this member's sponsored bills (sorted by count desc).",
+        description="Orgs filing as proponents on member's sponsored bills (by count desc).",
     )
-    def member_slip_alignment(
-        self, member_name: str
-    ) -> list[LobbyistAlignmentEntryType]:
+    def member_slip_alignment(self, member_name: str) -> list[LobbyistAlignmentEntryType]:
         member = state.member_lookup.get(member_name)
         if member is None:
             return []
@@ -915,10 +907,11 @@ class Query:
             high_volume_stalled=analytics_results.get("high_volume_stalled", []),
             high_volume_passed=analytics_results.get("high_volume_passed", []),
         )
+
     # ----- End New Query Field -----
 
 
-from strawberry.extensions import QueryDepthLimiter # noqa: E402
+from strawberry.extensions import QueryDepthLimiter  # noqa: E402
 
 schema = strawberry.Schema(
     query=Query,

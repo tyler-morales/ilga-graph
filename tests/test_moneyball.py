@@ -22,7 +22,6 @@ from ilga_graph.moneyball import (
     is_leadership,
 )
 
-
 # ── Pipeline stage classification ─────────────────────────────────────────────
 
 
@@ -43,10 +42,16 @@ class TestClassifyPipelineStage:
         assert classify_pipeline_stage("Third Reading - Passed") == PipelineStage.CHAMBER_PASSED
 
     def test_second_reading(self) -> None:
-        assert classify_pipeline_stage("Second Reading - Standard Debate") == PipelineStage.SECOND_READING
+        assert (
+            classify_pipeline_stage("Second Reading - Standard Debate")
+            == PipelineStage.SECOND_READING
+        )
 
     def test_placed_on_calendar(self) -> None:
-        assert classify_pipeline_stage("Placed on Calendar Order of 2nd Reading") == PipelineStage.SECOND_READING
+        assert (
+            classify_pipeline_stage("Placed on Calendar Order of 2nd Reading")
+            == PipelineStage.SECOND_READING
+        )
 
     def test_committee_do_pass(self) -> None:
         assert classify_pipeline_stage("Do Pass / Short Debate") == PipelineStage.COMMITTEE_PASSED
@@ -81,8 +86,14 @@ class TestPipelineDepth:
 class TestIsLeadership:
     def _make_member(self, role: str) -> Member:
         return Member(
-            id="test", name="Test", member_url="", chamber="House",
-            party="Democrat", district="1", bio_text="", role=role,
+            id="test",
+            name="Test",
+            member_url="",
+            chamber="House",
+            party="Democrat",
+            district="1",
+            bio_text="",
+            role=role,
         )
 
     def test_speaker(self) -> None:
@@ -118,14 +129,18 @@ class TestIsLeadership:
 
 class TestBuildCosponsorEdges:
     def test_shared_bill_creates_edge(
-        self, mixed_bill_member: Member, cosponsor_republican: Member,
+        self,
+        mixed_bill_member: Member,
+        cosponsor_republican: Member,
     ) -> None:
         adjacency = _build_cosponsor_edges([mixed_bill_member, cosponsor_republican])
         assert cosponsor_republican.id in adjacency[mixed_bill_member.id]
         assert mixed_bill_member.id in adjacency[cosponsor_republican.id]
 
     def test_no_shared_bills_no_edge(
-        self, mixed_bill_member: Member, member_no_bills: Member,
+        self,
+        mixed_bill_member: Member,
+        member_no_bills: Member,
     ) -> None:
         adjacency = _build_cosponsor_edges([mixed_bill_member, member_no_bills])
         assert member_no_bills.id not in adjacency[mixed_bill_member.id]
@@ -158,8 +173,7 @@ class TestDegreeCentrality:
         assert dc["a"] == pytest.approx(1 / 3)
 
     def test_isolate(self) -> None:
-        adj = {"A": set(), "B": {"A"}, "A": {"B"}}
-        adj["C"] = set()  # isolate
+        adj = {"A": {"B"}, "B": {"A"}, "C": set()}  # C is isolate
         dc = degree_centrality(adj)
         assert dc["C"] == 0.0
 
@@ -219,16 +233,28 @@ class TestComputeMoneyball:
 
     def test_leadership_detected(self) -> None:
         leader = Member(
-            id="L1", name="Leader", member_url="", chamber="House",
-            party="Democrat", district="1", bio_text="",
+            id="L1",
+            name="Leader",
+            member_url="",
+            chamber="House",
+            party="Democrat",
+            district="1",
+            bio_text="",
             role="Speaker of the House",
-            sponsored_bills=[], co_sponsor_bills=[],
+            sponsored_bills=[],
+            co_sponsor_bills=[],
         )
         regular = Member(
-            id="R1", name="Regular", member_url="", chamber="House",
-            party="Democrat", district="2", bio_text="",
+            id="R1",
+            name="Regular",
+            member_url="",
+            chamber="House",
+            party="Democrat",
+            district="2",
+            bio_text="",
             role="Representative",
-            sponsored_bills=[], co_sponsor_bills=[],
+            sponsored_bills=[],
+            co_sponsor_bills=[],
         )
         report = compute_moneyball([leader, regular])
         assert report.profiles["L1"].is_leadership is True
@@ -273,7 +299,8 @@ class TestComputeMoneyball:
         assert mb.moneyball_score == expected
 
     def test_zero_bills_no_division_error(
-        self, member_no_bills: Member,
+        self,
+        member_no_bills: Member,
     ) -> None:
         report = compute_moneyball([member_no_bills])
         mb = report.profiles[member_no_bills.id]
@@ -283,14 +310,26 @@ class TestComputeMoneyball:
 
     def test_chamber_rankings_separate(self) -> None:
         house_member = Member(
-            id="H1", name="House Rep", member_url="", chamber="House",
-            party="Democrat", district="1", bio_text="",
-            sponsored_bills=[], co_sponsor_bills=[],
+            id="H1",
+            name="House Rep",
+            member_url="",
+            chamber="House",
+            party="Democrat",
+            district="1",
+            bio_text="",
+            sponsored_bills=[],
+            co_sponsor_bills=[],
         )
         senate_member = Member(
-            id="S1", name="Senator", member_url="", chamber="Senate",
-            party="Republican", district="1", bio_text="",
-            sponsored_bills=[], co_sponsor_bills=[],
+            id="S1",
+            name="Senator",
+            member_url="",
+            chamber="Senate",
+            party="Republican",
+            district="1",
+            bio_text="",
+            sponsored_bills=[],
+            co_sponsor_bills=[],
         )
         report = compute_moneyball([house_member, senate_member])
         assert "H1" in report.rankings_house
@@ -305,14 +344,26 @@ class TestComputeMoneyball:
 class TestBadges:
     def _make_profile(self, **kwargs) -> MoneyballProfile:
         defaults = dict(
-            member_id="test", member_name="Test", chamber="House",
-            party="Democrat", district="1", role="Representative",
-            is_leadership=False, laws_filed=10, laws_passed=3,
-            effectiveness_rate=0.3, magnet_score=5.0, bridge_score=0.1,
-            resolutions_filed=2, resolutions_passed=2,
-            pipeline_depth_avg=2.0, pipeline_depth_normalized=0.33,
-            network_centrality=0.3, unique_collaborators=10,
-            total_primary_bills=12, total_passed=5,
+            member_id="test",
+            member_name="Test",
+            chamber="House",
+            party="Democrat",
+            district="1",
+            role="Representative",
+            is_leadership=False,
+            laws_filed=10,
+            laws_passed=3,
+            effectiveness_rate=0.3,
+            magnet_score=5.0,
+            bridge_score=0.1,
+            resolutions_filed=2,
+            resolutions_passed=2,
+            pipeline_depth_avg=2.0,
+            pipeline_depth_normalized=0.33,
+            network_centrality=0.3,
+            unique_collaborators=10,
+            total_primary_bills=12,
+            total_passed=5,
         )
         defaults.update(kwargs)
         return MoneyballProfile(**defaults)
@@ -354,16 +405,20 @@ class TestBadges:
 
     def test_hidden_gem(self) -> None:
         p = self._make_profile(
-            is_leadership=False, laws_passed=3,
-            effectiveness_rate=0.20, magnet_score=3.0,
+            is_leadership=False,
+            laws_passed=3,
+            effectiveness_rate=0.20,
+            magnet_score=3.0,
         )
         badges = _assign_badges(p)
         assert "Hidden Gem" in badges
 
     def test_hidden_gem_not_for_leadership(self) -> None:
         p = self._make_profile(
-            is_leadership=True, laws_passed=3,
-            effectiveness_rate=0.20, magnet_score=3.0,
+            is_leadership=True,
+            laws_passed=3,
+            effectiveness_rate=0.20,
+            magnet_score=3.0,
         )
         badges = _assign_badges(p)
         assert "Hidden Gem" not in badges
