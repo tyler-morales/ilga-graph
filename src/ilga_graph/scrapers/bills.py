@@ -155,8 +155,12 @@ def scrape_all_bill_indexes(
 ) -> list[BillIndexEntry]:
     """Scrape bill indexes for both SB and HB, returning combined list."""
     sess = session or _build_session()
-    sb = scrape_bill_index("SB", limit=sb_limit, session=sess, timeout=timeout, request_delay=request_delay)
-    hb = scrape_bill_index("HB", limit=hb_limit, session=sess, timeout=timeout, request_delay=request_delay)
+    sb = scrape_bill_index(
+        "SB", limit=sb_limit, session=sess, timeout=timeout, request_delay=request_delay
+    )
+    hb = scrape_bill_index(
+        "HB", limit=hb_limit, session=sess, timeout=timeout, request_delay=request_delay
+    )
     LOGGER.info("Total bill index: %d SB + %d HB = %d", len(sb), len(hb), len(sb) + len(hb))
     return sb + hb
 
@@ -603,9 +607,7 @@ def incremental_bill_scrape(
     LOGGER.info("Incremental: scraping %d BillStatus pages...", len(to_scrape))
 
     # Scrape only the delta
-    completed = 0
     t_start = time.perf_counter()
-    total = len(to_scrape)
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         future_to_entry = {
@@ -620,7 +622,6 @@ def incremental_bill_scrape(
             for entry in to_scrape
         }
         for future in as_completed(future_to_entry):
-            completed += 1
             entry = future_to_entry[future]
             try:
                 bill = future.result()
