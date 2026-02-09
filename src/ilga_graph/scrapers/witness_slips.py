@@ -82,6 +82,8 @@ def _extract_leg_doc_ids(html: str, page_url: str) -> list[tuple[str, str]]:
         leg_doc_id = qs.get("LegDocId", qs.get("legdocid", [None]))[0]
         if leg_doc_id and leg_doc_id not in seen:
             label = link.get_text(strip=True)
+            # Normalise abbreviated "Amdt" to "Amendment" for consistent labels
+            label = label.replace("Amdt", "Amendment")
             results.append((leg_doc_id, label))
             seen.add(leg_doc_id)
 
