@@ -1,12 +1,12 @@
 # TODOS
 
-**State of the system:** Modularity Roadmap Steps 1-2 complete. `ILGA_PROFILE=dev|prod` gives one-knob environment switching; `config.py` centralizes all settings with `.env` support; scrapers are parameterized; lifespan has full try/except resilience with stale-cache fallback. 257/257 tests pass.
+**State of the system:** Modularity Roadmap Steps 1-2 complete + Seating Chart / Whisper Network (Verdict 1c). `ILGA_PROFILE=dev|prod` gives one-knob environment switching; `config.py` centralizes all settings with `.env` support; scrapers are parameterized; lifespan has full try/except resilience with stale-cache fallback. Seating chart analytics populate `seat_block_id`, `seat_ring`, `seatmate_names`, and `seatmate_affinity` on Senate members. 257/257 tests pass.
 
 ---
 
 ## Current
 
-- None — Steps 1-2 of Modularity Roadmap are done; use **Next** when you pick up work again.
+- None — Seating chart (Verdict 1c) is done; use **Next** when you pick up work again.
 
 ---
 
@@ -53,3 +53,5 @@
 **Bills-first & incremental:** Bills from Legislation pages (single source of truth); bill index to BillStatus detail; `scrapers/bills.py` with `incremental_bill_scrape()`; member-bill linkage from `Bill.sponsor_ids`; cache persisted every run; exporter uses `all_bills` from `bills_lookup` so all cached bills get vault notes.
 
 **Server & CI:** Single app in `main.py` (schema.py types only); ruff lint/format and per-file ignores for schema; tests updated for line-length and duplicate keys.
+
+**Seating Chart / Whisper Network (Verdict 1c):** Added `seat_block_id`, `seat_ring`, `seatmate_names`, `seatmate_affinity` fields to `Member` dataclass. Created `src/ilga_graph/seating.py` with fuzzy name matching (bare last name, "Initial. Lastname", compound last names like "Glowiak Hilton"), the Aisle Rule (neighbors within same section only, no cross-aisle adjacency), and co-sponsorship affinity calculation (overlap % of member's bills with seatmate co-sponsors). Exposed all four fields via GraphQL `MemberType`. Integrated into lifespan (Step 2b) and `run_etl`. Senate-only for now; seating data loaded from `mocks/dev/senate_seats.json`.

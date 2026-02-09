@@ -72,6 +72,11 @@ class Member:
     # Normalized references (leg_ids) used for cache serialization
     sponsored_bill_ids: list[str] = field(default_factory=list)
     co_sponsor_bill_ids: list[str] = field(default_factory=list)
+    # ── Seating chart (populated by seating.process_seating) ──
+    seat_block_id: str | None = None  # e.g. "ring1-FarLeft"
+    seat_ring: int | None = None  # 1-4
+    seatmate_names: list[str] = field(default_factory=list)  # canonical Member.name of neighbors
+    seatmate_affinity: float = 0.0  # fraction of member's bills co-sponsored by >= 1 seatmate
 
     @property
     def bills(self) -> list[Bill]:

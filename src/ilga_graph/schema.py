@@ -375,6 +375,11 @@ class MemberType:
     co_sponsor_bills: list[BillType] = strawberry.field(default_factory=list)
     scorecard: ScorecardType | None = None
     moneyball: MoneyballProfileType | None = None
+    # ── Seating chart (Whisper Network) ──
+    seat_block_id: str | None = None
+    seat_ring: int | None = None
+    seatmate_names: list[str] = strawberry.field(default_factory=list)
+    seatmate_affinity: float = 0.0
 
     @classmethod
     def from_model(
@@ -407,6 +412,10 @@ class MemberType:
                 if moneyball_profile is not None
                 else None
             ),
+            seat_block_id=m.seat_block_id,
+            seat_ring=m.seat_ring,
+            seatmate_names=list(m.seatmate_names),
+            seatmate_affinity=m.seatmate_affinity,
         )
 
 

@@ -1,0 +1,190 @@
+{
+    "chamber": "Senate",
+    "session": "104th General Assembly",
+    "layout_mode": "Rings & Aisles (Annotated)",
+    "rostrum": {
+        "position": "Front Center (Focal Point)",
+        "officials": [
+            {
+                "role": "Secretary",
+                "name": "Tim Anderson"
+            },
+            {
+                "role": "President",
+                "name": "Don Harmon"
+            }
+        ]
+    },
+    "rings": [
+        {
+            "ring_number": 1,
+            "name": "Inner Ring (The Pit)",
+            "sections": [
+                {
+                    "label": "FarLeft",
+                    "seats": [
+                        "Plummer",
+                        "Balkema",
+                        "Wilcox"
+                    ]
+                },
+                {
+                    "label": "Left",
+                    "seats": [
+                        "PRESTON",
+                        "VENTURA"
+                    ]
+                },
+                {
+                    "label": "Right",
+                    "seats": [
+                        "JOHNSON",
+                        "EDLY-ALLEN"
+                    ]
+                },
+                {
+                    "label": "Far Right",
+                    "seats": [
+                        "SIMS",
+                        "KOEHLER",
+                        "HUNTER"
+                    ]
+                }
+            ]
+        },
+        {
+            "ring_number": 2,
+            "name": "Second Ring",
+            "sections": [
+                {
+                    "label": "Far Left",
+                    "seats": [
+                        "E. Harss",
+                        "S. Turner",
+                        "null",
+                        "Lewis",
+                        "Chesney"
+                    ]
+                },
+                {
+                    "label": "Left",
+                    "seats": [
+                        "Glowiak Hilton",
+                        "Loughran Cappel",
+                        "Collins"
+                    ]
+                },
+                {
+                    "label": "Right",
+                    "seats": [
+                        "ELLMAN",
+                        "Feigenholtz",
+                        "FINE"
+                    ]
+                },
+                {
+                    "label": "Far Right",
+                    "seats": [
+                        "JOYCE",
+                        "FARACI",
+                        "WALKER",
+                        "Guzman",
+                        "Porfirio"
+                    ]
+                }
+            ]
+        },
+        {
+            "ring_number": 3,
+            "name": "Third Ring",
+            "sections": [
+                {
+                    "label": "Far Left",
+                    "seats": [
+                        "Dewitte",
+                        "Fowler",
+                        "Arellano",
+                        "Anderson",
+                        "Rose",
+                        "Hills",
+                        "Bryant"
+                    ]
+                },
+                {
+                    "label": "Left",
+                    "seats": [
+                        "VACANT",
+                        "VACANT",
+                        "D. Turner",
+                        "Villa"
+                    ]
+                },
+                {
+                    "label": "Right",
+                    "seats": [
+                        "Stadelman",
+                        "Simmons",
+                        "MARTWICK",
+                        "Villanueva"
+                    ]
+                },
+                {
+                    "label": "Far Right",
+                    "seats": [
+                        "VILLIVALAM",
+                        "PETERS",
+                        "HASTINGS",
+                        "CERVANTES",
+                        "BELT",
+                        "HALPIN",
+                        "JONES"
+                    ]
+                }
+            ]
+        },
+        {
+            "ring_number": 4,
+            "name": "Outer Ring (The Perch)",
+            "sections": [
+                {
+                    "label": "Far Left",
+                    "seats": [
+                        "CURRAN",
+                        "VACANT",
+                        "REZIN",
+                        "MCCLURE"
+                    ]
+                },
+                {
+                    "label": "Left",
+                    "seats": [
+                        "TRACY",
+                        "SYVERSON",
+                        "VACANT",
+                        "VACANT",
+                        "VACANT"
+                    ]
+                },
+                {
+                    "label": "Right",
+                    "seats": [
+                        "AQUINO",
+                        "MURPHY",
+                        "MORRISON",
+                        "CASTRO",
+                        "N. HARRIS"
+                    ]
+                },
+                {
+                    "label": "Far Right",
+                    "seats": [
+                        "CUNNINGHAM",
+                        "HOLMES",
+                        "LIGHTFORD",
+                        "HARMON"
+                    ]
+                }
+            ]
+        }
+    ]
+}

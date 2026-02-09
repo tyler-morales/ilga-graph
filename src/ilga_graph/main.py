@@ -59,6 +59,7 @@ from .scrapers.bills import (
 )
 from .scrapers.votes import scrape_specific_bills
 from .scrapers.witness_slips import scrape_all_witness_slips
+from .seating import process_seating
 from .vote_name_normalizer import normalize_vote_events
 from .vote_timeline import compute_bill_vote_timeline
 
@@ -424,6 +425,7 @@ def run_etl(
         hb_limit=hb_limit,
     )
     scorecards, moneyball = compute_analytics(data.members)
+    process_seating(data.members, cfg.MOCK_DEV_DIR / "senate_seats.json")
     export_vault(
         data,
         scorecards,
@@ -577,6 +579,13 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         elapsed_analytics = _time.perf_counter() - t_analytics
     except Exception:
         LOGGER.exception("Analytics computation failed; scorecards will be empty.")
+
+    # ── Step 2b: Seating chart analytics ─────────────────────────────────
+    try:
+        seating_path = cfg.MOCK_DEV_DIR / "senate_seats.json"
+        process_seating(state.members, seating_path)
+    except Exception:
+        LOGGER.exception("Seating chart processing failed; seating fields will be empty.")
 
     # ── Step 3: Export vault ─────────────────────────────────────────────
     try:
