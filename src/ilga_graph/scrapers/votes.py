@@ -12,7 +12,6 @@ import logging
 import re
 import time
 from dataclasses import asdict
-from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
@@ -20,14 +19,13 @@ import pdfplumber
 import requests
 from bs4 import BeautifulSoup
 
+from ..config import BASE_URL, CACHE_DIR, GA_ID, MOCK_DEV_DIR, SESSION_ID
 from ..models import VoteEvent
 
 LOGGER = logging.getLogger(__name__)
 
-BASE_URL = "https://www.ilga.gov/"
-VOTE_CACHE_DIR = Path("cache")
-VOTE_CACHE_FILE = VOTE_CACHE_DIR / "vote_events.json"
-VOTE_MOCK_DEV_FILE = Path("mocks") / "dev" / "vote_events.json"
+VOTE_CACHE_FILE = CACHE_DIR / "vote_events.json"
+VOTE_MOCK_DEV_FILE = MOCK_DEV_DIR / "vote_events.json"
 
 # ── Regex patterns ────────────────────────────────────────────────────────────
 
@@ -387,7 +385,7 @@ def scrape_bills_from_range(
     range_url = (
         f"{BASE_URL}Legislation/RegularSession/{doc_type}"
         f"?num1={num_start:04d}&num2={num_end:04d}"
-        f"&DocTypeID={doc_type}&GaId=18&SessionId=114"
+        f"&DocTypeID={doc_type}&GaId={GA_ID}&SessionId={SESSION_ID}"
     )
     LOGGER.info("Fetching bill range listing: %s", range_url)
     resp = sess.get(range_url, timeout=timeout)
@@ -485,7 +483,7 @@ def _vote_event_from_dict(v: dict) -> VoteEvent:
 
 def _save_vote_cache(events: list[VoteEvent]) -> None:
     """Save vote events to disk cache."""
-    VOTE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
     with open(VOTE_CACHE_FILE, "w", encoding="utf-8") as f:
         json.dump([asdict(e) for e in events], f, indent=2, ensure_ascii=False)
     LOGGER.info("Saved %d vote events to cache (%s).", len(events), VOTE_CACHE_FILE)

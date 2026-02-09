@@ -21,15 +21,17 @@ from fastapi.testclient import TestClient
 def _make_client(**env_overrides: str) -> TestClient:
     """Build a fresh TestClient, optionally with env var overrides.
 
-    We reimport ``main`` each time to pick up changed env vars, but we
-    skip the lifespan so there is no real startup.
+    We reimport ``config`` then ``main`` each time to pick up changed
+    env vars for API_KEY, CORS_ORIGINS, etc.  We skip the lifespan so
+    there is no real startup.
     """
     with patch.dict(os.environ, env_overrides):
-        # Reload main to pick up new env vars for API_KEY etc.
         import importlib
 
+        import ilga_graph.config as _cfg_mod
         import ilga_graph.main as _main_mod
 
+        importlib.reload(_cfg_mod)
         importlib.reload(_main_mod)
         return TestClient(_main_mod.app, raise_server_exceptions=False)
 

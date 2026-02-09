@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import functools
 import logging
-import os
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -15,9 +14,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from strawberry.fastapi import GraphQLRouter
 
+from . import config as cfg
 from .analytics import (
     MemberScorecard,
-    compute_advancement_analytics,  # Import the new function
+    compute_advancement_analytics,
     compute_all_scorecards,
     controversial_score,
     lobbyist_alignment,
@@ -26,7 +26,7 @@ from .exporter import ObsidianExporter
 from .models import Bill, Committee, CommitteeMemberRole, Member, VoteEvent, WitnessSlip
 from .moneyball import MoneyballReport, compute_moneyball
 from .schema import (
-    BillAdvancementAnalyticsType,  # Import the new GraphQL type
+    BillAdvancementAnalyticsType,
     BillConnection,
     BillSlipAnalyticsType,
     BillSortField,
@@ -72,35 +72,8 @@ logging.basicConfig(
 )
 LOGGER = logging.getLogger(__name__)
 
-TEST_MEMBER_URL = os.getenv("ILGA_TEST_MEMBER_URL", "").strip()
-TEST_MEMBER_CHAMBER = os.getenv("ILGA_TEST_MEMBER_CHAMBER", "Senate").strip() or "Senate"
-MEMBER_LIMIT = int(os.getenv("ILGA_MEMBER_LIMIT", "0"))
-CORS_ORIGINS = os.getenv("ILGA_CORS_ORIGINS", "*").strip()
-API_KEY = os.getenv("ILGA_API_KEY", "").strip()
-
-# ── Bill status URLs: single source of truth for votes + witness slips ───────
-
-DEFAULT_BILL_STATUS_URLS = [
-    # Senate bills (votes + witness slips)
-    "https://www.ilga.gov/Legislation/BillStatus?DocNum=852&GAID=18&DocTypeID=SB&LegId=158575&SessionID=114",
-    "https://www.ilga.gov/Legislation/BillStatus?DocNum=8&GAID=18&DocTypeID=SB&LegId=157098&SessionID=114",
-    "https://www.ilga.gov/Legislation/BillStatus?DocNum=9&GAID=18&DocTypeID=SB&LegId=157099&SessionID=114",
-    # House bills (votes + witness slips — HB0034 has high-volume slips)
-    "https://www.ilga.gov/Legislation/BillStatus?DocNum=576&GAID=18&DocTypeID=HB&LegId=156254&SessionID=114",
-    "https://www.ilga.gov/Legislation/BillStatus?DocNum=34&GAID=18&DocTypeID=HB&LegId=155692&SessionID=114",
-]
-
-
-def get_bill_status_urls() -> list[str]:
-    """Return bill status URLs from env or defaults.
-
-    Used by both the FastAPI lifespan and ``scripts/scrape.py`` so the same
-    bills are scraped for vote events **and** witness slips.
-    """
-    custom = os.getenv("ILGA_VOTE_BILL_URLS", "").strip()
-    if custom:
-        return [u.strip() for u in custom.split(",") if u.strip()]
-    return list(DEFAULT_BILL_STATUS_URLS)
+# Re-export for backward compatibility (scripts/scrape.py imports from here)
+get_bill_status_urls = cfg.get_bill_status_urls
 
 
 # ── Startup timing log & summary table ──────────────────────────────────────
@@ -230,24 +203,21 @@ def _log_startup_timing(
     LOGGER.debug("Startup timing logged to %s", log_file)
 
 
-# ── Mode flags ────────────────────────────────────────────────────────────────
-# DEV_MODE: lighter scrape limits, faster request delays.
-# SEED_MODE: load from mocks/dev/ when cache/ is missing (instant startup).
-# INCREMENTAL: only re-scrape bills that changed since last run.
-DEV_MODE = os.getenv("ILGA_DEV_MODE", "1") == "1"
-SEED_MODE = os.getenv("ILGA_SEED_MODE", "1") == "1"
-INCREMENTAL = os.getenv("ILGA_INCREMENTAL", "0") == "1"
+# ── Mode flags (from config) ──────────────────────────────────────────────────
+DEV_MODE = cfg.DEV_MODE
+SEED_MODE = cfg.SEED_MODE
+INCREMENTAL = cfg.INCREMENTAL
 
 # When DEV_MODE is on, override scrape + export limits:
 #   - Scrape 20 members per chamber (40 total)
 #   - Export all members, all committees, latest 100 bills
 if DEV_MODE:
-    _SCRAPE_MEMBER_LIMIT = MEMBER_LIMIT or 20
+    _SCRAPE_MEMBER_LIMIT = cfg.MEMBER_LIMIT or 20
     _EXPORT_MEMBER_LIMIT: int | None = None  # export all scraped members
     _EXPORT_COMMITTEE_LIMIT: int | None = None  # only ~142, export all
     _EXPORT_BILL_LIMIT: int | None = 100  # latest 100 by most-recent action
 else:
-    _SCRAPE_MEMBER_LIMIT = MEMBER_LIMIT
+    _SCRAPE_MEMBER_LIMIT = cfg.MEMBER_LIMIT
     _EXPORT_MEMBER_LIMIT = None
     _EXPORT_COMMITTEE_LIMIT = None
     _EXPORT_BILL_LIMIT = None
@@ -347,8 +317,8 @@ def load_or_scrape_data(
     house_members = scraper.fetch_members("House", limit=limit)
     members = senate_members + house_members
 
-    if TEST_MEMBER_URL:
-        test_member = scraper.fetch_member_by_url(TEST_MEMBER_URL, TEST_MEMBER_CHAMBER)
+    if cfg.TEST_MEMBER_URL:
+        test_member = scraper.fetch_member_by_url(cfg.TEST_MEMBER_URL, cfg.TEST_MEMBER_CHAMBER)
         if test_member is not None:
             members.append(test_member)
 
@@ -498,11 +468,60 @@ def _collect_unique_bills_by_number(bills_lookup: dict[str, Bill]) -> dict[str, 
     return unique
 
 
+def _load_stale_cache_fallback() -> ScrapedData:
+    """Best-effort fallback: load whatever JSON caches exist on disk.
+
+    Used when the primary ETL scrape fails so the app can serve stale data
+    instead of starting completely empty.  Raises if no usable cache is found.
+    """
+    scraper = ILGAScraper(request_delay=0, seed_fallback=SEED_MODE)
+
+    # Members + bills (normalized cache)
+    from .scraper import load_normalized_cache  # local to avoid circular at top-level
+
+    normalized = load_normalized_cache(seed_fallback=SEED_MODE)
+    if normalized is not None:
+        members, bills_lookup = normalized
+    else:
+        members = []
+        bills_lookup = {}
+
+    # Bills cache (independent of member cache)
+    if not bills_lookup:
+        bills_lookup = load_bill_cache(seed_fallback=SEED_MODE) or {}
+
+    # Committees (best-effort)
+    try:
+        committees, committee_rosters, committee_bills = scraper.fetch_all_committees()
+    except Exception:
+        LOGGER.warning("Committee cache also unavailable.")
+        committees, committee_rosters, committee_bills = [], {}, {}
+
+    if not members and not bills_lookup:
+        raise RuntimeError("No usable cache data found for stale-cache fallback.")
+
+    # Re-link members to bills
+    _link_members_to_bills(members, bills_lookup)
+
+    return ScrapedData(
+        members=members,
+        bills_lookup=bills_lookup,
+        committees=committees,
+        committee_rosters=committee_rosters,
+        committee_bills=committee_bills,
+    )
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     import time as _time
 
     t_startup_begin = _time.perf_counter()
+    elapsed_load = 0.0
+    elapsed_analytics = 0.0
+    elapsed_export = 0.0
+    elapsed_votes = 0.0
+    data: ScrapedData | None = None
 
     if DEV_MODE:
         LOGGER.warning(
@@ -512,35 +531,67 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             " (seed ON)" if SEED_MODE else "",
         )
 
-    # ── Step 1: Load or scrape data ──
-    t_load = _time.perf_counter()
-    data = load_or_scrape_data(
-        limit=_SCRAPE_MEMBER_LIMIT,
-        dev_mode=DEV_MODE,
-        seed_mode=SEED_MODE,
-        incremental=INCREMENTAL,
-        sb_limit=100,
-        hb_limit=100,
-    )
-    state.members = data.members
-    elapsed_load = _time.perf_counter() - t_load
+    # ── Step 1: Load or scrape data (resilient) ──────────────────────────
+    try:
+        t_load = _time.perf_counter()
+        data = load_or_scrape_data(
+            limit=_SCRAPE_MEMBER_LIMIT,
+            dev_mode=DEV_MODE,
+            seed_mode=SEED_MODE,
+            incremental=INCREMENTAL,
+            sb_limit=100,
+            hb_limit=100,
+        )
+        state.members = data.members
+        elapsed_load = _time.perf_counter() - t_load
+    except Exception:
+        LOGGER.exception("ETL load/scrape failed. Attempting stale-cache fallback...")
+        # Try to load whatever cache exists on disk so the app can serve
+        # stale data rather than starting completely empty.
+        try:
+            data = _load_stale_cache_fallback()
+            state.members = data.members
+            elapsed_load = _time.perf_counter() - t_startup_begin
+            LOGGER.warning(
+                "Loaded stale cache: %d members, %d bills.",
+                len(data.members),
+                len(data.bills_lookup),
+            )
+        except Exception:
+            LOGGER.exception(
+                "Stale-cache fallback also failed. "
+                "App will start with EMPTY state (health.ready=false)."
+            )
+            data = ScrapedData(
+                members=[],
+                bills_lookup={},
+                committees=[],
+                committee_rosters={},
+                committee_bills={},
+            )
 
-    # ── Step 2: Compute analytics ──
-    t_analytics = _time.perf_counter()
-    state.scorecards, state.moneyball = compute_analytics(state.members)
-    elapsed_analytics = _time.perf_counter() - t_analytics
+    # ── Step 2: Compute analytics ────────────────────────────────────────
+    try:
+        t_analytics = _time.perf_counter()
+        state.scorecards, state.moneyball = compute_analytics(state.members)
+        elapsed_analytics = _time.perf_counter() - t_analytics
+    except Exception:
+        LOGGER.exception("Analytics computation failed; scorecards will be empty.")
 
-    # ── Step 3: Export vault ──
-    t_export = _time.perf_counter()
-    export_vault(
-        data,
-        state.scorecards,
-        state.moneyball,
-        member_export_limit=_EXPORT_MEMBER_LIMIT,
-        committee_export_limit=_EXPORT_COMMITTEE_LIMIT,
-        bill_export_limit=_EXPORT_BILL_LIMIT,
-    )
-    elapsed_export = _time.perf_counter() - t_export
+    # ── Step 3: Export vault ─────────────────────────────────────────────
+    try:
+        t_export = _time.perf_counter()
+        export_vault(
+            data,
+            state.scorecards,
+            state.moneyball,
+            member_export_limit=_EXPORT_MEMBER_LIMIT,
+            committee_export_limit=_EXPORT_COMMITTEE_LIMIT,
+            bill_export_limit=_EXPORT_BILL_LIMIT,
+        )
+        elapsed_export = _time.perf_counter() - t_export
+    except Exception:
+        LOGGER.exception("Vault export failed; Obsidian vault may be stale.")
 
     state.member_lookup = {m.name: m for m in state.members}
     state.bill_lookup = _collect_unique_bills_by_number(data.bills_lookup)
@@ -550,36 +601,40 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     state.committee_rosters = data.committee_rosters
     state.committee_bills = data.committee_bills
 
-    # ── Level 4: Scrape roll-call votes ──
-    # Uses the same bill status URLs as witness slips (single source of truth).
-    _vote_bill_urls = get_bill_status_urls()
+    # ── Level 4: Scrape roll-call votes ──────────────────────────────────
+    _vote_bill_urls = cfg.get_bill_status_urls()
 
-    t_votes = _time.perf_counter()
-    state.vote_events = scrape_specific_bills(
-        _vote_bill_urls,
-        request_delay=0.3,
-        use_cache=True,
-        seed_fallback=SEED_MODE,
-    )
-    for ve in state.vote_events:
-        state.vote_lookup.setdefault(ve.bill_number, []).append(ve)
+    try:
+        t_votes = _time.perf_counter()
+        state.vote_events = scrape_specific_bills(
+            _vote_bill_urls,
+            request_delay=0.3,
+            use_cache=True,
+            seed_fallback=SEED_MODE,
+        )
+        for ve in state.vote_events:
+            state.vote_lookup.setdefault(ve.bill_number, []).append(ve)
 
-    # ── Normalize vote names to canonical member names ──
-    normalize_vote_events(state.vote_events, state.member_lookup)
+        # ── Normalize vote names to canonical member names ──
+        normalize_vote_events(state.vote_events, state.member_lookup)
+        elapsed_votes = _time.perf_counter() - t_votes
+    except Exception:
+        LOGGER.exception("Vote scraping failed; vote data will be empty.")
 
-    elapsed_votes = _time.perf_counter() - t_votes
+    # ── Level 5: Scrape / load witness slips ─────────────────────────────
+    try:
+        state.witness_slips = scrape_all_witness_slips(
+            _vote_bill_urls,
+            request_delay=0.3,
+            use_cache=True,
+            seed_fallback=SEED_MODE,
+        )
+        for ws in state.witness_slips:
+            state.witness_slips_lookup.setdefault(ws.bill_number, []).append(ws)
+    except Exception:
+        LOGGER.exception("Witness slip scraping failed; slip data will be empty.")
 
-    # ── Level 5: Scrape / load witness slips (same bills as votes) ──
-    state.witness_slips = scrape_all_witness_slips(
-        _vote_bill_urls,
-        request_delay=0.3,
-        use_cache=True,
-        seed_fallback=SEED_MODE,
-    )
-    for ws in state.witness_slips:
-        state.witness_slips_lookup.setdefault(ws.bill_number, []).append(ws)
-
-    # ── Print startup summary table ──
+    # ── Print startup summary table ──────────────────────────────────────
     elapsed_total = _time.perf_counter() - t_startup_begin
     summary = _format_startup_table(
         elapsed_total,
@@ -597,7 +652,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     print(summary, flush=True)
 
     # Show MVP
-    if state.moneyball.mvp_house_non_leadership:
+    if state.moneyball and state.moneyball.mvp_house_non_leadership:
         mvp = state.moneyball.profiles[state.moneyball.mvp_house_non_leadership]
         print(
             f"  🏆 MVP (House, non-leadership): {mvp.member_name} (Score: {mvp.moneyball_score})\n",
@@ -1024,7 +1079,7 @@ graphql_app = GraphQLRouter(schema)
 app = FastAPI(title="ILGA Graph", lifespan=lifespan)
 
 # ── CORS middleware ──────────────────────────────────────────────────────────
-_cors_origins = [o.strip() for o in CORS_ORIGINS.split(",") if o.strip()]
+_cors_origins = [o.strip() for o in cfg.CORS_ORIGINS.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
@@ -1041,11 +1096,11 @@ async def _api_key_middleware(request: Request, call_next) -> Response:  # type:
 
     Skips auth for the health endpoint and for OPTIONS (CORS preflight).
     """
-    if API_KEY:
+    if cfg.API_KEY:
         exempt = {"/health", "/docs", "/openapi.json", "/redoc"}
         if request.url.path not in exempt and request.method != "OPTIONS":
             provided = request.headers.get("X-API-Key", "")
-            if provided != API_KEY:
+            if provided != cfg.API_KEY:
                 return JSONResponse(
                     status_code=401,
                     content={"detail": "Invalid or missing API key"},

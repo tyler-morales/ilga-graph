@@ -14,7 +14,6 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-from pathlib import Path
 from urllib.parse import urljoin
 
 import requests
@@ -22,12 +21,11 @@ from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from ..config import BASE_URL, CACHE_DIR, GA_ID, MOCK_DEV_DIR, SESSION_ID
 from ..models import ActionEntry, Bill
 
 LOGGER = logging.getLogger(__name__)
 
-BASE_URL = "https://www.ilga.gov/"
-CACHE_DIR = Path("cache")
 BILLS_CACHE_FILE = CACHE_DIR / "bills.json"
 METADATA_FILE = CACHE_DIR / "scrape_metadata.json"
 
@@ -71,11 +69,11 @@ def _build_session(request_delay: float = 0.5) -> requests.Session:
 
 
 def _range_url(doc_type: str, num1: int, num2: int) -> str:
-    """Build legislation range page URL. GaId=18, SessionId=114 = 104th GA (2025-2026)."""
+    """Build legislation range page URL using config GA_ID/SESSION_ID."""
     return (
         f"{BASE_URL}Legislation/RegularSession/{doc_type}"
         f"?num1={num1:04d}&num2={num2:04d}"
-        f"&DocTypeID={doc_type}&GaId=18&SessionId=114"
+        f"&DocTypeID={doc_type}&GaId={GA_ID}&SessionId={SESSION_ID}"
     )
 
 
@@ -375,10 +373,18 @@ def scrape_all_bills(
     max_workers: int = 3,
     use_cache: bool = True,
     seed_fallback: bool = False,
+    checkpoint_interval: int = 50,
 ) -> dict[str, Bill]:
     """Scrape BillStatus pages for all bills in the index.
 
     Returns ``{leg_id: Bill}`` dict.
+
+    Parameters
+    ----------
+    checkpoint_interval:
+        Save a checkpoint to disk every *N* completed bills so that progress
+        is not lost if the scrape is interrupted mid-run.  Set to 0 to
+        disable checkpointing.
     """
     # Try cache first
     if use_cache:
@@ -392,6 +398,7 @@ def scrape_all_bills(
 
     bills: dict[str, Bill] = {}
     completed = 0
+    last_checkpoint = 0
     t_start = time.perf_counter()
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
@@ -429,10 +436,22 @@ def scrape_all_bills(
             except Exception:
                 LOGGER.exception("  [%d/%d] Error scraping %s", completed, total, entry.bill_number)
 
+            # ── Checkpoint: persist progress every N bills ──
+            if (
+                checkpoint_interval > 0
+                and completed - last_checkpoint >= checkpoint_interval
+                and bills
+            ):
+                LOGGER.info(
+                    "  Checkpoint: saving %d bills at %d/%d...", len(bills), completed, total
+                )
+                save_bill_cache(bills)
+                last_checkpoint = completed
+
     elapsed_total = time.perf_counter() - t_start
     LOGGER.info("Bill scraping complete: %d bills in %.1fs", len(bills), elapsed_total)
 
-    # Save cache
+    # Save final cache
     save_bill_cache(bills)
     save_scrape_metadata(len(bills))
 
@@ -487,7 +506,7 @@ def load_bill_cache(*, seed_fallback: bool = False) -> dict[str, Bill] | None:
     path = BILLS_CACHE_FILE
     if not path.exists():
         if seed_fallback:
-            seed_path = Path("mocks") / "dev" / "bills.json"
+            seed_path = MOCK_DEV_DIR / "bills.json"
             if seed_path.exists():
                 LOGGER.info("Loading bill cache from seed: %s", seed_path)
                 path = seed_path

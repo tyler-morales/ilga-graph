@@ -14,6 +14,7 @@ dependencies = [
     "requests",
     "beautifulsoup4",
     "pdfplumber",
+    "python-dotenv",
 ]
 
 [project.optional-dependencies]
