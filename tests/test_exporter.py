@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
-from ilga_graph.analytics import MemberScorecard, compute_all_scorecards
+from ilga_graph.analytics import MemberScorecard
 from ilga_graph.exporter import ObsidianExporter
 from ilga_graph.models import Bill, CareerRange, Member
 
@@ -153,12 +152,20 @@ class TestScorecardBadges:
 
     def test_coalition_builder_badge(self) -> None:
         sc = MemberScorecard(
-            primary_bill_count=5, passed_count=3, vetoed_count=0,
-            stuck_count=1, in_progress_count=1, success_rate=0.6,
-            heat_score=5, effectiveness_score=3.0,
-            law_heat_score=5, law_success_rate=0.6,
-            magnet_score=12.0, bridge_score=0.1,
-            resolutions_count=0, resolution_pass_rate=0.0,
+            primary_bill_count=5,
+            passed_count=3,
+            vetoed_count=0,
+            stuck_count=1,
+            in_progress_count=1,
+            success_rate=0.6,
+            heat_score=5,
+            effectiveness_score=3.0,
+            law_heat_score=5,
+            law_success_rate=0.6,
+            magnet_score=12.0,
+            bridge_score=0.1,
+            resolutions_count=0,
+            resolution_pass_rate=0.0,
         )
         exporter = ObsidianExporter()
         result = exporter._render_scorecard(sc)
@@ -166,12 +173,20 @@ class TestScorecardBadges:
 
     def test_bipartisan_bridge_badge(self) -> None:
         sc = MemberScorecard(
-            primary_bill_count=5, passed_count=3, vetoed_count=0,
-            stuck_count=1, in_progress_count=1, success_rate=0.6,
-            heat_score=5, effectiveness_score=3.0,
-            law_heat_score=5, law_success_rate=0.6,
-            magnet_score=2.0, bridge_score=0.25,
-            resolutions_count=0, resolution_pass_rate=0.0,
+            primary_bill_count=5,
+            passed_count=3,
+            vetoed_count=0,
+            stuck_count=1,
+            in_progress_count=1,
+            success_rate=0.6,
+            heat_score=5,
+            effectiveness_score=3.0,
+            law_heat_score=5,
+            law_success_rate=0.6,
+            magnet_score=2.0,
+            bridge_score=0.25,
+            resolutions_count=0,
+            resolution_pass_rate=0.0,
         )
         exporter = ObsidianExporter()
         result = exporter._render_scorecard(sc)
@@ -179,12 +194,20 @@ class TestScorecardBadges:
 
     def test_ceremonial_focus_badge(self) -> None:
         sc = MemberScorecard(
-            primary_bill_count=5, passed_count=2, vetoed_count=0,
-            stuck_count=0, in_progress_count=0, success_rate=0.4,
-            heat_score=5, effectiveness_score=2.0,
-            law_heat_score=1, law_success_rate=1.0,
-            magnet_score=0.0, bridge_score=0.0,
-            resolutions_count=4, resolution_pass_rate=0.25,
+            primary_bill_count=5,
+            passed_count=2,
+            vetoed_count=0,
+            stuck_count=0,
+            in_progress_count=0,
+            success_rate=0.4,
+            heat_score=5,
+            effectiveness_score=2.0,
+            law_heat_score=1,
+            law_success_rate=1.0,
+            magnet_score=0.0,
+            bridge_score=0.0,
+            resolutions_count=4,
+            resolution_pass_rate=0.25,
         )
         exporter = ObsidianExporter()
         result = exporter._render_scorecard(sc)
@@ -192,12 +215,20 @@ class TestScorecardBadges:
 
     def test_no_badges_when_thresholds_not_met(self) -> None:
         sc = MemberScorecard(
-            primary_bill_count=2, passed_count=1, vetoed_count=0,
-            stuck_count=0, in_progress_count=1, success_rate=0.5,
-            heat_score=2, effectiveness_score=1.0,
-            law_heat_score=2, law_success_rate=0.5,
-            magnet_score=3.0, bridge_score=0.1,
-            resolutions_count=0, resolution_pass_rate=0.0,
+            primary_bill_count=2,
+            passed_count=1,
+            vetoed_count=0,
+            stuck_count=0,
+            in_progress_count=1,
+            success_rate=0.5,
+            heat_score=2,
+            effectiveness_score=1.0,
+            law_heat_score=2,
+            law_success_rate=0.5,
+            magnet_score=3.0,
+            bridge_score=0.1,
+            resolutions_count=0,
+            resolution_pass_rate=0.0,
         )
         exporter = ObsidianExporter()
         result = exporter._render_scorecard(sc)
@@ -206,14 +237,23 @@ class TestScorecardBadges:
         assert "Ceremonial Focus" not in result
 
     def test_lawmaking_passed_matches_success_rate_formula(self) -> None:
-        """Lawmaking Passed and Success Rate must align: Success Rate = Passed / Bills Introduced."""
+        """Lawmaking Passed and Success Rate align: Success Rate = Passed / Bills Introduced."""
         sc = MemberScorecard(
-            primary_bill_count=55, passed_count=9, vetoed_count=0,
-            stuck_count=10, in_progress_count=36, success_rate=round(9 / 55, 4),
-            heat_score=55, effectiveness_score=9.0,
-            law_heat_score=50, law_passed_count=5, law_success_rate=0.10,
-            magnet_score=1.5, bridge_score=0.14,
-            resolutions_count=5, resolutions_passed_count=4,
+            primary_bill_count=55,
+            passed_count=9,
+            vetoed_count=0,
+            stuck_count=10,
+            in_progress_count=36,
+            success_rate=round(9 / 55, 4),
+            heat_score=55,
+            effectiveness_score=9.0,
+            law_heat_score=50,
+            law_passed_count=5,
+            law_success_rate=0.10,
+            magnet_score=1.5,
+            bridge_score=0.14,
+            resolutions_count=5,
+            resolutions_passed_count=4,
             resolution_pass_rate=0.8,
         )
         exporter = ObsidianExporter()
@@ -254,8 +294,13 @@ class TestRenderCareerRanges:
 
     def test_with_ended_range(self) -> None:
         member = Member(
-            id="1", name="T", member_url="", chamber="Senate",
-            party="D", district="1", bio_text="",
+            id="1",
+            name="T",
+            member_url="",
+            chamber="Senate",
+            party="D",
+            district="1",
+            bio_text="",
             career_ranges=[CareerRange(start_year=2010, end_year=2014)],
         )
         exporter = ObsidianExporter()
@@ -264,8 +309,13 @@ class TestRenderCareerRanges:
 
     def test_no_ranges_uses_text(self) -> None:
         member = Member(
-            id="1", name="T", member_url="", chamber="Senate",
-            party="D", district="1", bio_text="",
+            id="1",
+            name="T",
+            member_url="",
+            chamber="Senate",
+            party="D",
+            district="1",
+            bio_text="",
             career_timeline_text="2020-",
         )
         exporter = ObsidianExporter()
@@ -274,8 +324,13 @@ class TestRenderCareerRanges:
 
     def test_no_ranges_no_text(self) -> None:
         member = Member(
-            id="1", name="T", member_url="", chamber="Senate",
-            party="D", district="1", bio_text="",
+            id="1",
+            name="T",
+            member_url="",
+            chamber="Senate",
+            party="D",
+            district="1",
+            bio_text="",
         )
         exporter = ObsidianExporter()
         result = exporter._render_career_ranges(member)

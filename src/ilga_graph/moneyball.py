@@ -24,10 +24,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .analytics import (
-    BillStatus,
-    MemberScorecard,
     _PIPELINE_MAX_DEPTH,
-    classify_bill_status,
+    MemberScorecard,
     compute_all_scorecards,
     is_substantive,
     pipeline_depth,
@@ -212,10 +210,7 @@ class MoneyballWeights:
 
     @property
     def total(self) -> float:
-        return (
-            self.effectiveness + self.pipeline + self.magnet
-            + self.bridge + self.centrality
-        )
+        return self.effectiveness + self.pipeline + self.magnet + self.bridge + self.centrality
 
 
 # ── Composite Moneyball Score ────────────────────────────────────────────────
@@ -338,7 +333,7 @@ def compute_moneyball(
     # ── Step 1: Scorecards (reuse or compute) ──
     if scorecards is None:
         scorecards = compute_all_scorecards(members)
-    member_lookup = {m.id: m for m in members}
+    _member_lookup = {m.id: m for m in members}
 
     # ── Step 2: Co-sponsorship network ──
     adjacency = _build_cosponsor_edges(members)
@@ -370,7 +365,9 @@ def compute_moneyball(
             resolutions_filed=sc.resolutions_count,
             resolutions_passed=sc.resolutions_passed_count,
             pipeline_depth_avg=round(depth, 2),
-            pipeline_depth_normalized=round(depth / _PIPELINE_MAX_DEPTH, 4) if _PIPELINE_MAX_DEPTH > 0 else 0.0,
+            pipeline_depth_normalized=round(depth / _PIPELINE_MAX_DEPTH, 4)
+            if _PIPELINE_MAX_DEPTH > 0
+            else 0.0,
             network_centrality=round(centralities.get(member.id, 0.0), 4),
             unique_collaborators=len(adjacency.get(member.id, set())),
             total_primary_bills=sc.primary_bill_count,
@@ -381,7 +378,9 @@ def compute_moneyball(
     max_magnet = max((p.magnet_score for p in profiles.values()), default=0.0)
     for profile in profiles.values():
         profile.moneyball_score = _compute_moneyball_score(
-            profile, max_magnet, weights,
+            profile,
+            max_magnet,
+            weights,
         )
 
     # ── Step 5: Assign badges ──

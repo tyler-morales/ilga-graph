@@ -31,16 +31,26 @@ class TestParseBillDate:
 class TestMemberCareerStart:
     def test_single_range(self) -> None:
         member = Member(
-            id="1", name="T", member_url="", chamber="Senate",
-            party="D", district="1", bio_text="",
+            id="1",
+            name="T",
+            member_url="",
+            chamber="Senate",
+            party="D",
+            district="1",
+            bio_text="",
             career_ranges=[CareerRange(start_year=2015)],
         )
         assert _member_career_start(member) == 2015
 
     def test_multiple_ranges_returns_min(self) -> None:
         member = Member(
-            id="1", name="T", member_url="", chamber="Senate",
-            party="D", district="1", bio_text="",
+            id="1",
+            name="T",
+            member_url="",
+            chamber="Senate",
+            party="D",
+            district="1",
+            bio_text="",
             career_ranges=[
                 CareerRange(start_year=2020),
                 CareerRange(start_year=2010, end_year=2014),
@@ -50,8 +60,13 @@ class TestMemberCareerStart:
 
     def test_no_ranges_returns_9999(self) -> None:
         member = Member(
-            id="1", name="T", member_url="", chamber="Senate",
-            party="D", district="1", bio_text="",
+            id="1",
+            name="T",
+            member_url="",
+            chamber="Senate",
+            party="D",
+            district="1",
+            bio_text="",
             career_ranges=[],
         )
         assert _member_career_start(member) == 9999

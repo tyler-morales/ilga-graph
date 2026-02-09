@@ -68,10 +68,10 @@ class Member:
 
 @dataclass
 class VoteEvent:
-    bill_number: str        # e.g. "SB0852"
-    date: str               # e.g. "May 22, 2025"
-    description: str        # e.g. "Third Reading"
-    chamber: str            # "Senate" or "House"
+    bill_number: str  # e.g. "SB0852"
+    date: str  # e.g. "May 22, 2025"
+    description: str  # e.g. "Third Reading"
+    chamber: str  # "Senate" or "House"
     yea_votes: list[str] = field(default_factory=list)
     nay_votes: list[str] = field(default_factory=list)
     present_votes: list[str] = field(default_factory=list)
@@ -82,14 +82,14 @@ class VoteEvent:
 
 @dataclass
 class WitnessSlip:
-    name: str               # Witness Name
-    organization: str       # Firm, Business, or Agency
+    name: str  # Witness Name
+    organization: str  # Firm, Business, or Agency
     representing: str
-    position: str           # "Proponent" / "Opponent" / "No Position"
+    position: str  # "Proponent" / "Opponent" / "No Position"
     hearing_committee: str
-    hearing_date: str       # from ScheduledDateTime column
+    hearing_date: str  # from ScheduledDateTime column
     testimony_type: str = "Record of Appearance Only"  # not in export data
-    bill_number: str = ""   # from Legislation column -- useful for analytics
+    bill_number: str = ""  # from Legislation column -- useful for analytics
 
 
 @dataclass(frozen=True)

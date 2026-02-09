@@ -12,12 +12,11 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 from dataclasses import asdict
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
-
-import re
 
 import requests
 from bs4 import BeautifulSoup
@@ -83,6 +82,8 @@ def _extract_leg_doc_ids(html: str, page_url: str) -> list[tuple[str, str]]:
         leg_doc_id = qs.get("LegDocId", qs.get("legdocid", [None]))[0]
         if leg_doc_id and leg_doc_id not in seen:
             label = link.get_text(strip=True)
+            # Normalise abbreviated "Amdt" to "Amendment" for consistent labels
+            label = label.replace("Amdt", "Amendment")
             results.append((leg_doc_id, label))
             seen.add(leg_doc_id)
 
@@ -95,7 +96,7 @@ def _parse_export_text(text: str) -> list[WitnessSlip]:
     Expected format (first line is header)::
 
         Legislation|Name|Firm|Representation|Position|Committee|ScheduledDateTime
-        HB1075|Paul Makarewicz|AES Clean Energy|AES Clean Energy|Proponent|Executive|2025-05-31 17:00
+        HB1075|Paul M.|AES|AES|Proponent|Executive|2025-05-31 17:00
     """
     lines = text.strip().splitlines()
     if len(lines) < 2:
@@ -112,15 +113,17 @@ def _parse_export_text(text: str) -> list[WitnessSlip]:
             LOGGER.warning("Skipping malformed export line: %r", line)
             continue
 
-        slips.append(WitnessSlip(
-            bill_number=parts[0].strip(),
-            name=parts[1].strip(),
-            organization=parts[2].strip(),
-            representing=parts[3].strip(),
-            position=parts[4].strip(),
-            hearing_committee=parts[5].strip(),
-            hearing_date=parts[6].strip(),
-        ))
+        slips.append(
+            WitnessSlip(
+                bill_number=parts[0].strip(),
+                name=parts[1].strip(),
+                organization=parts[2].strip(),
+                representing=parts[3].strip(),
+                position=parts[4].strip(),
+                hearing_committee=parts[5].strip(),
+                hearing_date=parts[6].strip(),
+            )
+        )
 
     return slips
 
@@ -128,9 +131,7 @@ def _parse_export_text(text: str) -> list[WitnessSlip]:
 # ── Public API ────────────────────────────────────────────────────────────────
 
 # Regex to extract DocTypeID + DocNum from a BillStatus URL → e.g. "HB0034"
-_RE_BILL_FROM_URL = re.compile(
-    r"DocNum=(\d+).*?DocTypeID=(\w+)", re.IGNORECASE
-)
+_RE_BILL_FROM_URL = re.compile(r"DocNum=(\d+).*?DocTypeID=(\w+)", re.IGNORECASE)
 
 
 def _bill_number_from_url(bill_status_url: str) -> str | None:
@@ -210,7 +211,9 @@ def scrape_witness_slips(
     elapsed_ms = (time.perf_counter() - t_start) * 1000
     LOGGER.info(
         "Witness slips complete: %d total slips for %s in %.0fms",
-        len(all_slips), parent_bill or "unknown bill", elapsed_ms,
+        len(all_slips),
+        parent_bill or "unknown bill",
+        elapsed_ms,
     )
     return all_slips
 
@@ -228,9 +231,7 @@ def _load_ws_cache(*, seed_fallback: bool = False) -> list[WitnessSlip] | None:
     if seed_fallback and WS_MOCK_DEV_FILE.exists():
         with open(WS_MOCK_DEV_FILE, encoding="utf-8") as f:
             data = json.load(f)
-        LOGGER.info(
-            "Loaded %d witness slips from mocks/dev (%s).", len(data), WS_MOCK_DEV_FILE
-        )
+        LOGGER.info("Loaded %d witness slips from mocks/dev (%s).", len(data), WS_MOCK_DEV_FILE)
         return [WitnessSlip(**ws) for ws in data]
     return None
 
@@ -287,12 +288,17 @@ def scrape_all_witness_slips(
         LOGGER.info("━━━ Witness slips: bill %d/%d ━━━", i, len(bill_status_urls))
         try:
             slips = scrape_witness_slips(
-                url, session=sess, timeout=timeout, request_delay=request_delay,
+                url,
+                session=sess,
+                timeout=timeout,
+                request_delay=request_delay,
             )
             all_slips.extend(slips)
             LOGGER.info(
                 "  Bill %d/%d: %d witness slips",
-                i, len(bill_status_urls), len(slips),
+                i,
+                len(bill_status_urls),
+                len(slips),
             )
         except Exception:
             LOGGER.exception("Failed to scrape witness slips for bill %d: %s", i, url)
@@ -300,7 +306,9 @@ def scrape_all_witness_slips(
     elapsed_s = time.perf_counter() - t_total_start
     LOGGER.info(
         "Witness slip scraping complete: %d slips from %d bills in %.1fs",
-        len(all_slips), len(bill_status_urls), elapsed_s,
+        len(all_slips),
+        len(bill_status_urls),
+        elapsed_s,
     )
 
     # Save to cache for next time

@@ -1,6 +1,14 @@
 from __future__ import annotations
 
-from ilga_graph.models import Bill, CareerRange, Committee, CommitteeMemberRole, Member, Office, WitnessSlip
+from ilga_graph.models import (
+    Bill,
+    CareerRange,
+    Committee,
+    CommitteeMemberRole,
+    Member,
+    Office,
+    WitnessSlip,
+)
 
 
 class TestBill:

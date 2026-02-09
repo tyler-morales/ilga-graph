@@ -25,20 +25,12 @@ LOGGER = logging.getLogger(__name__)
 
 _RE_PARTY_LETTER = re.compile(r"\([RDI]\)", re.IGNORECASE)
 _RE_PARTY_CAPTURE = re.compile(r"\(([RDI])\)")
-_RE_TITLE_PREFIX = re.compile(
-    r"^\s*(sen\.?|senator|rep\.?|representative)\s+", re.IGNORECASE
-)
+_RE_TITLE_PREFIX = re.compile(r"^\s*(sen\.?|senator|rep\.?|representative)\s+", re.IGNORECASE)
 _RE_WHITESPACE = re.compile(r"\s+")
-_RE_NAME_SUFFIX = re.compile(
-    r"(,?\s*(jr\.?|sr\.?|ii|iii|iv|v))\s*$", re.IGNORECASE
-)
+_RE_NAME_SUFFIX = re.compile(r"(,?\s*(jr\.?|sr\.?|ii|iii|iv|v))\s*$", re.IGNORECASE)
 _RE_NAME_PARTY = re.compile(r"^(?P<name>.+?)\s*\([RDI]\)")
-_RE_PARTY_FULL = re.compile(
-    r"\b(Republican|Democrat|Independent)\b", re.IGNORECASE
-)
-_RE_DISTRICT = re.compile(
-    r"\b(\d+)(?:st|nd|rd|th)?\s+District\b", re.IGNORECASE
-)
+_RE_PARTY_FULL = re.compile(r"\b(Republican|Democrat|Independent)\b", re.IGNORECASE)
+_RE_DISTRICT = re.compile(r"\b(\d+)(?:st|nd|rd|th)?\s+District\b", re.IGNORECASE)
 _RE_CAREER_RANGE = re.compile(
     r"(?P<start>\d{4})\s*[-\u2013\u2014]\s*(?P<end>\d{4}|Present)"
     r"(?:\s*\((?P<chamber>[^)]+)\))?",
@@ -72,35 +64,35 @@ MOCK_DEV_DIR = Path("mocks") / "dev"
 
 # ── Constant token sets ──────────────────────────────────────────────────────
 
-_SECTION_STOP_TOKENS: frozenset[str] = frozenset({
-    "Biography",
-    "Associated Representative:",
-    "Associated Representatives:",
-    "Associated Senator:",
-    "Associated Senators:",
-    "Associated Members:",
-    "Committees",
-    "Bills",
-})
+_SECTION_STOP_TOKENS: frozenset[str] = frozenset(
+    {
+        "Biography",
+        "Associated Representative:",
+        "Associated Representatives:",
+        "Associated Senator:",
+        "Associated Senators:",
+        "Associated Members:",
+        "Committees",
+        "Bills",
+    }
+)
 
-_ASSOCIATED_LABELS: frozenset[str] = frozenset({
-    "Associated Representative:",
-    "Associated Representatives:",
-    "Associated Senator:",
-    "Associated Senators:",
-    "Associated Members:",
-})
+_ASSOCIATED_LABELS: frozenset[str] = frozenset(
+    {
+        "Associated Representative:",
+        "Associated Representatives:",
+        "Associated Senator:",
+        "Associated Senators:",
+        "Associated Members:",
+    }
+)
 
 
 # ── Module-level utility functions ───────────────────────────────────────────
 
 
 def _extract_text_lines(soup: BeautifulSoup) -> list[str]:
-    return [
-        line
-        for raw in soup.get_text("\n", strip=True).splitlines()
-        if (line := raw.strip())
-    ]
+    return [line for raw in soup.get_text("\n", strip=True).splitlines() if (line := raw.strip())]
 
 
 def _member_id_from_url(url: str) -> str:
@@ -113,9 +105,7 @@ def _member_id_from_url(url: str) -> str:
     return path_parts[-1] if path_parts else url
 
 
-def _collect_section(
-    lines: list[str], start_index: int, stop_tokens: frozenset[str]
-) -> list[str]:
+def _collect_section(lines: list[str], start_index: int, stop_tokens: frozenset[str]) -> list[str]:
     collected: list[str] = []
     for line in lines[start_index:]:
         if line in stop_tokens:
@@ -296,12 +286,16 @@ def save_normalized_cache(
 
     LOGGER.info(
         "Saved normalized cache: %d members (%s), %d bills (%s)",
-        len(members_data), path_m, len(bills_data), path_b,
+        len(members_data),
+        path_m,
+        len(bills_data),
+        path_b,
     )
 
 
 def load_normalized_cache(
-    *, seed_fallback: bool = False,
+    *,
+    seed_fallback: bool = False,
 ) -> tuple[list[Member], dict[str, Bill]] | None:
     """Load normalized members + bills from cache or seed.
 
@@ -319,9 +313,7 @@ def load_normalized_cache(
     if members_raw is None or bills_raw is None:
         return None
 
-    bills_lookup: dict[str, Bill] = {
-        lid: _bill_from_dict(bd) for lid, bd in bills_raw.items()
-    }
+    bills_lookup: dict[str, Bill] = {lid: _bill_from_dict(bd) for lid, bd in bills_raw.items()}
 
     members: list[Member] = []
     for d in members_raw:
@@ -362,7 +354,8 @@ def load_normalized_cache(
 
     LOGGER.info(
         "Loaded normalized cache: %d members, %d unique bills.",
-        len(members), len(bills_lookup),
+        len(members),
+        len(bills_lookup),
     )
     return members, bills_lookup
 
@@ -377,14 +370,10 @@ def hydrate_members(
     """
     for member in members:
         member.sponsored_bills = [
-            bills_lookup[bid]
-            for bid in member.sponsored_bill_ids
-            if bid in bills_lookup
+            bills_lookup[bid] for bid in member.sponsored_bill_ids if bid in bills_lookup
         ]
         member.co_sponsor_bills = [
-            bills_lookup[bid]
-            for bid in member.co_sponsor_bill_ids
-            if bid in bills_lookup
+            bills_lookup[bid] for bid in member.co_sponsor_bill_ids if bid in bills_lookup
         ]
     return members
 
@@ -519,7 +508,9 @@ class ILGAScraper:
             for m in members:
                 self._update_name_map(m)
             LOGGER.info(
-                "Loaded %d %s members from normalized cache.", len(members), chamber,
+                "Loaded %d %s members from normalized cache.",
+                len(members),
+                chamber,
             )
             return members
 
@@ -544,8 +535,7 @@ class ILGAScraper:
         t_start = time.perf_counter()
         with ThreadPoolExecutor(max_workers=self.max_workers) as pool:
             future_to_url = {
-                pool.submit(self.scrape_details, url, chamber): url
-                for url in member_urls
+                pool.submit(self.scrape_details, url, chamber): url for url in member_urls
             }
             for future in as_completed(future_to_url):
                 completed += 1
@@ -558,17 +548,25 @@ class ILGAScraper:
                         eta = (total - completed) / rate if rate > 0 else 0
                         LOGGER.info(
                             "  [%d/%d] Scraped %s (%.0fs elapsed, ~%.0fs remaining)",
-                            completed, total, result.name, elapsed, eta,
+                            completed,
+                            total,
+                            result.name,
+                            elapsed,
+                            eta,
                         )
                     else:
                         LOGGER.warning(
-                            "  [%d/%d] Failed: %s", completed, total,
+                            "  [%d/%d] Failed: %s",
+                            completed,
+                            total,
                             future_to_url[future],
                         )
                 except Exception:
                     LOGGER.exception(
                         "  [%d/%d] Unexpected error scraping %s",
-                        completed, total, future_to_url[future],
+                        completed,
+                        total,
+                        future_to_url[future],
                     )
 
         LOGGER.info(
@@ -610,7 +608,9 @@ class ILGAScraper:
             committees = [_committee_from_dict(d) for d in committees_raw]
 
             # Rosters and bills are optional -- return empty dicts if missing
-            rosters_raw = load_dict_cache("committee_rosters.json", seed_fallback=self.seed_fallback)
+            rosters_raw = load_dict_cache(
+                "committee_rosters.json", seed_fallback=self.seed_fallback
+            )
             rosters: dict[str, list[CommitteeMemberRole]] = {}
             if rosters_raw is not None:
                 rosters = {
@@ -639,9 +639,7 @@ class ILGAScraper:
         bills = self.fetch_committee_bills(committees)
 
         self._save_split_committee_cache(committees, rosters, bills)
-        LOGGER.info(
-            "\u2705 Scraped and cached %d committees.", len(committees)
-        )
+        LOGGER.info("\u2705 Scraped and cached %d committees.", len(committees))
         return committees, rosters, bills
 
     def _save_split_committee_cache(
@@ -657,10 +655,7 @@ class ILGAScraper:
         )
         save_dict_cache(
             "committee_rosters.json",
-            {
-                code: [asdict(r) for r in role_list]
-                for code, role_list in rosters.items()
-            },
+            {code: [asdict(r) for r in role_list] for code, role_list in rosters.items()},
         )
         save_dict_cache("committee_bills.json", bills)
 
@@ -689,9 +684,7 @@ class ILGAScraper:
             resp = self._throttled_get(list_url)
             resp.raise_for_status()
         except requests.RequestException as exc:
-            LOGGER.exception(
-                "Failed to fetch committees index from %s: %s", list_url, exc
-            )
+            LOGGER.exception("Failed to fetch committees index from %s: %s", list_url, exc)
             return []
 
         committees = self._extract_committees_index(
@@ -735,16 +728,11 @@ class ILGAScraper:
             )
             return rosters
 
-        items = [
-            (c.code, c.members_list_url)
-            for c in committees
-            if c.members_list_url
-        ]
+        items = [(c.code, c.members_list_url) for c in committees if c.members_list_url]
         rosters = {}
         with ThreadPoolExecutor(max_workers=self.max_workers) as pool:
             future_to_code = {
-                pool.submit(self._scrape_committee_roster, url): code
-                for code, url in items
+                pool.submit(self._scrape_committee_roster, url): code for code, url in items
             }
             for future in as_completed(future_to_code):
                 code = future_to_code[future]
@@ -753,9 +741,7 @@ class ILGAScraper:
                     if roster:
                         rosters[code] = roster
                 except Exception:
-                    LOGGER.exception(
-                        "Unexpected error scraping roster for %s", code
-                    )
+                    LOGGER.exception("Unexpected error scraping roster for %s", code)
         save_dict_cache(
             cache_filename,
             {
@@ -773,9 +759,7 @@ class ILGAScraper:
         )
         return rosters
 
-    def fetch_committee_bills(
-        self, committees: Iterable[Committee]
-    ) -> dict[str, list[str]]:
+    def fetch_committee_bills(self, committees: Iterable[Committee]) -> dict[str, list[str]]:
         """Scrape the bills page for each committee.
 
         Derives the bills URL from each committee's members_list_url by
@@ -796,9 +780,9 @@ class ILGAScraper:
         for c in committees:
             if not c.members_list_url:
                 continue
-            bills_url = c.members_list_url.replace(
-                "/MembersList/", "/Bills/"
-            ).replace("/Members/", "/Bills/")
+            bills_url = c.members_list_url.replace("/MembersList/", "/Bills/").replace(
+                "/Members/", "/Bills/"
+            )
             items.append((c.code, bills_url))
 
         result: dict[str, list[str]] = {}
@@ -810,16 +794,11 @@ class ILGAScraper:
                 soup = BeautifulSoup(resp.text, "html.parser")
                 return code, parse_committee_bill_table(soup)
             except requests.RequestException as exc:
-                LOGGER.warning(
-                    "Failed to fetch committee bills from %s: %s", url, exc
-                )
+                LOGGER.warning("Failed to fetch committee bills from %s: %s", url, exc)
                 return code, []
 
         with ThreadPoolExecutor(max_workers=self.max_workers) as pool:
-            future_to_code = {
-                pool.submit(_scrape_one, code, url): code
-                for code, url in items
-            }
+            future_to_code = {pool.submit(_scrape_one, code, url): code for code, url in items}
             for future in as_completed(future_to_code):
                 code = future_to_code[future]
                 try:
@@ -872,9 +851,7 @@ class ILGAScraper:
             primary_soup = BeautifulSoup(primary_resp.text, "html.parser")
             sponsored_bills = parse_bill_table(primary_soup)
         except requests.RequestException as exc:
-            LOGGER.warning(
-                "Failed to fetch primary bills from %s: %s", primary_url, exc
-            )
+            LOGGER.warning("Failed to fetch primary bills from %s: %s", primary_url, exc)
 
         # ── Derive co-sponsor bills (all bills minus sponsored) ──
         sponsored_leg_ids = {b.leg_id for b in sponsored_bills}
@@ -938,11 +915,7 @@ class ILGAScraper:
             self._add_name_key(normalized_full, member.id)
 
             last_name = _last_name_from_normalized(normalized_full)
-            if (
-                last_name
-                and last_name in self.name_map
-                and self.name_map[last_name] != member.id
-            ):
+            if last_name and last_name in self.name_map and self.name_map[last_name] != member.id:
                 last_name = ""
             self._add_name_key(last_name, member.id)
 
@@ -990,16 +963,12 @@ class ILGAScraper:
             return title.get_text(strip=True).split("|")[0].strip()
         return None
 
-    def _extract_party(
-        self, soup: BeautifulSoup, text_lines: list[str]
-    ) -> str | None:
+    def _extract_party(self, soup: BeautifulSoup, text_lines: list[str]) -> str | None:
         matched_header = self._find_name_party_header(soup)
         if matched_header:
             match = _RE_PARTY_CAPTURE.search(matched_header)
             if match:
-                return {"R": "Republican", "D": "Democrat", "I": "Independent"}[
-                    match.group(1)
-                ]
+                return {"R": "Republican", "D": "Democrat", "I": "Independent"}[match.group(1)]
         match = _RE_PARTY_FULL.search(" ".join(text_lines))
         return match.group(1).title() if match else None
 
@@ -1007,9 +976,7 @@ class ILGAScraper:
         match = _RE_DISTRICT.search(" ".join(text_lines))
         return match.group(1) if match else None
 
-    def _extract_role_timeline(
-        self, soup: BeautifulSoup, text_lines: list[str]
-    ) -> tuple[str, str]:
+    def _extract_role_timeline(self, soup: BeautifulSoup, text_lines: list[str]) -> tuple[str, str]:
         header = self._find_name_party_header(soup)
         if not header:
             return "", ""
@@ -1059,9 +1026,7 @@ class ILGAScraper:
                     chamber = "Senate"
                 else:
                     chamber = chamber_raw.strip()
-            ranges.append(
-                CareerRange(start_year=start_year, end_year=end_year, chamber=chamber)
-            )
+            ranges.append(CareerRange(start_year=start_year, end_year=end_year, chamber=chamber))
         return ranges
 
     def _extract_bio_text(self, soup: BeautifulSoup, text_lines: list[str]) -> str:
@@ -1070,9 +1035,7 @@ class ILGAScraper:
             return bio_section.get_text(" ", strip=True)
         if "Biography" in text_lines:
             bio_index = text_lines.index("Biography")
-            collected = _collect_section(
-                text_lines, bio_index + 1, _SECTION_STOP_TOKENS
-            )
+            collected = _collect_section(text_lines, bio_index + 1, _SECTION_STOP_TOKENS)
             return " ".join(collected).strip()
         return " ".join(text_lines)
 
@@ -1085,9 +1048,7 @@ class ILGAScraper:
         if not table:
             return []
 
-        header_cells = [
-            cell.get_text(" ", strip=True) for cell in table.find_all("th")
-        ]
+        header_cells = [cell.get_text(" ", strip=True) for cell in table.find_all("th")]
         if any("Bill" in h for h in header_cells):
             return []
 
@@ -1098,9 +1059,7 @@ class ILGAScraper:
                 committees.append(cells[0])
         return list(dict.fromkeys(committees))
 
-    def _extract_committees_index(
-        self, soup: BeautifulSoup, base_url: str
-    ) -> list[Committee]:
+    def _extract_committees_index(self, soup: BeautifulSoup, base_url: str) -> list[Committee]:
         table = soup.find("table")
         if not table:
             return []
@@ -1116,9 +1075,7 @@ class ILGAScraper:
             code_text = cells[1].get_text(" ", strip=True)
             if not code_text or code_text.lower() == "code":
                 continue
-            members_list_url = self._extract_committee_members_list_url(
-                cells[0], base_url
-            )
+            members_list_url = self._extract_committee_members_list_url(cells[0], base_url)
 
             is_subcommittee, cleaned_name = self._parse_committee_name(name_text)
             parent_code = current_parent_code if is_subcommittee else None
@@ -1142,9 +1099,7 @@ class ILGAScraper:
             return True, cleaned.lstrip("-").strip()
         return False, cleaned
 
-    def _extract_committee_members_list_url(
-        self, cell: Tag, base_url: str
-    ) -> str | None:
+    def _extract_committee_members_list_url(self, cell: Tag, base_url: str) -> str | None:
         anchor = cell.find("a", href=True)
         if not anchor:
             return None
@@ -1160,9 +1115,7 @@ class ILGAScraper:
             return committee_url.replace("/Members/", "/MembersList/", 1)
         return committee_url
 
-    def _scrape_committee_roster(
-        self, members_list_url: str
-    ) -> list[CommitteeMemberRole]:
+    def _scrape_committee_roster(self, members_list_url: str) -> list[CommitteeMemberRole]:
         try:
             resp = self._throttled_get(members_list_url)
             resp.raise_for_status()
@@ -1216,15 +1169,10 @@ class ILGAScraper:
 
     def _find_committee_roster_table(self, soup: BeautifulSoup) -> Tag | None:
         for table in soup.find_all("table"):
-            headers = [
-                cell.get_text(" ", strip=True).lower()
-                for cell in table.find_all("th")
-            ]
+            headers = [cell.get_text(" ", strip=True).lower() for cell in table.find_all("th")]
             if not headers:
                 continue
-            if any("role" in h for h in headers) and any(
-                "member" in h for h in headers
-            ):
+            if any("role" in h for h in headers) and any("member" in h for h in headers):
                 return table
         return None
 
@@ -1238,36 +1186,27 @@ class ILGAScraper:
     def _extract_committees_from_bio(self, bio_text: str) -> list[str]:
         return list(
             dict.fromkeys(
-                m.group("committee").strip()
-                for m in _RE_COMMITTEE_ROLE.finditer(bio_text)
+                m.group("committee").strip() for m in _RE_COMMITTEE_ROLE.finditer(bio_text)
             )
         )
 
-    def _extract_associated_members(
-        self, soup: BeautifulSoup, text_lines: list[str]
-    ) -> str | None:
+    def _extract_associated_members(self, soup: BeautifulSoup, text_lines: list[str]) -> str | None:
         for heading in soup.find_all(["h3", "h4", "strong", "b"]):
             text = heading.get_text(" ", strip=True)
             if text in _ASSOCIATED_LABELS:
                 parent = heading.find_parent()
                 if parent is None:
                     continue
-                links = [
-                    link.get_text(" ", strip=True) for link in parent.find_all("a")
-                ]
+                links = [link.get_text(" ", strip=True) for link in parent.find_all("a")]
                 if links:
                     return ", ".join(links)
         for idx, line in enumerate(text_lines):
             if line in _ASSOCIATED_LABELS:
-                collected = _collect_section(
-                    text_lines, idx + 1, _SECTION_STOP_TOKENS
-                )
+                collected = _collect_section(text_lines, idx + 1, _SECTION_STOP_TOKENS)
                 return ", ".join(collected) if collected else None
         return None
 
-    def _extract_offices_and_email(
-        self, soup: BeautifulSoup
-    ) -> tuple[list[Office], str | None]:
+    def _extract_offices_and_email(self, soup: BeautifulSoup) -> tuple[list[Office], str | None]:
         container = self._find_contact_container(soup)
         if not container:
             return [], None
@@ -1322,9 +1261,7 @@ class ILGAScraper:
             label_text = label_div.get_text(" ", strip=True)
             if not label_text.endswith("Office:") and "Office" not in label_text:
                 continue
-            raw_lines = [
-                line.strip() for line in value_div.stripped_strings if line.strip()
-            ]
+            raw_lines = [line.strip() for line in value_div.stripped_strings if line.strip()]
             if not raw_lines:
                 continue
             office = self._parse_office_block(label_text.replace(":", ""), raw_lines)
@@ -1332,9 +1269,7 @@ class ILGAScraper:
                 offices.append(office)
         return offices
 
-    def _collect_label_blocks(
-        self, container: Tag, labels: set[str]
-    ) -> dict[str, list[str]]:
+    def _collect_label_blocks(self, container: Tag, labels: set[str]) -> dict[str, list[str]]:
         blocks: dict[str, list[str]] = {label: [] for label in labels}
         current_label: str | None = None
 
@@ -1364,18 +1299,12 @@ class ILGAScraper:
         for label, parts in blocks.items():
             if not parts:
                 continue
-            lines = [
-                line.strip()
-                for line in "".join(parts).splitlines()
-                if line.strip()
-            ]
+            lines = [line.strip() for line in "".join(parts).splitlines() if line.strip()]
             if lines:
                 cleaned[label] = lines
         return cleaned
 
-    def _parse_office_block(
-        self, name: str, lines: list[str]
-    ) -> Office | None:
+    def _parse_office_block(self, name: str, lines: list[str]) -> Office | None:
         address_lines: list[str] = []
         phones: list[str] = []
         faxes: list[str] = []
@@ -1388,9 +1317,7 @@ class ILGAScraper:
             if stripped:
                 address_lines.append(stripped)
         fax = sorted(set(faxes))[0] if faxes else None
-        deduped_phones = (
-            [p for p in sorted(set(phones)) if p != fax] if phones else []
-        )
+        deduped_phones = [p for p in sorted(set(phones)) if p != fax] if phones else []
         phone = deduped_phones[0] if deduped_phones else None
         address = "\n".join(address_lines).strip()
         if not any([address, phone, fax]):

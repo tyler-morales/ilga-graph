@@ -1,5 +1,3 @@
-"""Pure-function analytics: bill classification and member scorecards."""
-
 from __future__ import annotations
 
 import re
@@ -32,13 +30,13 @@ class PipelineStage(str, Enum):
     Moneyball engine to compute average pipeline depth per member.
     """
 
-    FILED = "filed"              # depth 0: introduced but never moved
-    COMMITTEE = "committee"      # depth 1: assigned/referred to committee
+    FILED = "filed"  # depth 0: introduced but never moved
+    COMMITTEE = "committee"  # depth 1: assigned/referred to committee
     COMMITTEE_PASSED = "committee_passed"  # depth 2: passed out of committee
-    SECOND_READING = "second_reading"      # depth 3: reached 2nd/3rd reading
-    CHAMBER_PASSED = "chamber_passed"      # depth 4: passed originating chamber
-    CROSSED = "crossed"          # depth 5: passed both chambers
-    SIGNED = "signed"            # depth 6: signed by Governor / Public Act
+    SECOND_READING = "second_reading"  # depth 3: reached 2nd/3rd reading
+    CHAMBER_PASSED = "chamber_passed"  # depth 4: passed originating chamber
+    CROSSED = "crossed"  # depth 5: passed both chambers
+    SIGNED = "signed"  # depth 6: signed by Governor / Public Act
 
     @property
     def depth(self) -> int:
@@ -140,8 +138,6 @@ def classify_pipeline_stage(last_action: str) -> PipelineStage:
         return PipelineStage.COMMITTEE_PASSED
     if any(token in last_action for token in _SECOND_READING_TOKENS):
         return PipelineStage.SECOND_READING
-    if any(token in last_action for token in _COMMITTEE_PASSED_TOKENS):
-        return PipelineStage.COMMITTEE
     if any(token in last_action for token in _COMMITTEE_TOKENS):
         return PipelineStage.COMMITTEE
     return PipelineStage.FILED
@@ -207,12 +203,16 @@ class MemberScorecard:
 
     # ── Phase 3: Legislative DNA metrics ──
     law_heat_score: int = 0  # count of primary HB/SB only
-    law_passed_count: int = 0  # count of primary HB/SB that passed (so law_success_rate = this / law_heat_score)
+    law_passed_count: int = (
+        0  # count of primary HB/SB that passed (so law_success_rate = this / law_heat_score)
+    )
     law_success_rate: float = 0.0  # passage rate of HB/SB only: law_passed_count / law_heat_score
     magnet_score: float = 0.0  # avg co-sponsors per primary law
     bridge_score: float = 0.0  # % of primary laws with cross-party co-sponsor
     resolutions_count: int = 0  # count of HR/SR/SJR/HJR
-    resolutions_passed_count: int = 0  # count of primary resolutions that passed (passed_count = law_passed_count + this)
+    resolutions_passed_count: int = (
+        0  # count of primary resolutions that passed (passed_count = law_passed_count + this)
+    )
     resolution_pass_rate: float = 0.0  # resolutions_passed_count / resolutions_count
 
 
@@ -238,12 +238,9 @@ def compute_scorecard(member: Member) -> MemberScorecard:
     resolutions = [b for b in bills if not is_substantive(b.bill_number)]
     law_count = len(laws)
 
-    law_passed = sum(
-        1 for b in laws if classify_bill_status(b.last_action) == BillStatus.PASSED
-    )
+    law_passed = sum(1 for b in laws if classify_bill_status(b.last_action) == BillStatus.PASSED)
     resolutions_passed = sum(
-        1 for b in resolutions
-        if classify_bill_status(b.last_action) == BillStatus.PASSED
+        1 for b in resolutions if classify_bill_status(b.last_action) == BillStatus.PASSED
     )
     law_sr = law_passed / law_count if law_count > 0 else 0.0
     res_count = len(resolutions)
@@ -310,12 +307,10 @@ def compute_all_scorecards(
         law_count = len(laws)
 
         law_passed = sum(
-            1 for b in laws
-            if classify_bill_status(b.last_action) == BillStatus.PASSED
+            1 for b in laws if classify_bill_status(b.last_action) == BillStatus.PASSED
         )
         resolutions_passed = sum(
-            1 for b in resolutions
-            if classify_bill_status(b.last_action) == BillStatus.PASSED
+            1 for b in resolutions if classify_bill_status(b.last_action) == BillStatus.PASSED
         )
         law_sr = law_passed / law_count if law_count > 0 else 0.0
 
@@ -388,7 +383,7 @@ def lobbyist_alignment(
     sponsored_bills: set[str] = set()
     for bill in member.sponsored_bills:
         sponsored_bills.add(bill.bill_number)
-    # Also match the normalised form (e.g. "HB1075" vs "HB1075")
+    # Also match the normalised form (e.g. "HB1075" vs "HB100")
     # The bill_number on WitnessSlip comes from the export and may lack
     # leading zeros, so normalise both sides for comparison.
     sponsored_normalised: set[str] = set()
@@ -453,3 +448,100 @@ def _normalise_bill_number(bn: str) -> str:
     if m:
         return f"{m.group(1).upper()}{m.group(2)}"
     return bn.upper()
+
+
+# ── Advanced Analytics: Slip Volume vs. Advancement ───────────────────────────
+
+
+def compute_advancement_analytics(
+    bills: list[Bill],
+    witness_slips: list[WitnessSlip],
+    volume_percentile_threshold: float = 0.9,
+) -> dict[str, list[str]]:
+    """
+    Analyze bills by witness slip volume and advancement status.
+
+    Categorizes bills into 'high_volume_stalled' and 'high_volume_passed',
+    based on slip volume, controversy score, and pipeline depth.
+
+    'High volume' is defined by the ``volume_percentile_threshold`` (e.g., 0.9
+    means bills in the top 10% of slip volume).
+    'Stalled' bills are those not classified as PASSED or VETOED.
+    'Passed' bills are those classified as PASSED.
+    """
+    # Group slips by bill number for easier lookup & normalization
+    slips_by_bill: dict[str, list[WitnessSlip]] = {}
+    for slip in witness_slips:
+        normalized_bn = _normalise_bill_number(slip.bill_number)
+        slips_by_bill.setdefault(normalized_bn, []).append(slip)
+
+    bill_metrics: list[dict] = []
+    for bill in bills:
+        normalized_bill_number = _normalise_bill_number(bill.bill_number)
+        bill_slips = slips_by_bill.get(normalized_bill_number, [])
+        volume = len(bill_slips)
+
+        # Focus on bills with at least one slip for these analytics
+        if volume == 0:
+            continue
+
+        # Use original bill_number for controversial_score, if it expects it
+        # Our internal normalisation is primarily for matching unique bills.
+        controversy = controversial_score(witness_slips, bill.bill_number)
+        depth = pipeline_depth(bill.last_action)
+        status = classify_bill_status(bill.last_action)
+
+        bill_metrics.append(
+            {
+                "bill_number": bill.bill_number,
+                "normalized_bill_number": normalized_bill_number,
+                "volume": volume,
+                "controversy_score": controversy,
+                "pipeline_depth": depth,
+                "status": status,
+            }
+        )
+
+    if not bill_metrics:
+        return {"high_volume_stalled": [], "high_volume_passed": []}
+
+    # Determine high volume threshold based on percentile
+    sorted_volumes = sorted([m["volume"] for m in bill_metrics], reverse=True)
+    if not sorted_volumes:  # Should not happen if bill_metrics is not empty, but for safety
+        return {"high_volume_stalled": [], "high_volume_passed": []}
+
+    # Calculate the index for the percentile. E.g., 0.9 percentile means top 10%.
+    # If N=100, index = 90, meaning the 91st item (0-indexed) is the threshold value.
+    # We need the minimum volume that qualifies for 'high volume'.
+    volume_index_for_percentile = int(len(sorted_volumes) * volume_percentile_threshold)
+
+    # Ensure index is within bounds. If threshold is 0.9 and len is 5, index is 4.
+    # This picks the 5th element (which then implies top 20%).
+    # If N=10 and threshold=0.9, index=9, picks 10th element (top 10%)
+    # Make sure index doesn't exceed the last element.
+    volume_threshold = sorted_volumes[min(volume_index_for_percentile, len(sorted_volumes) - 1)]
+
+    # Ensure threshold is at least 1 if there are any volumes > 0
+    # If the highest volume is 1, and N=5, index=4, threshold=1. If N=100, index=90, threshold=1.
+    # This logic captures bills WITH at least one slip.
+    if (
+        volume_threshold == 0
+    ):  # If top volumes are all 0 (shouldn't happen if volume > 0 filter applied)
+        volume_threshold = 1  # Ensure at least 1 slip counts as 'some' volume
+
+    # Categorize bills
+    high_volume_stalled_bills = []
+    high_volume_passed_bills = []
+
+    for metrics in bill_metrics:
+        # Check if bill volume meets or exceeds the calculated threshold
+        if metrics["volume"] >= volume_threshold:
+            if metrics["status"] == BillStatus.PASSED:
+                high_volume_passed_bills.append(metrics["bill_number"])
+            else:  # IN_PROGRESS, STUCK, VETOED, etc. are considered 'stalled' in this context
+                high_volume_stalled_bills.append(metrics["bill_number"])
+
+    return {
+        "high_volume_stalled": high_volume_stalled_bills,
+        "high_volume_passed": high_volume_passed_bills,
+    }
