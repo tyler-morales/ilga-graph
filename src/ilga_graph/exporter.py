@@ -44,6 +44,7 @@ class ObsidianExporter:
         *,
         scorecards: dict[str, MemberScorecard] | None = None,
         moneyball: MoneyballReport | None = None,
+        all_bills: Iterable[Bill] | None = None,
     ) -> None:
         members = list(members)
         member_lookup = {m.id: m for m in members}
@@ -127,13 +128,18 @@ class ObsidianExporter:
 
             LOGGER.info("Exported %d committee files.", len(committees_to_write))
 
-        # ── Bill deduplication and co-sponsor map (single pass) ─────────
-        # Always build the full map in memory so scores stay accurate.
+        # ── Bill set: from all_bills when provided (bills-first), else from members ──
         bills_path = self.vault_root / "Bills"
         bills_path.mkdir(parents=True, exist_ok=True)
 
         unique_bills: dict[str, Bill] = {}
         bill_cosponsors: dict[str, list[str]] = {}
+        if all_bills is not None:
+            for bill in all_bills:
+                bn = bill.bill_number
+                if bn not in unique_bills:
+                    unique_bills[bn] = bill
+                    bill_cosponsors[bn] = []
         for member in members:
             for bill in member.sponsored_bills:
                 bn = bill.bill_number

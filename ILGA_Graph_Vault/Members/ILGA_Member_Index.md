@@ -5,7 +5,7 @@ tags: [index, ilga, members]
 # ILGA Member Index
 
 ## Guides
-- [[Scorecard Guide]] — How to read the legislative scorecard and what each metric means.
+- [[Scorecard Guide]] — How to read the scorecard and each metric.
 
 ## Members
 - [[Amy Briel]] ([ILGA](https://www.ilga.gov/House/Members/Details/3451))

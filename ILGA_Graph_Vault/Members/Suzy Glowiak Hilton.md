@@ -6,25 +6,25 @@ career_timeline: 2019 - Present
 career_start_year: 2019
 district: 23
 member_url: https://www.ilga.gov/Senate/Members/Details/3341
-bills_introduced: 55
-laws_passed: 14
-law_success_rate: 0.2545
-magnet_score: 0.87
-bridge_score: 0.1091
-resolutions_filed: 2
-resolutions_passed: 2
-resolution_pass_rate: 1.0
-total_primary_bills: 57
-total_passed: 16
-overall_pass_rate: 0.2807
-moneyball_score: 38.62
-pipeline_depth: 2.22
-network_centrality: 0.9744
-unique_collaborators: 38
+bills_introduced: 0
+laws_passed: 0
+law_success_rate: 0.0
+magnet_score: 0.0
+bridge_score: 0.0
+resolutions_filed: 0
+resolutions_passed: 0
+resolution_pass_rate: 0.0
+total_primary_bills: 0
+total_passed: 0
+overall_pass_rate: 0.0
+moneyball_score: 6.15
+pipeline_depth: 0.0
+network_centrality: 0.4103
+unique_collaborators: 16
 is_leadership: false
-rank_overall: 5
-rank_chamber: 2
-rank_non_leadership: 2
+rank_overall: 24
+rank_chamber: 18
+rank_non_leadership: 13
 tags: [type/member, chamber/senate, party/democrat, committee/commerce, committee/consumer-protection, committee/insurance, committee/licensed-activities, committee/transportation]
 ---
 
@@ -48,40 +48,40 @@ See [[Scorecard Guide]] for how these metrics are defined.
 ### Lawmaking (HB/SB)
 | Metric | Value | Formula |
 | --- | --- | --- |
-| Bills Introduced | 55 | Count of primary HB/SB |
-| Passed | 14 | HB/SB that became law |
-| Success Rate | 25.4% | Passed ÷ Bills Introduced |
-| Avg Co-Sponsors (Magnet) | 0.9 | Total co-sponsors ÷ Bills Introduced |
-| Cross-Party Rate (Bridge) | 10.9% | Bills w/ cross-party co-sponsor ÷ Bills Introduced |
+| Bills Introduced | 0 | Count of primary HB/SB |
+| Passed | 0 | HB/SB that became law |
+| Success Rate | 0.0% | Passed ÷ Bills Introduced |
+| Avg Co-Sponsors (Magnet) | 0.0 | Co-sponsors ÷ Introduced |
+| Cross-Party (Bridge) | 0.0% | Cross-party co-sponsor ÷ Introduced |
 
 ### Resolutions (HR/SR/HJR/SJR)
 | Metric | Value | Formula |
 | --- | --- | --- |
-| Resolutions Filed | 2 | Count of primary HR/SR/HJR/SJR |
-| Passed | 2 | Resolutions adopted |
-| Pass Rate | 100.0% | Passed ÷ Resolutions Filed |
+| Resolutions Filed | 0 | Count of primary HR/SR/HJR/SJR |
+| Passed | 0 | Resolutions adopted |
+| Pass Rate | 0.0% | Passed ÷ Resolutions Filed |
 
 ### Overall
 | Metric | Value | Formula |
 | --- | --- | --- |
-| Total Primary Bills | 57 | Bills Introduced + Resolutions Filed |
-| Total Passed | 16 | Laws Passed + Resolutions Passed |
-| Overall Pass Rate | 28.1% | Total Passed ÷ Total Primary Bills |
+| Total Primary Bills | 0 | Introduced + Resolutions Filed |
+| Total Passed | 0 | Laws Passed + Resolutions Passed |
+| Overall Pass Rate | 0.0% | Total Passed ÷ Total Primary Bills |
 
 ## Moneyball Analytics
 See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **38.62** / 100 |
-| Rank (Overall) | #5 |
-| Rank (Senate) | #2 |
-| Rank (Non-Leadership) | #2 |
+| Moneyball Score | **6.15** / 100 |
+| Rank (Overall) | #24 |
+| Rank (Senate) | #18 |
+| Rank (Non-Leadership) | #13 |
 | Leadership | No |
-| Pipeline Depth | 2.2 / 6.0 [##....] |
-| Network Centrality | 97.44% |
-| Unique Collaborators | 38 |
-| Badges | Closer, Network Hub, Wide Tent |
+| Pipeline Depth | 0.0 / 6.0 [......] |
+| Network Centrality | 41.03% |
+| Unique Collaborators | 16 |
+| Badges | None yet |
 
 ## Tags
 #type/member
@@ -101,124 +101,12 @@ See [[Moneyball Report]] for full rankings and methodology.
 - [[Transportation]]
 
 ## 📜 Primary Legislation
-- [[SB0593]]
-- [[SB1273]]
-- [[SB1274]]
-- [[SB1275]]
-- [[SB1421]]
-- [[SB1546]]
-- [[SB1656]]
-- [[SB1683]]
-- [[SB1713]]
-- [[SB1770]]
-- [[SB1902]]
-- [[SB1931]]
-- [[SB1932]]
-- [[SB2142]]
-- [[SB2150]]
-- [[SB2166]]
-- [[SB2167]]
-- [[SB2168]]
-- [[SB2169]]
-- [[SB2170]]
-- [[SB2171]]
-- [[SB2172]]
-- [[SB2173]]
-- [[SB2215]]
-- [[SB2216]]
-- [[SB2217]]
-- [[SB2456]]
-- [[SB2492]]
-- [[SB2494]]
-- [[SB2495]]
-- [[SB2496]]
-- [[SB2503]]
-- [[SB2523]]
-- [[SB2753]]
-- [[SB2793]]
-- [[SB2962]]
-- [[SB2999]]
-- [[SB3002]]
-- [[SB3496]]
-- [[SB3497]]
-- [[SB3498]]
-- [[SB3893]]
-- [[SB3894]]
-- [[SB3895]]
-- [[SB3896]]
-- [[SB3897]]
-- [[SB3941]]
-- [[SR0003]]
-- [[SR0152]]
-- [[HB0226]]
-- [[HB0871]]
-- [[HB1237]]
-- [[HB1270]]
-- [[HB2459]]
-- [[HB2548]]
-- [[HB3671]]
-- [[HB3743]]
+- None
 
 ## 🖊️ Co-Sponsorships
 - [[SB0075]]
 - [[SB0091]]
 - [[SB0098]]
-- [[SB0243]]
-- [[SB0314]]
-- [[SB0618]]
-- [[SB0710]]
-- [[SB1380]]
-- [[SB1409]]
-- [[SB1491]]
-- [[SB1527]]
-- [[SB1548]]
-- [[SB1550]]
-- [[SB1563]]
-- [[SB1602]]
-- [[SB1618]]
-- [[SB1672]]
-- [[SB1688]]
-- [[SB1693]]
-- [[SB1723]]
-- [[SB1740]]
-- [[SB1773]]
-- [[SB1807]]
-- [[SB1862]]
-- [[SB1939]]
-- [[SB2053]]
-- [[SB2057]]
-- [[SB2075]]
-- [[SB2129]]
-- [[SB2405]]
-- [[SB2422]]
-- [[SB2427]]
-- [[SB2488]]
-- [[SB2630]]
-- [[SB2642]]
-- [[SB2740]]
-- [[SB2762]]
-- [[SB2800]]
-- [[SB2991]]
-- [[SR0396]]
-- [[SR0559]]
-- [[SJR0013]]
-- [[SJR0031]]
-- [[HB1085]]
-- [[HB1141]]
-- [[HB1226]]
-- [[HB1373]]
-- [[HB1710]]
-- [[HB1715]]
-- [[HB1865]]
-- [[HB2386]]
-- [[HB2456]]
-- [[HB2572]]
-- [[HB3328]]
-- [[HB3339]]
-- [[HB3435]]
-- [[HB3711]]
-- [[HB3851]]
-- [[HJR0025]]
 
 ## Contact
 ### Springfield Office

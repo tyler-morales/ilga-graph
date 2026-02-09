@@ -19,6 +19,13 @@ class CareerRange:
 
 
 @dataclass
+class ActionEntry:
+    date: str  # e.g. "1/13/2025"
+    chamber: str  # e.g. "Senate" or "House"
+    action: str  # e.g. "First Reading"
+
+
+@dataclass
 class Bill:
     bill_number: str  # e.g. "SB0029"
     leg_id: str  # e.g. "157128" -- unique key
@@ -27,6 +34,12 @@ class Bill:
     last_action: str
     last_action_date: str
     primary_sponsor: str  # Chief Sponsor name from table
+    # New fields from BillStatus page
+    synopsis: str = ""
+    status_url: str = ""  # BillStatus URL for re-fetching
+    sponsor_ids: list[str] = field(default_factory=list)  # member IDs of all sponsors
+    house_sponsor_ids: list[str] = field(default_factory=list)  # house sponsors
+    action_history: list[ActionEntry] = field(default_factory=list)
 
 
 @dataclass

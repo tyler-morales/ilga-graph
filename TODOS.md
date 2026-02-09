@@ -69,15 +69,39 @@ Committed dev mock data lives in `mocks/dev/`. When `ILGA_SEED_MODE=1` (default 
 ## Future
 
 - **Witness slip analytics (volume vs advancement)**: Compare slip volume and position ratio to whether the bill advanced. Expose via GraphQL (e.g. list of “high-volume / stalled” vs “high-volume / passed” bills; ratio field on summary).
-- **Incremental scraping**: Only re-scrape members/bills that have changed since last run (use `last_action_date` comparison).
 - **Full-text search**: Add a search endpoint to the GraphQL API for bill descriptions and member bios.
 - **Analytics caching**: Cache scorecards/moneyball results alongside member data to skip recomputation on startup.
+- **Full bill index scrape**: Expand to scrape all ~9,600 bills (all range pages) instead of first 100 per chamber.
 
 ---
 
-## Next steps (lowest-hanging fruit)
+## Done: Bills-first rearchitecture + incremental scraping
 
-- (None listed — doc/query task done.)
+- **Bills as single source of truth**: Bills are now scraped from the ILGA Legislation pages (`/Legislation/RegularSession/SB`, `/HB`) instead of being discovered as a side-effect of member page scraping.
+- **Three-layer bill pipeline**: Range pages build a bill index (bill_number, leg_id, description), then BillStatus pages provide full detail (last_action, last_action_date, all sponsors with member IDs, synopsis, full action history).
+- **New module**: `src/ilga_graph/scrapers/bills.py` with `scrape_bill_index()`, `scrape_bill_status()`, `scrape_all_bills()`, `incremental_bill_scrape()`.
+- **Enhanced Bill model**: New fields `synopsis`, `status_url`, `sponsor_ids`, `house_sponsor_ids`, `action_history` (list of `ActionEntry`).
+- **Inverted member-bill relationship**: `_link_members_to_bills()` builds member-to-bill linkage from `Bill.sponsor_ids` (extracted from BillStatus sponsor div) instead of from member page bill tables.
+- **Incremental scraping**: `incremental_bill_scrape()` fetches range pages to detect new leg_ids, re-checks bills with recent `last_action_date` (configurable window, default 30 days), and merges into existing cache.
+- **CLI**: `scripts/scrape.py --incremental`, `--sb-limit`, `--hb-limit` (default 100 each).
+- **Env var**: `ILGA_INCREMENTAL=1` enables incremental mode in server lifespan.
+- **Cache metadata**: `cache/scrape_metadata.json` tracks `last_bill_scrape_at` and `bill_index_count`.
+- **GraphQL**: `BillType` exposes `synopsis`, `statusUrl`, `sponsorIds`, `houseSponsorIds`.
+
+## Done: PR cleanup (bills-first / incremental)
+- **Persist cache:** `load_or_scrape_data` now calls `save_normalized_cache(members, bills_lookup)` at the end so `members.json` (and bills) are written every run; next run can load from cache.
+- **Removed dead code:** `extract_and_normalize()` removed from scraper (bills come from bill scraper; linkage is via `_link_members_to_bills`).
+- **Bills scraper:** Normalize last-action text to single spaces; guard `scrape_bill_status` when URL has no `leg_id` (return None); defensive `_bill_from_dict` for malformed `action_history` in both bills.py and scraper.py; removed unused `Tag` import; doc for hardcoded session in `_range_url`.
+
+## Done: Bill export fix (bills-first pipeline)
+
+- Exporter was building `unique_bills` only from `member.sponsored_bills` / `co_sponsor_bills`. With old cache (no `sponsor_ids`), no bills were linked to members → "Exported 0 bill files."
+- `ObsidianExporter.export()` now accepts optional `all_bills`; when provided (from `data.bills_lookup`), the exporter uses that as the bill set and still enriches co-sponsors from members. `export_vault()` passes `data.bills_lookup.values()` so bill notes are written for all cached bills (up to `bill_export_limit`).
+
+## Next steps
+
+- Run `python scripts/scrape.py --fast --force-refresh` to populate `cache/bills.json` with the new format.
+- Run `python scripts/scrape.py --incremental --fast` on subsequent runs to test incremental mode.
 
 ## Done: Fix server startup (PR)
 

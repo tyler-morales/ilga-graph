@@ -213,14 +213,27 @@ def _committee_member_role_from_dict(d: dict) -> CommitteeMemberRole:
 
 
 def _bill_from_dict(b: dict) -> Bill:
+    from .models import ActionEntry
+
+    action_history = []
+    for a in b.get("action_history", []):
+        if isinstance(a, dict) and "date" in a and "chamber" in a and "action" in a:
+            action_history.append(
+                ActionEntry(date=a["date"], chamber=a["chamber"], action=a["action"])
+            )
     return Bill(
         bill_number=b["bill_number"],
         leg_id=b["leg_id"],
         description=b["description"],
         chamber=b["chamber"],
-        last_action=b["last_action"],
-        last_action_date=b["last_action_date"],
-        primary_sponsor=b["primary_sponsor"],
+        last_action=b.get("last_action", ""),
+        last_action_date=b.get("last_action_date", ""),
+        primary_sponsor=b.get("primary_sponsor", ""),
+        synopsis=b.get("synopsis", ""),
+        status_url=b.get("status_url", ""),
+        sponsor_ids=b.get("sponsor_ids", []),
+        house_sponsor_ids=b.get("house_sponsor_ids", []),
+        action_history=action_history,
     )
 
 
@@ -247,24 +260,6 @@ def _member_metadata_dict(m: Member) -> dict:
 
 
 # ── Normalized cache ─────────────────────────────────────────────────────────
-
-
-def extract_and_normalize(members: list[Member]) -> dict[str, Bill]:
-    """Extract unique bills from members and populate sponsored/co_sponsor bill IDs.
-
-    Returns a dict of ``leg_id -> Bill`` containing every unique bill.
-    After calling, each member has ``sponsored_bill_ids`` and
-    ``co_sponsor_bill_ids`` populated with the corresponding ``leg_id`` strings.
-    """
-    all_bills: dict[str, Bill] = {}
-    for member in members:
-        for bill in member.sponsored_bills:
-            all_bills[bill.leg_id] = bill
-        for bill in member.co_sponsor_bills:
-            all_bills[bill.leg_id] = bill
-        member.sponsored_bill_ids = [b.leg_id for b in member.sponsored_bills]
-        member.co_sponsor_bill_ids = [b.leg_id for b in member.co_sponsor_bills]
-    return all_bills
 
 
 def save_normalized_cache(
@@ -364,10 +359,7 @@ def hydrate_members(
     members: list[Member],
     bills_lookup: dict[str, Bill],
 ) -> list[Member]:
-    """Populate ``sponsored_bills`` and ``co_sponsor_bills`` from their ID lists.
-
-    This is the reverse of :func:`extract_and_normalize`.
-    """
+    """Populate ``sponsored_bills`` and ``co_sponsor_bills`` from ID lists."""
     for member in members:
         member.sponsored_bills = [
             bills_lookup[bid] for bid in member.sponsored_bill_ids if bid in bills_lookup
