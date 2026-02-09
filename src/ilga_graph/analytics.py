@@ -207,12 +207,14 @@ class MemberScorecard:
 
     # ── Phase 3: Legislative DNA metrics ──
     law_heat_score: int = 0  # count of primary HB/SB only
-    law_passed_count: int = 0  # count of primary HB/SB that passed (so law_success_rate = this / law_heat_score)
+    # count of primary HB/SB that passed (so law_success_rate = this / law_heat_score)
+    law_passed_count: int = 0
     law_success_rate: float = 0.0  # passage rate of HB/SB only: law_passed_count / law_heat_score
     magnet_score: float = 0.0  # avg co-sponsors per primary law
     bridge_score: float = 0.0  # % of primary laws with cross-party co-sponsor
     resolutions_count: int = 0  # count of HR/SR/SJR/HJR
-    resolutions_passed_count: int = 0  # count of primary resolutions that passed (passed_count = law_passed_count + this)
+    # count of primary resolutions that passed (passed_count = law_passed_count + this)
+    resolutions_passed_count: int = 0
     resolution_pass_rate: float = 0.0  # resolutions_passed_count / resolutions_count
 
 

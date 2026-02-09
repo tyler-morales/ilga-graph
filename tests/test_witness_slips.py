@@ -13,23 +13,30 @@ from ilga_graph.scrapers.witness_slips import (
 
 # ── Sample data ───────────────────────────────────────────────────────────────
 
-SAMPLE_EXPORT = """\
-Legislation|Name|Firm|Representation|Position|Committee|ScheduledDateTime 
-HB1075|Cecilia Tian|Recurrent Energy||Proponent|Executive|2025-05-31 17:00 
-HB1075|Joseph Hus|Naperville Environment and Sustainability Task Force||Proponent|Executive|2025-05-31 17:00 
-HB1075|Paul Makarewicz|AES Clean Energy|AES Clean Energy|Proponent|Executive|2025-05-31 17:00 
-HB1075|Gowri Magati|Lake County Indians Association|Lake County Indians Association|Proponent|State Government Administration|2025-03-05 14:00 
-HB1075|David Schwartz|Self|Self|Proponent|State Government Administration|2025-02-19 14:30 
-HB1075|Maura Freeman|Illinois Association of Park Districts|Illinois Association of Park Districts|Opponent|Executive|2025-05-31 17:00 
-"""
+SAMPLE_EXPORT = (
+    "Legislation|Name|Firm|Representation|Position|Committee|ScheduledDateTime\n"
+    "HB1075|Cecilia Tian|Recurrent Energy||Proponent|Executive|2025-05-31 17:00\n"
+    "HB1075|Joseph Hus|Naperville Environment and Sustainability Task Force||"
+    "Proponent|Executive|2025-05-31 17:00\n"
+    "HB1075|Paul Makarewicz|AES Clean Energy|AES Clean Energy|Proponent|Executive|"
+    "2025-05-31 17:00\n"
+    "HB1075|Gowri Magati|Lake County Indians Association|Lake County Indians Association|"
+    "Proponent|State Government Administration|2025-03-05 14:00\n"
+    "HB1075|David Schwartz|Self|Self|Proponent|State Government Administration|"
+    "2025-02-19 14:30\n"
+    "HB1075|Maura Freeman|Illinois Association of Park Districts|"
+    "Illinois Association of Park Districts|Opponent|Executive|2025-05-31 17:00\n"
+)
 
-SAMPLE_WITNESS_SLIPS_PAGE = """\
-<html><body>
-<a href="/Legislation/BillStatus/WitnessSlips?LegDocId=196535&DocNum=1075&DocTypeID=HB&LegID=156769&GAID=18&SessionID=114">HB1075</a>
-<a href="/Legislation/BillStatus/WitnessSlips?LegDocId=204772&DocNum=1075&DocTypeID=HB&LegID=156769&GAID=18&SessionID=114">Senate Amendment 001</a>
-<a href="/Legislation/BillStatus/VoteHistory?GAID=18&DocNum=1075">Votes</a>
-</body></html>
-"""
+SAMPLE_WITNESS_SLIPS_PAGE = (
+    "<html><body>\n"
+    '<a href="/Legislation/BillStatus/WitnessSlips?LegDocId=196535&DocNum=1075&'
+    'DocTypeID=HB&LegID=156769&GAID=18&SessionID=114">HB1075</a>\n'
+    '<a href="/Legislation/BillStatus/WitnessSlips?LegDocId=204772&DocNum=1075&'
+    'DocTypeID=HB&LegID=156769&GAID=18&SessionID=114">Senate Amendment 001</a>\n'
+    '<a href="/Legislation/BillStatus/VoteHistory?GAID=18&DocNum=1075">Votes</a>\n'
+    "</body></html>\n"
+)
 
 
 # ── _parse_export_text ────────────────────────────────────────────────────────
@@ -70,7 +77,10 @@ class TestParseExportText:
         assert _parse_export_text(header) == []
 
     def test_malformed_line_skipped(self) -> None:
-        bad = "Legislation|Name|Firm|Representation|Position|Committee|ScheduledDateTime\nHB1075|Only Two Fields\n"
+        bad = (
+            "Legislation|Name|Firm|Representation|Position|Committee|ScheduledDateTime\n"
+            "HB1075|Only Two Fields\n"
+        )
         slips = _parse_export_text(bad)
         assert len(slips) == 0
 

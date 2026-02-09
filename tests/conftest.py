@@ -4,7 +4,6 @@ import pytest
 
 from ilga_graph.models import Bill, CareerRange, Committee, Member, Office, WitnessSlip
 
-
 # ── Bill fixtures ─────────────────────────────────────────────────────────────
 
 
@@ -168,7 +167,9 @@ def sample_committee_house() -> Committee:
 
 
 @pytest.fixture
-def sample_member(sample_bill: Bill, sample_career_range: CareerRange, sample_office: Office) -> Member:
+def sample_member(
+    sample_bill: Bill, sample_career_range: CareerRange, sample_office: Office
+) -> Member:
     return Member(
         id="3312",
         name="Neil Anderson",

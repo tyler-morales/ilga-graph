@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
-from ilga_graph.analytics import MemberScorecard, compute_all_scorecards
+from ilga_graph.analytics import MemberScorecard
 from ilga_graph.exporter import ObsidianExporter
 from ilga_graph.models import Bill, CareerRange, Member
 
@@ -206,7 +205,7 @@ class TestScorecardBadges:
         assert "Ceremonial Focus" not in result
 
     def test_lawmaking_passed_matches_success_rate_formula(self) -> None:
-        """Lawmaking Passed and Success Rate must align: Success Rate = Passed / Bills Introduced."""
+        """Success Rate = Passed / Bills Introduced."""
         sc = MemberScorecard(
             primary_bill_count=55, passed_count=9, vetoed_count=0,
             stuck_count=10, in_progress_count=36, success_rate=round(9 / 55, 4),

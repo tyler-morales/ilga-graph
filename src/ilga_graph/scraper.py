@@ -610,7 +610,9 @@ class ILGAScraper:
             committees = [_committee_from_dict(d) for d in committees_raw]
 
             # Rosters and bills are optional -- return empty dicts if missing
-            rosters_raw = load_dict_cache("committee_rosters.json", seed_fallback=self.seed_fallback)
+            rosters_raw = load_dict_cache(
+                "committee_rosters.json", seed_fallback=self.seed_fallback
+            )
             rosters: dict[str, list[CommitteeMemberRole]] = {}
             if rosters_raw is not None:
                 rosters = {

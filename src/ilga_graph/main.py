@@ -879,7 +879,10 @@ class Query:
         )
 
     @strawberry.field(
-        description="Organisations that file as proponents on this member's sponsored bills (sorted by count desc).",
+        description=(
+            "Organisations that file as proponents on this member's sponsored bills "
+            "(sorted by count desc)."
+        ),
     )
     def member_slip_alignment(
         self, member_name: str

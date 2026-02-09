@@ -7,8 +7,7 @@ from ilga_graph.analytics import (
     compute_scorecard,
     is_substantive,
 )
-from ilga_graph.models import Bill, Member
-
+from ilga_graph.models import Member
 
 # ── is_substantive ────────────────────────────────────────────────────────────
 

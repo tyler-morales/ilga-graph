@@ -258,7 +258,9 @@ class ObsidianExporter:
         contact_blocks = [self._render_office_block(o) for o in member.offices]
         if member.email:
             contact_blocks.append(f"### Email\n- {member.email}")
-        contact_section = "\n\n".join(contact_blocks) if contact_blocks else "No contact info found."
+        contact_section = (
+            "\n\n".join(contact_blocks) if contact_blocks else "No contact info found."
+        )
 
         # ── Legislation sections ──
         primary_links = (
@@ -273,7 +275,9 @@ class ObsidianExporter:
         )
 
         scorecard_section = self._render_scorecard(scorecard)
-        moneyball_section = self._render_moneyball_section(moneyball_profile) if moneyball_profile else ""
+        moneyball_section = (
+            self._render_moneyball_section(moneyball_profile) if moneyball_profile else ""
+        )
 
         body = (
             f"# {member.name}\n\n"
@@ -387,8 +391,10 @@ class ObsidianExporter:
             f"| Bills Introduced | {sc.law_heat_score} | Count of primary HB/SB |\n"
             f"| Passed | {sc.law_passed_count} | HB/SB that became law |\n"
             f"| Success Rate | {law_pct} | Passed ÷ Bills Introduced |\n"
-            f"| Avg Co-Sponsors (Magnet) | {magnet_str} | Total co-sponsors ÷ Bills Introduced |\n"
-            f"| Cross-Party Rate (Bridge) | {bridge_pct} | Bills w/ cross-party co-sponsor ÷ Bills Introduced |\n\n"
+            f"| Avg Co-Sponsors (Magnet) | {magnet_str} | "
+            "Total co-sponsors ÷ Bills Introduced |\n"
+            f"| Cross-Party Rate (Bridge) | {bridge_pct} | "
+            "Bills w/ cross-party co-sponsor ÷ Bills Introduced |\n\n"
             "### Resolutions (HR/SR/HJR/SJR)\n"
             "| Metric | Value | Formula |\n"
             "| --- | --- | --- |\n"
@@ -398,7 +404,8 @@ class ObsidianExporter:
             "### Overall\n"
             "| Metric | Value | Formula |\n"
             "| --- | --- | --- |\n"
-            f"| Total Primary Bills | {sc.primary_bill_count} | Bills Introduced + Resolutions Filed |\n"
+            f"| Total Primary Bills | {sc.primary_bill_count} | "
+            "Bills Introduced + Resolutions Filed |\n"
             f"| Total Passed | {sc.passed_count} | Laws Passed + Resolutions Passed |\n"
             f"| Overall Pass Rate | {overall_pct} | Total Passed ÷ Total Primary Bills |"
         )
@@ -487,7 +494,8 @@ class ObsidianExporter:
             "---\n\n"
             "# ILGA Member Index\n\n"
             "## Guides\n"
-            "- [[Scorecard Guide]] — How to read the legislative scorecard and what each metric means.\n\n"
+            "- [[Scorecard Guide]] — "
+            "How to read the legislative scorecard and what each metric means.\n\n"
             "## Members\n"
             f"{links}\n\n"
             "## Tags\n"
@@ -704,11 +712,14 @@ class ObsidianExporter:
             "The Moneyball Score is a weighted composite of five normalized metrics:\n\n"
             "| Component | Weight | What It Measures |\n"
             "| --- | --- | --- |\n"
-            f"| Effectiveness Rate | {w.effectiveness:.0%} | Laws Passed / Laws Filed (HB/SB only) |\n"
-            f"| Pipeline Depth | {w.pipeline:.0%} | How far bills progress (0=filed, 6=signed) |\n"
+            f"| Effectiveness Rate | {w.effectiveness:.0%} | "
+            "Laws Passed / Laws Filed (HB/SB only) |\n"
+            f"| Pipeline Depth | {w.pipeline:.0%} | "
+            "How far bills progress (0=filed, 6=signed) |\n"
             f"| Magnet Score | {w.magnet:.0%} | Avg co-sponsors per law (normalized) |\n"
             f"| Bridge Score | {w.bridge:.0%} | Cross-party co-sponsorship rate |\n"
-            f"| Network Centrality | {w.centrality:.0%} | Degree centrality in co-sponsorship graph |\n\n"
+            f"| Network Centrality | {w.centrality:.0%} | "
+            "Degree centrality in co-sponsorship graph |\n\n"
             "**No-Fluff Filter**: Only substantive legislation (HB/SB) counts for "
             "effectiveness and pipeline metrics. Resolutions (HR/SR/HJR/SJR) are "
             "tracked separately.\n\n"
@@ -890,7 +901,9 @@ class ObsidianExporter:
             "      - party\n"
             "      - chamber\n"
         )
-        (self.vault_root / "Moneyball Leaderboard.base").write_text(moneyball_base, encoding="utf-8")
+        (self.vault_root / "Moneyball Leaderboard.base").write_text(
+            moneyball_base, encoding="utf-8"
+        )
 
     def _slug(self, value: str) -> str:
         return _RE_SLUG.sub("-", value.lower()).strip("-") or "unknown"

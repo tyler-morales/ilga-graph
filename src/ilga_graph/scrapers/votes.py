@@ -161,7 +161,7 @@ def scrape_vote_pdf(
     result = _parse_vote_text(full_text)
     result["pdf_url"] = pdf_url
 
-    total_votes = (
+    (
         len(result["yeas"]) + len(result["nays"])
         + len(result["present"]) + len(result["nv"])
     )
@@ -179,7 +179,7 @@ def scrape_vote_pdf(
     if result["tally"]:
         expected_y = result["tally"]["yeas"]
         expected_n = result["tally"]["nays"]
-        expected_p = result["tally"]["present"]
+        result["tally"]["present"]
         if len(result["yeas"]) != expected_y:
             LOGGER.warning(
                 "    Tally mismatch: expected %d yeas, got %d",
@@ -221,7 +221,9 @@ def _parse_vote_history_page(
         else:
             vote_type = "unknown"
 
-        for row in table.find("tbody", recursive=False).find_all("tr") if table.find("tbody") else []:
+        tbody = table.find("tbody", recursive=False)
+        tbody_rows = tbody.find_all("tr") if tbody else []
+        for row in tbody_rows:
             cells = row.find_all("td")
             if len(cells) < 2:
                 continue
@@ -412,7 +414,9 @@ def scrape_bills_from_range(
             seen.add(url)
             unique_links.append(url)
 
-    LOGGER.info("Found %d bills in range %s %04d-%04d.", len(unique_links), doc_type, num_start, num_end)
+    LOGGER.info(
+        "Found %d bills in range %s %04d-%04d.", len(unique_links), doc_type, num_start, num_end
+    )
 
     all_events: list[VoteEvent] = []
     bills_with_votes = 0
@@ -493,7 +497,7 @@ def scrape_specific_bills(
     seed_fallback: bool = False,
 ) -> list[VoteEvent]:
     """Scrape votes for a specific list of bill status URLs.
-    
+
     Parameters
     ----------
     bill_status_urls:
@@ -514,11 +518,11 @@ def scrape_specific_bills(
         cached = _load_vote_cache(seed_fallback=seed_fallback)
         if cached is not None:
             return cached
-    
+
     # Suppress verbose per-PDF logs during scraping
     old_level = LOGGER.level
     LOGGER.setLevel(logging.WARNING)
-    
+
     sess = session or requests.Session()
     t_total_start = time.perf_counter()
 
@@ -539,13 +543,13 @@ def scrape_specific_bills(
         except Exception:
             LOGGER.exception("Failed to scrape bill %d: %s", i, url)
 
-    elapsed_s = time.perf_counter() - t_total_start
-    
+    time.perf_counter() - t_total_start
+
     # Restore log level
     LOGGER.setLevel(old_level)
-    
+
     # Save to cache for next time
     if all_events:
         _save_vote_cache(all_events)
-    
+
     return all_events

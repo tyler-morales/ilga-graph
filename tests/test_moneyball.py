@@ -22,7 +22,6 @@ from ilga_graph.moneyball import (
     is_leadership,
 )
 
-
 # ── Pipeline stage classification ─────────────────────────────────────────────
 
 
@@ -43,10 +42,16 @@ class TestClassifyPipelineStage:
         assert classify_pipeline_stage("Third Reading - Passed") == PipelineStage.CHAMBER_PASSED
 
     def test_second_reading(self) -> None:
-        assert classify_pipeline_stage("Second Reading - Standard Debate") == PipelineStage.SECOND_READING
+        assert (
+            classify_pipeline_stage("Second Reading - Standard Debate")
+            == PipelineStage.SECOND_READING
+        )
 
     def test_placed_on_calendar(self) -> None:
-        assert classify_pipeline_stage("Placed on Calendar Order of 2nd Reading") == PipelineStage.SECOND_READING
+        assert (
+            classify_pipeline_stage("Placed on Calendar Order of 2nd Reading")
+            == PipelineStage.SECOND_READING
+        )
 
     def test_committee_do_pass(self) -> None:
         assert classify_pipeline_stage("Do Pass / Short Debate") == PipelineStage.COMMITTEE_PASSED
@@ -158,7 +163,7 @@ class TestDegreeCentrality:
         assert dc["a"] == pytest.approx(1 / 3)
 
     def test_isolate(self) -> None:
-        adj = {"A": set(), "B": {"A"}, "A": {"B"}}
+        adj = {"A": {"B"}, "B": {"A"}}
         adj["C"] = set()  # isolate
         dc = degree_centrality(adj)
         assert dc["C"] == 0.0

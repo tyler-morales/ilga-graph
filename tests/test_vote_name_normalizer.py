@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from ilga_graph.models import Member, VoteEvent
 from ilga_graph.vote_name_normalizer import (
     _build_variant_map,
@@ -14,7 +12,6 @@ from ilga_graph.vote_name_normalizer import (
     _resolve_name,
     normalize_vote_events,
 )
-
 
 # ── Helper to build minimal Member objects ───────────────────────────────────
 

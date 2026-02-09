@@ -12,12 +12,11 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 from dataclasses import asdict
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
-
-import re
 
 import requests
 from bs4 import BeautifulSoup
@@ -95,7 +94,8 @@ def _parse_export_text(text: str) -> list[WitnessSlip]:
     Expected format (first line is header)::
 
         Legislation|Name|Firm|Representation|Position|Committee|ScheduledDateTime
-        HB1075|Paul Makarewicz|AES Clean Energy|AES Clean Energy|Proponent|Executive|2025-05-31 17:00
+        HB1075|Paul Makarewicz|AES Clean Energy|AES Clean Energy|Proponent|Executive|
+            2025-05-31 17:00
     """
     lines = text.strip().splitlines()
     if len(lines) < 2:
