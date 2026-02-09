@@ -157,7 +157,6 @@ def scrape_vote_pdf(
     result = _parse_vote_text(full_text)
     result["pdf_url"] = pdf_url
 
-    (len(result["yeas"]) + len(result["nays"]) + len(result["present"]) + len(result["nv"]))
     LOGGER.info(
         "    PDF parsed: %d Y, %d N, %d P, %d NV  (download %.0fms, parse %.0fms)",
         len(result["yeas"]),
@@ -172,7 +171,6 @@ def scrape_vote_pdf(
     if result["tally"]:
         expected_y = result["tally"]["yeas"]
         expected_n = result["tally"]["nays"]
-        result["tally"]["present"]
         if len(result["yeas"]) != expected_y:
             LOGGER.warning(
                 "    Tally mismatch: expected %d yeas, got %d",
@@ -525,7 +523,6 @@ def scrape_specific_bills(
     LOGGER.setLevel(logging.WARNING)
 
     sess = session or requests.Session()
-    t_total_start = time.perf_counter()
 
     all_events: list[VoteEvent] = []
     for i, url in enumerate(bill_status_urls, 1):
@@ -548,8 +545,6 @@ def scrape_specific_bills(
             )
         except Exception:
             LOGGER.exception("Failed to scrape bill %d: %s", i, url)
-
-    time.perf_counter() - t_total_start
 
     # Restore log level
     LOGGER.setLevel(old_level)

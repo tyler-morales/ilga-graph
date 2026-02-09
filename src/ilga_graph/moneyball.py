@@ -333,7 +333,6 @@ def compute_moneyball(
     # ── Step 1: Scorecards (reuse or compute) ──
     if scorecards is None:
         scorecards = compute_all_scorecards(members)
-    {m.id: m for m in members}
 
     # ── Step 2: Co-sponsorship network ──
     adjacency = _build_cosponsor_edges(members)
