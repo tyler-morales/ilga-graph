@@ -20,6 +20,7 @@ from .analytics import (
     compute_all_scorecards,
     controversial_score,
     lobbyist_alignment,
+    compute_advancement_analytics,  # Import the new function
 )
 from .exporter import ObsidianExporter
 from .models import Bill, Committee, CommitteeMemberRole, Member, VoteEvent, WitnessSlip
@@ -47,6 +48,7 @@ from .schema import (
     WitnessSlipSummaryType,
     WitnessSlipType,
     paginate,
+    BillAdvancementAnalyticsType,  # Import the new GraphQL type
 )
 from .scraper import ILGAScraper, extract_and_normalize, save_normalized_cache
 from .scrapers.votes import scrape_specific_bills
@@ -896,8 +898,27 @@ class Query:
             for org, count in alignment.items()
         ]
 
+    # ----- New Query Field for Advancement Analytics -----
+    @strawberry.field(
+        description="Analytics categorizing bills by witness slip volume and advancement status.",
+    )
+    def bill_advancement_analytics_summary(
+        self,
+        volume_percentile_threshold: float = 0.9,
+    ) -> BillAdvancementAnalyticsType:
+        analytics_results = compute_advancement_analytics(
+            state.bills,
+            state.witness_slips,
+            volume_percentile_threshold=volume_percentile_threshold,
+        )
+        return BillAdvancementAnalyticsType(
+            high_volume_stalled=analytics_results.get("high_volume_stalled", []),
+            high_volume_passed=analytics_results.get("high_volume_passed", []),
+        )
+    # ----- End New Query Field -----
 
-from strawberry.extensions import QueryDepthLimiter  # noqa: E402
+
+from strawberry.extensions import QueryDepthLimiter # noqa: E402
 
 schema = strawberry.Schema(
     query=Query,

@@ -4,7 +4,13 @@ from enum import Enum
 
 import strawberry
 
-from .analytics import MemberScorecard, compute_scorecard
+from .analytics import (
+    MemberScorecard,
+    compute_scorecard,
+    controversial_score,
+    lobbyist_alignment,
+    compute_advancement_analytics,  # Import the new function
+)
 from .models import Bill as BillModel
 from .models import CareerRange as CareerRangeModel
 from .models import Committee as CommitteeModel
@@ -439,6 +445,21 @@ class BillSlipAnalyticsType:
     controversy_score: float = 0.0  # 0–1; opponents/(proponents+opponents)
 
 
+# ----- New Type for Advancement Analytics -----
+@strawberry.type
+class BillAdvancementAnalyticsType:
+    """Aggregated analytics comparing witness slip volume and bill advancement."""
+    high_volume_stalled: list[str] = strawberry.field(
+        default_factory=list,
+        description="Bills with high witness slip volume that did not pass.",
+    )
+    high_volume_passed: list[str] = strawberry.field(
+        default_factory=list,
+        description="Bills with high witness slip volume that successfully passed.",
+    )
+# ----- End New Type -----
+
+
 @strawberry.type
 class LobbyistAlignmentEntryType:
     """One organisation's proponent slip count on a member's sponsored bills."""
@@ -491,3 +512,433 @@ def paginate(items: list, offset: int, limit: int) -> tuple[list, PageInfo]:
         has_next_page=has_next,
         has_previous_page=has_prev,
     )
+
+
+@strawberry.type
+class Query:
+    @strawberry.field(description="Look up a single member by exact name.")
+    def member(self, name: str) -> MemberType | None:
+        model = state.member_lookup.get(name)
+        if model is None:
+            return None
+        return MemberType.from_model(
+            model,
+            state.scorecards.get(model.id),
+            _mb_profile(model.id),
+        )
+
+    @strawberry.field(
+        description="Paginated list of members with optional sorting and chamber filter.",
+    )
+    def members(
+        self,
+        sort_by: MemberSortField | None = None,
+        sort_order: SortOrder | None = None,
+        chamber: Chamber | None = None,
+        offset: int = 0,
+        limit: int = 0,
+    ) -> MemberConnection:
+        result = list(state.members)
+        chamber_str = _resolve_chamber(chamber)
+
+        # ── Filtering ──
+        if chamber_str is not None:
+            result = [m for m in result if m.chamber.lower() == chamber_str.lower()]
+
+        if sort_by is not None:
+            reverse = sort_order == SortOrder.DESC
+            if sort_by == MemberSortField.CAREER_START:
+                result.sort(key=_member_career_start, reverse=reverse)
+            elif sort_by == MemberSortField.NAME:
+                result.sort(key=lambda m: m.name, reverse=reverse)
+
+        page, page_info = paginate(result, offset, limit)
+        return MemberConnection(
+            items=[
+                MemberType.from_model(m, state.scorecards.get(m.id), _mb_profile(m.id))
+                for m in page
+            ],
+            page_info=page_info,
+        )
+
+    @strawberry.field(description="Ranked leaderboard by Moneyball Score or any analytics metric.")
+    def moneyball_leaderboard(
+        self,
+        chamber: Chamber | None = None,
+        exclude_leadership: bool = False,
+        limit: int = 0,
+        offset: int = 0,
+        sort_by: LeaderboardSortField | None = None,
+        sort_order: SortOrder | None = None,
+    ) -> MemberConnection:
+        """Returns all members by default (limit=0 means no cap).
+
+        Use ``chamber=HOUSE, excludeLeadership=true, limit=1`` to get the MVP.
+        """
+        if state.moneyball is None:
+            return MemberConnection(
+                items=[],
+                page_info=PageInfo(total_count=0, has_next_page=False, has_previous_page=False),
+            )
+
+        chamber_str = _resolve_chamber(chamber)
+
+        # ── Base ranking (by moneyball_score) ──
+        if chamber_str and chamber_str.lower() == "house":
+            ids = (
+                state.moneyball.rankings_house_non_leadership
+                if exclude_leadership
+                else state.moneyball.rankings_house
+            )
+        elif chamber_str and chamber_str.lower() == "senate":
+            ids = (
+                state.moneyball.rankings_senate_non_leadership
+                if exclude_leadership
+                else state.moneyball.rankings_senate
+            )
+        else:
+            ids = state.moneyball.rankings_overall
+
+        # Resolve to Member models
+        id_set = set(ids)
+        members = [m for m in state.members if m.id in id_set]
+
+        # ── Optional re-sort by analytics field ──
+        if sort_by is not None:
+            scorecards = state.scorecards
+            profiles = state.moneyball.profiles
+            reverse = sort_order == SortOrder.DESC
+
+            def _sort_key(m: Member) -> float:
+                if sort_by == LeaderboardSortField.MONEYBALL_SCORE:
+                    return profiles[m.id].moneyball_score if m.id in profiles else 0.0
+                if sort_by == LeaderboardSortField.EFFECTIVENESS_SCORE:
+                    return scorecards[m.id].effectiveness_score if m.id in scorecards else 0.0
+                if sort_by == LeaderboardSortField.PIPELINE_DEPTH:
+                    return profiles[m.id].pipeline_depth_avg if m.id in profiles else 0.0
+                if sort_by == LeaderboardSortField.NETWORK_CENTRALITY:
+                    return profiles[m.id].network_centrality if m.id in profiles else 0.0
+                if sort_by == LeaderboardSortField.HEAT_SCORE:
+                    return float(scorecards[m.id].heat_score) if m.id in scorecards else 0.0
+                if sort_by == LeaderboardSortField.SUCCESS_RATE:
+                    return scorecards[m.id].success_rate if m.id in scorecards else 0.0
+                if sort_by == LeaderboardSortField.MAGNET_SCORE:
+                    return scorecards[m.id].magnet_score if m.id in scorecards else 0.0
+                if sort_by == LeaderboardSortField.BRIDGE_SCORE:
+                    return scorecards[m.id].bridge_score if m.id in scorecards else 0.0
+                return 0.0
+
+            members.sort(key=_sort_key, reverse=reverse)
+        else:
+            # Preserve the pre-computed ranking order
+            rank = {mid: i for i, mid in enumerate(ids)}
+            members.sort(key=lambda m: rank.get(m.id, len(ids)))
+
+        page, page_info = paginate(members, offset, limit)
+        return MemberConnection(
+            items=[
+                MemberType.from_model(m, state.scorecards.get(m.id), _mb_profile(m.id))
+                for m in page
+            ],
+            page_info=page_info,
+        )
+
+    @strawberry.field(description="All vote events for a specific bill (floor + committee).")
+    def votes(self, bill_number: str) -> list[VoteEventType]:
+        events = state.vote_lookup.get(bill_number, [])
+        return [VoteEventType.from_model(v) for v in events]
+
+    @strawberry.field(
+        description=(
+            "Full vote timeline for a bill in one chamber,"
+            " tracking every member's journey across committee and floor events."
+        ),
+    )
+    def bill_vote_timeline(self, bill_number: str, chamber: Chamber) -> BillVoteTimelineType | None:
+        return compute_bill_vote_timeline(state.vote_lookup, bill_number, chamber.value)
+
+    @strawberry.field(
+        description="All scraped vote events, optionally filtered by type and chamber.",
+    )
+    def all_vote_events(
+        self,
+        vote_type: str | None = None,
+        chamber: Chamber | None = None,
+        offset: int = 0,
+        limit: int = 0,
+    ) -> VoteEventConnection:
+        result = list(state.vote_events)
+        chamber_str = _resolve_chamber(chamber)
+        if vote_type is not None:
+            result = [v for v in result if v.vote_type == vote_type]
+        if chamber_str is not None:
+            result = [v for v in result if v.chamber.lower() == chamber_str.lower()]
+        page, page_info = paginate(result, offset, limit)
+        return VoteEventConnection(
+            items=[VoteEventType.from_model(v) for v in page],
+            page_info=page_info,
+        )
+
+    @strawberry.field(description="Look up a single bill by bill number (e.g. 'SB1527').")
+    def bill(self, number: str) -> BillType | None:
+        model = state.bill_lookup.get(number)
+        return BillType.from_model(model) if model else None
+
+    @strawberry.field(
+        description="Paginated list of bills with optional sorting and date-range filtering.",
+    )
+    def bills(
+        self,
+        sort_by: BillSortField | None = None,
+        sort_order: SortOrder | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        offset: int = 0,
+        limit: int = 0,
+    ) -> BillConnection:
+        result = list(state.bills)
+
+        # ── date filtering (with safe parsing) ──
+        if date_from is not None:
+            from_dt = _safe_parse_date(date_from, "dateFrom")
+            if from_dt is not None:
+                result = [b for b in result if _parse_bill_date(b.last_action_date) >= from_dt]
+        if date_to is not None:
+            to_dt = _safe_parse_date(date_to, "dateTo")
+            if to_dt is not None:
+                result = [b for b in result if _parse_bill_date(b.last_action_date) <= to_dt]
+
+        # ── sorting ──
+        if sort_by is not None:
+            reverse = sort_order == SortOrder.DESC
+            if sort_by == BillSortField.LAST_ACTION_DATE:
+                result.sort(
+                    key=lambda b: _parse_bill_date(b.last_action_date),
+                    reverse=reverse,
+                )
+            elif sort_by == BillSortField.BILL_NUMBER:
+                result.sort(key=lambda b: b.bill_number, reverse=reverse)
+
+        page, page_info = paginate(result, offset, limit)
+        return BillConnection(
+            items=[BillType.from_model(b) for b in page],
+            page_info=page_info,
+        )
+
+    # ── Committee queries ─────────────────────────────────────────────────
+
+    @strawberry.field(description="Look up a single committee by its code (e.g. 'SAGR').")
+    def committee(self, code: str) -> CommitteeType | None:
+        model = state.committee_lookup.get(code)
+        if model is None:
+            return None
+        return CommitteeType.from_model(
+            model,
+            roster=state.committee_rosters.get(code),
+            bill_numbers=state.committee_bills.get(code),
+        )
+
+    @strawberry.field(description="Paginated list of committees.")
+    def committees(
+        self,
+        offset: int = 0,
+        limit: int = 0,
+    ) -> CommitteeConnection:
+        page, page_info = paginate(state.committees, offset, limit)
+        return CommitteeConnection(
+            items=[
+                CommitteeType.from_model(
+                    c,
+                    roster=state.committee_rosters.get(c.code),
+                    bill_numbers=state.committee_bills.get(c.code),
+                )
+                for c in page
+            ],
+            page_info=page_info,
+        )
+
+    # ── Witness slip queries ──────────────────────────────────────────────
+
+    @strawberry.field(description="Witness slips for a specific bill.")
+    def witness_slips(
+        self,
+        bill_number: str,
+        offset: int = 0,
+        limit: int = 0,
+    ) -> WitnessSlipConnection:
+        slips = state.witness_slips_lookup.get(bill_number, [])
+        page, page_info = paginate(slips, offset, limit)
+        return WitnessSlipConnection(
+            items=[WitnessSlipType.from_model(ws) for ws in page],
+            page_info=page_info,
+        )
+
+    def _witness_slip_summary_for_slips(
+        self, bill_number: str, slips: list[WitnessSlip]
+    ) -> WitnessSlipSummaryType:
+        pro = sum(1 for s in slips if s.position == "Proponent")
+        opp = sum(1 for s in slips if s.position == "Opponent")
+        no_pos = sum(
+            1
+            for s in slips
+            if s.position and "no position" in s.position.lower()
+        )
+        return WitnessSlipSummaryType(
+            bill_number=bill_number,
+            total_count=len(slips),
+            proponent_count=pro,
+            opponent_count=opp,
+            no_position_count=no_pos,
+        )
+
+    @strawberry.field(
+        description="Per-bill witness slip counts by position (no paging).",
+    )
+    def witness_slip_summary(self, bill_number: str) -> WitnessSlipSummaryType | None:
+        slips = state.witness_slips_lookup.get(bill_number, [])
+        if not slips:
+            return None
+        return self._witness_slip_summary_for_slips(bill_number, slips)
+
+    @strawberry.field(
+        description="All bills with witness slips, summarized (sorted by slip volume descending).",
+    )
+    def witness_slip_summaries(
+        self,
+        offset: int = 0,
+        limit: int = 0,
+    ) -> WitnessSlipSummaryConnection:
+        all_summaries = [
+            self._witness_slip_summary_for_slips(bill_number, slips)
+            for bill_number, slips in state.witness_slips_lookup.items()
+        ]
+        all_summaries.sort(key=lambda s: s.total_count, reverse=True)
+        page, page_info = paginate(all_summaries, offset, limit)
+        return WitnessSlipSummaryConnection(items=page, page_info=page_info)
+
+    @strawberry.field(
+        description="Witness-slip analytics for a bill (controversy score 0–1).",
+    )
+    def bill_slip_analytics(
+        self, bill_number: str
+    ) -> BillSlipAnalyticsType | None:
+        if not state.witness_slips_lookup.get(bill_number):
+            return None
+        score = controversial_score(state.witness_slips, bill_number)
+        return BillSlipAnalyticsType(
+            bill_number=bill_number,
+            controversy_score=score,
+        )
+
+    @strawberry.field(
+        description="Organisations that file as proponents on this member's sponsored bills (sorted by count desc).",
+    )
+    def member_slip_alignment(
+        self, member_name: str
+    ) -> list[LobbyistAlignmentEntryType]:
+        member = state.member_lookup.get(member_name)
+        if member is None:
+            return []
+        alignment = lobbyist_alignment(state.witness_slips, member)
+        return [
+            LobbyistAlignmentEntryType(
+                organization=org,
+                proponent_count=count,
+            )
+            for org, count in alignment.items()
+        ]
+
+    # ----- New Query Field for Advancement Analytics -----
+    @strawberry.field(
+        description="Analytics categorizing bills by witness slip volume and advancement status.",
+    )
+    def bill_advancement_analytics_summary(
+        self,
+        volume_percentile_threshold: float = 0.9,
+    ) -> BillAdvancementAnalyticsType:
+        analytics_results = compute_advancement_analytics(
+            state.bills,
+            state.witness_slips,
+            volume_percentile_threshold=volume_percentile_threshold,
+        )
+        return BillAdvancementAnalyticsType(
+            high_volume_stalled=analytics_results.get("high_volume_stalled", []),
+            high_volume_passed=analytics_results.get("high_volume_passed", []),
+        )
+    # ----- End New Query Field -----
+
+
+from strawberry.extensions import QueryDepthLimiter # noqa: E402
+
+schema = strawberry.Schema(
+    query=Query,
+    extensions=[QueryDepthLimiter(max_depth=10)],
+)
+graphql_app = GraphQLRouter(schema)
+
+app = FastAPI(title="ILGA Graph", lifespan=lifespan)
+
+# ── CORS middleware ──────────────────────────────────────────────────────────
+_cors_origins = [o.strip() for o in CORS_ORIGINS.split(",") if o.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ── API key authentication middleware ────────────────────────────────────────
+@app.middleware("http")
+async def _api_key_middleware(request: Request, call_next) -> Response:  # type: ignore[no-untyped-def]
+    """Require ``X-API-Key`` header when ``ILGA_API_KEY`` env var is set.
+
+    Skips auth for the health endpoint and for OPTIONS (CORS preflight).
+    """
+    if API_KEY:
+        exempt = {"/health", "/docs", "/openapi.json", "/redoc"}
+        if request.url.path not in exempt and request.method != "OPTIONS":
+            provided = request.headers.get("X-API-Key", "")
+            if provided != API_KEY:
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "Invalid or missing API key"},
+                )
+    return await call_next(request)
+
+
+# ── Request logging middleware ───────────────────────────────────────────────
+@app.middleware("http")
+async def _request_logging_middleware(request: Request, call_next) -> Response:  # type: ignore[no-untyped-def]
+    """Log every request with method, path, and response time."""
+    import time as _t
+
+    t0 = _t.perf_counter()
+    response: Response = await call_next(request)
+    elapsed_ms = (_t.perf_counter() - t0) * 1000
+    LOGGER.info(
+        "%s %s %d (%.1fms)",
+        request.method,
+        request.url.path,
+        response.status_code,
+        elapsed_ms,
+    )
+    return response
+
+
+# ── Health endpoint ──────────────────────────────────────────────────────────
+@app.get("/health")
+async def health() -> dict:
+    """Service health check with data counts."""
+    return {
+        "status": "ok",
+        "ready": len(state.members) > 0,
+        "members": len(state.members),
+        "bills": len(state.bills),
+        "committees": len(state.committees),
+        "vote_events": len(state.vote_events),
+    }
+
+
+app.include_router(graphql_app, prefix="/graphql")
