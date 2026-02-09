@@ -202,7 +202,7 @@ def _parse_last_action(soup: BeautifulSoup) -> tuple[str, str, str]:
     action_text = item.get_text(strip=True)
     # Remove the bold prefix
     if bold_text and action_text.startswith(bold_text):
-        action_text = action_text[len(bold_text):].strip()
+        action_text = action_text[len(bold_text) :].strip()
     # Normalize internal whitespace to single space (e.g. "To  Ethics" -> "To Ethics")
     action_text = re.sub(r"\s+", " ", action_text).strip()
 
@@ -427,14 +427,10 @@ def scrape_all_bills(
                 else:
                     LOGGER.warning("  [%d/%d] Failed: %s", completed, total, entry.bill_number)
             except Exception:
-                LOGGER.exception(
-                    "  [%d/%d] Error scraping %s", completed, total, entry.bill_number
-                )
+                LOGGER.exception("  [%d/%d] Error scraping %s", completed, total, entry.bill_number)
 
     elapsed_total = time.perf_counter() - t_start
-    LOGGER.info(
-        "Bill scraping complete: %d bills in %.1fs", len(bills), elapsed_total
-    )
+    LOGGER.info("Bill scraping complete: %d bills in %.1fs", len(bills), elapsed_total)
 
     # Save cache
     save_bill_cache(bills)
