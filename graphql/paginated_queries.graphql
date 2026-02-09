@@ -1,0 +1,140 @@
+# Paginated query examples for the hardened API (v1).
+# All list queries now return Connection types with pageInfo.
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 1. Paginated members (first page, 10 per page)
+# ──────────────────────────────────────────────────────────────────────────────
+
+query MembersPage1 {
+  members(limit: 10, offset: 0, sortBy: NAME, sortOrder: ASC) {
+    items {
+      name
+      party
+      chamber
+      district
+    }
+    pageInfo {
+      totalCount
+      hasNextPage
+      hasPreviousPage
+    }
+  }
+}
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 2. House members only (using Chamber enum)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# query HouseMembers {
+#   members(chamber: HOUSE, limit: 5) {
+#     items { name party district }
+#     pageInfo { totalCount }
+#   }
+# }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 3. Paginated bills with date range
+# ──────────────────────────────────────────────────────────────────────────────
+
+# query RecentBills {
+#   bills(
+#     sortBy: LAST_ACTION_DATE
+#     sortOrder: DESC
+#     dateFrom: "2025-01-01"
+#     limit: 20
+#     offset: 0
+#   ) {
+#     items {
+#       billNumber
+#       description
+#       lastActionDate
+#       primarySponsor
+#     }
+#     pageInfo {
+#       totalCount
+#       hasNextPage
+#     }
+#   }
+# }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 4. Committee lookup
+# ──────────────────────────────────────────────────────────────────────────────
+
+# query CommitteeDetail {
+#   committee(code: "SAGR") {
+#     code
+#     name
+#     parentCode
+#     roster { memberName role }
+#     billNumbers
+#   }
+# }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 5. Paginated committees
+# ──────────────────────────────────────────────────────────────────────────────
+
+# query AllCommittees {
+#   committees(limit: 50) {
+#     items { code name parentCode }
+#     pageInfo { totalCount hasNextPage }
+#   }
+# }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 6. Moneyball leaderboard (House, non-leadership, top 10)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# query HouseMVPs {
+#   moneyballLeaderboard(
+#     chamber: HOUSE
+#     excludeLeadership: true
+#     limit: 10
+#     sortBy: MONEYBALL_SCORE
+#     sortOrder: DESC
+#   ) {
+#     items {
+#       name
+#       party
+#       moneyball { moneyballScore badges }
+#       scorecard { effectivenessScore successRate }
+#     }
+#     pageInfo { totalCount }
+#   }
+# }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 7. Witness slips for a bill
+# ──────────────────────────────────────────────────────────────────────────────
+
+# query BillWitnessSlips {
+#   witnessSlips(billNumber: "HB1075", limit: 50) {
+#     items {
+#       name
+#       organization
+#       position
+#       hearingCommittee
+#       hearingDate
+#     }
+#     pageInfo { totalCount }
+#   }
+# }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 8. All vote events (filtered by chamber)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# query SenateVotes {
+#   allVoteEvents(chamber: SENATE, limit: 20) {
+#     items {
+#       billNumber
+#       date
+#       description
+#       voteType
+#       yeaCount
+#       nayCount
+#     }
+#     pageInfo { totalCount }
+#   }
+# }

@@ -1,0 +1,60 @@
+# Full Bill Vote Timeline — tracks every member's journey across committee and floor events.
+# Run at POST /graphql with this as the "query" body.
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 1. Full timeline with per-member journeys
+# ──────────────────────────────────────────────────────────────────────────────
+
+query BillVoteTimeline($billNumber: String!, $chamber: String!) {
+  billVoteTimeline(billNumber: $billNumber, chamber: $chamber) {
+    billNumber
+    chamber
+    eventLabels
+    committeeToFloorFlips
+    committeeToFloorDropoffs
+    floorNewcomers
+    consistentYea
+    consistentNay
+    journeys {
+      memberName
+      votes
+      changed
+      isCommitteeMember
+      firstAppearance
+      lastVote
+    }
+  }
+}
+
+# Variables:
+# { "billNumber": "SB0852", "chamber": "Senate" }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 2. Quick "who flipped / who dropped off" check (no journey details)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# query QuickFlipCheck {
+#   billVoteTimeline(billNumber: "SB0008", chamber: "Senate") {
+#     eventLabels
+#     committeeToFloorFlips
+#     committeeToFloorDropoffs
+#     floorNewcomers
+#   }
+# }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 3. Only committee members — see who stayed loyal from committee to floor
+# ──────────────────────────────────────────────────────────────────────────────
+
+# query CommitteeMemberJourneys {
+#   billVoteTimeline(billNumber: "SB0852", chamber: "Senate") {
+#     eventLabels
+#     journeys {
+#       memberName
+#       votes
+#       isCommitteeMember
+#       changed
+#     }
+#   }
+# }
+# Then filter client-side: journeys where isCommitteeMember == true

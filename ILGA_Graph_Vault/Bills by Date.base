@@ -1,0 +1,23 @@
+filters: file.inFolder("Bills")
+views:
+  - type: table
+    name: "Bills by Date"
+    groupBy:
+      property: last_action_date_iso
+      direction: DESC
+    order:
+      - last_action_date_iso
+      - bill_number
+      - status
+      - chamber
+  - type: table
+    name: "Recent Bills"
+    filters: 'note.last_action_date_iso >= date("2026-01-01")'
+    groupBy:
+      property: last_action_date_iso
+      direction: DESC
+    order:
+      - last_action_date_iso
+      - bill_number
+      - status
+      - chamber

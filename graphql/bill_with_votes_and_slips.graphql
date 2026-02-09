@@ -1,0 +1,90 @@
+# Bill with vote events and witness slips (single bill).
+# Use field "votes" (returns a list), not "voteEvents" (does not exist).
+#
+# Run at POST /graphql with variables: { "billNumber": "HB0034" }
+# Other bills: "HB0576", "SB0852", "SB0008", "SB0009"
+
+query BillWithVotesAndSlips($billNumber: String!) {
+  votes(billNumber: $billNumber) {
+    billNumber
+    date
+    description
+    chamber
+    voteType
+    yeaCount
+    nayCount
+  }
+  witnessSlipSummary(billNumber: $billNumber) {
+    billNumber
+    totalCount
+    proponentCount
+    opponentCount
+    noPositionCount
+  }
+  witnessSlips(billNumber: $billNumber, limit: 10) {
+    items {
+      name
+      organization
+      position
+      hearingCommittee
+      hearingDate
+    }
+    pageInfo {
+      totalCount
+      hasNextPage
+    }
+  }
+}
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Witness slip summary only (no paging)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# query WitnessSlipSummaryOnly {
+#   witnessSlipSummary(billNumber: "HB0034") {
+#     billNumber
+#     totalCount
+#     proponentCount
+#     opponentCount
+#     noPositionCount
+#   }
+# }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# All bills with slip summaries (sorted by volume desc; paginated)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# query AllWitnessSlipSummaries {
+#   witnessSlipSummaries(limit: 20, offset: 0) {
+#     items {
+#       billNumber
+#       totalCount
+#       proponentCount
+#       opponentCount
+#       noPositionCount
+#     }
+#     pageInfo {
+#       totalCount
+#       hasNextPage
+#       hasPreviousPage
+#     }
+#   }
+# }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Bill slip analytics (controversy score) and member slip alignment
+# ──────────────────────────────────────────────────────────────────────────────
+
+# query BillSlipAnalytics {
+#   billSlipAnalytics(billNumber: "HB0034") {
+#     billNumber
+#     controversyScore
+#   }
+# }
+
+# query MemberSlipAlignment {
+#   memberSlipAlignment(memberName: "Chris Welch") {
+#     organization
+#     proponentCount
+#   }
+# }

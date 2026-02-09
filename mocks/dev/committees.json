@@ -1,0 +1,896 @@
+[
+  {
+    "code": "SAGR",
+    "name": "Agriculture",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3069"
+  },
+  {
+    "code": "APED",
+    "name": "Approp- Ed",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3116"
+  },
+  {
+    "code": "APHH",
+    "name": "Approp- Health and Human",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3121"
+  },
+  {
+    "code": "APSI",
+    "name": "Approp- Pub Safety & Infrastructure",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3122"
+  },
+  {
+    "code": "SAPP",
+    "name": "Appropriations",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3108"
+  },
+  {
+    "code": "SCOA",
+    "name": "Assignments * Reports",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3086"
+  },
+  {
+    "code": "SBMH",
+    "name": "Behavioral and Mental Health",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3107"
+  },
+  {
+    "code": "SCHW",
+    "name": "Child Welfare",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3127"
+  },
+  {
+    "code": "SCOM",
+    "name": "Commerce",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3128"
+  },
+  {
+    "code": "SCWL",
+    "name": "Committee of the Whole",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3082"
+  },
+  {
+    "code": "SCPR",
+    "name": "Consumer Protection",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3129"
+  },
+  {
+    "code": "SCRL",
+    "name": "Criminal Law",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3131"
+  },
+  {
+    "code": "SCRL-CLCC",
+    "name": "Criminal Law Clear Compliance",
+    "parent_code": "SCRL",
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3170"
+  },
+  {
+    "code": "SCRL-CLSI",
+    "name": "Criminal Law Special Issues",
+    "parent_code": "SCRL",
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3169"
+  },
+  {
+    "code": "SESE",
+    "name": "Education",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3070"
+  },
+  {
+    "code": "SENE",
+    "name": "Energy and Public Utilities",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3087"
+  },
+  {
+    "code": "SNVR",
+    "name": "Environment and Conservation",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3088"
+  },
+  {
+    "code": "SEXC",
+    "name": "Executive",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3072"
+  },
+  {
+    "code": "SEXC-AISM",
+    "name": "AI and Social Media",
+    "parent_code": "SEXC",
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3206"
+  },
+  {
+    "code": "SEXC-SCAN",
+    "name": "Cannabis",
+    "parent_code": "SEXC",
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3174"
+  },
+  {
+    "code": "SEXC-CONS",
+    "name": "Consolidation",
+    "parent_code": "SEXC",
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3200"
+  },
+  {
+    "code": "SEXC-SSCA",
+    "name": "Constitutional Amendments",
+    "parent_code": "SEXC",
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3175"
+  },
+  {
+    "code": "SEXC-SSEL",
+    "name": "Elections",
+    "parent_code": "SEXC",
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3176"
+  },
+  {
+    "code": "SEXC-SELI",
+    "name": "End of Life Issues",
+    "parent_code": "SEXC",
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3177"
+  },
+  {
+    "code": "SEXC-SETH",
+    "name": "Ethics",
+    "parent_code": "SEXC",
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3178"
+  },
+  {
+    "code": "SEXC-ESSI",
+    "name": "Executive Special Issues",
+    "parent_code": "SEXC",
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3179"
+  },
+  {
+    "code": "SEXC-ESFA",
+    "name": "Firearms",
+    "parent_code": "SEXC",
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3180"
+  },
+  {
+    "code": "SEXC-SGWR",
+    "name": "Gaming, Wagering, and Racing",
+    "parent_code": "SEXC",
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3181"
+  },
+  {
+    "code": "SEXC-EGOP",
+    "name": "Government Operations",
+    "parent_code": "SEXC",
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3182"
+  },
+  {
+    "code": "SEXC-EXSL",
+    "name": "Liquor",
+    "parent_code": "SEXC",
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3183"
+  },
+  {
+    "code": "SEXC-ESPL",
+    "name": "Paid Leave",
+    "parent_code": "SEXC",
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3184"
+  },
+  {
+    "code": "SEXC-ESPR",
+    "name": "Procurement",
+    "parent_code": "SEXC",
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3185"
+  },
+  {
+    "code": "SEXC-ESTO",
+    "name": "Tobacco",
+    "parent_code": "SEXC",
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3186"
+  },
+  {
+    "code": "SEXA",
+    "name": "Executive Appointments",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3071"
+  },
+  {
+    "code": "SFIC",
+    "name": "Financial Institutions",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3073"
+  },
+  {
+    "code": "HHSR",
+    "name": "Health and Human Services",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3118"
+  },
+  {
+    "code": "SCHE",
+    "name": "Higher Education",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3083"
+  },
+  {
+    "code": "SHUM",
+    "name": "Human Rights",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3109"
+  },
+  {
+    "code": "SINS",
+    "name": "Insurance",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3075"
+  },
+  {
+    "code": "SJUD",
+    "name": "Judiciary",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3089"
+  },
+  {
+    "code": "SJUD-SPIS",
+    "name": "Special Issues",
+    "parent_code": "SJUD",
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3139"
+  },
+  {
+    "code": "SJUD-TORT",
+    "name": "Torts",
+    "parent_code": "SJUD",
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3137"
+  },
+  {
+    "code": "SJUD-WKCO",
+    "name": "Workers Compensation",
+    "parent_code": "SJUD",
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3138"
+  },
+  {
+    "code": "SLAB",
+    "name": "Labor",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3084"
+  },
+  {
+    "code": "SLIC",
+    "name": "Licensed Activities",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3077"
+  },
+  {
+    "code": "SLGV",
+    "name": "Local Government",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3076"
+  },
+  {
+    "code": "SPEN",
+    "name": "Pensions",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3130"
+  },
+  {
+    "code": "PBHE",
+    "name": "Public Health",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3119"
+  },
+  {
+    "code": "SREV",
+    "name": "Revenue",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3078"
+  },
+  {
+    "code": "SSCT",
+    "name": "Special Committee on Tourism",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3132"
+  },
+  {
+    "code": "SGOA",
+    "name": "State Government",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3074"
+  },
+  {
+    "code": "STRN",
+    "name": "Transportation",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3079"
+  },
+  {
+    "code": "SVET",
+    "name": "Veterans Affairs",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3099"
+  },
+  {
+    "code": "HACW",
+    "name": "Adoption & Child Welfare",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3103"
+  },
+  {
+    "code": "HAGC",
+    "name": "Agriculture & Conservation",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3081"
+  },
+  {
+    "code": "HAPE",
+    "name": "Approp-Elementary & Secondary Educ",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3049"
+  },
+  {
+    "code": "HAPG",
+    "name": "Approp-General Service",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3050"
+  },
+  {
+    "code": "HAPH",
+    "name": "Approp-Health and Human Services",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3051"
+  },
+  {
+    "code": "HAPI",
+    "name": "Approp-Higher Education",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3052"
+  },
+  {
+    "code": "HAPS",
+    "name": "Approp-Pensions & Personnel",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3133"
+  },
+  {
+    "code": "HAPP",
+    "name": "Approp-Public Safety & Infrastruct",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3053"
+  },
+  {
+    "code": "HAPP-WFIS",
+    "name": "Fiscal Impact Subcommittee",
+    "parent_code": "HAPP",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3163"
+  },
+  {
+    "code": "HCEC",
+    "name": "Child Care Access & Early Childhood",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3104"
+  },
+  {
+    "code": "HCIV",
+    "name": "Cities & Villages",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3090"
+  },
+  {
+    "code": "HCWL",
+    "name": "Committee of the Whole",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3055"
+  },
+  {
+    "code": "HCON",
+    "name": "Consumer Protection",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3054"
+  },
+  {
+    "code": "HCOT",
+    "name": "Counties & Townships",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3091"
+  },
+  {
+    "code": "HCDA",
+    "name": "Cybersecurity, Data Analytics, & IT",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3100"
+  },
+  {
+    "code": "HCDA-HAIE",
+    "name": "Artificial Intelligence Subcommitte",
+    "parent_code": "HCDA",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3202"
+  },
+  {
+    "code": "HCDA-HDPA",
+    "name": "Data Privacy and Analytics Sub",
+    "parent_code": "HCDA",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3201"
+  },
+  {
+    "code": "HCDA-HSMC",
+    "name": "Social Media and Content Moderation",
+    "parent_code": "HCDA",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3203"
+  },
+  {
+    "code": "HECO",
+    "name": "Economic Opportunity & Equity",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3101"
+  },
+  {
+    "code": "HELM",
+    "name": "Education Policy",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3056"
+  },
+  {
+    "code": "HELO",
+    "name": "Elem Sec Ed: Adm., Lic. & Charter",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3097"
+  },
+  {
+    "code": "HELO-HTPR",
+    "name": "Teacher Policy & Research",
+    "parent_code": "HELO",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3171"
+  },
+  {
+    "code": "HENG",
+    "name": "Energy & Environment",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3096"
+  },
+  {
+    "code": "HENG-HCES",
+    "name": "Clean Energy Subcommittee",
+    "parent_code": "HENG",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3194"
+  },
+  {
+    "code": "HENG-HEJS",
+    "name": "Environmental Justice Subcommittee",
+    "parent_code": "HENG",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3195"
+  },
+  {
+    "code": "HENG-HLGS",
+    "name": "Local Government Subcommittee",
+    "parent_code": "HENG",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3196"
+  },
+  {
+    "code": "SHEE",
+    "name": "Ethics & Elections",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3110"
+  },
+  {
+    "code": "HEXC",
+    "name": "Executive",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3057"
+  },
+  {
+    "code": "HFIN",
+    "name": "Financial Institutions & Licensing",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3058"
+  },
+  {
+    "code": "HOGC",
+    "name": "Gaming",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3123"
+  },
+  {
+    "code": "HOGC-HGAM",
+    "name": "Special Topics Subcommittee",
+    "parent_code": "HOGC",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3153"
+  },
+  {
+    "code": "HGVP",
+    "name": "Gun Violence Prevention",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3134"
+  },
+  {
+    "code": "HHCA",
+    "name": "Health Care Availability & Access",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3059"
+  },
+  {
+    "code": "HHCA-HPBM",
+    "name": "Pharmacy Benefit Manager",
+    "parent_code": "HHCA",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3168"
+  },
+  {
+    "code": "HHCA-HPDA",
+    "name": "Prescription Drug Affordability Sub",
+    "parent_code": "HHCA",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3193"
+  },
+  {
+    "code": "HHCL",
+    "name": "Health Care Licenses",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3092"
+  },
+  {
+    "code": "HHCL-HCAI",
+    "name": "Healthcare AI",
+    "parent_code": "HHCL",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3207"
+  },
+  {
+    "code": "HHED",
+    "name": "Higher Education",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3060"
+  },
+  {
+    "code": "SHOU",
+    "name": "Housing",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3111"
+  },
+  {
+    "code": "HHSV",
+    "name": "Human Services",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3061"
+  },
+  {
+    "code": "HHSV-HBUD",
+    "name": "Budget Impact",
+    "parent_code": "HHSV",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3156"
+  },
+  {
+    "code": "HHSV-HMED",
+    "name": "Medicaid Sub",
+    "parent_code": "HHSV",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3154"
+  },
+  {
+    "code": "HHSV-HSPE",
+    "name": "Special Issues",
+    "parent_code": "HHSV",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3155"
+  },
+  {
+    "code": "SIHR",
+    "name": "Immigration & Human Rights",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3112"
+  },
+  {
+    "code": "HINS",
+    "name": "Insurance",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3105"
+  },
+  {
+    "code": "HINS-HIMS",
+    "name": "Insurance Main Subcommittee",
+    "parent_code": "HINS",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3197"
+  },
+  {
+    "code": "HINS-HIPS",
+    "name": "Insurance Policy Subcommittee",
+    "parent_code": "HINS",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3198"
+  },
+  {
+    "code": "HIRT",
+    "name": "Int Relations, Tourism, & Trade",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3135"
+  },
+  {
+    "code": "HJUA",
+    "name": "Judiciary - Civil",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3062"
+  },
+  {
+    "code": "HJUA-HJCV",
+    "name": "Civil Procedure & Tort Liability",
+    "parent_code": "HJUA",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3149"
+  },
+  {
+    "code": "HJUA-HJCX",
+    "name": "Commercial & Property Law Sub",
+    "parent_code": "HJUA",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3151"
+  },
+  {
+    "code": "HJUA-HJCC",
+    "name": "Constitutional & Family Law Sub",
+    "parent_code": "HJUA",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3150"
+  },
+  {
+    "code": "HJUA-HJCZ",
+    "name": "Data Privacy Law & Emerging Issues",
+    "parent_code": "HJUA",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3152"
+  },
+  {
+    "code": "HJUC",
+    "name": "Judiciary - Criminal",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3098"
+  },
+  {
+    "code": "HJUC-HCAE",
+    "name": "Criminal Administration",
+    "parent_code": "HJUC",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3187"
+  },
+  {
+    "code": "HJUC-HJSY",
+    "name": "Juvenile Justice and Systems",
+    "parent_code": "HJUC",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3189"
+  },
+  {
+    "code": "HJUC-HSPC",
+    "name": "Sentencing, Penalties, and Criminal",
+    "parent_code": "HJUC",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3190"
+  },
+  {
+    "code": "HJUC-HSXS",
+    "name": "Sex Offenses and Sex Offender Reg.",
+    "parent_code": "HJUC",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3191"
+  },
+  {
+    "code": "HJUC-HWWS",
+    "name": "Weapons and Weapon Safety Sub",
+    "parent_code": "HJUC",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3188"
+  },
+  {
+    "code": "HLBR",
+    "name": "Labor & Commerce",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3063"
+  },
+  {
+    "code": "HLBR-HDIC",
+    "name": "Domestic and International Commerce",
+    "parent_code": "HLBR",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3161"
+  },
+  {
+    "code": "HLBR-HJWD",
+    "name": "Job & Workforce Development Sub",
+    "parent_code": "HLBR",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3157"
+  },
+  {
+    "code": "HLBR-HMWB",
+    "name": "Minority & Women Business Sub",
+    "parent_code": "HLBR",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3160"
+  },
+  {
+    "code": "HLBR-HOLS",
+    "name": "Occupational Licenses Sub",
+    "parent_code": "HLBR",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3158"
+  },
+  {
+    "code": "HLBR-HWPS",
+    "name": "Wage Policy Study Sub",
+    "parent_code": "HLBR",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3159"
+  },
+  {
+    "code": "HLBR-HWCA",
+    "name": "Workers’ Compensation Analysis Sub",
+    "parent_code": "HLBR",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3162"
+  },
+  {
+    "code": "HMEH",
+    "name": "Mental Health & Addiction",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3102"
+  },
+  {
+    "code": "HMAC",
+    "name": "Museum, Arts, Culture, & Entertain",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3136"
+  },
+  {
+    "code": "HPPN",
+    "name": "Personnel & Pensions",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3064"
+  },
+  {
+    "code": "SHPF",
+    "name": "Police & Fire Committee",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3113"
+  },
+  {
+    "code": "SHPF-HFSU",
+    "name": "Fire Subcommittee",
+    "parent_code": "SHPF",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3172"
+  },
+  {
+    "code": "SHPF-HPPS",
+    "name": "Police Subcommittee",
+    "parent_code": "SHPF",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3173"
+  },
+  {
+    "code": "HPDA",
+    "name": "Prescription Drug Affordability",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3106"
+  },
+  {
+    "code": "HPHE",
+    "name": "Public Health",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3124"
+  },
+  {
+    "code": "HPUB",
+    "name": "Public Utilities",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3065"
+  },
+  {
+    "code": "HPUB-HNAT",
+    "name": "Natural Gas Subcommittee",
+    "parent_code": "HPUB",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3167"
+  },
+  {
+    "code": "HPUB-HTEL",
+    "name": "Telecom Subcommittee",
+    "parent_code": "HPUB",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3164"
+  },
+  {
+    "code": "HPUB-HUTL",
+    "name": "Utilities Subcommittee",
+    "parent_code": "HPUB",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3166"
+  },
+  {
+    "code": "HPUB-HWAT",
+    "name": "Water Subcommittee",
+    "parent_code": "HPUB",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3165"
+  },
+  {
+    "code": "SHRJ",
+    "name": "Restorative Justice & Public Safety",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3114"
+  },
+  {
+    "code": "HREF",
+    "name": "Revenue & Finance",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3095"
+  },
+  {
+    "code": "HREF-HRFS",
+    "name": "Finance Subcommittee",
+    "parent_code": "HREF",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3144"
+  },
+  {
+    "code": "HREF-HRIT",
+    "name": "Income Tax Subcommittee",
+    "parent_code": "HREF",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3143"
+  },
+  {
+    "code": "HREF-HRPT",
+    "name": "Property Tax Subcommittee",
+    "parent_code": "HREF",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3141"
+  },
+  {
+    "code": "HREF-HRST",
+    "name": "Sales Tax Subcommittee",
+    "parent_code": "HREF",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3142"
+  },
+  {
+    "code": "HREF-HTCI",
+    "name": "Tax Credit and Incentives",
+    "parent_code": "HREF",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3140"
+  },
+  {
+    "code": "HREF-HRTF",
+    "name": "Tax Policy: Finance Subcommittee",
+    "parent_code": "HREF",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3148"
+  },
+  {
+    "code": "HREF-HRTI",
+    "name": "Tax Policy: Income Tax Subcommittee",
+    "parent_code": "HREF",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3147"
+  },
+  {
+    "code": "HREF-HRTT",
+    "name": "Tax Policy: Other Taxes Subcommitte",
+    "parent_code": "HREF",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3145"
+  },
+  {
+    "code": "HREF-HRTS",
+    "name": "Tax Policy: Sales Tax Subcommittee",
+    "parent_code": "HREF",
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3146"
+  },
+  {
+    "code": "HRUL",
+    "name": "Rules * Reports",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3066"
+  },
+  {
+    "code": "SBTE",
+    "name": "Small Business, Tech Innovation",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3115"
+  },
+  {
+    "code": "HSGA",
+    "name": "State Government Administration",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3067"
+  },
+  {
+    "code": "HTRR",
+    "name": "Trans: Regulation, Roads & Bridges",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3093"
+  },
+  {
+    "code": "HVES",
+    "name": "Transportation: Vehicles & Safety",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3094"
+  },
+  {
+    "code": "HVET",
+    "name": "Veterans' Affairs",
+    "parent_code": null,
+    "members_list_url": "https://www.ilga.gov/House/Committees/MembersList/3068"
+  }
+]

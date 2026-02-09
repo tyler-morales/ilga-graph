@@ -1,0 +1,38 @@
+filters:
+  and:
+    - file.inFolder("Members")
+    - 'file.name != "ILGA_Member_Index"'
+views:
+  - type: table
+    name: "Legislative Heat"
+    order:
+      - property: total_primary_bills
+        direction: DESC
+    columns:
+      - file.name
+      - total_primary_bills
+      - total_passed
+      - overall_pass_rate
+      - bills_introduced
+      - laws_passed
+      - law_success_rate
+      - magnet_score
+      - bridge_score
+      - party
+      - district
+  - type: table
+    name: "Most Effective"
+    order:
+      - property: total_passed
+        direction: DESC
+    columns:
+      - file.name
+      - total_passed
+      - law_success_rate
+      - total_primary_bills
+      - magnet_score
+      - bridge_score
+      - bills_introduced
+      - resolutions_filed
+      - party
+      - district

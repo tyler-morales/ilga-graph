@@ -1,0 +1,37 @@
+# Vote events with count totals (yeaCount, nayCount, presentCount, nvCount)
+# Run at POST /graphql with this as the "query" body.
+
+query VotesWithCounts($billNumber: String!) {
+  votes(billNumber: $billNumber) {
+    billNumber
+    date
+    description
+    chamber
+    voteType
+    yeaCount
+    nayCount
+    presentCount
+    nvCount
+    yeaVotes
+    nayVotes
+    nvVotes
+  }
+}
+
+# Variables (for SB0852):
+# { "billNumber": "SB0852" }
+
+# Or inline for SB0008:
+# query {
+#   votes(billNumber: "SB0008") {
+#     billNumber
+#     date
+#     description
+#     chamber
+#     voteType
+#     yeaCount
+#     nayCount
+#     presentCount
+#     nvCount
+#   }
+# }
