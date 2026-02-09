@@ -173,8 +173,12 @@ def generate_seed(member_limit: int = 10, bill_limit: int = 100) -> None:
 
     # Prune member bill_ids to only reference bills we kept
     for m in picked_all:
-        m["sponsored_bill_ids"] = [bid for bid in m.get("sponsored_bill_ids", []) if bid in kept_ids]
-        m["co_sponsor_bill_ids"] = [bid for bid in m.get("co_sponsor_bill_ids", []) if bid in kept_ids]
+        m["sponsored_bill_ids"] = [
+            bid for bid in m.get("sponsored_bill_ids", []) if bid in kept_ids
+        ]
+        m["co_sponsor_bill_ids"] = [
+            bid for bid in m.get("co_sponsor_bill_ids", []) if bid in kept_ids
+        ]
 
     _save_json(MOCK_DEV_DIR / "members.json", picked_all)
     _save_json(MOCK_DEV_DIR / "bills.json", seed_bills)

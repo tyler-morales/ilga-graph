@@ -9,7 +9,6 @@ from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
-from pathlib import Path
 from urllib.parse import parse_qs, urljoin, urlparse
 
 import requests
@@ -17,6 +16,7 @@ from bs4 import BeautifulSoup, NavigableString, Tag
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from .config import CACHE_DIR, MOCK_DEV_DIR
 from .models import Bill, CareerRange, Committee, CommitteeMemberRole, Member, Office
 
 LOGGER = logging.getLogger(__name__)
@@ -57,10 +57,7 @@ _RE_COMMITTEE_ROLE = re.compile(
 )
 _RE_LEG_ID = re.compile(r"LegID=(\d+)")
 
-# ── Cache & mock directories ─────────────────────────────────────────────────
-
-CACHE_DIR = Path("cache")
-MOCK_DEV_DIR = Path("mocks") / "dev"
+# ── Cache & mock directories (from config) ──────────────────────────────────
 
 # ── Constant token sets ──────────────────────────────────────────────────────
 

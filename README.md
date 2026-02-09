@@ -264,13 +264,50 @@ The app will:
 
 ### Environment Variables
 
-| Variable                  | Default   | Description                                      |
-|---------------------------|-----------|--------------------------------------------------|
-| `ILGA_DEV_MODE`           | `1`       | Enable dev mode: lighter scrape limits, faster delays. Set `0` for production. |
-| `ILGA_SEED_MODE`          | `1`       | Fall back to `mocks/dev/` when `cache/` is missing. Enables instant startup for local dev. Set `0` to force live scraping. |
-| `ILGA_MEMBER_LIMIT`       | `0`       | Max members to scrape per chamber (0 = all). In dev mode defaults to 20. |
-| `ILGA_TEST_MEMBER_URL`    | *(empty)* | URL of a single member to scrape for testing     |
-| `ILGA_TEST_MEMBER_CHAMBER`| `Senate`  | Chamber for the test member URL                  |
+Copy [`.env.example`](.env.example) to `.env` in the project root. The app loads it via `python-dotenv`.
+
+#### Quick start (zero config)
+
+The default profile is `dev` — just run `make dev` and everything works.
+
+#### Production
+
+```bash
+ILGA_PROFILE=prod
+ILGA_CORS_ORIGINS=https://myapp.example.com
+ILGA_API_KEY=your-secret-key
+```
+
+That's it. The `prod` profile sets `DEV_MODE=0`, `SEED_MODE=0`, and warns at startup if CORS or API_KEY are missing.
+
+#### Full reference
+
+`ILGA_PROFILE` sets sensible defaults for each environment. Any individual variable overrides the profile value.
+
+| Profile | `DEV_MODE` | `SEED_MODE` | `CORS_ORIGINS` | `MEMBER_LIMIT` |
+|---------|-----------|-------------|----------------|----------------|
+| `dev`   | `1`       | `1`         | `*`            | `0` (→ 20)     |
+| `prod`  | `0`       | `0`         | *(must set)*   | `0` (all)      |
+
+All variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| **`ILGA_PROFILE`** | `dev` | `dev` or `prod`. Sets defaults for the flags below. |
+| `ILGA_GA_ID` | `18` | General Assembly ID (104th GA). |
+| `ILGA_SESSION_ID` | `114` | Session ID. |
+| `ILGA_BASE_URL` | `https://www.ilga.gov/` | ILGA site base URL. |
+| `ILGA_CACHE_DIR` | `cache` | Directory for scraped JSON cache. |
+| `ILGA_MOCK_DIR` | `mocks/dev` | Seed/mock data directory. |
+| `ILGA_DEV_MODE` | *profile* | `1` = lighter scrape, faster delays; `0` = production. |
+| `ILGA_SEED_MODE` | *profile* | `1` = use seed when cache missing; `0` = require cache or live scrape. |
+| `ILGA_INCREMENTAL` | `0` | `1` = incremental bill scrape (new/changed only). |
+| `ILGA_MEMBER_LIMIT` | `0` | Max members per chamber (0 = all; dev mode defaults to 20). |
+| `ILGA_TEST_MEMBER_URL` | *(empty)* | Optional single member URL for testing. |
+| `ILGA_TEST_MEMBER_CHAMBER` | `Senate` | Chamber for the test member URL. |
+| `ILGA_CORS_ORIGINS` | *profile* | Comma-separated CORS origins. |
+| `ILGA_API_KEY` | *(empty)* | If set, non-exempt routes require `X-API-Key` header. |
+| `ILGA_VOTE_BILL_URLS` | *(built-in list)* | Comma-separated bill status URLs for votes/slips. |
 
 ## Migration: Normalized Cache (v2)
 

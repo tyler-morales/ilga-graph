@@ -23,7 +23,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from ilga_graph.main import compute_analytics, export_vault, get_bill_status_urls, load_or_scrape_data  # noqa: E402
+from ilga_graph.main import (  # noqa: E402
+    compute_analytics,
+    export_vault,
+    get_bill_status_urls,
+    load_or_scrape_data,
+)
 from ilga_graph.scrapers.votes import scrape_specific_bills  # noqa: E402
 from ilga_graph.scrapers.witness_slips import scrape_all_witness_slips  # noqa: E402
 
@@ -122,9 +127,7 @@ def main() -> None:
     if not args.export_only:
         bill_urls = get_bill_status_urls()
         delay = 0.25 if args.fast else 0.5
-        logger.info(
-            "Scraping votes + witness slips for %d bill(s)...", len(bill_urls)
-        )
+        logger.info("Scraping votes + witness slips for %d bill(s)...", len(bill_urls))
 
         vote_events = scrape_specific_bills(
             bill_urls,

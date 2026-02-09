@@ -11,9 +11,10 @@ build/
 venv/
 env/
 
-# Environment variables
+# Environment variables (keep .env.example committed)
 .env
 .env.*
+!.env.example
 
 # IDE
 .idea/

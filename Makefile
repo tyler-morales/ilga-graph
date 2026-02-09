@@ -19,10 +19,10 @@ install: ## Install the project with dev dependencies
 	$(BIN)pip install -e ".[dev]"
 
 dev: ## Start server in dev mode with mocks/dev (instant, no scraping)
-	ILGA_DEV_MODE=1 ILGA_SEED_MODE=1 $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src
+	ILGA_PROFILE=dev $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src
 
 run: ## Start server using cache/ (no mock fallback)
-	ILGA_DEV_MODE=0 ILGA_SEED_MODE=0 $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src
+	ILGA_PROFILE=prod $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src
 
 scrape: ## Full scrape to cache/ (no server)
 	$(PYTHON) scripts/scrape.py --export

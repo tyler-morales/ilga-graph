@@ -15,24 +15,22 @@ import logging
 import re
 import time
 from dataclasses import asdict
-from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import requests
 from bs4 import BeautifulSoup
 
+from ..config import CACHE_DIR, MOCK_DEV_DIR
 from ..models import WitnessSlip
 
 LOGGER = logging.getLogger(__name__)
 
-BASE_URL = "https://www.ilga.gov/"
 EXPORT_BASE = "https://my.ilga.gov/Legislation/BillStatus/ExportWitnessSlips"
 
-# ── Cache / seed paths ───────────────────────────────────────────────────────
+# ── Cache / seed paths (derived from config) ─────────────────────────────────
 
-WS_CACHE_DIR = Path("cache")
-WS_CACHE_FILE = WS_CACHE_DIR / "witness_slips.json"
-WS_MOCK_DEV_FILE = Path("mocks") / "dev" / "witness_slips.json"
+WS_CACHE_FILE = CACHE_DIR / "witness_slips.json"
+WS_MOCK_DEV_FILE = MOCK_DEV_DIR / "witness_slips.json"
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -238,7 +236,7 @@ def _load_ws_cache(*, seed_fallback: bool = False) -> list[WitnessSlip] | None:
 
 def _save_ws_cache(slips: list[WitnessSlip]) -> None:
     """Save witness slips to disk cache."""
-    WS_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
     with open(WS_CACHE_FILE, "w", encoding="utf-8") as f:
         json.dump([asdict(ws) for ws in slips], f, indent=2, ensure_ascii=False)
     LOGGER.info("Saved %d witness slips to cache (%s).", len(slips), WS_CACHE_FILE)
