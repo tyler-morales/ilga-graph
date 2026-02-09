@@ -1,4 +1,4 @@
-.PHONY: install dev run scrape seed export test lint clean help
+.PHONY: install dev run scrape scrape-incremental seed export test lint clean help
 
 # ── Virtual environment auto-detection ────────────────────────────────────────
 # Searches common venv locations. Override with: make dev VENV=path/to/venv
@@ -29,6 +29,9 @@ scrape: ## Full scrape to cache/ (no server)
 
 scrape-fast: ## Dev scrape (20/chamber, fast delay) to cache/ with export
 	$(PYTHON) scripts/scrape.py --limit 20 --fast --export --bill-limit 100
+
+scrape-incremental: ## Incremental scrape (only new/changed bills)
+	$(PYTHON) scripts/scrape.py --incremental --fast --export
 
 seed: ## Regenerate mocks/dev/ from current cache/
 	$(PYTHON) scripts/generate_seed.py

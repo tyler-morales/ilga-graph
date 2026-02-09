@@ -8,20 +8,20 @@ tags: [ilga, moneyball, analytics, rankings]
 
 ## MVP: Most Effective Non-Leadership House Member
 
-**[[Margaret Croke]]** — District 12 (Democrat)
+**[[Diane Blair-Sherlock]]** — District 46 (Democrat)
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **42.32** / 100 |
-| Laws Filed (HB/SB) | 31 |
-| Laws Passed | 9 |
-| Effectiveness Rate | 29.0% |
-| Avg Co-Sponsors (Magnet) | 1.2 |
-| Cross-Party Rate (Bridge) | 6.5% |
-| Pipeline Depth | 2.4 / 6.0 |
-| Network Centrality | 100.00% |
-| Unique Collaborators | 39 |
-| Badges | Closer, Network Hub, Wide Tent |
+| Moneyball Score | **15.6** / 100 |
+| Laws Filed (HB/SB) | 6 |
+| Laws Passed | 0 |
+| Effectiveness Rate | 0.0% |
+| Avg Co-Sponsors (Magnet) | 2.7 |
+| Cross-Party Rate (Bridge) | 0.0% |
+| Pipeline Depth | 1.0 / 6.0 |
+| Network Centrality | 46.15% |
+| Unique Collaborators | 18 |
+| Badges | None |
 
 ## MVP: Most Effective Non-Leadership Senate Member
 
@@ -29,12 +29,12 @@ tags: [ilga, moneyball, analytics, rankings]
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **43.36** / 100 |
-| Laws Filed (HB/SB) | 82 |
-| Laws Passed | 25 |
-| Effectiveness Rate | 30.5% |
-| Pipeline Depth | 2.5 / 6.0 |
-| Badges | Closer, Network Hub, Wide Tent |
+| Moneyball Score | **92.15** / 100 |
+| Laws Filed (HB/SB) | 1 |
+| Laws Passed | 1 |
+| Effectiveness Rate | 100.0% |
+| Pipeline Depth | 6.0 / 6.0 |
+| Badges | Closer, Bipartisan Bridge, Network Hub, Wide Tent |
 
 ---
 
@@ -44,11 +44,11 @@ The Moneyball Score is a weighted composite of five normalized metrics:
 
 | Component | Weight | What It Measures |
 | --- | --- | --- |
-| Effectiveness Rate | 30% | Laws Passed / Laws Filed (HB/SB only) |
+| Effectiveness | 30% | Laws Passed / Laws Filed (HB/SB) |
 | Pipeline Depth | 20% | How far bills progress (0=filed, 6=signed) |
 | Magnet Score | 20% | Avg co-sponsors per law (normalized) |
 | Bridge Score | 15% | Cross-party co-sponsorship rate |
-| Network Centrality | 15% | Degree centrality in co-sponsorship graph |
+| Network Centrality | 15% | Co-sponsorship graph degree |
 
 **No-Fluff Filter**: Only substantive legislation (HB/SB) counts for effectiveness and pipeline metrics. Resolutions (HR/SR/HJR/SJR) are tracked separately.
 
@@ -60,87 +60,87 @@ The Moneyball Score is a weighted composite of five normalized metrics:
 
 | # | Member | Score | Laws | Eff% | Magnet | Bridge | Depth | Centrality | Badges |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | [[Margaret Croke]] | 42.32 | 9/31 | 29% | 1.2 | 6% | 2.4 | 100.00% | Closer, Network Hub, Wide Tent |
-| 2 | [[Carol Ammons]] | 41.07 | 1/19 | 5% | 2.4 | 11% | 1.1 | 94.87% | Network Hub, Wide Tent |
-| 3 | [[Kelly M. Cassidy]] | 40.32 | 9/49 | 18% | 1.6 | 6% | 1.7 | 100.00% | Network Hub, Wide Tent |
-| 4 | [[Michael Crawford]] | 36.85 | 6/31 | 19% | 1.1 | 6% | 1.8 | 100.00% | Network Hub, Wide Tent |
-| 5 | [[Lisa Davis]] | 36.56 | 3/24 | 12% | 1.5 | 4% | 1.5 | 100.00% | Network Hub, Wide Tent |
-| 6 | [[Michael J. Coffey, Jr.]] | 36.46 | 2/14 | 14% | 0.9 | 36% | 1.7 | 92.31% | Bipartisan Bridge, Network Hub, Wide Tent |
-| 7 | [[Diane Blair-Sherlock]] | 35.7 | 5/21 | 24% | 0.8 | 0% | 2.1 | 100.00% | Network Hub, Wide Tent |
-| 8 | [[Jason R. Bunting]] | 31.12 | 2/10 | 20% | 0.5 | 0% | 2.0 | 94.87% | Network Hub, Wide Tent |
-| 9 | [[Amy Briel]] | 30.83 | 4/37 | 11% | 0.8 | 8% | 1.5 | 100.00% | Network Hub, Wide Tent |
-| 10 | [[Mary Beth Canty]] | 28.75 | 3/38 | 8% | 0.8 | 5% | 1.1 | 100.00% | Network Hub, Wide Tent |
-| 11 | [[Jaime M. Andrade, Jr.]] | 28.41 | 2/27 | 7% | 0.7 | 7% | 1.1 | 100.00% | Network Hub, Wide Tent |
-| 12 | [[Sharon Chung]] | 26.5 | 4/41 | 10% | 0.4 | 5% | 1.4 | 100.00% | Network Hub, Wide Tent |
-| 13 | [[Harry Benton]] | 25.83 | 3/38 | 8% | 0.4 | 5% | 1.3 | 100.00% | Network Hub, Wide Tent |
-| 14 | [[Fred Crespo]] | 24.85 | 0/17 | 0% | 0.7 | 18% | 0.8 | 89.74% | Network Hub, Wide Tent |
-| 15 | [[Jed Davis]] | 18.33 | 1/67 | 1% | 0.1 | 3% | 1.0 | 89.74% | Network Hub, Wide Tent |
-| 16 | [[Justin Cochran]] | 7.89 | 0/12 | 0% | 0.0 | 0% | 0.8 | 35.90% | - |
+| 1 | [[Diane Blair-Sherlock]] | 15.6 | 0/6 | 0% | 2.7 | 0% | 1.0 | 46.15% | - |
+| 2 | [[Margaret Croke]] | 11.49 | 0/1 | 0% | 1.0 | 0% | 1.0 | 41.03% | - |
+| 3 | [[Sharon Chung]] | 9.62 | 0/0 | 0% | 0.0 | 0% | 0.0 | 64.10% | Network Hub, Wide Tent |
+| 4 | [[Harry Benton]] | 7.69 | 0/0 | 0% | 0.0 | 0% | 0.0 | 51.28% | Network Hub, Wide Tent |
+| 5 | [[Lisa Davis]] | 6.92 | 0/0 | 0% | 0.0 | 0% | 0.0 | 46.15% | - |
+| 6 | [[Kelly M. Cassidy]] | 6.54 | 0/0 | 0% | 0.0 | 0% | 0.0 | 43.59% | - |
+| 7 | [[Mary Beth Canty]] | 6.15 | 0/0 | 0% | 0.0 | 0% | 0.0 | 41.03% | - |
+| 8 | [[Amy Briel]] | 5.77 | 0/0 | 0% | 0.0 | 0% | 0.0 | 38.46% | - |
+| 9 | [[Jason R. Bunting]] | 5.77 | 0/0 | 0% | 0.0 | 0% | 0.0 | 38.46% | - |
+| 10 | [[Michael Crawford]] | 4.23 | 0/0 | 0% | 0.0 | 0% | 0.0 | 28.21% | - |
+| 11 | [[Jaime M. Andrade, Jr.]] | 2.69 | 0/0 | 0% | 0.0 | 0% | 0.0 | 17.95% | - |
+| 12 | [[Michael J. Coffey, Jr.]] | 2.31 | 0/0 | 0% | 0.0 | 0% | 0.0 | 15.38% | - |
+| 13 | [[Jed Davis]] | 1.54 | 0/0 | 0% | 0.0 | 0% | 0.0 | 10.26% | - |
+| 14 | [[Carol Ammons]] | 0.0 | 0/0 | 0% | 0.0 | 0% | 0.0 | 0.00% | - |
+| 15 | [[Justin Cochran]] | 0.0 | 0/0 | 0% | 0.0 | 0% | 0.0 | 0.00% | - |
+| 16 | [[Fred Crespo]] | 0.0 | 0/0 | 0% | 0.0 | 0% | 0.0 | 0.00% | - |
 
 ## Senate Rankings (Non-Leadership)
 
 | # | Member | Score | Laws | Eff% | Magnet | Bridge | Depth | Centrality | Badges |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | [[Laura Fine]] | 43.36 | 25/82 | 30% | 1.3 | 5% | 2.5 | 92.31% | Closer, Network Hub, Wide Tent |
-| 2 | [[Suzy Glowiak Hilton]] | 38.62 | 14/55 | 25% | 0.9 | 11% | 2.2 | 97.44% | Closer, Network Hub, Wide Tent |
-| 3 | [[Sara Feigenholtz]] | 37.94 | 12/55 | 22% | 1.0 | 7% | 2.1 | 97.44% | Network Hub, Wide Tent |
-| 4 | [[Javier L. Cervantes]] | 36.08 | 10/54 | 19% | 1.0 | 6% | 1.9 | 97.44% | Network Hub, Wide Tent |
-| 5 | [[Donald P. DeWitte]] | 34.81 | 7/38 | 18% | 0.8 | 16% | 1.9 | 92.31% | Network Hub, Wide Tent |
-| 6 | [[Christopher Belt]] | 34.71 | 12/70 | 17% | 0.9 | 7% | 1.9 | 97.44% | Network Hub, Wide Tent |
-| 7 | [[Mary Edly-Allen]] | 34.39 | 11/63 | 17% | 0.9 | 6% | 1.8 | 97.44% | Network Hub, Wide Tent |
-| 8 | [[Paul Faraci]] | 31.84 | 5/35 | 14% | 0.8 | 6% | 1.6 | 97.44% | Network Hub, Wide Tent |
-| 9 | [[Laura Ellman]] | 31.58 | 11/76 | 14% | 0.8 | 4% | 1.7 | 97.44% | Network Hub, Wide Tent |
-| 10 | [[Li Arellano, Jr.]] | 31.1 | 3/26 | 12% | 0.7 | 12% | 1.5 | 97.44% | Network Hub, Wide Tent |
-| 11 | [[Lakesia Collins]] | 26.96 | 4/75 | 5% | 0.7 | 5% | 1.2 | 97.44% | Network Hub, Wide Tent |
-| 12 | [[Chris Balkema]] | 25.6 | 3/60 | 5% | 0.6 | 2% | 1.2 | 97.44% | Network Hub, Wide Tent |
-| 13 | [[Andrew S. Chesney]] | 18.45 | 0/47 | 0% | 0.1 | 0% | 1.0 | 92.31% | Network Hub, Wide Tent |
+| 1 | [[Laura Fine]] | 92.15 | 1/1 | 100% | 8.0 | 100% | 6.0 | 74.36% | Closer, Bipartisan Bridge, Network Hub |
+| 2 | [[Laura Ellman]] | 76.54 | 1/1 | 100% | 10.0 | 0% | 6.0 | 43.59% | Closer, Coalition Builder |
+| 3 | [[Christopher Belt]] | 27.24 | 1/3 | 33% | 0.3 | 0% | 2.7 | 51.28% | Closer, Network Hub, Wide Tent |
+| 4 | [[Mary Edly-Allen]] | 14.27 | 0/3 | 0% | 1.0 | 0% | 0.3 | 74.36% | Network Hub, Wide Tent |
+| 5 | [[Lakesia Collins]] | 10.0 | 0/0 | 0% | 0.0 | 0% | 0.0 | 66.67% | Network Hub, Wide Tent |
+| 6 | [[Sara Feigenholtz]] | 10.0 | 0/0 | 0% | 0.0 | 0% | 0.0 | 66.67% | Network Hub, Wide Tent |
+| 7 | [[Javier L. Cervantes]] | 9.23 | 0/0 | 0% | 0.0 | 0% | 0.0 | 61.54% | Network Hub, Wide Tent |
+| 8 | [[Paul Faraci]] | 8.85 | 0/0 | 0% | 0.0 | 0% | 0.0 | 58.97% | Network Hub, Wide Tent |
+| 9 | [[Chris Balkema]] | 8.08 | 0/0 | 0% | 0.0 | 0% | 0.0 | 53.85% | Network Hub, Wide Tent |
+| 10 | [[Andrew S. Chesney]] | 7.31 | 0/0 | 0% | 0.0 | 0% | 0.0 | 48.72% | - |
+| 11 | [[Donald P. DeWitte]] | 6.54 | 0/0 | 0% | 0.0 | 0% | 0.0 | 43.59% | - |
+| 12 | [[Li Arellano, Jr.]] | 6.15 | 0/0 | 0% | 0.0 | 0% | 0.0 | 41.03% | - |
+| 13 | [[Suzy Glowiak Hilton]] | 6.15 | 0/0 | 0% | 0.0 | 0% | 0.0 | 41.03% | - |
 
 ## House Rankings (All)
 
 | # | Member | Score | Laws | Eff% | Magnet | Bridge | Depth | Centrality | Badges |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | [[Margaret Croke]] | 42.32 | 9/31 | 29% | 1.2 | 6% | 2.4 | 100.00% | Closer, Network Hub, Wide Tent |
-| 2 | [[Carol Ammons]] | 41.07 | 1/19 | 5% | 2.4 | 11% | 1.1 | 94.87% | Network Hub, Wide Tent |
-| 3 | [[Kelly M. Cassidy]] | 40.32 | 9/49 | 18% | 1.6 | 6% | 1.7 | 100.00% | Network Hub, Wide Tent |
-| 4 | [[Michael Crawford]] | 36.85 | 6/31 | 19% | 1.1 | 6% | 1.8 | 100.00% | Network Hub, Wide Tent |
-| 5 | [[Lisa Davis]] | 36.56 | 3/24 | 12% | 1.5 | 4% | 1.5 | 100.00% | Network Hub, Wide Tent |
-| 6 | [[Michael J. Coffey, Jr.]] | 36.46 | 2/14 | 14% | 0.9 | 36% | 1.7 | 92.31% | Bipartisan Bridge, Network Hub, Wide Tent |
-| 7 | [[Diane Blair-Sherlock]] | 35.7 | 5/21 | 24% | 0.8 | 0% | 2.1 | 100.00% | Network Hub, Wide Tent |
-| 8 | [[Jason R. Bunting]] | 31.12 | 2/10 | 20% | 0.5 | 0% | 2.0 | 94.87% | Network Hub, Wide Tent |
-| 9 | [[Amy Briel]] | 30.83 | 4/37 | 11% | 0.8 | 8% | 1.5 | 100.00% | Network Hub, Wide Tent |
-| 10 | [[Kam Buckner]] * | 30.67 | 3/48 | 6% | 1.1 | 4% | 1.2 | 100.00% | Network Hub, Wide Tent |
-| 11 | [[Dagmara Avelar]] * | 29.12 | 5/50 | 10% | 0.8 | 0% | 1.4 | 100.00% | Network Hub, Wide Tent |
-| 12 | [[Mary Beth Canty]] | 28.75 | 3/38 | 8% | 0.8 | 5% | 1.1 | 100.00% | Network Hub, Wide Tent |
-| 13 | [[Jaime M. Andrade, Jr.]] | 28.41 | 2/27 | 7% | 0.7 | 7% | 1.1 | 100.00% | Network Hub, Wide Tent |
-| 14 | [[Sharon Chung]] | 26.5 | 4/41 | 10% | 0.4 | 5% | 1.4 | 100.00% | Network Hub, Wide Tent |
-| 15 | [[Harry Benton]] | 25.83 | 3/38 | 8% | 0.4 | 5% | 1.3 | 100.00% | Network Hub, Wide Tent |
-| 16 | [[Fred Crespo]] | 24.85 | 0/17 | 0% | 0.7 | 18% | 0.8 | 89.74% | Network Hub, Wide Tent |
-| 17 | [[Christopher "C.D." Davidsmeyer]] * | 23.8 | 2/40 | 5% | 0.5 | 8% | 1.2 | 89.74% | Network Hub, Wide Tent |
-| 18 | [[John M. Cabello]] * | 20.11 | 1/62 | 2% | 0.2 | 0% | 1.1 | 97.44% | Network Hub, Wide Tent |
-| 19 | [[Jed Davis]] | 18.33 | 1/67 | 1% | 0.1 | 3% | 1.0 | 89.74% | Network Hub, Wide Tent |
-| 20 | [[Justin Cochran]] | 7.89 | 0/12 | 0% | 0.0 | 0% | 0.8 | 35.90% | - |
+| 1 | [[Diane Blair-Sherlock]] | 15.6 | 0/6 | 0% | 2.7 | 0% | 1.0 | 46.15% | - |
+| 2 | [[Margaret Croke]] | 11.49 | 0/1 | 0% | 1.0 | 0% | 1.0 | 41.03% | - |
+| 3 | [[Sharon Chung]] | 9.62 | 0/0 | 0% | 0.0 | 0% | 0.0 | 64.10% | Network Hub, Wide Tent |
+| 4 | [[Harry Benton]] | 7.69 | 0/0 | 0% | 0.0 | 0% | 0.0 | 51.28% | Network Hub, Wide Tent |
+| 5 | [[Lisa Davis]] | 6.92 | 0/0 | 0% | 0.0 | 0% | 0.0 | 46.15% | - |
+| 6 | [[Kelly M. Cassidy]] | 6.54 | 0/0 | 0% | 0.0 | 0% | 0.0 | 43.59% | - |
+| 7 | [[Mary Beth Canty]] | 6.15 | 0/0 | 0% | 0.0 | 0% | 0.0 | 41.03% | - |
+| 8 | [[Dagmara Avelar]] * | 5.77 | 0/0 | 0% | 0.0 | 0% | 0.0 | 38.46% | - |
+| 9 | [[Amy Briel]] | 5.77 | 0/0 | 0% | 0.0 | 0% | 0.0 | 38.46% | - |
+| 10 | [[Jason R. Bunting]] | 5.77 | 0/0 | 0% | 0.0 | 0% | 0.0 | 38.46% | - |
+| 11 | [[Michael Crawford]] | 4.23 | 0/0 | 0% | 0.0 | 0% | 0.0 | 28.21% | - |
+| 12 | [[Jaime M. Andrade, Jr.]] | 2.69 | 0/0 | 0% | 0.0 | 0% | 0.0 | 17.95% | - |
+| 13 | [[Michael J. Coffey, Jr.]] | 2.31 | 0/0 | 0% | 0.0 | 0% | 0.0 | 15.38% | - |
+| 14 | [[Jed Davis]] | 1.54 | 0/0 | 0% | 0.0 | 0% | 0.0 | 10.26% | - |
+| 15 | [[Christopher "C.D." Davidsmeyer]] * | 1.15 | 0/0 | 0% | 0.0 | 0% | 0.0 | 7.69% | - |
+| 16 | [[Carol Ammons]] | 0.0 | 0/0 | 0% | 0.0 | 0% | 0.0 | 0.00% | - |
+| 17 | [[Kam Buckner]] * | 0.0 | 0/0 | 0% | 0.0 | 0% | 0.0 | 0.00% | - |
+| 18 | [[John M. Cabello]] * | 0.0 | 0/0 | 0% | 0.0 | 0% | 0.0 | 0.00% | - |
+| 19 | [[Justin Cochran]] | 0.0 | 0/0 | 0% | 0.0 | 0% | 0.0 | 0.00% | - |
+| 20 | [[Fred Crespo]] | 0.0 | 0/0 | 0% | 0.0 | 0% | 0.0 | 0.00% | - |
 
 ## Senate Rankings (All)
 
 | # | Member | Score | Laws | Eff% | Magnet | Bridge | Depth | Centrality | Badges |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | [[Laura Fine]] | 43.36 | 25/82 | 30% | 1.3 | 5% | 2.5 | 92.31% | Closer, Network Hub, Wide Tent |
-| 2 | [[Suzy Glowiak Hilton]] | 38.62 | 14/55 | 25% | 0.9 | 11% | 2.2 | 97.44% | Closer, Network Hub, Wide Tent |
-| 3 | [[Sara Feigenholtz]] | 37.94 | 12/55 | 22% | 1.0 | 7% | 2.1 | 97.44% | Network Hub, Wide Tent |
-| 4 | [[Omar Aquino]] * | 36.44 | 8/38 | 21% | 1.4 | 5% | 2.0 | 71.79% | Network Hub, Wide Tent |
-| 5 | [[Javier L. Cervantes]] | 36.08 | 10/54 | 19% | 1.0 | 6% | 1.9 | 97.44% | Network Hub, Wide Tent |
-| 6 | [[Donald P. DeWitte]] | 34.81 | 7/38 | 18% | 0.8 | 16% | 1.9 | 92.31% | Network Hub, Wide Tent |
-| 7 | [[Christopher Belt]] | 34.71 | 12/70 | 17% | 0.9 | 7% | 1.9 | 97.44% | Network Hub, Wide Tent |
-| 8 | [[Mary Edly-Allen]] | 34.39 | 11/63 | 17% | 0.9 | 6% | 1.8 | 97.44% | Network Hub, Wide Tent |
-| 9 | [[Paul Faraci]] | 31.84 | 5/35 | 14% | 0.8 | 6% | 1.6 | 97.44% | Network Hub, Wide Tent |
-| 10 | [[Laura Ellman]] | 31.58 | 11/76 | 14% | 0.8 | 4% | 1.7 | 97.44% | Network Hub, Wide Tent |
-| 11 | [[Cristina Castro]] * | 31.32 | 11/90 | 12% | 0.8 | 8% | 1.6 | 97.44% | Network Hub, Wide Tent |
-| 12 | [[Li Arellano, Jr.]] | 31.1 | 3/26 | 12% | 0.7 | 12% | 1.5 | 97.44% | Network Hub, Wide Tent |
-| 13 | [[Bill Cunningham]] * | 27.61 | 12/90 | 13% | 0.5 | 6% | 1.6 | 87.18% | Network Hub, Wide Tent |
-| 14 | [[Neil Anderson]] * | 27.47 | 8/77 | 10% | 0.6 | 4% | 1.5 | 92.31% | Network Hub, Wide Tent |
-| 15 | [[Lakesia Collins]] | 26.96 | 4/75 | 5% | 0.7 | 5% | 1.2 | 97.44% | Network Hub, Wide Tent |
-| 16 | [[Chris Balkema]] | 25.6 | 3/60 | 5% | 0.6 | 2% | 1.2 | 97.44% | Network Hub, Wide Tent |
-| 17 | [[Dale Fowler]] * | 24.1 | 1/41 | 2% | 0.6 | 2% | 1.1 | 97.44% | Network Hub, Wide Tent |
-| 18 | [[Terri Bryant]] * | 23.1 | 2/60 | 3% | 0.4 | 3% | 1.1 | 97.44% | Network Hub, Wide Tent |
-| 19 | [[John F. Curran]] * | 19.1 | 3/333 | 1% | 0.1 | 2% | 1.1 | 94.87% | Network Hub, Wide Tent |
-| 20 | [[Andrew S. Chesney]] | 18.45 | 0/47 | 0% | 0.1 | 0% | 1.0 | 92.31% | Network Hub, Wide Tent |
+| 1 | [[Laura Fine]] | 92.15 | 1/1 | 100% | 8.0 | 100% | 6.0 | 74.36% | Closer, Bipartisan Bridge, Network Hub |
+| 2 | [[Laura Ellman]] | 76.54 | 1/1 | 100% | 10.0 | 0% | 6.0 | 43.59% | Closer, Coalition Builder |
+| 3 | [[Cristina Castro]] * | 31.18 | 0/1 | 0% | 2.0 | 100% | 1.0 | 58.97% | Bipartisan Bridge, Network Hub, Wide Tent |
+| 4 | [[Christopher Belt]] | 27.24 | 1/3 | 33% | 0.3 | 0% | 2.7 | 51.28% | Closer, Network Hub, Wide Tent |
+| 5 | [[Mary Edly-Allen]] | 14.27 | 0/3 | 0% | 1.0 | 0% | 0.3 | 74.36% | Network Hub, Wide Tent |
+| 6 | [[Dale Fowler]] * | 11.26 | 0/2 | 0% | 0.5 | 0% | 1.0 | 46.15% | - |
+| 7 | [[Terri Bryant]] * | 10.26 | 0/1 | 0% | 0.0 | 0% | 1.0 | 46.15% | - |
+| 8 | [[Lakesia Collins]] | 10.0 | 0/0 | 0% | 0.0 | 0% | 0.0 | 66.67% | Network Hub, Wide Tent |
+| 9 | [[Sara Feigenholtz]] | 10.0 | 0/0 | 0% | 0.0 | 0% | 0.0 | 66.67% | Network Hub, Wide Tent |
+| 10 | [[Javier L. Cervantes]] | 9.23 | 0/0 | 0% | 0.0 | 0% | 0.0 | 61.54% | Network Hub, Wide Tent |
+| 11 | [[Paul Faraci]] | 8.85 | 0/0 | 0% | 0.0 | 0% | 0.0 | 58.97% | Network Hub, Wide Tent |
+| 12 | [[John F. Curran]] * | 8.46 | 0/0 | 0% | 0.0 | 0% | 0.0 | 56.41% | Network Hub, Wide Tent |
+| 13 | [[Chris Balkema]] | 8.08 | 0/0 | 0% | 0.0 | 0% | 0.0 | 53.85% | Network Hub, Wide Tent |
+| 14 | [[Andrew S. Chesney]] | 7.31 | 0/0 | 0% | 0.0 | 0% | 0.0 | 48.72% | - |
+| 15 | [[Neil Anderson]] * | 6.92 | 0/0 | 0% | 0.0 | 0% | 0.0 | 46.15% | - |
+| 16 | [[Donald P. DeWitte]] | 6.54 | 0/0 | 0% | 0.0 | 0% | 0.0 | 43.59% | - |
+| 17 | [[Li Arellano, Jr.]] | 6.15 | 0/0 | 0% | 0.0 | 0% | 0.0 | 41.03% | - |
+| 18 | [[Suzy Glowiak Hilton]] | 6.15 | 0/0 | 0% | 0.0 | 0% | 0.0 | 41.03% | - |
+| 19 | [[Bill Cunningham]] * | 3.46 | 0/0 | 0% | 0.0 | 0% | 0.0 | 23.08% | - |
+| 20 | [[Omar Aquino]] * | 1.15 | 0/0 | 0% | 0.0 | 0% | 0.0 | 7.69% | - |

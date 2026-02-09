@@ -91,6 +91,10 @@ class BillType:
     last_action: str
     last_action_date: str
     primary_sponsor: str
+    synopsis: str = ""
+    status_url: str = ""
+    sponsor_ids: list[str] = strawberry.field(default_factory=list)
+    house_sponsor_ids: list[str] = strawberry.field(default_factory=list)
 
     @classmethod
     def from_model(cls, b: BillModel) -> BillType:
@@ -102,6 +106,10 @@ class BillType:
             last_action=b.last_action,
             last_action_date=b.last_action_date,
             primary_sponsor=b.primary_sponsor,
+            synopsis=b.synopsis,
+            status_url=b.status_url,
+            sponsor_ids=b.sponsor_ids,
+            house_sponsor_ids=b.house_sponsor_ids,
         )
 
 

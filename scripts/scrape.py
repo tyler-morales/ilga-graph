@@ -3,7 +3,8 @@
 
 Usage::
 
-    python scripts/scrape.py                    # full scrape (all members)
+    python scripts/scrape.py                    # full scrape (members + 100 SB + 100 HB)
+    python scripts/scrape.py --incremental      # incremental: only new/changed bills
     python scripts/scrape.py --limit 20         # scrape 20 members per chamber
     python scripts/scrape.py --export           # scrape + export vault
     python scripts/scrape.py --export-only      # skip scraping, just export from cache
@@ -34,6 +35,23 @@ def main() -> None:
         type=int,
         default=0,
         help="Max members to scrape per chamber (0 = all)",
+    )
+    parser.add_argument(
+        "--incremental",
+        action="store_true",
+        help="Incremental scrape: only fetch new/changed bills",
+    )
+    parser.add_argument(
+        "--sb-limit",
+        type=int,
+        default=100,
+        help="Max Senate bills to scrape from index (default: 100)",
+    )
+    parser.add_argument(
+        "--hb-limit",
+        type=int,
+        default=100,
+        help="Max House bills to scrape from index (default: 100)",
     )
     parser.add_argument(
         "--export",
@@ -79,20 +97,25 @@ def main() -> None:
     seed_mode = args.export_only
 
     logger.info(
-        "Loading data (limit=%d, seed_mode=%s, dev_delay=%s)...",
+        "Loading data (limit=%d, seed_mode=%s, dev_delay=%s, incremental=%s)...",
         args.limit,
         seed_mode,
         args.fast,
+        args.incremental,
     )
     data = load_or_scrape_data(
         limit=args.limit,
         dev_mode=args.fast,
         seed_mode=seed_mode,
+        incremental=args.incremental,
+        sb_limit=args.sb_limit,
+        hb_limit=args.hb_limit,
     )
     logger.info(
-        "Loaded %d members, %d committees.",
+        "Loaded %d members, %d committees, %d bills.",
         len(data.members),
         len(data.committees),
+        len(data.bills_lookup),
     )
 
     # ── Scrape votes + witness slips for the configured bill URLs ──

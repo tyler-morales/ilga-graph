@@ -242,11 +242,14 @@ make run            # start server using cache/
 
 ```bash
 make test           # run pytest
-make lint           # ruff check + format check
+make lint           # ruff check + format check (run before opening a PR)
+make lint-fix       # auto-fix ruff issues
 make seed           # regenerate mocks/dev/ (20 members, 100 bills)
 make export         # re-export vault from cache (no server)
 make clean          # remove cache/ and generated vault files
 ```
+
+**Before opening a PR:** run `make lint` and `make test` so CI passes.
 
 ### Run Manually
 

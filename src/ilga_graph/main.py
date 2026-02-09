@@ -50,7 +50,13 @@ from .schema import (
     WitnessSlipType,
     paginate,
 )
-from .scraper import ILGAScraper, extract_and_normalize, save_normalized_cache
+from .scraper import ILGAScraper, save_normalized_cache
+from .scrapers.bills import (
+    incremental_bill_scrape,
+    load_bill_cache,
+    scrape_all_bill_indexes,
+    scrape_all_bills,
+)
 from .scrapers.votes import scrape_specific_bills
 from .scrapers.witness_slips import scrape_all_witness_slips
 from .vote_name_normalizer import normalize_vote_events
@@ -227,8 +233,10 @@ def _log_startup_timing(
 # ── Mode flags ────────────────────────────────────────────────────────────────
 # DEV_MODE: lighter scrape limits, faster request delays.
 # SEED_MODE: load from mocks/dev/ when cache/ is missing (instant startup).
+# INCREMENTAL: only re-scrape bills that changed since last run.
 DEV_MODE = os.getenv("ILGA_DEV_MODE", "1") == "1"
 SEED_MODE = os.getenv("ILGA_SEED_MODE", "1") == "1"
+INCREMENTAL = os.getenv("ILGA_INCREMENTAL", "0") == "1"
 
 # When DEV_MODE is on, override scrape + export limits:
 #   - Scrape 20 members per chamber (40 total)
@@ -253,9 +261,51 @@ class ScrapedData:
     """Container for raw scraped/loaded data before analytics."""
 
     members: list[Member]
+    bills_lookup: dict[str, Bill]  # leg_id -> Bill (from bill scraper)
     committees: list[Committee]
     committee_rosters: dict[str, list[CommitteeMemberRole]]
     committee_bills: dict[str, list[str]]
+
+
+def _link_members_to_bills(
+    members: list[Member],
+    bills_lookup: dict[str, Bill],
+) -> None:
+    """Build member-bill relationships from Bill.sponsor_ids.
+
+    For each bill, its ``sponsor_ids`` and ``house_sponsor_ids`` contain
+    member IDs extracted from the BillStatus page.  We build a reverse
+    index so each member knows which bills they sponsor / co-sponsor.
+    """
+    # Build member-id -> Member lookup
+    member_by_id: dict[str, Member] = {m.id: m for m in members}
+
+    # Clear existing linkage (will rebuild)
+    for m in members:
+        m.sponsored_bills = []
+        m.co_sponsor_bills = []
+        m.sponsored_bill_ids = []
+        m.co_sponsor_bill_ids = []
+
+    for bill in bills_lookup.values():
+        all_sponsor_ids = bill.sponsor_ids + bill.house_sponsor_ids
+        if not all_sponsor_ids:
+            continue
+
+        # First sponsor is the chief sponsor
+        chief_id = all_sponsor_ids[0]
+        co_ids = all_sponsor_ids[1:]
+
+        if chief_id in member_by_id:
+            m = member_by_id[chief_id]
+            m.sponsored_bills.append(bill)
+            m.sponsored_bill_ids.append(bill.leg_id)
+
+        for co_id in co_ids:
+            if co_id in member_by_id:
+                m = member_by_id[co_id]
+                m.co_sponsor_bills.append(bill)
+                m.co_sponsor_bill_ids.append(bill.leg_id)
 
 
 def load_or_scrape_data(
@@ -263,6 +313,9 @@ def load_or_scrape_data(
     limit: int = 0,
     dev_mode: bool = False,
     seed_mode: bool = False,
+    incremental: bool = False,
+    sb_limit: int = 100,
+    hb_limit: int = 100,
 ) -> ScrapedData:
     """Load data from cache/seed or scrape from ilga.gov.
 
@@ -274,9 +327,17 @@ def load_or_scrape_data(
         Use faster request delays when scraping.
     seed_mode:
         Fall back to ``mocks/dev/`` when ``cache/`` is missing.
+    incremental:
+        If True and cache exists, only re-scrape changed/new bills.
+    sb_limit:
+        Max Senate bills to scrape from the index (0 = all).
+    hb_limit:
+        Max House bills to scrape from the index (0 = all).
     """
+    request_delay = 0.25 if dev_mode else 0.5
+
     scraper = ILGAScraper(
-        request_delay=0.25 if dev_mode else 1.0,
+        request_delay=request_delay,
         seed_fallback=seed_mode,
     )
 
@@ -291,21 +352,48 @@ def load_or_scrape_data(
         if test_member is not None:
             members.append(test_member)
 
-    # ── Save normalized cache if we scraped fresh data ──
-    # (If loaded from cache, sponsored/co_sponsor bills are already populated.)
-    # Detect fresh scrape: if any member has bills but no sponsored_bill_ids yet.
-    needs_normalize = any(m.sponsored_bills and not m.sponsored_bill_ids for m in members)
-    if needs_normalize and members:
-        all_bills = extract_and_normalize(members)
-        save_normalized_cache(members, all_bills)
-        LOGGER.info(
-            "Normalized %d members → %d unique bills.",
-            len(members),
-            len(all_bills),
+    # ── Bills: scrape from legislation pages (single source of truth) ──
+    if incremental:
+        LOGGER.info("Incremental bill scrape (SB limit=%d, HB limit=%d)...", sb_limit, hb_limit)
+        bills_lookup = incremental_bill_scrape(
+            sb_limit=sb_limit,
+            hb_limit=hb_limit,
+            request_delay=request_delay,
+            rescrape_recent_days=30,
         )
+    else:
+        # Try cache first, then full scrape
+        bills_lookup = load_bill_cache(seed_fallback=seed_mode)
+        if bills_lookup is None:
+            LOGGER.info("Full bill scrape (SB limit=%d, HB limit=%d)...", sb_limit, hb_limit)
+            index = scrape_all_bill_indexes(
+                sb_limit=sb_limit,
+                hb_limit=hb_limit,
+                request_delay=request_delay,
+            )
+            bills_lookup = scrape_all_bills(
+                index,
+                request_delay=request_delay,
+                use_cache=False,
+                seed_fallback=seed_mode,
+            )
+        else:
+            LOGGER.info("Loaded %d bills from cache.", len(bills_lookup))
+
+    # ── Link members to bills using sponsor_ids from BillStatus ──
+    _link_members_to_bills(members, bills_lookup)
+    LOGGER.info(
+        "Linked %d members to %d bills via sponsor IDs.",
+        len(members),
+        len(bills_lookup),
+    )
+
+    # Persist normalized cache so next run can load members (and bills) from disk.
+    save_normalized_cache(members, bills_lookup)
 
     return ScrapedData(
         members=members,
+        bills_lookup=bills_lookup,
         committees=committees,
         committee_rosters=committee_rosters,
         committee_bills=committee_bills,
@@ -338,7 +426,12 @@ def export_vault(
         member_export_limit=member_export_limit,
         committee_export_limit=committee_export_limit,
         bill_export_limit=bill_export_limit,
-    ).export(data.members, scorecards=scorecards, moneyball=moneyball)
+    ).export(
+        data.members,
+        scorecards=scorecards,
+        moneyball=moneyball,
+        all_bills=data.bills_lookup.values(),
+    )
 
 
 def run_etl(
@@ -347,12 +440,18 @@ def run_etl(
     member_export_limit: int | None = None,
     committee_export_limit: int | None = None,
     bill_export_limit: int | None = None,
+    incremental: bool = False,
+    sb_limit: int = 100,
+    hb_limit: int = 100,
 ) -> list[Member]:
     """Full ETL pipeline: scrape/load -> analytics -> vault export."""
     data = load_or_scrape_data(
         limit=limit,
         dev_mode=DEV_MODE,
         seed_mode=SEED_MODE,
+        incremental=incremental,
+        sb_limit=sb_limit,
+        hb_limit=hb_limit,
     )
     scorecards, moneyball = compute_analytics(data.members)
     export_vault(
@@ -390,12 +489,12 @@ class AppState:
 state = AppState()
 
 
-def _collect_unique_bills(members: list[Member]) -> dict[str, Bill]:
+def _collect_unique_bills_by_number(bills_lookup: dict[str, Bill]) -> dict[str, Bill]:
+    """Build a bill_number -> Bill lookup from the leg_id -> Bill dict."""
     unique: dict[str, Bill] = {}
-    for m in members:
-        for b in m.bills:
-            if b.bill_number not in unique:
-                unique[b.bill_number] = b
+    for b in bills_lookup.values():
+        if b.bill_number not in unique:
+            unique[b.bill_number] = b
     return unique
 
 
@@ -419,6 +518,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         limit=_SCRAPE_MEMBER_LIMIT,
         dev_mode=DEV_MODE,
         seed_mode=SEED_MODE,
+        incremental=INCREMENTAL,
+        sb_limit=100,
+        hb_limit=100,
     )
     state.members = data.members
     elapsed_load = _time.perf_counter() - t_load
@@ -441,7 +543,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     elapsed_export = _time.perf_counter() - t_export
 
     state.member_lookup = {m.name: m for m in state.members}
-    state.bill_lookup = _collect_unique_bills(state.members)
+    state.bill_lookup = _collect_unique_bills_by_number(data.bills_lookup)
     state.bills = list(state.bill_lookup.values())
     state.committees = data.committees
     state.committee_lookup = {c.code: c for c in data.committees}
