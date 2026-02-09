@@ -1,121 +1,52 @@
 # TODOS
 
-## Done: Committee data caching
-
-Committee data (index, rosters, bills) is now cached in a unified `cache/committees.json` file. Startup loads from cache when present, skipping the slow multi-minute scrape.
-
-## Done: Seed data for instant local dev
-
-Committed dev mock data lives in `mocks/dev/`. When `ILGA_SEED_MODE=1` (default in dev), the scraper falls back to mocks when `cache/` is missing. Run `make dev` for instant startup with no scraping.
-
-## Done: Composable ETL
-
-`run_etl()` is refactored into three independent steps: `load_or_scrape_data()`, `compute_analytics()`, and `export_vault()`. The CLI scripts (`scripts/scrape.py`) can call each step independently.
-
-## Done: Scraper resilience
-
-- HTTPAdapter with 3 retries and connection pooling
-- Stale cache warnings (>7 days)
-- Progress logging with elapsed time and ETA during scrapes
-
-## Done: Startup performance tracking
-
-- Detailed timing logs for each ETL step (load, analytics, export, votes)
-- CSV logging to `.startup_timings.csv` for historical tracking
-- Terminal output showing breakdown and total startup time
-- `PERFORMANCE.md` documenting bottlenecks and optimization opportunities
-
-## Done: Vote caching & clean startup UI
-
-- Roll-call votes are now cached in `cache/vote_events.json` (no re-scraping on every startup)
-- Replaced verbose per-PDF logs with clean color-coded summary table
-- Startup summary shows step-by-step breakdown with emoji icons and ANSI colors
-- Vote scraping bottleneck eliminated (0.1s from cache vs 8s live scraping)
-
-## Done: Normalized data architecture
-
-- Cache restructured from denormalized (embedded bills per member) to normalized (`members.json` + `bills.json`)
-- ~70% reduction in cache size (12.7 MB → ~3.5 MB) by storing each bill once
-- Members use disjoint `sponsored_bill_ids` / `co_sponsor_bill_ids` (no overlap)
-- `hydrate_members()` resolves IDs to full Bill objects on load
-- Legacy per-chamber cache and backward-compat fallbacks removed
-- Seed data generation updated to produce normalized format
-- GraphQL API exposes `sponsored_bills` and `co_sponsor_bills` on `MemberType`
-
-## Done: Witness slip pipeline
-
-- Witness slips use the same bill list as votes (`DEFAULT_BILL_STATUS_URLS` / `ILGA_VOTE_BILL_URLS`); one source of truth.
-- `scrape_all_witness_slips()` in lifespan and `scripts/scrape.py`; cache `cache/witness_slips.json`; seed copy in `generate_seed.py`.
-- Amendment slips normalised to parent bill number so `witnessSlips(billNumber)` returns all slips for that bill.
-- HB0576 and HB0034 added to defaults; real slip data in cache and mocks (e.g. HB0034: 3,567 slips, SB0008: 7,901).
-- GraphQL: `votes(billNumber)` and `witnessSlips(billNumber, limit, offset)` for per-bill votes and slips.
-
-## Done: Witness slip summary (GraphQL)
-
-- `WitnessSlipSummaryType`: `billNumber`, `totalCount`, `proponentCount`, `opponentCount`, `noPositionCount`.
-- `witnessSlipSummary(billNumber: String!)`: per-bill counts, no paging.
-- `witnessSlipSummaries(limit, offset)`: all bills that have slips, sorted by slip volume descending; paginated. Enables “bills by slip volume” / “high-opposition bills” in one query.
-
-## Done: Bill / member slip analytics (GraphQL)
-
-- `billSlipAnalytics(billNumber: String!)`: returns `BillSlipAnalyticsType` with `controversyScore` (0–1, from `controversial_score()`). Null when the bill has no slips.
-- `memberSlipAlignment(memberName: String!)`: returns list of `LobbyistAlignmentEntryType` (`organization`, `proponentCount`) for orgs that file as proponents on that member’s sponsored bills (from `lobbyist_alignment()`). Empty when member not found or no alignment.
-
-## Done: GraphQL query docs
-
-- `graphql/README.md`: Lists query files, documents the recommended “bill + votes + slips” query, and clarifies that `votes` returns a list and `witnessSlips` returns a connection. Also notes `witnessSlipSummaries`, `billSlipAnalytics`, and `memberSlipAlignment`.
-- Main `README.md`: Under “Example GraphQL Queries”, added a short note pointing to `graphql/bill_with_votes_and_slips.graphql` and `graphql/README.md`.
-
-## Future
-
-- **Witness slip analytics (volume vs advancement)**: Compare slip volume and position ratio to whether the bill advanced. Expose via GraphQL (e.g. list of “high-volume / stalled” vs “high-volume / passed” bills; ratio field on summary).
-- **Full-text search**: Add a search endpoint to the GraphQL API for bill descriptions and member bios.
-- **Analytics caching**: Cache scorecards/moneyball results alongside member data to skip recomputation on startup.
-- **Full bill index scrape**: Expand to scrape all ~9,600 bills (all range pages) instead of first 100 per chamber.
+**State of the system:** Bills-first pipeline and incremental scraping are done. Core data (members, committees, bills, votes, witness slips) is scraped and cached; GraphQL API, Obsidian export, and CI are in place. Ready to level-set for production when you are.
 
 ---
 
-## Done: Bills-first rearchitecture + incremental scraping
+## Current
 
-- **Bills as single source of truth**: Bills are now scraped from the ILGA Legislation pages (`/Legislation/RegularSession/SB`, `/HB`) instead of being discovered as a side-effect of member page scraping.
-- **Three-layer bill pipeline**: Range pages build a bill index (bill_number, leg_id, description), then BillStatus pages provide full detail (last_action, last_action_date, all sponsors with member IDs, synopsis, full action history).
-- **New module**: `src/ilga_graph/scrapers/bills.py` with `scrape_bill_index()`, `scrape_bill_status()`, `scrape_all_bills()`, `incremental_bill_scrape()`.
-- **Enhanced Bill model**: New fields `synopsis`, `status_url`, `sponsor_ids`, `house_sponsor_ids`, `action_history` (list of `ActionEntry`).
-- **Inverted member-bill relationship**: `_link_members_to_bills()` builds member-to-bill linkage from `Bill.sponsor_ids` (extracted from BillStatus sponsor div) instead of from member page bill tables.
-- **Incremental scraping**: `incremental_bill_scrape()` fetches range pages to detect new leg_ids, re-checks bills with recent `last_action_date` (configurable window, default 30 days), and merges into existing cache.
-- **CLI**: `scripts/scrape.py --incremental`, `--sb-limit`, `--hb-limit` (default 100 each).
-- **Env var**: `ILGA_INCREMENTAL=1` enables incremental mode in server lifespan.
-- **Cache metadata**: `cache/scrape_metadata.json` tracks `last_bill_scrape_at` and `bill_index_count`.
-- **GraphQL**: `BillType` exposes `synopsis`, `statusUrl`, `sponsorIds`, `houseSponsorIds`.
+- None — system is in a good spot; use **Next** when you pick up work again.
 
-## Done: PR cleanup (bills-first / incremental)
-- **Persist cache:** `load_or_scrape_data` now calls `save_normalized_cache(members, bills_lookup)` at the end so `members.json` (and bills) are written every run; next run can load from cache.
-- **Removed dead code:** `extract_and_normalize()` removed from scraper (bills come from bill scraper; linkage is via `_link_members_to_bills`).
-- **Bills scraper:** Normalize last-action text to single spaces; guard `scrape_bill_status` when URL has no `leg_id` (return None); defensive `_bill_from_dict` for malformed `action_history` in both bills.py and scraper.py; removed unused `Tag` import; doc for hardcoded session in `_range_url`.
+---
 
-## Done: Bill export fix (bills-first pipeline)
+## Next (when you’re ready)
 
-- Exporter was building `unique_bills` only from `member.sponsored_bills` / `co_sponsor_bills`. With old cache (no `sponsor_ids`), no bills were linked to members → "Exported 0 bill files."
-- `ObsidianExporter.export()` now accepts optional `all_bills`; when provided (from `data.bills_lookup`), the exporter uses that as the bill set and still enriches co-sponsors from members. `export_vault()` passes `data.bills_lookup.values()` so bill notes are written for all cached bills (up to `bill_export_limit`).
+- Run `python scripts/scrape.py --fast --force-refresh` to populate `cache/bills.json` with the new format (if needed).
+- Run `python scripts/scrape.py --incremental --fast` on subsequent runs to exercise incremental mode.
+- When shifting to prod: pre-populate cache (e.g. scheduled scrape), run app with `ILGA_SEED_MODE=0` and `ILGA_DEV_MODE=0`, restrict `ILGA_CORS_ORIGINS`, and optionally set `ILGA_API_KEY`.
 
-## Next steps
+---
 
-- Run `python scripts/scrape.py --fast --force-refresh` to populate `cache/bills.json` with the new format.
-- Run `python scripts/scrape.py --incremental --fast` on subsequent runs to test incremental mode.
+## Production (checklist for deployment)
 
-## Done: Fix server startup (PR)
+- Pre-populate `cache/` (full or incremental scrape) so startup is load-only.
+- Set `ILGA_SEED_MODE=0`, `ILGA_DEV_MODE=0`.
+- Set `ILGA_CORS_ORIGINS` to your front-end origin(s).
+- Optionally set `ILGA_API_KEY` to protect the GraphQL endpoint.
+- Use `GET /health` for readiness (`ready` is true when members are loaded).
 
-- Removed duplicate app block from `schema.py` that referenced undefined names (`GraphQLRouter`, `FastAPI`, `lifespan`, etc.). The app and GraphQL router live only in `main.py`; `schema.py` now only defines types and the Strawberry `schema` object. `make dev` runs without `NameError`.
+---
 
-## Done: PR consistency review (Open Claw / witness-slip-advancement-analytics)
+## Backlog / Future
 
-- **Schema vs main:** Confirmed the running app uses `main.py`’s Query and schema only; `schema.py` is the source of types (and a parallel Query/schema that is not mounted). No consumers import `app` or `graphql_app` from schema.
-- **Advancement analytics:** `compute_advancement_analytics()` in `analytics.py` returns `high_volume_stalled` / `high_volume_passed`; `BillAdvancementAnalyticsType` and both Query implementations (main + schema) match. `Bill.last_action`, `pipeline_depth`, `classify_bill_status`, `_normalise_bill_number` are all present and used correctly.
-- **Type hints in schema.py:** Replaced `Member` / `WitnessSlip` with `MemberModel` / `WitnessSlipModel` in `_sort_key` and `_witness_slip_summary_for_slips` so type hints match the actual imports (avoids undefined-name issues for type checkers).
-- **Docs:** Documented `billAdvancementAnalyticsSummary` in `graphql/README.md`.
+- Full-text search for bill descriptions and member bios.
+- Analytics caching (scorecards/moneyball) to skip recomputation on startup.
+- Full bill index scrape (~9,600 bills, all range pages).
+- Optionally derive vote/slip bill list from cache for broader coverage.
 
-## Done: Fix GitHub CI lint (ruff)
+---
 
-- **pyproject.toml:** Added `[tool.ruff.lint.per-file-ignores]` so `schema.py` ignores F821 (undefined names `state`, helpers) that are injected by `main` at runtime.
-- **Ruff check:** Fixed E501 (line length), F401 (unused imports), F841 (unused variables), W291/W293 (whitespace), F601 (duplicate dict key). Ran `ruff check --fix` and `ruff format`; shortened long lines in exporter, main, schema, analytics, scrapers, tests.
-- **Tests:** Shortened SAMPLE_EXPORT / SAMPLE_WITNESS_SLIPS_PAGE in test_witness_slips.py to meet line-length; fixed test_isolate duplicate key in test_moneyball.py; updated assertions for shortened org names.
+## Done (summary)
+
+**Cache & seed:** Committee data in `cache/committees.json`; seed data in `mocks/dev/` with `ILGA_SEED_MODE=1` for instant dev; normalized `members.json` + `bills.json` (~70% size reduction); vote events and witness slips cached.
+
+**ETL:** Composable steps — `load_or_scrape_data()`, `compute_analytics()`, `export_vault()`; CLI `scripts/scrape.py` can run each step or full pipeline.
+
+**Resilience & performance:** HTTPAdapter with retries and connection pooling; stale cache warnings; startup timing logs and `.startup_timings.csv`; clean startup summary table; vote/slip cache eliminates re-scraping on every start.
+
+**Witness slips & GraphQL:** Slips and votes share bill list (`ILGA_VOTE_BILL_URLS`); witness slip summary and paginated summaries; `billSlipAnalytics`, `memberSlipAlignment`; advancement analytics (`billAdvancementAnalyticsSummary`); docs in `graphql/README.md` and main README.
+
+**Bills-first & incremental:** Bills from Legislation pages (single source of truth); bill index → BillStatus detail; `scrapers/bills.py` with `incremental_bill_scrape()`; member–bill linkage from `Bill.sponsor_ids`; cache persisted every run; exporter uses `all_bills` from `bills_lookup` so all cached bills get vault notes.
+
+**Server & CI:** Single app in `main.py` (schema.py types only); ruff lint/format and per-file ignores for schema; tests updated for line-length and duplicate keys.
