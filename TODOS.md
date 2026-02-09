@@ -78,3 +78,14 @@ Committed dev mock data lives in `mocks/dev/`. When `ILGA_SEED_MODE=1` (default 
 ## Next steps (lowest-hanging fruit)
 
 - (None listed — doc/query task done.)
+
+## Done: Fix server startup (PR)
+
+- Removed duplicate app block from `schema.py` that referenced undefined names (`GraphQLRouter`, `FastAPI`, `lifespan`, etc.). The app and GraphQL router live only in `main.py`; `schema.py` now only defines types and the Strawberry `schema` object. `make dev` runs without `NameError`.
+
+## Done: PR consistency review (Open Claw / witness-slip-advancement-analytics)
+
+- **Schema vs main:** Confirmed the running app uses `main.py`’s Query and schema only; `schema.py` is the source of types (and a parallel Query/schema that is not mounted). No consumers import `app` or `graphql_app` from schema.
+- **Advancement analytics:** `compute_advancement_analytics()` in `analytics.py` returns `high_volume_stalled` / `high_volume_passed`; `BillAdvancementAnalyticsType` and both Query implementations (main + schema) match. `Bill.last_action`, `pipeline_depth`, `classify_bill_status`, `_normalise_bill_number` are all present and used correctly.
+- **Type hints in schema.py:** Replaced `Member` / `WitnessSlip` with `MemberModel` / `WitnessSlipModel` in `_sort_key` and `_witness_slip_summary_for_slips` so type hints match the actual imports (avoids undefined-name issues for type checkers).
+- **Docs:** Documented `billAdvancementAnalyticsSummary` in `graphql/README.md`.

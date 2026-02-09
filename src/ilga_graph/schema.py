@@ -609,7 +609,7 @@ class Query:
             profiles = state.moneyball.profiles
             reverse = sort_order == SortOrder.DESC
 
-            def _sort_key(m: Member) -> float:
+            def _sort_key(m: MemberModel) -> float:
                 if sort_by == LeaderboardSortField.MONEYBALL_SCORE:
                     return profiles[m.id].moneyball_score if m.id in profiles else 0.0
                 if sort_by == LeaderboardSortField.EFFECTIVENESS_SCORE:
@@ -774,7 +774,7 @@ class Query:
         )
 
     def _witness_slip_summary_for_slips(
-        self, bill_number: str, slips: list[WitnessSlip]
+        self, bill_number: str, slips: list[WitnessSlipModel]
     ) -> WitnessSlipSummaryType:
         pro = sum(1 for s in slips if s.position == "Proponent")
         opp = sum(1 for s in slips if s.position == "Opponent")
@@ -874,71 +874,3 @@ schema = strawberry.Schema(
     query=Query,
     extensions=[QueryDepthLimiter(max_depth=10)],
 )
-graphql_app = GraphQLRouter(schema)
-
-app = FastAPI(title="ILGA Graph", lifespan=lifespan)
-
-# ── CORS middleware ──────────────────────────────────────────────────────────
-_cors_origins = [o.strip() for o in CORS_ORIGINS.split(",") if o.strip()]
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-# ── API key authentication middleware ────────────────────────────────────────
-@app.middleware("http")
-async def _api_key_middleware(request: Request, call_next) -> Response:  # type: ignore[no-untyped-def]
-    """Require ``X-API-Key`` header when ``ILGA_API_KEY`` env var is set.
-
-    Skips auth for the health endpoint and for OPTIONS (CORS preflight).
-    """
-    if API_KEY:
-        exempt = {"/health", "/docs", "/openapi.json", "/redoc"}
-        if request.url.path not in exempt and request.method != "OPTIONS":
-            provided = request.headers.get("X-API-Key", "")
-            if provided != API_KEY:
-                return JSONResponse(
-                    status_code=401,
-                    content={"detail": "Invalid or missing API key"},
-                )
-    return await call_next(request)
-
-
-# ── Request logging middleware ───────────────────────────────────────────────
-@app.middleware("http")
-async def _request_logging_middleware(request: Request, call_next) -> Response:  # type: ignore[no-untyped-def]
-    """Log every request with method, path, and response time."""
-    import time as _t
-
-    t0 = _t.perf_counter()
-    response: Response = await call_next(request)
-    elapsed_ms = (_t.perf_counter() - t0) * 1000
-    LOGGER.info(
-        "%s %s %d (%.1fms)",
-        request.method,
-        request.url.path,
-        response.status_code,
-        elapsed_ms,
-    )
-    return response
-
-
-# ── Health endpoint ──────────────────────────────────────────────────────────
-@app.get("/health")
-async def health() -> dict:
-    """Service health check with data counts."""
-    return {
-        "status": "ok",
-        "ready": len(state.members) > 0,
-        "members": len(state.members),
-        "bills": len(state.bills),
-        "committees": len(state.committees),
-        "vote_events": len(state.vote_events),
-    }
-
-
-app.include_router(graphql_app, prefix="/graphql")

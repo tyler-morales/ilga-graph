@@ -28,3 +28,4 @@ Use the **`BillWithVotesAndSlips`** query in `bill_with_votes_and_slips.graphql`
 - **All bills by slip volume:** `witnessSlipSummaries(limit: 20, offset: 0)` — items sorted by `totalCount` descending.
 - **Controversy score for a bill:** `billSlipAnalytics(billNumber: "HB0034")` → `controversyScore` (0–1).
 - **Lobbyist alignment for a member:** `memberSlipAlignment(memberName: "Chris Welch")` → list of `{ organization, proponentCount }`.
+- **Slip volume vs advancement:** `billAdvancementAnalyticsSummary(volumePercentileThreshold: 0.9)` → `highVolumeStalled` and `highVolumePassed` (bill numbers in top volume percentile, by advancement status).
