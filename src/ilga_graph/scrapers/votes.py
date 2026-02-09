@@ -52,9 +52,7 @@ _RE_DATE = re.compile(
     r"((?:January|February|March|April|May|June|July|August|September|"
     r"October|November|December)\s+\d{1,2},\s+\d{4})"
 )
-_RE_BILL_NUMBER = re.compile(
-    r"(?:Senate|House)\s+Bill\s+No\.\s*(\d+)", re.IGNORECASE
-)
+_RE_BILL_NUMBER = re.compile(r"(?:Senate|House)\s+Bill\s+No\.\s*(\d+)", re.IGNORECASE)
 _RE_VOTE_DESCRIPTION = re.compile(
     r"(THIRD READING|SECOND READING|FIRST READING|"
     r"MOTION TO CONCUR|CONCURRENCE|"
@@ -63,9 +61,7 @@ _RE_VOTE_DESCRIPTION = re.compile(
     r"(?:DO PASS|RECOMMEND DO ADOPT).*)",
     re.IGNORECASE,
 )
-_RE_TALLY = re.compile(
-    r"(\d+)\s+YEAS?\s+(\d+)\s+NAYS?\s+(\d+)\s+PRESENT", re.IGNORECASE
-)
+_RE_TALLY = re.compile(r"(\d+)\s+YEAS?\s+(\d+)\s+NAYS?\s+(\d+)\s+PRESENT", re.IGNORECASE)
 
 
 # ── PDF parsing ──────────────────────────────────────────────────────────────
@@ -161,10 +157,7 @@ def scrape_vote_pdf(
     result = _parse_vote_text(full_text)
     result["pdf_url"] = pdf_url
 
-    (
-        len(result["yeas"]) + len(result["nays"])
-        + len(result["present"]) + len(result["nv"])
-    )
+    (len(result["yeas"]) + len(result["nays"]) + len(result["present"]) + len(result["nv"]))
     LOGGER.info(
         "    PDF parsed: %d Y, %d N, %d P, %d NV  (download %.0fms, parse %.0fms)",
         len(result["yeas"]),
@@ -183,12 +176,14 @@ def scrape_vote_pdf(
         if len(result["yeas"]) != expected_y:
             LOGGER.warning(
                 "    Tally mismatch: expected %d yeas, got %d",
-                expected_y, len(result["yeas"]),
+                expected_y,
+                len(result["yeas"]),
             )
         if len(result["nays"]) != expected_n:
             LOGGER.warning(
                 "    Tally mismatch: expected %d nays, got %d",
-                expected_n, len(result["nays"]),
+                expected_n,
+                len(result["nays"]),
             )
 
     return result
@@ -197,9 +192,7 @@ def scrape_vote_pdf(
 # ── Vote history page parsing ────────────────────────────────────────────────
 
 
-def _parse_vote_history_page(
-    html: str, page_url: str
-) -> list[dict[str, str]]:
+def _parse_vote_history_page(html: str, page_url: str) -> list[dict[str, str]]:
     """Parse the vote history HTML page and return a list of PDF info dicts.
 
     Each dict has keys: pdf_url, label, chamber, vote_type.
@@ -236,12 +229,14 @@ def _parse_vote_history_page(
             pdf_url = urljoin(page_url, href)
             label = link.get_text(strip=True)
             chamber = cells[1].get_text(strip=True)
-            results.append({
-                "pdf_url": pdf_url,
-                "label": label,
-                "chamber": chamber,
-                "vote_type": vote_type,
-            })
+            results.append(
+                {
+                    "pdf_url": pdf_url,
+                    "label": label,
+                    "chamber": chamber,
+                    "vote_type": vote_type,
+                }
+            )
 
     return results
 
@@ -362,7 +357,8 @@ def scrape_bill_votes(
     elapsed_ms = (time.perf_counter() - t_bill_start) * 1000
     LOGGER.info(
         "  Bill complete: %d vote events scraped in %.0fms",
-        len(events), elapsed_ms,
+        len(events),
+        elapsed_ms,
     )
     return events
 
@@ -428,13 +424,18 @@ def scrape_bills_from_range(
         time.sleep(request_delay)
         try:
             events = scrape_bill_votes(
-                bill_url, session=sess, timeout=timeout, request_delay=request_delay,
+                bill_url,
+                session=sess,
+                timeout=timeout,
+                request_delay=request_delay,
             )
             if events:
                 all_events.extend(events)
                 bills_with_votes += 1
                 LOGGER.info(
-                    "  [%d/%d bills with votes found]", bills_with_votes, max_bills,
+                    "  [%d/%d bills with votes found]",
+                    bills_with_votes,
+                    max_bills,
                 )
         except Exception:
             LOGGER.exception("Failed to scrape votes for: %s", bill_url)
@@ -442,7 +443,9 @@ def scrape_bills_from_range(
     elapsed_s = time.perf_counter() - t_total_start
     LOGGER.info(
         "Vote scraping complete: %d events from %d bills in %.1fs",
-        len(all_events), bills_with_votes, elapsed_s,
+        len(all_events),
+        bills_with_votes,
+        elapsed_s,
     )
     return all_events
 
@@ -457,9 +460,7 @@ def _load_vote_cache(*, seed_fallback: bool = False) -> list[VoteEvent] | None:
     if seed_fallback and VOTE_MOCK_DEV_FILE.exists():
         with open(VOTE_MOCK_DEV_FILE, encoding="utf-8") as f:
             data = json.load(f)
-        LOGGER.info(
-            "Loaded %d vote events from mocks/dev (%s).", len(data), VOTE_MOCK_DEV_FILE
-        )
+        LOGGER.info("Loaded %d vote events from mocks/dev (%s).", len(data), VOTE_MOCK_DEV_FILE)
         return [_vote_event_from_dict(v) for v in data]
     return None
 
@@ -532,12 +533,17 @@ def scrape_specific_bills(
         t_bill = time.perf_counter()
         try:
             events = scrape_bill_votes(
-                url, session=sess, timeout=timeout, request_delay=request_delay,
+                url,
+                session=sess,
+                timeout=timeout,
+                request_delay=request_delay,
             )
             all_events.extend(events)
             LOGGER.info(
                 "  Bill %d/%d: %d events (%.1fs)",
-                i, len(bill_status_urls), len(events),
+                i,
+                len(bill_status_urls),
+                len(events),
                 time.perf_counter() - t_bill,
             )
         except Exception:

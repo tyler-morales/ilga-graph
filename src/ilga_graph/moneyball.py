@@ -210,10 +210,7 @@ class MoneyballWeights:
 
     @property
     def total(self) -> float:
-        return (
-            self.effectiveness + self.pipeline + self.magnet
-            + self.bridge + self.centrality
-        )
+        return self.effectiveness + self.pipeline + self.magnet + self.bridge + self.centrality
 
 
 # ── Composite Moneyball Score ────────────────────────────────────────────────
@@ -381,7 +378,9 @@ def compute_moneyball(
     max_magnet = max((p.magnet_score for p in profiles.values()), default=0.0)
     for profile in profiles.values():
         profile.moneyball_score = _compute_moneyball_score(
-            profile, max_magnet, weights,
+            profile,
+            max_magnet,
+            weights,
         )
 
     # ── Step 5: Assign badges ──

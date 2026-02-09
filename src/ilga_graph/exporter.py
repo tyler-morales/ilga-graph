@@ -80,9 +80,7 @@ class ObsidianExporter:
             members_to_write = members_to_write[: self.member_export_limit]
         else:
             # Full mode: clean up stale member files
-            current_files = {
-                f"{self._safe_filename(m.name)}.md" for m in members
-            }
+            current_files = {f"{self._safe_filename(m.name)}.md" for m in members}
             for path in members_path.glob("*.md"):
                 if path.name not in current_files:
                     path.unlink()
@@ -251,9 +249,9 @@ class ObsidianExporter:
             "---\n\n"
         )
 
-        committees_links = "\n".join(
-            f"- {self._committee_link(c)}" for c in member.committees
-        ) or "- None"
+        committees_links = (
+            "\n".join(f"- {self._committee_link(c)}" for c in member.committees) or "- None"
+        )
 
         contact_blocks = [self._render_office_block(o) for o in member.offices]
         if member.email:
@@ -332,8 +330,7 @@ class ObsidianExporter:
         )
 
         cosponsor_lines = (
-            "\n".join(f"- [[{name}]]" for name in sorted(cosponsors))
-            if cosponsors else "- None"
+            "\n".join(f"- [[{name}]]" for name in sorted(cosponsors)) if cosponsors else "- None"
         )
 
         body = (
@@ -481,9 +478,7 @@ class ObsidianExporter:
 
     def _render_index(self, members: Iterable[Member]) -> str:
         members_list = sorted(members, key=lambda m: m.name)
-        links = "\n".join(
-            f"- [[{m.name}]] ([ILGA]({m.member_url}))" for m in members_list
-        )
+        links = "\n".join(f"- [[{m.name}]] ([ILGA]({m.member_url}))" for m in members_list)
         tag_pool: set[str] = set()
         for member in members_list:
             tag_pool.update(self._build_tags(member))
@@ -526,11 +521,15 @@ class ObsidianExporter:
         member_lookup: dict[str, Member],
         committee_bills: list[str] | None = None,
     ) -> str:
-        tag_values = list(dict.fromkeys([
-            "type/committee",
-            "committee" if committee.parent_code is None else "subcommittee",
-            *self._committee_tags([committee.code]),
-        ]))
+        tag_values = list(
+            dict.fromkeys(
+                [
+                    "type/committee",
+                    "committee" if committee.parent_code is None else "subcommittee",
+                    *self._committee_tags([committee.code]),
+                ]
+            )
+        )
         frontmatter = (
             "---\n"
             f"code: {committee.code}\n"
@@ -553,9 +552,7 @@ class ObsidianExporter:
         else:
             member_links = members_by_committee.get(committee.code, [])
             members_section = (
-                "\n".join(f"- [[{m.name}]]" for m in member_links)
-                if member_links
-                else "- None"
+                "\n".join(f"- [[{m.name}]]" for m in member_links) if member_links else "- None"
             )
 
         subcommittees = children_by_parent.get(committee.code, [])
@@ -566,8 +563,7 @@ class ObsidianExporter:
         )
 
         bills_section = (
-            "\n".join(f"- [[{bn}]]" for bn in committee_bills)
-            if committee_bills else "- None"
+            "\n".join(f"- [[{bn}]]" for bn in committee_bills) if committee_bills else "- None"
         )
 
         body = (
@@ -657,17 +653,13 @@ class ObsidianExporter:
     ) -> str:
         """Render the full Moneyball Report as an Obsidian note."""
         w = report.weights_used
-        frontmatter = (
-            "---\n"
-            "tags: [ilga, moneyball, analytics, rankings]\n"
-            "---\n\n"
-        )
+        frontmatter = "---\ntags: [ilga, moneyball, analytics, rankings]\n---\n\n"
 
         # Header
         body = "# The Moneyball Report\n\n"
         body += (
-            "> *\"Can we identify the most effective legislator in the House "
-            "who is not in leadership?\"*\n\n"
+            '> *"Can we identify the most effective legislator in the House '
+            'who is not in leadership?"*\n\n'
         )
 
         # ── MVP callout ──
@@ -724,7 +716,7 @@ class ObsidianExporter:
             "effectiveness and pipeline metrics. Resolutions (HR/SR/HJR/SJR) are "
             "tracked separately.\n\n"
             "**Leadership Filter**: Members with formal leadership titles (Speaker, "
-            "Leader, Whip, etc.) are ranked separately so we can surface \"hidden gems.\"\n\n"
+            'Leader, Whip, etc.) are ranked separately so we can surface "hidden gems."\n\n'
         )
 
         # ── Full Rankings ──

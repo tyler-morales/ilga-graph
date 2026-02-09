@@ -206,7 +206,9 @@ def sample_member_no_career() -> Member:
 
 @pytest.fixture
 def sample_member_house(
-    sample_bill_house: Bill, sample_career_range_ended: CareerRange, sample_office: Office,
+    sample_bill_house: Bill,
+    sample_career_range_ended: CareerRange,
+    sample_office: Office,
 ) -> Member:
     return Member(
         id="4501",
@@ -241,8 +243,11 @@ def mixed_bill_member(
 ) -> Member:
     """A Democrat member with 3 laws (2 passed, 1 stuck) and 2 resolutions."""
     all_bills = [
-        sample_bill_passed, sample_bill_sb_passed, sample_bill_stuck,
-        sample_resolution_hr, sample_resolution_sjr,
+        sample_bill_passed,
+        sample_bill_sb_passed,
+        sample_bill_stuck,
+        sample_resolution_hr,
+        sample_resolution_sjr,
     ]
     return Member(
         id="5001",
@@ -263,9 +268,13 @@ def mixed_bill_member(
 def cosponsor_republican() -> Member:
     """A Republican who co-sponsors Alice's HB0100 (cross-party)."""
     hb100 = Bill(
-        bill_number="HB0100", leg_id="200001", description="CLEAN ENERGY ACT",
-        chamber="H", last_action="Public Act 104-0001",
-        last_action_date="7/1/2025", primary_sponsor="Alice Smith",
+        bill_number="HB0100",
+        leg_id="200001",
+        description="CLEAN ENERGY ACT",
+        chamber="H",
+        last_action="Public Act 104-0001",
+        last_action_date="7/1/2025",
+        primary_sponsor="Alice Smith",
     )
     return Member(
         id="5002",
@@ -286,14 +295,22 @@ def cosponsor_republican() -> Member:
 def cosponsor_democrat() -> Member:
     """A Democrat who co-sponsors Alice's HB0100 and SB0200 (same-party)."""
     hb100 = Bill(
-        bill_number="HB0100", leg_id="200001", description="CLEAN ENERGY ACT",
-        chamber="H", last_action="Public Act 104-0001",
-        last_action_date="7/1/2025", primary_sponsor="Alice Smith",
+        bill_number="HB0100",
+        leg_id="200001",
+        description="CLEAN ENERGY ACT",
+        chamber="H",
+        last_action="Public Act 104-0001",
+        last_action_date="7/1/2025",
+        primary_sponsor="Alice Smith",
     )
     sb200 = Bill(
-        bill_number="SB0200", leg_id="200002", description="EDUCATION REFORM",
-        chamber="S", last_action="Signed by Governor",
-        last_action_date="8/15/2025", primary_sponsor="Alice Smith",
+        bill_number="SB0200",
+        leg_id="200002",
+        description="EDUCATION REFORM",
+        chamber="S",
+        last_action="Signed by Governor",
+        last_action_date="8/15/2025",
+        primary_sponsor="Alice Smith",
     )
     return Member(
         id="5003",

@@ -75,7 +75,8 @@ class TestComputeScorecard:
         assert sc.law_success_rate == 0.0
 
     def test_magnet_and_bridge_default_zero_for_single(
-        self, sample_member: Member,
+        self,
+        sample_member: Member,
     ) -> None:
         """Single-member compute_scorecard cannot calculate network metrics."""
         sc = compute_scorecard(sample_member)

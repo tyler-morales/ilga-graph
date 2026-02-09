@@ -121,17 +121,26 @@ def _make_member_with_bills(bill_numbers: list[str]) -> Member:
     """Helper: create a member whose sponsored_bills match given bill numbers."""
     bills = [
         Bill(
-            bill_number=bn, leg_id=str(i), description="test",
-            chamber="H", last_action="In Progress",
-            last_action_date="1/1/2025", primary_sponsor="Test Sponsor",
+            bill_number=bn,
+            leg_id=str(i),
+            description="test",
+            chamber="H",
+            last_action="In Progress",
+            last_action_date="1/1/2025",
+            primary_sponsor="Test Sponsor",
         )
         for i, bn in enumerate(bill_numbers)
     ]
     return Member(
-        id="9000", name="Test Sponsor",
-        member_url="http://example.com", chamber="House",
-        party="Democrat", district="1", bio_text="test",
-        sponsored_bills=bills, co_sponsor_bills=[],
+        id="9000",
+        name="Test Sponsor",
+        member_url="http://example.com",
+        chamber="House",
+        party="Democrat",
+        district="1",
+        bio_text="test",
+        sponsored_bills=bills,
+        co_sponsor_bills=[],
     )
 
 
@@ -152,9 +161,13 @@ class TestLobbyistAlignment:
     def test_empty_org_excluded(self) -> None:
         member = _make_member_with_bills(["HB9999"])
         slip = WitnessSlip(
-            name="Nobody", organization="", representing="",
-            position="Proponent", hearing_committee="Test",
-            hearing_date="2025-01-01", bill_number="HB9999",
+            name="Nobody",
+            organization="",
+            representing="",
+            position="Proponent",
+            hearing_committee="Test",
+            hearing_date="2025-01-01",
+            bill_number="HB9999",
         )
         result = lobbyist_alignment([slip], member)
         assert result == {}
@@ -169,9 +182,13 @@ class TestLobbyistAlignment:
         """HB0100 on the member should match HB100 on the slip."""
         member = _make_member_with_bills(["HB0100"])
         slip = WitnessSlip(
-            name="Test", organization="BigCorp", representing="BigCorp",
-            position="Proponent", hearing_committee="Finance",
-            hearing_date="2025-01-01", bill_number="HB100",
+            name="Test",
+            organization="BigCorp",
+            representing="BigCorp",
+            position="Proponent",
+            hearing_committee="Finance",
+            hearing_date="2025-01-01",
+            bill_number="HB100",
         )
         result = lobbyist_alignment([slip], member)
         assert result == {"BigCorp": 1}
@@ -180,19 +197,31 @@ class TestLobbyistAlignment:
         member = _make_member_with_bills(["HB1"])
         slips = [
             WitnessSlip(
-                name="A", organization="OrgA", representing="",
-                position="Proponent", hearing_committee="C",
-                hearing_date="2025-01-01", bill_number="HB1",
+                name="A",
+                organization="OrgA",
+                representing="",
+                position="Proponent",
+                hearing_committee="C",
+                hearing_date="2025-01-01",
+                bill_number="HB1",
             ),
             WitnessSlip(
-                name="B", organization="OrgB", representing="",
-                position="Proponent", hearing_committee="C",
-                hearing_date="2025-01-01", bill_number="HB1",
+                name="B",
+                organization="OrgB",
+                representing="",
+                position="Proponent",
+                hearing_committee="C",
+                hearing_date="2025-01-01",
+                bill_number="HB1",
             ),
             WitnessSlip(
-                name="B2", organization="OrgB", representing="",
-                position="Proponent", hearing_committee="C",
-                hearing_date="2025-01-01", bill_number="HB1",
+                name="B2",
+                organization="OrgB",
+                representing="",
+                position="Proponent",
+                hearing_committee="C",
+                hearing_date="2025-01-01",
+                bill_number="HB1",
             ),
         ]
         result = lobbyist_alignment(slips, member)
@@ -215,14 +244,22 @@ class TestControversialScore:
     def test_all_opponents(self) -> None:
         slips = [
             WitnessSlip(
-                name="A", organization="X", representing="",
-                position="Opponent", hearing_committee="C",
-                hearing_date="2025-01-01", bill_number="HB9",
+                name="A",
+                organization="X",
+                representing="",
+                position="Opponent",
+                hearing_committee="C",
+                hearing_date="2025-01-01",
+                bill_number="HB9",
             ),
             WitnessSlip(
-                name="B", organization="Y", representing="",
-                position="Opponent", hearing_committee="C",
-                hearing_date="2025-01-01", bill_number="HB9",
+                name="B",
+                organization="Y",
+                representing="",
+                position="Opponent",
+                hearing_committee="C",
+                hearing_date="2025-01-01",
+                bill_number="HB9",
             ),
         ]
         assert controversial_score(slips, "HB9") == 1.0
@@ -230,9 +267,13 @@ class TestControversialScore:
     def test_all_proponents(self) -> None:
         slips = [
             WitnessSlip(
-                name="A", organization="X", representing="",
-                position="Proponent", hearing_committee="C",
-                hearing_date="2025-01-01", bill_number="HB9",
+                name="A",
+                organization="X",
+                representing="",
+                position="Proponent",
+                hearing_committee="C",
+                hearing_date="2025-01-01",
+                bill_number="HB9",
             ),
         ]
         assert controversial_score(slips, "HB9") == 0.0
@@ -247,14 +288,22 @@ class TestControversialScore:
     def test_normalises_bill_number(self) -> None:
         slips = [
             WitnessSlip(
-                name="A", organization="X", representing="",
-                position="Proponent", hearing_committee="C",
-                hearing_date="2025-01-01", bill_number="HB100",
+                name="A",
+                organization="X",
+                representing="",
+                position="Proponent",
+                hearing_committee="C",
+                hearing_date="2025-01-01",
+                bill_number="HB100",
             ),
             WitnessSlip(
-                name="B", organization="Y", representing="",
-                position="Opponent", hearing_committee="C",
-                hearing_date="2025-01-01", bill_number="HB100",
+                name="B",
+                organization="Y",
+                representing="",
+                position="Opponent",
+                hearing_committee="C",
+                hearing_date="2025-01-01",
+                bill_number="HB100",
             ),
         ]
         # Query with zero-padded form
@@ -263,14 +312,22 @@ class TestControversialScore:
     def test_ignores_no_position(self) -> None:
         slips = [
             WitnessSlip(
-                name="A", organization="X", representing="",
-                position="Proponent", hearing_committee="C",
-                hearing_date="2025-01-01", bill_number="HB5",
+                name="A",
+                organization="X",
+                representing="",
+                position="Proponent",
+                hearing_committee="C",
+                hearing_date="2025-01-01",
+                bill_number="HB5",
             ),
             WitnessSlip(
-                name="B", organization="Y", representing="",
-                position="No Position", hearing_committee="C",
-                hearing_date="2025-01-01", bill_number="HB5",
+                name="B",
+                organization="Y",
+                representing="",
+                position="No Position",
+                hearing_committee="C",
+                hearing_date="2025-01-01",
+                bill_number="HB5",
             ),
         ]
         # Only 1 proponent, 0 opponents → 0.0

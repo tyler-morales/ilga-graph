@@ -826,11 +826,7 @@ class Query:
     ) -> WitnessSlipSummaryType:
         pro = sum(1 for s in slips if s.position == "Proponent")
         opp = sum(1 for s in slips if s.position == "Opponent")
-        no_pos = sum(
-            1
-            for s in slips
-            if s.position and "no position" in s.position.lower()
-        )
+        no_pos = sum(1 for s in slips if s.position and "no position" in s.position.lower())
         return WitnessSlipSummaryType(
             bill_number=bill_number,
             total_count=len(slips),
@@ -867,9 +863,7 @@ class Query:
     @strawberry.field(
         description="Witness-slip analytics for a bill (controversy score 0–1).",
     )
-    def bill_slip_analytics(
-        self, bill_number: str
-    ) -> BillSlipAnalyticsType | None:
+    def bill_slip_analytics(self, bill_number: str) -> BillSlipAnalyticsType | None:
         if not state.witness_slips_lookup.get(bill_number):
             return None
         score = controversial_score(state.witness_slips, bill_number)
@@ -884,9 +878,7 @@ class Query:
             "(sorted by count desc)."
         ),
     )
-    def member_slip_alignment(
-        self, member_name: str
-    ) -> list[LobbyistAlignmentEntryType]:
+    def member_slip_alignment(self, member_name: str) -> list[LobbyistAlignmentEntryType]:
         member = state.member_lookup.get(member_name)
         if member is None:
             return []
