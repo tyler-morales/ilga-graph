@@ -17,14 +17,14 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 10.0
+moneyball_score: 17.04
 pipeline_depth: 0.0
-network_centrality: 0.6667
-unique_collaborators: 26
+network_centrality: 0.5866
+unique_collaborators: 105
 is_leadership: false
-rank_overall: 11
-rank_chamber: 9
-rank_non_leadership: 6
+rank_overall: 52
+rank_chamber: 22
+rank_non_leadership: 7
 tags: [type/member, chamber/senate, party/democrat, committee/approp-pub-safety-infrastructure, committee/behavioral-and-mental-health, committee/commerce, committee/environment-and-conservation, committee/pensions, committee/public-health, committee/special-committee-on-tourism]
 ---
 
@@ -74,14 +74,14 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **10.0** / 100 |
-| Rank (Overall) | #11 |
-| Rank (Senate) | #9 |
-| Rank (Non-Leadership) | #6 |
+| Moneyball Score | **17.04** / 100 |
+| Rank (Overall) | #52 |
+| Rank (Senate) | #22 |
+| Rank (Non-Leadership) | #7 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 66.67% |
-| Unique Collaborators | 26 |
+| Network Centrality | 58.66% |
+| Unique Collaborators | 105 |
 | Badges | Network Hub, Wide Tent |
 
 ## Tags

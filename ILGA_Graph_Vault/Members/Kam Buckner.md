@@ -17,13 +17,13 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 0.0
+moneyball_score: 20.0
 pipeline_depth: 0.0
 network_centrality: 0.0
 unique_collaborators: 0
 is_leadership: true
-rank_overall: 37
-rank_chamber: 17
+rank_overall: 39
+rank_chamber: 24
 rank_non_leadership: 0
 tags: [type/member, chamber/house, party/democrat, committee/consumer-protection, committee/ethics-elections, committee/judiciary-civil, committee/prescription-drug-affordability, committee/revenue-finance, subcommittee/revenue-finance/property-tax-subcommittee, committee/rules-reports, subcommittee/revenue-finance/tax-policy-finance-subcommittee, subcommittee/revenue-finance/tax-policy-other-taxes-subcommitte, subcommittee/revenue-finance/tax-policy-sales-tax-subcommittee]
 ---
@@ -73,9 +73,9 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **0.0** / 100 |
-| Rank (Overall) | #37 |
-| Rank (House) | #17 |
+| Moneyball Score | **20.0** / 100 |
+| Rank (Overall) | #39 |
+| Rank (House) | #24 |
 | Leadership | Yes |
 | Pipeline Depth | 0.0 / 6.0 [......] |
 | Network Centrality | 0.00% |

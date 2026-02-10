@@ -17,14 +17,14 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 10.0
+moneyball_score: 16.5
 pipeline_depth: 0.0
-network_centrality: 0.6667
-unique_collaborators: 26
+network_centrality: 0.5419
+unique_collaborators: 97
 is_leadership: false
-rank_overall: 10
-rank_chamber: 8
-rank_non_leadership: 5
+rank_overall: 57
+rank_chamber: 24
+rank_non_leadership: 8
 tags: [type/member, chamber/senate, party/democrat, committee/approp-ed, committee/approp-health-and-human, committee/behavioral-and-mental-health, committee/child-welfare, committee/consumer-protection, committee/criminal-law, committee/human-rights]
 ---
 
@@ -73,14 +73,14 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **10.0** / 100 |
-| Rank (Overall) | #10 |
-| Rank (Senate) | #8 |
-| Rank (Non-Leadership) | #5 |
+| Moneyball Score | **16.5** / 100 |
+| Rank (Overall) | #57 |
+| Rank (Senate) | #24 |
+| Rank (Non-Leadership) | #8 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 66.67% |
-| Unique Collaborators | 26 |
+| Network Centrality | 54.19% |
+| Unique Collaborators | 97 |
 | Badges | Network Hub, Wide Tent |
 
 ## Tags

@@ -6,24 +6,24 @@ career_timeline: 2017- Present
 career_start_year: 2017
 district: 22
 member_url: https://www.ilga.gov/Senate/Members/Details/3317
-bills_introduced: 1
+bills_introduced: 0
 laws_passed: 0
 law_success_rate: 0.0
-magnet_score: 2.0
-bridge_score: 1.0
+magnet_score: 0.0
+bridge_score: 0.0
 resolutions_filed: 0
 resolutions_passed: 0
 resolution_pass_rate: 0.0
 total_primary_bills: 1
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 31.18
-pipeline_depth: 1.0
-network_centrality: 0.5897
-unique_collaborators: 23
+moneyball_score: 16.7
+pipeline_depth: 0.0
+network_centrality: 0.5587
+unique_collaborators: 100
 is_leadership: true
-rank_overall: 3
-rank_chamber: 3
+rank_overall: 55
+rank_chamber: 23
 rank_non_leadership: 0
 tags: [type/member, chamber/senate, party/democrat, committee/agriculture, committee/executive, subcommittee/executive/ai-and-social-media, subcommittee/executive/cannabis, committee/energy-and-public-utilities, subcommittee/executive/gaming-wagering-and-racing, committee/insurance, subcommittee/executive/liquor, subcommittee/executive/paid-leave, committee/revenue]
 ---
@@ -48,11 +48,11 @@ See [[Scorecard Guide]] for how these metrics are defined.
 ### Lawmaking (HB/SB)
 | Metric | Value | Formula |
 | --- | --- | --- |
-| Bills Introduced | 1 | Count of primary HB/SB |
+| Bills Introduced | 0 | Count of primary HB/SB |
 | Passed | 0 | HB/SB that became law |
 | Success Rate | 0.0% | Passed ÷ Bills Introduced |
-| Avg Co-Sponsors (Magnet) | 2.0 | Co-sponsors ÷ Introduced |
-| Cross-Party (Bridge) | 100.0% | Cross-party co-sponsor ÷ Introduced |
+| Avg Co-Sponsors (Magnet) | 0.0 | Co-sponsors ÷ Introduced |
+| Cross-Party (Bridge) | 0.0% | Cross-party co-sponsor ÷ Introduced |
 
 ### Resolutions (HR/SR/HJR/SJR)
 | Metric | Value | Formula |
@@ -68,21 +68,19 @@ See [[Scorecard Guide]] for how these metrics are defined.
 | Total Passed | 0 | Laws Passed + Resolutions Passed |
 | Overall Pass Rate | 0.0% | Total Passed ÷ Total Primary Bills |
 
-🤝 **Bipartisan Bridge** (>20% cross-party support)
-
 ## Moneyball Analytics
 See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **31.18** / 100 |
-| Rank (Overall) | #3 |
-| Rank (Senate) | #3 |
+| Moneyball Score | **16.7** / 100 |
+| Rank (Overall) | #55 |
+| Rank (Senate) | #23 |
 | Leadership | Yes |
-| Pipeline Depth | 1.0 / 6.0 [#.....] |
-| Network Centrality | 58.97% |
-| Unique Collaborators | 23 |
-| Badges | Bipartisan Bridge, Network Hub, Wide Tent |
+| Pipeline Depth | 0.0 / 6.0 [......] |
+| Network Centrality | 55.87% |
+| Unique Collaborators | 100 |
+| Badges | Network Hub, Wide Tent |
 
 ## Tags
 #type/member

@@ -17,12 +17,12 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 1.15
+moneyball_score: 21.47
 pipeline_depth: 0.0
-network_centrality: 0.0769
-unique_collaborators: 3
+network_centrality: 0.1229
+unique_collaborators: 22
 is_leadership: true
-rank_overall: 35
+rank_overall: 29
 rank_chamber: 15
 rank_non_leadership: 0
 tags: [type/member, chamber/house, party/republican, committee/approp-health-and-human-services, committee/economic-opportunity-equity, committee/executive, committee/financial-institutions-licensing, committee/gun-violence-prevention, committee/public-utilities, subcommittee/public-utilities/water-subcommittee]
@@ -73,14 +73,14 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **1.15** / 100 |
-| Rank (Overall) | #35 |
+| Moneyball Score | **21.47** / 100 |
+| Rank (Overall) | #29 |
 | Rank (House) | #15 |
 | Leadership | Yes |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 7.69% |
-| Unique Collaborators | 3 |
-| Badges | None yet |
+| Network Centrality | 12.29% |
+| Unique Collaborators | 22 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member

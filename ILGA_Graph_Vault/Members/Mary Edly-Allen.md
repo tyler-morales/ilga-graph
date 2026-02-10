@@ -6,10 +6,10 @@ career_timeline: 2023 -
 career_start_year: 
 district: 31
 member_url: https://www.ilga.gov/Senate/Members/Details/3407
-bills_introduced: 3
+bills_introduced: 0
 laws_passed: 0
 law_success_rate: 0.0
-magnet_score: 1.0
+magnet_score: 0.0
 bridge_score: 0.0
 resolutions_filed: 0
 resolutions_passed: 0
@@ -17,14 +17,14 @@ resolution_pass_rate: 0.0
 total_primary_bills: 3
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 14.27
-pipeline_depth: 0.33
-network_centrality: 0.7436
-unique_collaborators: 29
+moneyball_score: 18.38
+pipeline_depth: 0.0
+network_centrality: 0.6983
+unique_collaborators: 125
 is_leadership: false
-rank_overall: 6
-rank_chamber: 5
-rank_non_leadership: 4
+rank_overall: 44
+rank_chamber: 16
+rank_non_leadership: 1
 tags: [type/member, chamber/senate, party/democrat, committee/approp-pub-safety-infrastructure, committee/child-welfare, committee/consumer-protection, committee/education, committee/health-and-human-services, committee/higher-education]
 ---
 
@@ -48,10 +48,10 @@ See [[Scorecard Guide]] for how these metrics are defined.
 ### Lawmaking (HB/SB)
 | Metric | Value | Formula |
 | --- | --- | --- |
-| Bills Introduced | 3 | Count of primary HB/SB |
+| Bills Introduced | 0 | Count of primary HB/SB |
 | Passed | 0 | HB/SB that became law |
 | Success Rate | 0.0% | Passed ÷ Bills Introduced |
-| Avg Co-Sponsors (Magnet) | 1.0 | Co-sponsors ÷ Introduced |
+| Avg Co-Sponsors (Magnet) | 0.0 | Co-sponsors ÷ Introduced |
 | Cross-Party (Bridge) | 0.0% | Cross-party co-sponsor ÷ Introduced |
 
 ### Resolutions (HR/SR/HJR/SJR)
@@ -73,14 +73,14 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **14.27** / 100 |
-| Rank (Overall) | #6 |
-| Rank (Senate) | #5 |
-| Rank (Non-Leadership) | #4 |
+| Moneyball Score | **18.38** / 100 |
+| Rank (Overall) | #44 |
+| Rank (Senate) | #16 |
+| Rank (Non-Leadership) | #1 |
 | Leadership | No |
-| Pipeline Depth | 0.3 / 6.0 [......] |
-| Network Centrality | 74.36% |
-| Unique Collaborators | 29 |
+| Pipeline Depth | 0.0 / 6.0 [......] |
+| Network Centrality | 69.83% |
+| Unique Collaborators | 125 |
 | Badges | Network Hub, Wide Tent |
 
 ## Tags
@@ -104,13 +104,13 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 ## 📜 Primary Legislation
 - [[SB0086]]
-- [[SB0087]]
 - [[SB0085]]
+- [[SB0087]]
 
 ## 🖊️ Co-Sponsorships
-- [[SB0003]]
 - [[SB0001]]
 - [[SB0002]]
+- [[SB0003]]
 - [[SB0005]]
 - [[SB0009]]
 - [[SB0008]]

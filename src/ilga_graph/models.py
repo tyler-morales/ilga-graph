@@ -72,6 +72,10 @@ class Member:
     # Normalized references (leg_ids) used for cache serialization
     sponsored_bill_ids: list[str] = field(default_factory=list)
     co_sponsor_bill_ids: list[str] = field(default_factory=list)
+    # ── Aggregated roles (populated by moneyball.populate_member_roles) ──
+    # Combines the member's profile ``role`` with committee roster titles
+    # (e.g. "Chair", "Minority Spokesperson") for institutional-power scoring.
+    roles: list[str] = field(default_factory=list)
     # ── Seating chart (populated by seating.process_seating) ──
     seat_block_id: str | None = None  # e.g. "ring1-FarLeft"
     seat_ring: int | None = None  # 1-4

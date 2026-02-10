@@ -17,14 +17,14 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 6.15
+moneyball_score: 15.16
 pipeline_depth: 0.0
-network_centrality: 0.4103
-unique_collaborators: 16
+network_centrality: 0.4302
+unique_collaborators: 77
 is_leadership: false
-rank_overall: 25
-rank_chamber: 7
-rank_non_leadership: 7
+rank_overall: 84
+rank_chamber: 43
+rank_non_leadership: 15
 tags: [type/member, chamber/house, party/democrat, committee/approp-public-safety-infrastruct, committee/child-care-access-early-childhood, committee/housing, committee/judiciary-civil, committee/trans-regulation-roads-bridges, committee/veterans-affairs]
 ---
 
@@ -73,15 +73,15 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **6.15** / 100 |
-| Rank (Overall) | #25 |
-| Rank (House) | #7 |
-| Rank (Non-Leadership) | #7 |
+| Moneyball Score | **15.16** / 100 |
+| Rank (Overall) | #84 |
+| Rank (House) | #43 |
+| Rank (Non-Leadership) | #15 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 41.03% |
-| Unique Collaborators | 16 |
-| Badges | None yet |
+| Network Centrality | 43.02% |
+| Unique Collaborators | 77 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member

@@ -6,10 +6,10 @@ career_timeline: 2016 - Present
 career_start_year: 2016
 district: 59
 member_url: https://www.ilga.gov/Senate/Members/Details/3318
-bills_introduced: 2
+bills_introduced: 0
 laws_passed: 0
 law_success_rate: 0.0
-magnet_score: 0.5
+magnet_score: 0.0
 bridge_score: 0.0
 resolutions_filed: 0
 resolutions_passed: 0
@@ -17,13 +17,13 @@ resolution_pass_rate: 0.0
 total_primary_bills: 2
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 11.26
-pipeline_depth: 1.0
-network_centrality: 0.4615
-unique_collaborators: 18
+moneyball_score: 24.09
+pipeline_depth: 0.0
+network_centrality: 0.3408
+unique_collaborators: 61
 is_leadership: true
-rank_overall: 8
-rank_chamber: 6
+rank_overall: 15
+rank_chamber: 11
 rank_non_leadership: 0
 tags: [type/member, chamber/senate, party/republican, committee/commerce, committee/education, committee/energy-and-public-utilities, committee/higher-education, committee/labor, committee/special-committee-on-tourism, committee/transportation]
 ---
@@ -48,10 +48,10 @@ See [[Scorecard Guide]] for how these metrics are defined.
 ### Lawmaking (HB/SB)
 | Metric | Value | Formula |
 | --- | --- | --- |
-| Bills Introduced | 2 | Count of primary HB/SB |
+| Bills Introduced | 0 | Count of primary HB/SB |
 | Passed | 0 | HB/SB that became law |
 | Success Rate | 0.0% | Passed ÷ Bills Introduced |
-| Avg Co-Sponsors (Magnet) | 0.5 | Co-sponsors ÷ Introduced |
+| Avg Co-Sponsors (Magnet) | 0.0 | Co-sponsors ÷ Introduced |
 | Cross-Party (Bridge) | 0.0% | Cross-party co-sponsor ÷ Introduced |
 
 ### Resolutions (HR/SR/HJR/SJR)
@@ -73,14 +73,14 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **11.26** / 100 |
-| Rank (Overall) | #8 |
-| Rank (Senate) | #6 |
+| Moneyball Score | **24.09** / 100 |
+| Rank (Overall) | #15 |
+| Rank (Senate) | #11 |
 | Leadership | Yes |
-| Pipeline Depth | 1.0 / 6.0 [#.....] |
-| Network Centrality | 46.15% |
-| Unique Collaborators | 18 |
-| Badges | None yet |
+| Pipeline Depth | 0.0 / 6.0 [......] |
+| Network Centrality | 34.08% |
+| Unique Collaborators | 61 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member

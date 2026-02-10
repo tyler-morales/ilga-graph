@@ -17,14 +17,14 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 5.77
+moneyball_score: 3.49
 pipeline_depth: 0.0
-network_centrality: 0.3846
-unique_collaborators: 15
+network_centrality: 0.2905
+unique_collaborators: 52
 is_leadership: false
-rank_overall: 27
-rank_chamber: 9
-rank_non_leadership: 8
+rank_overall: 161
+rank_chamber: 103
+rank_non_leadership: 73
 tags: [type/member, chamber/house, party/democrat, committee/agriculture-conservation, committee/approp-higher-education, committee/counties-townships, committee/energy-environment, committee/human-services, committee/trans-regulation-roads-bridges, committee/veterans-affairs]
 ---
 
@@ -73,15 +73,15 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **5.77** / 100 |
-| Rank (Overall) | #27 |
-| Rank (House) | #9 |
-| Rank (Non-Leadership) | #8 |
+| Moneyball Score | **3.49** / 100 |
+| Rank (Overall) | #161 |
+| Rank (House) | #103 |
+| Rank (Non-Leadership) | #73 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 38.46% |
-| Unique Collaborators | 15 |
-| Badges | None yet |
+| Network Centrality | 29.05% |
+| Unique Collaborators | 52 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member
@@ -110,8 +110,8 @@ See [[Moneyball Report]] for full rankings and methodology.
 ## 🖊️ Co-Sponsorships
 - [[HB0054]]
 - [[HB0066]]
-- [[HB0069]]
 - [[HB0070]]
+- [[HB0069]]
 
 ## Contact
 ### Springfield Office

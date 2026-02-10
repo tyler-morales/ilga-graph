@@ -17,13 +17,13 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 0.0
+moneyball_score: 20.0
 pipeline_depth: 0.0
 network_centrality: 0.0
 unique_collaborators: 0
 is_leadership: true
-rank_overall: 38
-rank_chamber: 18
+rank_overall: 40
+rank_chamber: 25
 rank_non_leadership: 0
 tags: [type/member, chamber/house, party/republican, committee/approp-public-safety-infrastruct, committee/executive, subcommittee/approp-public-safety-infrastruct/fiscal-impact-subcommittee, committee/gaming, committee/insurance, committee/judiciary-criminal, committee/police-fire-committee, subcommittee/judiciary-criminal/sentencing-penalties-and-criminal]
 ---
@@ -73,9 +73,9 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **0.0** / 100 |
-| Rank (Overall) | #38 |
-| Rank (House) | #18 |
+| Moneyball Score | **20.0** / 100 |
+| Rank (Overall) | #40 |
+| Rank (House) | #25 |
 | Leadership | Yes |
 | Pipeline Depth | 0.0 / 6.0 [......] |
 | Network Centrality | 0.00% |

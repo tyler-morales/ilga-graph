@@ -17,13 +17,13 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 1.15
+moneyball_score: 10.74
 pipeline_depth: 0.0
-network_centrality: 0.0769
-unique_collaborators: 3
+network_centrality: 0.0615
+unique_collaborators: 11
 is_leadership: true
-rank_overall: 34
-rank_chamber: 20
+rank_overall: 140
+rank_chamber: 58
 rank_non_leadership: 0
 tags: [type/member, chamber/senate, party/democrat, committee/approp-health-and-human, committee/appropriations, committee/assignments-reports, committee/executive, subcommittee/executive/elections, committee/executive-appointments, subcommittee/executive/government-operations, committee/labor, subcommittee/executive/procurement, committee/transportation]
 ---
@@ -73,13 +73,13 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **1.15** / 100 |
-| Rank (Overall) | #34 |
-| Rank (Senate) | #20 |
+| Moneyball Score | **10.74** / 100 |
+| Rank (Overall) | #140 |
+| Rank (Senate) | #58 |
 | Leadership | Yes |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 7.69% |
-| Unique Collaborators | 3 |
+| Network Centrality | 6.15% |
+| Unique Collaborators | 11 |
 | Badges | None yet |
 
 ## Tags

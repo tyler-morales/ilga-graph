@@ -22,9 +22,9 @@ pipeline_depth: 0.0
 network_centrality: 0.0
 unique_collaborators: 0
 is_leadership: false
-rank_overall: 39
-rank_chamber: 19
-rank_non_leadership: 15
+rank_overall: 175
+rank_chamber: 115
+rank_non_leadership: 85
 tags: [type/member, chamber/house, party/democrat, committee/approp-health-and-human-services, committee/cities-villages, committee/police-fire-committee, committee/trans-regulation-roads-bridges]
 ---
 
@@ -74,9 +74,9 @@ See [[Moneyball Report]] for full rankings and methodology.
 | Metric | Value |
 | --- | --- |
 | Moneyball Score | **0.0** / 100 |
-| Rank (Overall) | #39 |
-| Rank (House) | #19 |
-| Rank (Non-Leadership) | #15 |
+| Rank (Overall) | #175 |
+| Rank (House) | #115 |
+| Rank (Non-Leadership) | #85 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
 | Network Centrality | 0.00% |

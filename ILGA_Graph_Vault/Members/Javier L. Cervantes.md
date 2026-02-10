@@ -17,14 +17,14 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 9.23
+moneyball_score: 16.24
 pipeline_depth: 0.0
-network_centrality: 0.6154
-unique_collaborators: 24
+network_centrality: 0.5196
+unique_collaborators: 93
 is_leadership: false
-rank_overall: 13
-rank_chamber: 10
-rank_non_leadership: 7
+rank_overall: 59
+rank_chamber: 25
+rank_non_leadership: 9
 tags: [type/member, chamber/senate, party/democrat, committee/approp-ed, committee/criminal-law, committee/energy-and-public-utilities, committee/labor, committee/licensed-activities, committee/pensions]
 ---
 
@@ -73,14 +73,14 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **9.23** / 100 |
-| Rank (Overall) | #13 |
-| Rank (Senate) | #10 |
-| Rank (Non-Leadership) | #7 |
+| Moneyball Score | **16.24** / 100 |
+| Rank (Overall) | #59 |
+| Rank (Senate) | #25 |
+| Rank (Non-Leadership) | #9 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 61.54% |
-| Unique Collaborators | 24 |
+| Network Centrality | 51.96% |
+| Unique Collaborators | 93 |
 | Badges | Network Hub, Wide Tent |
 
 ## Tags
@@ -109,8 +109,8 @@ See [[Moneyball Report]] for full rankings and methodology.
 - [[SB0024]]
 - [[SB0026]]
 - [[SB0031]]
-- [[SB0042]]
 - [[SB0040]]
+- [[SB0042]]
 - [[SB0055]]
 - [[SB0066]]
 - [[SB0086]]

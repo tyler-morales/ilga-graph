@@ -17,13 +17,13 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 8.46
+moneyball_score: 25.7
 pipeline_depth: 0.0
-network_centrality: 0.5641
-unique_collaborators: 22
+network_centrality: 0.4749
+unique_collaborators: 85
 is_leadership: true
-rank_overall: 15
-rank_chamber: 12
+rank_overall: 5
+rank_chamber: 4
 rank_non_leadership: 0
 tags: [type/member, chamber/senate, party/republican, committee/executive, subcommittee/executive/cannabis, committee/judiciary]
 ---
@@ -73,14 +73,14 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **8.46** / 100 |
-| Rank (Overall) | #15 |
-| Rank (Senate) | #12 |
+| Moneyball Score | **25.7** / 100 |
+| Rank (Overall) | #5 |
+| Rank (Senate) | #4 |
 | Leadership | Yes |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 56.41% |
-| Unique Collaborators | 22 |
-| Badges | Network Hub, Wide Tent |
+| Network Centrality | 47.49% |
+| Unique Collaborators | 85 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member

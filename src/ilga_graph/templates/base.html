@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Kei Truck Freedom{% endblock %}</title>
+    <style>
+        /* ── 2005 Functional CSS ── */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Georgia, "Times New Roman", serif;
+            background: #f4f4f0;
+            color: #222;
+            line-height: 1.5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 760px;
+            margin: 0 auto;
+            background: #fff;
+            border: 1px solid #ccc;
+            padding: 24px 32px;
+        }
+        h1 {
+            font-size: 1.6em;
+            border-bottom: 2px solid #333;
+            padding-bottom: 6px;
+            margin-bottom: 16px;
+        }
+        h2 {
+            font-size: 1.2em;
+            margin-top: 20px;
+            margin-bottom: 8px;
+            color: #444;
+        }
+        p { margin-bottom: 10px; }
+        a { color: #0645ad; }
+        a:visited { color: #551a8b; }
+
+        /* ── Form ── */
+        .search-form {
+            margin: 20px 0;
+            padding: 16px;
+            background: #fafafa;
+            border: 1px solid #ddd;
+        }
+        .search-form label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+        .search-form input[type="text"] {
+            font-size: 1em;
+            padding: 6px 10px;
+            border: 1px solid #999;
+            width: 200px;
+        }
+        .search-form select {
+            font-size: 1em;
+            padding: 5px 8px;
+            border: 1px solid #999;
+            width: 260px;
+            background: #fff;
+        }
+        .search-form button {
+            font-size: 1em;
+            padding: 6px 16px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #111;
+            cursor: pointer;
+        }
+        .search-form button:hover { background: #555; }
+
+        /* ── Cards ── */
+        .card {
+            border: 1px solid #aaa;
+            padding: 14px 18px;
+            margin: 14px 0;
+            background: #fdfdfd;
+        }
+        .card h3 {
+            font-size: 1.1em;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 4px;
+        }
+        .card .role-label {
+            display: inline-block;
+            font-size: 0.8em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #fff;
+            padding: 2px 8px;
+            margin-bottom: 8px;
+        }
+        .role-senator    { background: #336; }
+        .role-rep        { background: #346; }
+        .role-broker     { background: #633; }
+        .role-ally       { background: #363; }
+        .role-super-ally { background: #a60; }
+        .role-badge      { background: #555; margin-right: 4px; }
+        .card dl { margin: 6px 0; }
+        .card dt {
+            font-weight: bold;
+            float: left;
+            clear: left;
+            width: 120px;
+            margin-bottom: 4px;
+        }
+        .card dd { margin-left: 126px; margin-bottom: 4px; }
+        .card .why-chosen {
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: #f0f4ff;
+            border-left: 3px solid #69c;
+            font-size: 0.9em;
+            color: #335;
+        }
+        .card .script-hint {
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: #fffff0;
+            border-left: 3px solid #cc9;
+            font-style: italic;
+            font-size: 0.95em;
+        }
+        .section-desc {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        /* ── Seed mode notice ── */
+        .seed-notice {
+            font-size: 0.85em;
+            color: #665500;
+            padding: 8px 12px;
+            border: 1px solid #dd9;
+            background: #fffde6;
+            margin-bottom: 12px;
+        }
+
+        /* ── Error ── */
+        .error-msg {
+            color: #900;
+            font-weight: bold;
+            padding: 10px;
+            border: 1px solid #c99;
+            background: #fff0f0;
+            margin: 12px 0;
+        }
+
+        /* ── Footer ── */
+        .footer {
+            margin-top: 24px;
+            padding-top: 10px;
+            border-top: 1px solid #ccc;
+            font-size: 0.85em;
+            color: #777;
+            text-align: center;
+        }
+        /* ── HTMX indicator ── */
+        .htmx-indicator {
+            display: none;
+            font-style: italic;
+            color: #888;
+            margin-left: 8px;
+        }
+        .htmx-request .htmx-indicator { display: inline; }
+        .htmx-request button { opacity: 0.6; }
+    </style>
+    <script src="https://unpkg.com/htmx.org@2.0.4"
+            integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
+            crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="container">
+        {% block content %}{% endblock %}
+        <div class="footer">
+            Kei Truck Advocacy Portal &mdash; ILGA Graph PoC
+        </div>
+    </div>
+</body>
+</html>

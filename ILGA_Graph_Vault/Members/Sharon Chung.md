@@ -17,13 +17,13 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 9.62
+moneyball_score: 16.97
 pipeline_depth: 0.0
-network_centrality: 0.641
-unique_collaborators: 25
+network_centrality: 0.581
+unique_collaborators: 104
 is_leadership: false
-rank_overall: 12
-rank_chamber: 3
+rank_overall: 53
+rank_chamber: 31
 rank_non_leadership: 3
 tags: [type/member, chamber/house, party/democrat, committee/agriculture-conservation, committee/approp-higher-education, committee/economic-opportunity-equity, committee/health-care-licenses, subcommittee/health-care-licenses/healthcare-ai, committee/higher-education, committee/museum-arts-culture-entertain, committee/veterans-affairs]
 ---
@@ -73,14 +73,14 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **9.62** / 100 |
-| Rank (Overall) | #12 |
-| Rank (House) | #3 |
+| Moneyball Score | **16.97** / 100 |
+| Rank (Overall) | #53 |
+| Rank (House) | #31 |
 | Rank (Non-Leadership) | #3 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 64.10% |
-| Unique Collaborators | 25 |
+| Network Centrality | 58.10% |
+| Unique Collaborators | 104 |
 | Badges | Network Hub, Wide Tent |
 
 ## Tags

@@ -17,14 +17,14 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 0.0
+moneyball_score: 10.0
 pipeline_depth: 0.0
 network_centrality: 0.0
 unique_collaborators: 0
 is_leadership: false
-rank_overall: 36
-rank_chamber: 16
-rank_non_leadership: 14
+rank_overall: 146
+rank_chamber: 88
+rank_non_leadership: 58
 tags: [type/member, chamber/house, party/democrat, committee/approp-higher-education, committee/economic-opportunity-equity, committee/energy-environment, committee/ethics-elections, committee/higher-education, committee/museum-arts-culture-entertain, committee/personnel-pensions]
 ---
 
@@ -73,10 +73,10 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **0.0** / 100 |
-| Rank (Overall) | #36 |
-| Rank (House) | #16 |
-| Rank (Non-Leadership) | #14 |
+| Moneyball Score | **10.0** / 100 |
+| Rank (Overall) | #146 |
+| Rank (House) | #88 |
+| Rank (Non-Leadership) | #58 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
 | Network Centrality | 0.00% |

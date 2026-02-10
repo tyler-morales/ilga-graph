@@ -1,0 +1,120 @@
+{# Partial template: swapped into #results by htmx. No base.html wrapper. #}
+
+{% if seed_mode is defined and seed_mode %}
+<div class="seed-notice">
+    <strong>Dev/Seed Mode:</strong> District data is approximate (hardcoded for ~14 demo ZIPs).
+    Only 40 of 177 legislators are loaded. Some districts will show no results.
+    In production, real Census ZCTA data is used.
+</div>
+{% endif %}
+
+{% if error %}
+<div class="error-msg">{{ error }}</div>
+{% endif %}
+
+{% macro member_card(member, role_label, role_class, script_hint) %}
+<div class="card">
+    {% for badge in member.badges %}
+    <span class="role-label role-badge">{{ badge }}</span>
+    {% endfor %}
+    {% if not member.badges %}
+    <span class="role-label {{ role_class }}">{{ role_label }}</span>
+    {% endif %}
+    <h3>{{ member.name }}</h3>
+    <dl>
+        <dt>District</dt>
+        <dd>{{ member.chamber }} District {{ member.district }}</dd>
+
+        <dt>Party</dt>
+        <dd>{{ member.party }}</dd>
+
+        {% if member.phone %}
+        <dt>Office Phone</dt>
+        <dd><a href="tel:{{ member.phone }}">{{ member.phone }}</a></dd>
+        {% endif %}
+
+        {% if member.moneyball_score is not none %}
+        <dt>Moneyball</dt>
+        <dd>{{ member.moneyball_score }}</dd>
+        {% endif %}
+
+        {% if member.bridge_score is not none %}
+        <dt>Bridge Score</dt>
+        <dd>{{ "%.0f%%"|format(member.bridge_score * 100) }}</dd>
+        {% endif %}
+    </dl>
+    {% if member.why %}
+    <div class="why-chosen">
+        <strong>Why this target:</strong> {{ member.why }}
+    </div>
+    {% endif %}
+    <div class="script-hint">
+        <strong>Script Hint:</strong> {{ script_hint }}
+    </div>
+</div>
+{% endmacro %}
+
+{# ── Your Legislators ── #}
+
+{% if senator or representative %}
+<h2>Your Legislators (ZIP {{ zip }})</h2>
+<p class="section-desc">These are the people who represent you. They work for you and must hear from constituents.</p>
+{% endif %}
+
+{% if senator %}
+{{ member_card(
+    senator,
+    "Your Senator",
+    "role-senator",
+    "This is YOUR state senator. Call their office, say you live in ZIP " ~ zip ~ " (District " ~ senate_district ~ "), and tell them you support kei truck legalization in Illinois. Constituent calls are tracked — yours counts."
+) }}
+{% endif %}
+
+{% if representative %}
+{{ member_card(
+    representative,
+    "Your Representative",
+    "role-rep",
+    "This is YOUR state representative. They vote on bills in the House before they reach the Senate. Call their office, reference ZIP " ~ zip ~ " (District " ~ house_district ~ "), and ask them to sponsor or support kei truck legislation."
+) }}
+{% endif %}
+
+{# ── Strategic Targets ── #}
+
+{% if super_ally or broker or ally %}
+<h2>Strategic Targets{% if category %} — {{ category }}{% endif %}</h2>
+<p class="section-desc">
+    {% if category %}
+    Filtered to legislators on <strong>{{ category }}</strong> committees.
+    {% else %}
+    These legislators were identified by our analytics engine as high-impact advocacy targets beyond your own district.
+    {% endif %}
+</p>
+{% endif %}
+
+{% if super_ally %}
+{{ member_card(
+    super_ally,
+    "Super Ally",
+    "role-super-ally",
+    "This legislator is extraordinary — they are both the most influential senator in the chamber AND a physical neighbor of your senator. They have maximum leverage and direct proximity. Ask your senator to partner with them directly. When you call their office, reference both the bill and the fact that they sit next to your senator. This is your highest-value strategic target."
+) }}
+{% endif %}
+
+{% if broker %}
+{{ member_card(
+    broker,
+    "Power Broker",
+    "role-broker",
+    "This legislator has outsized influence in the chamber — high effectiveness, deep network connections. Even though they are not your senator, pressuring them moves the needle. Reference the bill, mention broad constituent support, and ask for their co-sponsorship."
+) }}
+{% endif %}
+
+{% if ally %}
+{{ member_card(
+    ally,
+    "Potential Ally",
+    "role-ally",
+    "This senator sits physically near yours in the chamber and has a track record of building bipartisan bridges. They are a natural recruitment target — ask your senator to work with them on kei truck legislation."
+) }}
+{% endif %}

@@ -6,25 +6,25 @@ career_timeline: 2013 - 2018 (House); 2018 - Present (Senate)
 career_start_year: 2013
 district: 9
 member_url: https://www.ilga.gov/Senate/Members/Details/3338
-bills_introduced: 1
-laws_passed: 1
-law_success_rate: 1.0
-magnet_score: 8.0
-bridge_score: 1.0
+bills_introduced: 0
+laws_passed: 0
+law_success_rate: 0.0
+magnet_score: 0.0
+bridge_score: 0.0
 resolutions_filed: 0
 resolutions_passed: 0
 resolution_pass_rate: 0.0
 total_primary_bills: 1
 total_passed: 1
 overall_pass_rate: 1.0
-moneyball_score: 92.15
-pipeline_depth: 6.0
-network_centrality: 0.7436
-unique_collaborators: 29
+moneyball_score: 17.58
+pipeline_depth: 0.0
+network_centrality: 0.6313
+unique_collaborators: 113
 is_leadership: false
-rank_overall: 1
-rank_chamber: 1
-rank_non_leadership: 1
+rank_overall: 48
+rank_chamber: 19
+rank_non_leadership: 4
 tags: [type/member, chamber/senate, party/democrat, committee/behavioral-and-mental-health, committee/environment-and-conservation, committee/health-and-human-services, committee/insurance, committee/judiciary, committee/public-health, subcommittee/judiciary/workers-compensation]
 ---
 
@@ -49,11 +49,11 @@ See [[Scorecard Guide]] for how these metrics are defined.
 ### Lawmaking (HB/SB)
 | Metric | Value | Formula |
 | --- | --- | --- |
-| Bills Introduced | 1 | Count of primary HB/SB |
-| Passed | 1 | HB/SB that became law |
-| Success Rate | 100.0% | Passed ÷ Bills Introduced |
-| Avg Co-Sponsors (Magnet) | 8.0 | Co-sponsors ÷ Introduced |
-| Cross-Party (Bridge) | 100.0% | Cross-party co-sponsor ÷ Introduced |
+| Bills Introduced | 0 | Count of primary HB/SB |
+| Passed | 0 | HB/SB that became law |
+| Success Rate | 0.0% | Passed ÷ Bills Introduced |
+| Avg Co-Sponsors (Magnet) | 0.0 | Co-sponsors ÷ Introduced |
+| Cross-Party (Bridge) | 0.0% | Cross-party co-sponsor ÷ Introduced |
 
 ### Resolutions (HR/SR/HJR/SJR)
 | Metric | Value | Formula |
@@ -69,22 +69,20 @@ See [[Scorecard Guide]] for how these metrics are defined.
 | Total Passed | 1 | Laws Passed + Resolutions Passed |
 | Overall Pass Rate | 100.0% | Total Passed ÷ Total Primary Bills |
 
-🤝 **Bipartisan Bridge** (>20% cross-party support)
-
 ## Moneyball Analytics
 See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **92.15** / 100 |
-| Rank (Overall) | #1 |
-| Rank (Senate) | #1 |
-| Rank (Non-Leadership) | #1 |
+| Moneyball Score | **17.58** / 100 |
+| Rank (Overall) | #48 |
+| Rank (Senate) | #19 |
+| Rank (Non-Leadership) | #4 |
 | Leadership | No |
-| Pipeline Depth | 6.0 / 6.0 [######] |
-| Network Centrality | 74.36% |
-| Unique Collaborators | 29 |
-| Badges | Closer, Bipartisan Bridge, Network Hub, Wide Tent |
+| Pipeline Depth | 0.0 / 6.0 [......] |
+| Network Centrality | 63.13% |
+| Unique Collaborators | 113 |
+| Badges | Network Hub, Wide Tent |
 
 ## Tags
 #type/member

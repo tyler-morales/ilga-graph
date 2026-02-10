@@ -27,10 +27,54 @@ from .analytics import (
     _PIPELINE_MAX_DEPTH,
     MemberScorecard,
     compute_all_scorecards,
+    is_shell_bill,
     is_substantive,
     pipeline_depth,
 )
-from .models import Bill, Member
+from .models import Bill, CommitteeMemberRole, Member
+
+# ── Role aggregation ─────────────────────────────────────────────────────────
+
+
+def populate_member_roles(
+    members: list[Member],
+    committee_rosters: dict[str, list[CommitteeMemberRole]],
+) -> None:
+    """Aggregate all role titles into each member's ``roles`` list.
+
+    Sources:
+    1. ``member.role`` — the profile-page title (e.g. "Senator", "President
+       of the Senate").
+    2. Committee roster entries — each ``CommitteeMemberRole.role`` where the
+       member appears (e.g. "Chairperson", "Minority Spokesperson").
+
+    Duplicates are removed while preserving order.  The function mutates
+    *members* in place.
+    """
+    # Build member_id -> set of committee roles
+    roster_roles: dict[str, list[str]] = {}
+    for _code, roles in committee_rosters.items():
+        for cmr in roles:
+            if cmr.member_id:
+                roster_roles.setdefault(cmr.member_id, []).append(cmr.role)
+
+    for member in members:
+        seen: set[str] = set()
+        aggregated: list[str] = []
+
+        # Profile role first
+        if member.role and member.role not in seen:
+            seen.add(member.role)
+            aggregated.append(member.role)
+
+        # Committee roles
+        for r in roster_roles.get(member.id, []):
+            if r and r not in seen:
+                seen.add(r)
+                aggregated.append(r)
+
+        member.roles = aggregated
+
 
 # ── Leadership detection ─────────────────────────────────────────────────────
 
@@ -84,6 +128,57 @@ def is_leadership(member: Member) -> bool:
     return False
 
 
+# ── Institutional power scoring ──────────────────────────────────────────────
+
+
+def compute_institutional_weight(member: Member) -> float:
+    """Return an institutional-power bonus (0.0 – 1.0) based on role titles.
+
+    Tiers (highest match wins — no stacking):
+
+    * **1.0** — top chamber leadership: President, Leader, Speaker.
+    * **0.5** — committee leadership: Chair (excluding "Caucus Chair"),
+      Spokesperson.
+    * **0.25** — party management: Whip, Caucus Chair.
+
+    Roles are drawn from ``member.roles`` (aggregated profile + committee
+    roster titles).  If ``member.roles`` is empty, falls back to
+    ``member.role`` for backward compatibility.
+    """
+    roles_to_check = member.roles or ([member.role] if member.role else [])
+
+    tier_1 = False  # President / Leader / Speaker
+    tier_2 = False  # Chair / Spokesperson
+    tier_3 = False  # Whip / Caucus Chair
+
+    for role in roles_to_check:
+        rl = role.lower()
+
+        # Tier 1: top chamber leadership
+        if "president" in rl or "leader" in rl or "speaker" in rl:
+            tier_1 = True
+            break  # Can't get higher — short-circuit
+
+        # Tier 3 check first (Caucus Chair) so we can exclude it from Tier 2
+        if "caucus chair" in rl or "whip" in rl:
+            tier_3 = True
+            continue
+
+        # Tier 2: committee chair or spokesperson (but NOT "Caucus Chair",
+        # which was already captured above)
+        if "chair" in rl or "spokesperson" in rl:
+            tier_2 = True
+            continue
+
+    if tier_1:
+        return 1.0
+    if tier_2:
+        return 0.5
+    if tier_3:
+        return 0.25
+    return 0.0
+
+
 # ── Network centrality ───────────────────────────────────────────────────────
 
 
@@ -133,10 +228,10 @@ def degree_centrality(adjacency: dict[str, set[str]]) -> dict[str, float]:
 def avg_pipeline_depth(bills: list[Bill]) -> float:
     """Return the average pipeline depth across a list of bills.
 
-    Only substantive bills (HB/SB) are considered.  Returns 0.0 if there
-    are no substantive bills.
+    Only substantive, non-shell bills (HB/SB) are considered.  Returns 0.0
+    if there are no qualifying bills.
     """
-    laws = [b for b in bills if is_substantive(b.bill_number)]
+    laws = [b for b in bills if is_substantive(b.bill_number) and not is_shell_bill(b)]
     if not laws:
         return 0.0
     total = sum(pipeline_depth(b.last_action) for b in laws)
@@ -175,6 +270,9 @@ class MoneyballProfile:
     total_primary_bills: int
     total_passed: int
 
+    # ── Institutional power bonus (0.0 – 1.0) ──
+    institutional_weight: float = 0.0
+
     # ── The composite score ──
     moneyball_score: float = 0.0
 
@@ -192,25 +290,43 @@ class MoneyballWeights:
 
     All weights should sum to 1.0 for interpretability, but the engine
     normalizes them regardless.
+
+    Default allocation (v2 — with institutional power bonus):
+
+    * effectiveness  24%  (was 30%)
+    * pipeline       16%  (was 20%)
+    * magnet         16%  (was 20%)
+    * bridge         12%  (was 15%)
+    * centrality     12%  (was 15%)
+    * institutional  20%  (new)
     """
 
     def __init__(
         self,
-        effectiveness: float = 0.30,
-        pipeline: float = 0.20,
-        magnet: float = 0.20,
-        bridge: float = 0.15,
-        centrality: float = 0.15,
+        effectiveness: float = 0.24,
+        pipeline: float = 0.16,
+        magnet: float = 0.16,
+        bridge: float = 0.12,
+        centrality: float = 0.12,
+        institutional: float = 0.20,
     ) -> None:
         self.effectiveness = effectiveness
         self.pipeline = pipeline
         self.magnet = magnet
         self.bridge = bridge
         self.centrality = centrality
+        self.institutional = institutional
 
     @property
     def total(self) -> float:
-        return self.effectiveness + self.pipeline + self.magnet + self.bridge + self.centrality
+        return (
+            self.effectiveness
+            + self.pipeline
+            + self.magnet
+            + self.bridge
+            + self.centrality
+            + self.institutional
+        )
 
 
 # ── Composite Moneyball Score ────────────────────────────────────────────────
@@ -236,6 +352,7 @@ def _compute_moneyball_score(
     - magnet_normalized: magnet / max_magnet across cohort
     - bridge_score: already 0-1
     - network_centrality: already 0-1
+    - institutional_weight: already 0-1
     """
     w = weights
     total_weight = w.total or 1.0
@@ -246,6 +363,7 @@ def _compute_moneyball_score(
         + w.magnet * _normalize_magnet(profile.magnet_score, max_magnet)
         + w.bridge * profile.bridge_score
         + w.centrality * profile.network_centrality
+        + w.institutional * profile.institutional_weight
     )
     return round((raw / total_weight) * 100, 2)
 
@@ -348,6 +466,7 @@ def compute_moneyball(
 
         depth = avg_pipeline_depth(member.sponsored_bills)
         leadership = is_leadership(member)
+        inst_weight = compute_institutional_weight(member)
 
         profiles[member.id] = MoneyballProfile(
             member_id=member.id,
@@ -372,6 +491,7 @@ def compute_moneyball(
             unique_collaborators=len(adjacency.get(member.id, set())),
             total_primary_bills=sc.primary_bill_count,
             total_passed=sc.passed_count,
+            institutional_weight=inst_weight,
         )
 
     # ── Step 4: Compute composite scores ──

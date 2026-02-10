@@ -17,14 +17,14 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 4.23
+moneyball_score: 3.28
 pipeline_depth: 0.0
-network_centrality: 0.2821
-unique_collaborators: 11
+network_centrality: 0.2737
+unique_collaborators: 49
 is_leadership: false
-rank_overall: 29
-rank_chamber: 11
-rank_non_leadership: 10
+rank_overall: 162
+rank_chamber: 104
+rank_non_leadership: 74
 tags: [type/member, chamber/house, party/democrat, committee/adoption-child-welfare, committee/approp-higher-education, committee/gun-violence-prevention, committee/health-care-availability-access, committee/restorative-justice-public-safety, committee/state-government-administration]
 ---
 
@@ -73,15 +73,15 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **4.23** / 100 |
-| Rank (Overall) | #29 |
-| Rank (House) | #11 |
-| Rank (Non-Leadership) | #10 |
+| Moneyball Score | **3.28** / 100 |
+| Rank (Overall) | #162 |
+| Rank (House) | #104 |
+| Rank (Non-Leadership) | #74 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 28.21% |
-| Unique Collaborators | 11 |
-| Badges | None yet |
+| Network Centrality | 27.37% |
+| Unique Collaborators | 49 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member
@@ -110,8 +110,8 @@ See [[Moneyball Report]] for full rankings and methodology.
 - [[SB0028]]
 - [[HB0033]]
 - [[HB0067]]
-- [[HB0069]]
 - [[HB0070]]
+- [[HB0069]]
 
 ## Contact
 ### Springfield Office

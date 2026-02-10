@@ -17,14 +17,14 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 7.69
+moneyball_score: 15.5
 pipeline_depth: 0.0
-network_centrality: 0.5128
-unique_collaborators: 20
+network_centrality: 0.4581
+unique_collaborators: 82
 is_leadership: false
-rank_overall: 17
-rank_chamber: 4
-rank_non_leadership: 4
+rank_overall: 75
+rank_chamber: 38
+rank_non_leadership: 10
 tags: [type/member, chamber/house, party/democrat, committee/child-care-access-early-childhood, committee/labor-commerce, subcommittee/labor-commerce/domestic-and-international-commerce, committee/insurance, committee/police-fire-committee, committee/prescription-drug-affordability, committee/public-utilities, committee/transportation-vehicles-safety, subcommittee/public-utilities/utilities-subcommittee, committee/veterans-affairs]
 ---
 
@@ -73,15 +73,15 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **7.69** / 100 |
-| Rank (Overall) | #17 |
-| Rank (House) | #4 |
-| Rank (Non-Leadership) | #4 |
+| Moneyball Score | **15.5** / 100 |
+| Rank (Overall) | #75 |
+| Rank (House) | #38 |
+| Rank (Non-Leadership) | #10 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 51.28% |
-| Unique Collaborators | 20 |
-| Badges | Network Hub, Wide Tent |
+| Network Centrality | 45.81% |
+| Unique Collaborators | 82 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member
@@ -121,8 +121,8 @@ See [[Moneyball Report]] for full rankings and methodology.
 - [[HB0028]]
 - [[HB0046]]
 - [[HB0067]]
-- [[HB0069]]
 - [[HB0070]]
+- [[HB0069]]
 
 ## Contact
 ### Springfield Office

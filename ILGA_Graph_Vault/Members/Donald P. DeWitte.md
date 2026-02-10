@@ -17,14 +17,14 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 6.54
+moneyball_score: 13.96
 pipeline_depth: 0.0
-network_centrality: 0.4359
-unique_collaborators: 17
+network_centrality: 0.3296
+unique_collaborators: 59
 is_leadership: false
-rank_overall: 21
-rank_chamber: 16
-rank_non_leadership: 11
+rank_overall: 109
+rank_chamber: 51
+rank_non_leadership: 30
 tags: [type/member, chamber/senate, party/republican, committee/appropriations, committee/education, committee/environment-and-conservation, committee/labor, committee/revenue, committee/state-government, committee/transportation]
 ---
 
@@ -73,15 +73,15 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **6.54** / 100 |
-| Rank (Overall) | #21 |
-| Rank (Senate) | #16 |
-| Rank (Non-Leadership) | #11 |
+| Moneyball Score | **13.96** / 100 |
+| Rank (Overall) | #109 |
+| Rank (Senate) | #51 |
+| Rank (Non-Leadership) | #30 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 43.59% |
-| Unique Collaborators | 17 |
-| Badges | None yet |
+| Network Centrality | 32.96% |
+| Unique Collaborators | 59 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member

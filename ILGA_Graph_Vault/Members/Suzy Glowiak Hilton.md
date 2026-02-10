@@ -17,14 +17,14 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 6.15
+moneyball_score: 13.28
 pipeline_depth: 0.0
-network_centrality: 0.4103
-unique_collaborators: 16
+network_centrality: 0.2737
+unique_collaborators: 49
 is_leadership: false
-rank_overall: 24
-rank_chamber: 18
-rank_non_leadership: 13
+rank_overall: 118
+rank_chamber: 53
+rank_non_leadership: 32
 tags: [type/member, chamber/senate, party/democrat, committee/commerce, committee/consumer-protection, committee/insurance, committee/licensed-activities, committee/transportation]
 ---
 
@@ -73,15 +73,15 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **6.15** / 100 |
-| Rank (Overall) | #24 |
-| Rank (Senate) | #18 |
-| Rank (Non-Leadership) | #13 |
+| Moneyball Score | **13.28** / 100 |
+| Rank (Overall) | #118 |
+| Rank (Senate) | #53 |
+| Rank (Non-Leadership) | #32 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 41.03% |
-| Unique Collaborators | 16 |
-| Badges | None yet |
+| Network Centrality | 27.37% |
+| Unique Collaborators | 49 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member

@@ -17,14 +17,14 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 6.92
+moneyball_score: 5.1
 pipeline_depth: 0.0
-network_centrality: 0.4615
-unique_collaborators: 18
+network_centrality: 0.4246
+unique_collaborators: 76
 is_leadership: false
-rank_overall: 20
-rank_chamber: 5
-rank_non_leadership: 5
+rank_overall: 156
+rank_chamber: 98
+rank_non_leadership: 68
 tags: [type/member, chamber/house, party/democrat, committee/adoption-child-welfare, committee/approp-pensions-personnel, committee/child-care-access-early-childhood, committee/judiciary-criminal, subcommittee/judiciary-criminal/criminal-administration, committee/economic-opportunity-equity, subcommittee/judiciary-criminal/juvenile-justice-and-systems, committee/restorative-justice-public-safety, subcommittee/judiciary-criminal/sentencing-penalties-and-criminal, committee/state-government-administration]
 ---
 
@@ -73,15 +73,15 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **6.92** / 100 |
-| Rank (Overall) | #20 |
-| Rank (House) | #5 |
-| Rank (Non-Leadership) | #5 |
+| Moneyball Score | **5.1** / 100 |
+| Rank (Overall) | #156 |
+| Rank (House) | #98 |
+| Rank (Non-Leadership) | #68 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 46.15% |
-| Unique Collaborators | 18 |
-| Badges | None yet |
+| Network Centrality | 42.46% |
+| Unique Collaborators | 76 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member
@@ -118,8 +118,8 @@ See [[Moneyball Report]] for full rankings and methodology.
 - [[SB0042]]
 - [[HB0046]]
 - [[HB0067]]
-- [[HB0069]]
 - [[HB0070]]
+- [[HB0069]]
 
 ## Contact
 ### Springfield Office

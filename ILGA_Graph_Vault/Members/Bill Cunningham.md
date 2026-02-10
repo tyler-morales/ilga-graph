@@ -17,13 +17,13 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 3.46
+moneyball_score: 22.28
 pipeline_depth: 0.0
-network_centrality: 0.2308
-unique_collaborators: 9
+network_centrality: 0.1899
+unique_collaborators: 34
 is_leadership: true
-rank_overall: 30
-rank_chamber: 19
+rank_overall: 22
+rank_chamber: 13
 rank_non_leadership: 0
 tags: [type/member, chamber/senate, party/democrat, committee/executive, subcommittee/executive/ai-and-social-media, committee/assignments-reports, committee/energy-and-public-utilities, subcommittee/executive/ethics, committee/executive-appointments, subcommittee/executive/gaming-wagering-and-racing, committee/higher-education, committee/insurance, committee/special-committee-on-tourism]
 ---
@@ -74,14 +74,14 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **3.46** / 100 |
-| Rank (Overall) | #30 |
-| Rank (Senate) | #19 |
+| Moneyball Score | **22.28** / 100 |
+| Rank (Overall) | #22 |
+| Rank (Senate) | #13 |
 | Leadership | Yes |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 23.08% |
-| Unique Collaborators | 9 |
-| Badges | None yet |
+| Network Centrality | 18.99% |
+| Unique Collaborators | 34 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member

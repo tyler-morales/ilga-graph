@@ -251,6 +251,7 @@ def _member_metadata_dict(m: Member) -> dict:
         "associated_members": m.associated_members,
         "email": m.email,
         "offices": [asdict(o) for o in m.offices],
+        "roles": m.roles,
         "sponsored_bill_ids": m.sponsored_bill_ids,
         "co_sponsor_bill_ids": m.co_sponsor_bill_ids,
     }
@@ -339,6 +340,7 @@ def load_normalized_cache(
                 )
                 for o in d.get("offices", [])
             ],
+            roles=d.get("roles", []),
             sponsored_bill_ids=d.get("sponsored_bill_ids", []),
             co_sponsor_bill_ids=d.get("co_sponsor_bill_ids", []),
         )

@@ -6,7 +6,7 @@ career_timeline: 2015 - 2021 (House), 2021 -Present (Senate)
 career_start_year: 2015
 district: 58
 member_url: https://www.ilga.gov/Senate/Members/Details/3386
-bills_introduced: 1
+bills_introduced: 0
 laws_passed: 0
 law_success_rate: 0.0
 magnet_score: 0.0
@@ -17,13 +17,13 @@ resolution_pass_rate: 0.0
 total_primary_bills: 1
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 10.26
-pipeline_depth: 1.0
-network_centrality: 0.4615
-unique_collaborators: 18
+moneyball_score: 24.09
+pipeline_depth: 0.0
+network_centrality: 0.3408
+unique_collaborators: 61
 is_leadership: true
-rank_overall: 9
-rank_chamber: 7
+rank_overall: 14
+rank_chamber: 10
 rank_non_leadership: 0
 tags: [type/member, chamber/senate, party/republican, committee/agriculture, committee/approp-ed, committee/approp-pub-safety-infrastructure, committee/behavioral-and-mental-health, committee/criminal-law, committee/energy-and-public-utilities, committee/higher-education]
 ---
@@ -48,7 +48,7 @@ See [[Scorecard Guide]] for how these metrics are defined.
 ### Lawmaking (HB/SB)
 | Metric | Value | Formula |
 | --- | --- | --- |
-| Bills Introduced | 1 | Count of primary HB/SB |
+| Bills Introduced | 0 | Count of primary HB/SB |
 | Passed | 0 | HB/SB that became law |
 | Success Rate | 0.0% | Passed ÷ Bills Introduced |
 | Avg Co-Sponsors (Magnet) | 0.0 | Co-sponsors ÷ Introduced |
@@ -73,14 +73,14 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **10.26** / 100 |
-| Rank (Overall) | #9 |
-| Rank (Senate) | #7 |
+| Moneyball Score | **24.09** / 100 |
+| Rank (Overall) | #14 |
+| Rank (Senate) | #10 |
 | Leadership | Yes |
-| Pipeline Depth | 1.0 / 6.0 [#.....] |
-| Network Centrality | 46.15% |
-| Unique Collaborators | 18 |
-| Badges | None yet |
+| Pipeline Depth | 0.0 / 6.0 [......] |
+| Network Centrality | 34.08% |
+| Unique Collaborators | 61 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member

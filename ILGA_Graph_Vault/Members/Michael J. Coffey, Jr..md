@@ -17,14 +17,14 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 2.31
+moneyball_score: 1.41
 pipeline_depth: 0.0
-network_centrality: 0.1538
-unique_collaborators: 6
+network_centrality: 0.1173
+unique_collaborators: 21
 is_leadership: false
-rank_overall: 32
-rank_chamber: 13
-rank_non_leadership: 12
+rank_overall: 171
+rank_chamber: 112
+rank_non_leadership: 82
 tags: [type/member, chamber/house, party/republican, committee/approp-higher-education, committee/financial-institutions-licensing, committee/housing, committee/museum-arts-culture-entertain, committee/public-utilities, committee/state-government-administration, subcommittee/public-utilities/utilities-subcommittee]
 ---
 
@@ -73,15 +73,15 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **2.31** / 100 |
-| Rank (Overall) | #32 |
-| Rank (House) | #13 |
-| Rank (Non-Leadership) | #12 |
+| Moneyball Score | **1.41** / 100 |
+| Rank (Overall) | #171 |
+| Rank (House) | #112 |
+| Rank (Non-Leadership) | #82 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 15.38% |
-| Unique Collaborators | 6 |
-| Badges | None yet |
+| Network Centrality | 11.73% |
+| Unique Collaborators | 21 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member

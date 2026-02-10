@@ -17,14 +17,14 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 6.15
+moneyball_score: 13.96
 pipeline_depth: 0.0
-network_centrality: 0.4103
-unique_collaborators: 16
+network_centrality: 0.3296
+unique_collaborators: 59
 is_leadership: false
-rank_overall: 23
-rank_chamber: 17
-rank_non_leadership: 12
+rank_overall: 108
+rank_chamber: 50
+rank_non_leadership: 29
 tags: [type/member, chamber/senate, party/republican, committee/approp-health-and-human, committee/health-and-human-services, committee/local-government, committee/pensions, committee/public-health, committee/state-government, committee/veterans-affairs]
 ---
 
@@ -73,15 +73,15 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **6.15** / 100 |
-| Rank (Overall) | #23 |
-| Rank (Senate) | #17 |
-| Rank (Non-Leadership) | #12 |
+| Moneyball Score | **13.96** / 100 |
+| Rank (Overall) | #108 |
+| Rank (Senate) | #50 |
+| Rank (Non-Leadership) | #29 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 41.03% |
-| Unique Collaborators | 16 |
-| Badges | None yet |
+| Network Centrality | 32.96% |
+| Unique Collaborators | 59 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member

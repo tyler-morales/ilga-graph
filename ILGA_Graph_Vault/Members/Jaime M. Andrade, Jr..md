@@ -17,14 +17,14 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 2.69
+moneyball_score: 11.34
 pipeline_depth: 0.0
-network_centrality: 0.1795
-unique_collaborators: 7
+network_centrality: 0.1117
+unique_collaborators: 20
 is_leadership: false
-rank_overall: 31
-rank_chamber: 12
-rank_non_leadership: 11
+rank_overall: 136
+rank_chamber: 79
+rank_non_leadership: 49
 tags: [type/member, chamber/house, party/democrat, committee/cybersecurity-data-analytics-it, subcommittee/cybersecurity-data-analytics-it/artificial-intelligence-subcommitte, subcommittee/cybersecurity-data-analytics-it/data-privacy-and-analytics-sub, committee/financial-institutions-licensing, committee/labor-commerce, subcommittee/labor-commerce/occupational-licenses-sub, committee/public-utilities, committee/revenue-finance, subcommittee/cybersecurity-data-analytics-it/social-media-and-content-moderation, subcommittee/revenue-finance/tax-policy-sales-tax-subcommittee, subcommittee/public-utilities/telecom-subcommittee, committee/transportation-vehicles-safety]
 ---
 
@@ -73,15 +73,15 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **2.69** / 100 |
-| Rank (Overall) | #31 |
-| Rank (House) | #12 |
-| Rank (Non-Leadership) | #11 |
+| Moneyball Score | **11.34** / 100 |
+| Rank (Overall) | #136 |
+| Rank (House) | #79 |
+| Rank (Non-Leadership) | #49 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 17.95% |
-| Unique Collaborators | 7 |
-| Badges | None yet |
+| Network Centrality | 11.17% |
+| Unique Collaborators | 20 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member

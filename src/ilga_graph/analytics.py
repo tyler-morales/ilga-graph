@@ -168,6 +168,24 @@ def is_substantive(bill_number: str) -> bool:
     return any(upper.startswith(p) for p in _SUBSTANTIVE_PREFIXES)
 
 
+def is_shell_bill(bill: Bill) -> bool:
+    """Return ``True`` if *bill* is a procedural shell / placeholder.
+
+    Shell bills are filed as legislative vehicles and were never intended to
+    pass on their own merits.  They should be excluded from the effectiveness
+    denominator so they don't penalise leadership who file them.
+
+    A bill is considered a shell bill when:
+    - Its description contains "Technical" or "Shell" (case-insensitive), **or**
+    - Its description is trivially short (< 50 characters).
+    """
+    desc = (bill.description or "").strip()
+    desc_lower = desc.lower()
+    if "technical" in desc_lower or "shell" in desc_lower:
+        return True
+    return len(desc) < 50
+
+
 # ── Co-sponsor map ───────────────────────────────────────────────────────────
 
 
@@ -233,8 +251,10 @@ def compute_scorecard(member: Member) -> MemberScorecard:
 
     success_rate = counts[BillStatus.PASSED] / total if total > 0 else 0.0
 
-    # Separate substantive laws from resolutions
-    laws = [b for b in bills if is_substantive(b.bill_number)]
+    # Separate substantive laws from resolutions, excluding shell bills
+    # from the effectiveness denominator so procedural placeholders don't
+    # penalise leadership.
+    laws = [b for b in bills if is_substantive(b.bill_number) and not is_shell_bill(b)]
     resolutions = [b for b in bills if not is_substantive(b.bill_number)]
     law_count = len(laws)
 
@@ -301,8 +321,8 @@ def compute_all_scorecards(
 
         success_rate = counts[BillStatus.PASSED] / total if total > 0 else 0.0
 
-        # ── Filter: laws vs resolutions ──
-        laws = [b for b in bills if is_substantive(b.bill_number)]
+        # ── Filter: laws vs resolutions (shell bills excluded from denominator) ──
+        laws = [b for b in bills if is_substantive(b.bill_number) and not is_shell_bill(b)]
         resolutions = [b for b in bills if not is_substantive(b.bill_number)]
         law_count = len(laws)
 

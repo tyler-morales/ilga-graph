@@ -17,14 +17,14 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 1.54
+moneyball_score: 2.55
 pipeline_depth: 0.0
-network_centrality: 0.1026
-unique_collaborators: 4
+network_centrality: 0.2123
+unique_collaborators: 38
 is_leadership: false
-rank_overall: 33
-rank_chamber: 14
-rank_non_leadership: 13
+rank_overall: 166
+rank_chamber: 108
+rank_non_leadership: 78
 tags: [type/member, chamber/house, party/republican, committee/adoption-child-welfare, committee/approp-general-service, committee/approp-health-and-human-services, committee/labor-commerce, subcommittee/labor-commerce/domestic-and-international-commerce, committee/energy-environment, subcommittee/labor-commerce/job-workforce-development-sub, committee/judiciary-civil, committee/mental-health-addiction]
 ---
 
@@ -73,15 +73,15 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **1.54** / 100 |
-| Rank (Overall) | #33 |
-| Rank (House) | #14 |
-| Rank (Non-Leadership) | #13 |
+| Moneyball Score | **2.55** / 100 |
+| Rank (Overall) | #166 |
+| Rank (House) | #108 |
+| Rank (Non-Leadership) | #78 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 10.26% |
-| Unique Collaborators | 4 |
-| Badges | None yet |
+| Network Centrality | 21.23% |
+| Unique Collaborators | 38 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member

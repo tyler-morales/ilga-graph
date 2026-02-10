@@ -22,9 +22,9 @@ pipeline_depth: 0.0
 network_centrality: 0.0
 unique_collaborators: 0
 is_leadership: false
-rank_overall: 40
-rank_chamber: 20
-rank_non_leadership: 16
+rank_overall: 176
+rank_chamber: 116
+rank_non_leadership: 86
 tags: [type/member, chamber/house, party/democrat, committee/education-policy, committee/int-relations-tourism-trade, committee/public-utilities]
 ---
 
@@ -74,9 +74,9 @@ See [[Moneyball Report]] for full rankings and methodology.
 | Metric | Value |
 | --- | --- |
 | Moneyball Score | **0.0** / 100 |
-| Rank (Overall) | #40 |
-| Rank (House) | #20 |
-| Rank (Non-Leadership) | #16 |
+| Rank (Overall) | #176 |
+| Rank (House) | #116 |
+| Rank (Non-Leadership) | #86 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
 | Network Centrality | 0.00% |

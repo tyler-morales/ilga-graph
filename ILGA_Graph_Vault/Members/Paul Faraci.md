@@ -17,14 +17,14 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 8.85
+moneyball_score: 15.63
 pipeline_depth: 0.0
-network_centrality: 0.5897
-unique_collaborators: 23
+network_centrality: 0.4693
+unique_collaborators: 84
 is_leadership: false
-rank_overall: 14
-rank_chamber: 11
-rank_non_leadership: 8
+rank_overall: 68
+rank_chamber: 31
+rank_non_leadership: 14
 tags: [type/member, chamber/senate, party/democrat, committee/agriculture, committee/approp-ed, committee/commerce, committee/higher-education, committee/labor, committee/local-government]
 ---
 
@@ -73,15 +73,15 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **8.85** / 100 |
-| Rank (Overall) | #14 |
-| Rank (Senate) | #11 |
-| Rank (Non-Leadership) | #8 |
+| Moneyball Score | **15.63** / 100 |
+| Rank (Overall) | #68 |
+| Rank (Senate) | #31 |
+| Rank (Non-Leadership) | #14 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 58.97% |
-| Unique Collaborators | 23 |
-| Badges | Network Hub, Wide Tent |
+| Network Centrality | 46.93% |
+| Unique Collaborators | 84 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member
@@ -107,8 +107,8 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 ## 🖊️ Co-Sponsorships
 - [[SB0024]]
-- [[SB0029]]
 - [[SB0028]]
+- [[SB0029]]
 - [[SB0031]]
 - [[SB0055]]
 - [[SB0062]]

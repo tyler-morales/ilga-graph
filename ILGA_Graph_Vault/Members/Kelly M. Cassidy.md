@@ -17,14 +17,14 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 6.54
+moneyball_score: 14.96
 pipeline_depth: 0.0
-network_centrality: 0.4359
-unique_collaborators: 17
+network_centrality: 0.4134
+unique_collaborators: 74
 is_leadership: false
-rank_overall: 22
-rank_chamber: 6
-rank_non_leadership: 6
+rank_overall: 91
+rank_chamber: 46
+rank_non_leadership: 18
 tags: [type/member, chamber/house, party/democrat, committee/judiciary-criminal, subcommittee/judiciary-criminal/criminal-administration, committee/ethics-elections, committee/gun-violence-prevention, committee/human-services, subcommittee/judiciary-criminal/juvenile-justice-and-systems, committee/labor-commerce, subcommittee/labor-commerce/minority-women-business-sub, committee/restorative-justice-public-safety, subcommittee/judiciary-criminal/sentencing-penalties-and-criminal, subcommittee/judiciary-criminal/sex-offenses-and-sex-offender-reg, subcommittee/human-services/special-issues, subcommittee/judiciary-criminal/weapons-and-weapon-safety-sub]
 ---
 
@@ -73,15 +73,15 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **6.54** / 100 |
-| Rank (Overall) | #22 |
-| Rank (House) | #6 |
-| Rank (Non-Leadership) | #6 |
+| Moneyball Score | **14.96** / 100 |
+| Rank (Overall) | #91 |
+| Rank (House) | #46 |
+| Rank (Non-Leadership) | #18 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 43.59% |
-| Unique Collaborators | 17 |
-| Badges | None yet |
+| Network Centrality | 41.34% |
+| Unique Collaborators | 74 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member

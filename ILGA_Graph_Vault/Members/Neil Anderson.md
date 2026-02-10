@@ -17,13 +17,13 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 6.92
+moneyball_score: 14.63
 pipeline_depth: 0.0
-network_centrality: 0.4615
-unique_collaborators: 18
+network_centrality: 0.3855
+unique_collaborators: 69
 is_leadership: true
-rank_overall: 19
-rank_chamber: 15
+rank_overall: 98
+rank_chamber: 48
 rank_non_leadership: 0
 tags: [type/member, chamber/senate, party/republican, committee/agriculture, committee/assignments-reports, committee/energy-and-public-utilities, committee/executive, subcommittee/executive/firearms, subcommittee/executive/gaming-wagering-and-racing, subcommittee/executive/government-operations, committee/health-and-human-services, committee/insurance, subcommittee/executive/liquor, subcommittee/executive/paid-leave, committee/pensions]
 ---
@@ -73,14 +73,14 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **6.92** / 100 |
-| Rank (Overall) | #19 |
-| Rank (Senate) | #15 |
+| Moneyball Score | **14.63** / 100 |
+| Rank (Overall) | #98 |
+| Rank (Senate) | #48 |
 | Leadership | Yes |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 46.15% |
-| Unique Collaborators | 18 |
-| Badges | None yet |
+| Network Centrality | 38.55% |
+| Unique Collaborators | 69 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member

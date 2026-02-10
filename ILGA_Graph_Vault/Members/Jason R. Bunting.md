@@ -17,14 +17,14 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 5.77
+moneyball_score: 4.16
 pipeline_depth: 0.0
-network_centrality: 0.3846
-unique_collaborators: 15
+network_centrality: 0.3464
+unique_collaborators: 62
 is_leadership: false
-rank_overall: 28
-rank_chamber: 10
-rank_non_leadership: 9
+rank_overall: 159
+rank_chamber: 101
+rank_non_leadership: 71
 tags: [type/member, chamber/house, party/republican, committee/approp-health-and-human-services, committee/approp-public-safety-infrastruct, committee/counties-townships, committee/energy-environment, committee/labor-commerce, subcommittee/labor-commerce/occupational-licenses-sub, committee/public-utilities, subcommittee/labor-commerce/workers-compensation-analysis-sub]
 ---
 
@@ -73,15 +73,15 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **5.77** / 100 |
-| Rank (Overall) | #28 |
-| Rank (House) | #10 |
-| Rank (Non-Leadership) | #9 |
+| Moneyball Score | **4.16** / 100 |
+| Rank (Overall) | #159 |
+| Rank (House) | #101 |
+| Rank (Non-Leadership) | #71 |
 | Leadership | No |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 38.46% |
-| Unique Collaborators | 15 |
-| Badges | None yet |
+| Network Centrality | 34.64% |
+| Unique Collaborators | 62 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member

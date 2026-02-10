@@ -17,13 +17,13 @@ resolution_pass_rate: 0.0
 total_primary_bills: 0
 total_passed: 0
 overall_pass_rate: 0.0
-moneyball_score: 5.77
+moneyball_score: 24.36
 pipeline_depth: 0.0
-network_centrality: 0.3846
-unique_collaborators: 15
+network_centrality: 0.3631
+unique_collaborators: 65
 is_leadership: true
-rank_overall: 26
-rank_chamber: 8
+rank_overall: 12
+rank_chamber: 4
 rank_non_leadership: 0
 tags: [type/member, chamber/house, party/democrat, committee/approp-pensions-personnel, committee/economic-opportunity-equity, committee/health-care-availability-access, committee/labor-commerce, subcommittee/labor-commerce/job-workforce-development-sub, committee/personnel-pensions, subcommittee/health-care-availability-access/pharmacy-benefit-manager, committee/prescription-drug-affordability, committee/revenue-finance, subcommittee/revenue-finance/sales-tax-subcommittee, subcommittee/revenue-finance/tax-policy-finance-subcommittee, committee/trans-regulation-roads-bridges]
 ---
@@ -73,14 +73,14 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **5.77** / 100 |
-| Rank (Overall) | #26 |
-| Rank (House) | #8 |
+| Moneyball Score | **24.36** / 100 |
+| Rank (Overall) | #12 |
+| Rank (House) | #4 |
 | Leadership | Yes |
 | Pipeline Depth | 0.0 / 6.0 [......] |
-| Network Centrality | 38.46% |
-| Unique Collaborators | 15 |
-| Badges | None yet |
+| Network Centrality | 36.31% |
+| Unique Collaborators | 65 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member

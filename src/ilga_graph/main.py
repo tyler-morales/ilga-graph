@@ -9,9 +9,11 @@ from dataclasses import dataclass
 from datetime import datetime
 
 import strawberry
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Form, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from strawberry.fastapi import GraphQLRouter
 
 from . import config as cfg
@@ -24,7 +26,7 @@ from .analytics import (
 )
 from .exporter import ObsidianExporter
 from .models import Bill, Committee, CommitteeMemberRole, Member, VoteEvent, WitnessSlip
-from .moneyball import MoneyballReport, compute_moneyball
+from .moneyball import MoneyballReport, compute_moneyball, populate_member_roles
 from .schema import (
     BillAdvancementAnalyticsType,
     BillConnection,
@@ -62,6 +64,7 @@ from .scrapers.witness_slips import scrape_all_witness_slips
 from .seating import process_seating
 from .vote_name_normalizer import normalize_vote_events
 from .vote_timeline import compute_bill_vote_timeline
+from .zip_crosswalk import ZipDistrictInfo, load_zip_crosswalk
 
 # ── Configure logging ────────────────────────────────────────────────────────
 # Ensure our application logs show up in the terminal
@@ -107,17 +110,29 @@ def _format_startup_table(
     elapsed_total: float,
     elapsed_load: float,
     elapsed_analytics: float,
+    elapsed_seating: float,
     elapsed_export: float,
     elapsed_votes: float,
+    elapsed_slips: float,
+    elapsed_zip: float,
     member_count: int,
     committee_count: int,
     bill_count: int,
     vote_event_count: int,
+    slip_count: int,
+    zcta_count: int,
     dev_mode: bool,
     seed_mode: bool,
 ) -> str:
-    """Format a nice table showing startup breakdown with colors."""
+    """Format a nice table showing startup breakdown with colors and timing."""
     c = _Colors
+
+    def row(icon: str, label: str, sec: float, detail: str) -> str:
+        return (
+            f"{c.GREEN}✓{c.RESET} {icon} {c.WHITE}{label:<18}{c.RESET}"
+            f"{c.BRIGHT_GREEN}{sec:>8.2f}s{c.RESET}  "
+            f"{c.WHITE}{detail}{c.RESET}"
+        )
 
     lines = [
         "",
@@ -125,50 +140,70 @@ def _format_startup_table(
         f"{c.BOLD}{c.BRIGHT_CYAN}🚀 Application Startup Complete{c.RESET}",
         f"{c.BOLD}{c.CYAN}{'=' * 80}{c.RESET}",
         "",
-        f"{c.BOLD}{'Step':<20} {'Time':>8}  {'Details':<45}{c.RESET}",
+        f"{c.BOLD}{'Step':<22} {'Time':>8}  {'Details'}{c.RESET}",
         f"{c.GRAY}{'-' * 80}{c.RESET}",
     ]
 
-    # Load step
-    load_icon = "📦"
-    load_detail = f"{member_count} members, {committee_count} committees"
+    # 1. Load (members, committees, bills from cache or scrape)
+    load_detail = f"{member_count} members, {committee_count} committees, {bill_count} bills"
     if seed_mode and elapsed_load < 0.5:
-        load_detail += f" {c.DIM}(from seed){c.RESET}"
+        load_detail += f" {c.DIM}(seed){c.RESET}"
+    elif elapsed_load < 1.0 and member_count > 0:
+        load_detail += f" {c.DIM}(cache){c.RESET}"
+    lines.append(row("📦", "1. Load data", elapsed_load, load_detail))
+
+    # 2. Analytics (scorecards + moneyball)
     lines.append(
-        f"{c.GREEN}✓{c.RESET} {load_icon} {c.WHITE}Load Data{c.RESET}"
-        f"{c.BRIGHT_GREEN}{elapsed_load:>11.2f}s{c.RESET}  "
-        f"{c.WHITE}{load_detail}{c.RESET}"
+        row(
+            "📊",
+            "2. Analytics",
+            elapsed_analytics,
+            f"{member_count} scorecards, moneyball rankings",
+        )
     )
 
-    # Analytics step
+    # 3. Seating (Senate seat blocks, seatmates, affinity)
     lines.append(
-        f"{c.GREEN}✓{c.RESET} 📊 {c.WHITE}Analytics{c.RESET}"
-        f"{c.BRIGHT_GREEN}{elapsed_analytics:>14.2f}s{c.RESET}  "
-        f"{c.WHITE}{member_count} scorecards, {member_count} profiles{c.RESET}"
+        row(
+            "🪑",
+            "3. Seating chart",
+            elapsed_seating,
+            f"Senate seat blocks & seatmate affinity",
+        )
     )
 
-    # Export step
+    # 4. Export vault (Obsidian)
     lines.append(
-        f"{c.GREEN}✓{c.RESET} 📝 {c.WHITE}Export Vault{c.RESET}"
-        f"{c.BRIGHT_GREEN}{elapsed_export:>11.2f}s{c.RESET}  "
-        f"{c.WHITE}{bill_count} bills exported{c.RESET}"
+        row("📝", "4. Export vault", elapsed_export, f"{bill_count} bills → Obsidian")
     )
 
-    # Votes step
-    vote_detail = f"{vote_event_count} events"
-    if elapsed_votes < 0.1:
+    # 5. Roll-call votes
+    vote_detail = f"{vote_event_count} vote events"
+    if elapsed_votes < 0.1 and vote_event_count > 0:
         vote_detail += f" {c.DIM}(cached){c.RESET}"
+    lines.append(row("🗳️", "5. Roll-call votes", elapsed_votes, vote_detail))
+
+    # 6. Witness slips
+    slip_detail = f"{slip_count} slips"
+    if elapsed_slips < 0.1 and slip_count > 0:
+        slip_detail += f" {c.DIM}(cached){c.RESET}"
+    lines.append(row("📋", "6. Witness slips", elapsed_slips, slip_detail))
+
+    # 7. ZIP crosswalk (advocacy lookup)
     lines.append(
-        f"{c.GREEN}✓{c.RESET} 🗳️  {c.WHITE}Roll-Call Votes{c.RESET}"
-        f"{c.BRIGHT_GREEN}{elapsed_votes:>9.2f}s{c.RESET}  "
-        f"{c.WHITE}{vote_detail}{c.RESET}"
+        row(
+            "📍",
+            "7. ZIP crosswalk",
+            elapsed_zip,
+            f"{zcta_count} ZCTAs → IL Senate/House districts",
+        )
     )
 
     lines.extend(
         [
             f"{c.GRAY}{'-' * 80}{c.RESET}",
-            f"{c.BOLD}{'Total':<20} {c.BRIGHT_CYAN}{elapsed_total:>8.2f}s{c.RESET}  "
-            f"{c.DIM}Dev: {dev_mode}, Seed: {seed_mode}{c.RESET}",
+            f"{c.BOLD}{'Total':<22} {c.BRIGHT_CYAN}{elapsed_total:>8.2f}s{c.RESET}  "
+            f"{c.DIM}Dev: {dev_mode}  Seed: {seed_mode}{c.RESET}",
             f"{c.BOLD}{c.CYAN}{'=' * 80}{c.RESET}",
             "",
         ]
@@ -181,10 +216,16 @@ def _log_startup_timing(
     total_s: float,
     load_s: float,
     analytics_s: float,
+    seating_s: float,
     export_s: float,
     votes_s: float,
+    slips_s: float,
+    zip_s: float,
     member_count: int,
     bill_count: int,
+    vote_count: int,
+    slip_count: int,
+    zcta_count: int,
     dev_mode: bool,
     seed_mode: bool,
 ) -> None:
@@ -195,11 +236,14 @@ def _log_startup_timing(
     with open(log_file, "a", encoding="utf-8") as f:
         if is_new:
             f.write(
-                "timestamp,total_s,load_s,analytics_s,export_s,votes_s,members,bills,dev_mode,seed_mode\n"
+                "timestamp,total_s,load_s,analytics_s,seating_s,export_s,votes_s,slips_s,zip_s,"
+                "members,bills,votes,slips,zctas,dev_mode,seed_mode\n"
             )
         f.write(
             f"{datetime.now().isoformat()},{total_s:.2f},{load_s:.2f},{analytics_s:.2f},"
-            f"{export_s:.2f},{votes_s:.2f},{member_count},{bill_count},{dev_mode},{seed_mode}\n"
+            f"{seating_s:.2f},{export_s:.2f},{votes_s:.2f},{slips_s:.2f},{zip_s:.2f},"
+            f"{member_count},{bill_count},{vote_count},{slip_count},{zcta_count},"
+            f"{dev_mode},{seed_mode}\n"
         )
     LOGGER.debug("Startup timing logged to %s", log_file)
 
@@ -373,8 +417,16 @@ def load_or_scrape_data(
 
 def compute_analytics(
     members: list[Member],
+    committee_rosters: dict[str, list[CommitteeMemberRole]] | None = None,
 ) -> tuple[dict[str, MemberScorecard], MoneyballReport]:
-    """Compute scorecards and moneyball analytics for all members."""
+    """Compute scorecards and moneyball analytics for all members.
+
+    When *committee_rosters* is provided, each member's ``roles`` list is
+    populated first (profile title + committee roster titles) so the
+    Moneyball institutional-power bonus can be calculated.
+    """
+    if committee_rosters is not None:
+        populate_member_roles(members, committee_rosters)
     scorecards = compute_all_scorecards(members)
     moneyball = compute_moneyball(members, scorecards=scorecards)
     return scorecards, moneyball
@@ -424,7 +476,7 @@ def run_etl(
         sb_limit=sb_limit,
         hb_limit=hb_limit,
     )
-    scorecards, moneyball = compute_analytics(data.members)
+    scorecards, moneyball = compute_analytics(data.members, data.committee_rosters)
     process_seating(data.members, cfg.MOCK_DEV_DIR / "senate_seats.json")
     export_vault(
         data,
@@ -456,6 +508,7 @@ class AppState:
         self.vote_lookup: dict[str, list[VoteEvent]] = {}  # bill_number -> votes
         self.witness_slips: list[WitnessSlip] = []
         self.witness_slips_lookup: dict[str, list[WitnessSlip]] = {}  # bill_number -> slips
+        self.zip_to_district: dict[str, ZipDistrictInfo] = {}  # ZCTA -> district info
 
 
 state = AppState()
@@ -521,8 +574,11 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     t_startup_begin = _time.perf_counter()
     elapsed_load = 0.0
     elapsed_analytics = 0.0
+    elapsed_seating = 0.0
     elapsed_export = 0.0
     elapsed_votes = 0.0
+    elapsed_slips = 0.0
+    elapsed_zip = 0.0
     data: ScrapedData | None = None
 
     if DEV_MODE:
@@ -575,15 +631,19 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # ── Step 2: Compute analytics ────────────────────────────────────────
     try:
         t_analytics = _time.perf_counter()
-        state.scorecards, state.moneyball = compute_analytics(state.members)
+        state.scorecards, state.moneyball = compute_analytics(
+            state.members, data.committee_rosters,
+        )
         elapsed_analytics = _time.perf_counter() - t_analytics
     except Exception:
         LOGGER.exception("Analytics computation failed; scorecards will be empty.")
 
     # ── Step 2b: Seating chart analytics ─────────────────────────────────
     try:
+        t_seating = _time.perf_counter()
         seating_path = cfg.MOCK_DEV_DIR / "senate_seats.json"
         process_seating(state.members, seating_path)
+        elapsed_seating = _time.perf_counter() - t_seating
     except Exception:
         LOGGER.exception("Seating chart processing failed; seating fields will be empty.")
 
@@ -610,7 +670,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     state.committee_rosters = data.committee_rosters
     state.committee_bills = data.committee_bills
 
-    # ── Level 4: Scrape roll-call votes ──────────────────────────────────
+    # ── Step 4: Scrape roll-call votes ───────────────────────────────────
     _vote_bill_urls = cfg.get_bill_status_urls()
 
     try:
@@ -630,8 +690,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     except Exception:
         LOGGER.exception("Vote scraping failed; vote data will be empty.")
 
-    # ── Level 5: Scrape / load witness slips ─────────────────────────────
+    # ── Step 5: Scrape / load witness slips ─────────────────────────────
     try:
+        t_slips = _time.perf_counter()
         state.witness_slips = scrape_all_witness_slips(
             _vote_bill_urls,
             request_delay=0.3,
@@ -640,8 +701,18 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         )
         for ws in state.witness_slips:
             state.witness_slips_lookup.setdefault(ws.bill_number, []).append(ws)
+        elapsed_slips = _time.perf_counter() - t_slips
     except Exception:
         LOGGER.exception("Witness slip scraping failed; slip data will be empty.")
+
+    # ── Step 6: Load ZIP-to-district crosswalk ───────────────────────────
+    try:
+        t_zip = _time.perf_counter()
+        state.zip_to_district = load_zip_crosswalk()
+        elapsed_zip = _time.perf_counter() - t_zip
+        LOGGER.info("ZIP crosswalk loaded: %d ZCTAs.", len(state.zip_to_district))
+    except Exception:
+        LOGGER.exception("ZIP crosswalk loading failed; advocacy search will be limited.")
 
     # ── Print startup summary table ──────────────────────────────────────
     elapsed_total = _time.perf_counter() - t_startup_begin
@@ -649,12 +720,17 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         elapsed_total,
         elapsed_load,
         elapsed_analytics,
+        elapsed_seating,
         elapsed_export,
         elapsed_votes,
+        elapsed_slips,
+        elapsed_zip,
         len(state.members),
         len(data.committees),
         len(state.bills),
         len(state.vote_events),
+        len(state.witness_slips),
+        len(state.zip_to_district),
         DEV_MODE,
         SEED_MODE,
     )
@@ -673,10 +749,16 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         elapsed_total,
         elapsed_load,
         elapsed_analytics,
+        elapsed_seating,
         elapsed_export,
         elapsed_votes,
+        elapsed_slips,
+        elapsed_zip,
         len(state.members),
         len(state.bills),
+        len(state.vote_events),
+        len(state.witness_slips),
+        len(state.zip_to_district),
         DEV_MODE,
         SEED_MODE,
     )
@@ -1087,6 +1169,12 @@ graphql_app = GraphQLRouter(schema)
 
 app = FastAPI(title="ILGA Graph", lifespan=lifespan)
 
+# ── Static files & Jinja2 templates ──────────────────────────────────────────
+_STATIC_DIR = Path(__file__).parent / "static"
+_TEMPLATE_DIR = Path(__file__).parent / "templates"
+app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
+templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
+
 # ── CORS middleware ──────────────────────────────────────────────────────────
 _cors_origins = [o.strip() for o in cfg.CORS_ORIGINS.split(",") if o.strip()]
 app.add_middleware(
@@ -1107,7 +1195,13 @@ async def _api_key_middleware(request: Request, call_next) -> Response:  # type:
     """
     if cfg.API_KEY:
         exempt = {"/health", "/docs", "/openapi.json", "/redoc"}
-        if request.url.path not in exempt and request.method != "OPTIONS":
+        path = request.url.path
+        if (
+            path not in exempt
+            and not path.startswith("/advocacy")
+            and not path.startswith("/static")
+            and request.method != "OPTIONS"
+        ):
             provided = request.headers.get("X-API-Key", "")
             if provided != cfg.API_KEY:
                 return JSONResponse(
@@ -1148,6 +1242,407 @@ async def health() -> dict:
         "committees": len(state.committees),
         "vote_events": len(state.vote_events),
     }
+
+
+# ── SSR Advocacy routes ──────────────────────────────────────────────────────
+
+# Policy categories mapped to Senate committee codes.  When the user picks a
+# category the Power Broker / Ally search is restricted to members who sit on
+# at least one of the listed committees.  "All" (empty string) = no filter.
+_CATEGORY_COMMITTEES: dict[str, list[str]] = {
+    "": [],  # No filter — default
+    "Transportation": ["STRN"],
+    "Agriculture": ["SAGR"],
+    "Commerce & Small Business": ["SCOM", "SBTE"],
+    "Criminal Justice": ["SCRL", "SHRJ"],
+    "Education": ["SESE", "SCHE"],
+    "Energy & Environment": ["SENE", "SNVR"],
+    "Healthcare & Human Services": ["SBMH", "SCHW", "SHUM"],
+    "Housing": ["SHOU"],
+    "Insurance & Finance": ["SINS", "SFIC"],
+    "Labor": ["SLAB"],
+    "Revenue & Pensions": ["SREV", "SPEN"],
+    "State Government": ["SGOA", "SHEE", "SEXC"],
+}
+
+# Labels in display order for the dropdown.
+CATEGORY_CHOICES: list[tuple[str, str]] = [
+    ("", "All categories"),
+    ("Transportation", "Transportation"),
+    ("Agriculture", "Agriculture"),
+    ("Commerce & Small Business", "Commerce & Small Business"),
+    ("Criminal Justice", "Criminal Justice"),
+    ("Education", "Education"),
+    ("Energy & Environment", "Energy & Environment"),
+    ("Healthcare & Human Services", "Healthcare & Human Services"),
+    ("Housing", "Housing"),
+    ("Insurance & Finance", "Insurance & Finance"),
+    ("Labor", "Labor"),
+    ("Revenue & Pensions", "Revenue & Pensions"),
+    ("State Government", "State Government"),
+]
+
+
+def _committee_member_ids(committee_codes: list[str]) -> set[str]:
+    """Return a set of member IDs that sit on any of the given committees."""
+    ids: set[str] = set()
+    for code in committee_codes:
+        for role in state.committee_rosters.get(code, []):
+            ids.add(role.member_id)
+    return ids
+
+
+def _member_to_card(member: Member, *, why: str = "", badges: list[str] | None = None) -> dict:
+    """Convert a Member to a template-friendly dict for card rendering."""
+    phone = None
+    for office in member.offices:
+        if office.phone:
+            phone = office.phone
+            break
+
+    mb = None
+    if state.moneyball:
+        mb = state.moneyball.profiles.get(member.id)
+
+    return {
+        "name": member.name,
+        "id": member.id,
+        "district": member.district,
+        "party": member.party,
+        "chamber": member.chamber,
+        "phone": phone,
+        "moneyball_score": round(mb.moneyball_score, 2) if mb else None,
+        "bridge_score": round(mb.bridge_score, 4) if mb else None,
+        "member_url": member.member_url,
+        "why": why,
+        "badges": badges or [],
+    }
+
+
+def _find_member_by_district(chamber: str, district: str) -> Member | None:
+    """Find a member by chamber (case-insensitive) and district number."""
+    chamber_lower = chamber.lower()
+    for m in state.members:
+        if m.chamber.lower() == chamber_lower and m.district == district:
+            return m
+    return None
+
+
+def _find_power_broker(
+    exclude_district: str,
+    *,
+    committee_ids: set[str] | None = None,
+    committee_codes: list[str] | None = None,
+    category_name: str = "",
+) -> tuple[Member | None, str]:
+    """Find the top Senate Power Broker.
+
+    Selection priority:
+    1.  When a policy *committee_codes* filter is active, first look for the
+        **Committee Chair** of the relevant committee(s).  A Chair is the
+        strongest institutional voice on a topic — they control what bills
+        get heard.
+    2.  If no Chair is found (or no committee filter is active), fall back to
+        the Senate member with the **highest Moneyball score**.
+
+    Returns ``(Member | None, why_text)``.
+    """
+    member_lookup = {m.id: m for m in state.members}
+
+    # ── Priority 1: Committee Chair (when a policy category is selected) ──
+    if committee_codes:
+        for code in committee_codes:
+            for cmr in state.committee_rosters.get(code, []):
+                role_lower = cmr.role.lower()
+                # Match "Chairperson", "Chair" but NOT "Vice-Chair*"
+                if "chair" in role_lower and "vice" not in role_lower:
+                    chair_member = member_lookup.get(cmr.member_id)
+                    if (
+                        chair_member
+                        and chair_member.chamber == "Senate"
+                        and chair_member.district != exclude_district
+                    ):
+                        committee_name = ""
+                        cmt = state.committee_lookup.get(code)
+                        if cmt:
+                            committee_name = cmt.name
+                        parts = [
+                            f"Chair of the {committee_name or code} committee"
+                        ]
+                        if category_name:
+                            parts.append(
+                                f"the institutional gatekeeper for {category_name} legislation"
+                            )
+                        mb = (
+                            state.moneyball.profiles.get(cmr.member_id)
+                            if state.moneyball
+                            else None
+                        )
+                        if mb:
+                            parts.append(
+                                f"Moneyball score: {mb.moneyball_score}, "
+                                f"effectiveness: {mb.effectiveness_rate:.0%}"
+                            )
+                        why = ". ".join(parts) + "."
+                        return chair_member, why
+
+    # ── Priority 2: Highest Moneyball score (fallback) ──
+    if not state.moneyball:
+        return None, ""
+
+    best_profile = None
+    for profile in state.moneyball.profiles.values():
+        if profile.chamber != "Senate":
+            continue
+        if profile.district == exclude_district:
+            continue
+        if committee_ids and profile.member_id not in committee_ids:
+            continue
+        if best_profile is None or profile.moneyball_score > best_profile.moneyball_score:
+            best_profile = profile
+
+    if best_profile is None:
+        return None, ""
+
+    member = member_lookup.get(best_profile.member_id)
+    if member is None:
+        return None, ""
+
+    parts = [
+        f"Highest Moneyball score ({best_profile.moneyball_score}) "
+        f"in the Senate outside your district",
+    ]
+    if category_name:
+        parts.append(f"sits on a {category_name} committee")
+    parts.append(
+        f"effectiveness: {best_profile.effectiveness_rate:.0%}, "
+        f"{best_profile.unique_collaborators} collaborators"
+    )
+    why = ". ".join(parts) + "."
+    return member, why
+
+
+def _find_ally(
+    senator: Member,
+    *,
+    committee_ids: set[str] | None = None,
+    category_name: str = "",
+) -> tuple[Member | None, str]:
+    """Find the best Ally from the senator's seatmates.
+
+    Returns ``(Member | None, why_text)``.
+    """
+    if not senator.seatmate_names:
+        return None, ""
+
+    best_member = None
+    best_bridge = -1.0
+
+    for seatmate_name in senator.seatmate_names:
+        member = state.member_lookup.get(seatmate_name)
+        if member is None:
+            continue
+        if committee_ids and member.id not in committee_ids:
+            continue
+
+        bridge = 0.0
+        if state.moneyball:
+            mb = state.moneyball.profiles.get(member.id)
+            if mb:
+                bridge = mb.bridge_score
+
+        if bridge > best_bridge:
+            best_bridge = bridge
+            best_member = member
+
+    # Fallback: if committee filter excluded everyone, try without it.
+    if best_member is None and committee_ids:
+        return _find_ally(senator, committee_ids=None, category_name="")
+
+    # Fallback: if no one has a bridge score, pick first resolved seatmate.
+    if best_member is None:
+        for seatmate_name in senator.seatmate_names:
+            member = state.member_lookup.get(seatmate_name)
+            if member is not None:
+                best_member = member
+                break
+
+    if best_member is None:
+        return None, ""
+
+    why_parts = ["Sits next to your senator in the chamber"]
+    if category_name and committee_ids and best_member.id in committee_ids:
+        why_parts.append(f"also on a {category_name} committee")
+    if state.moneyball:
+        mb = state.moneyball.profiles.get(best_member.id)
+        if mb and mb.bridge_score > 0:
+            why_parts.append(
+                f"bridge score of {mb.bridge_score:.0%} (cross-party co-sponsorship rate)"
+            )
+    if senator.seatmate_affinity > 0:
+        why_parts.append(
+            f"{senator.seatmate_affinity:.0%} bill overlap with seatmates"
+        )
+    why = ". ".join(why_parts) + "."
+    return best_member, why
+
+
+@app.get("/advocacy")
+async def advocacy_index(request: Request):
+    """Render the advocacy search page."""
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "title": "Kei Truck Freedom",
+        "categories": CATEGORY_CHOICES,
+    })
+
+
+@app.post("/advocacy/search")
+async def advocacy_search(
+    request: Request,
+    zip_code: str = Form(...),
+    category: str = Form(""),
+):
+    """Look up advocacy targets for a given ZIP code and optional policy category.
+
+    Returns up to four cards (or three if Power Broker and Ally are the same
+    person, merged into a single "Super Ally" card):
+
+    1. **Your Senator** — IL Senate member for this ZIP's district.
+    2. **Your Representative** — IL House member for this ZIP's district.
+    3. **Power Broker** — highest Moneyball score in the Senate (different district).
+    4. **Potential Ally** — senator's physical seatmate with highest bridge score.
+
+    When *category* is provided, Power Broker and Ally are filtered to members
+    who sit on a committee in that policy area.
+
+    When the request comes from htmx (``HX-Request`` header), only the
+    results partial is returned.
+    """
+    zip_code = zip_code.strip()
+    category = category.strip()
+    is_htmx = request.headers.get("HX-Request") == "true"
+
+    # ── Lookup ZIP in crosswalk ──
+    district_info = state.zip_to_district.get(zip_code)
+    if district_info is None:
+        error = (
+            f"ZIP code {zip_code!r} not found in Illinois district data. "
+            "Please enter a valid 5-digit Illinois ZIP code."
+        )
+        tpl = "_results_partial.html" if is_htmx else "index.html"
+        return templates.TemplateResponse(tpl, {
+            "request": request,
+            "title": "Kei Truck Freedom",
+            "categories": CATEGORY_CHOICES,
+            "error": error,
+        })
+
+    senate_district = district_info.il_senate
+    house_district = district_info.il_house
+    warnings: list[str] = []
+
+    # ── Committee filter ──
+    committee_codes = _CATEGORY_COMMITTEES.get(category, [])
+    committee_ids = _committee_member_ids(committee_codes) if committee_codes else None
+    category_label = category if category else ""
+
+    # ── Find Your Senator ──
+    senator_member = (
+        _find_member_by_district("senate", senate_district) if senate_district else None
+    )
+    senator_card = None
+    if senator_member:
+        senator_card = _member_to_card(
+            senator_member,
+            why=f"Represents IL Senate District {senate_district}, which contains ZIP {zip_code}.",
+        )
+    elif senate_district:
+        warnings.append(
+            f"Senate District {senate_district} (for ZIP {zip_code}) — "
+            "senator not in current data (dev/seed mode has limited members)."
+        )
+
+    # ── Find Your Representative ──
+    rep_member = (
+        _find_member_by_district("house", house_district) if house_district else None
+    )
+    rep_card = None
+    if rep_member:
+        rep_card = _member_to_card(
+            rep_member,
+            why=f"Represents IL House District {house_district}, which contains ZIP {zip_code}.",
+        )
+    elif house_district:
+        warnings.append(
+            f"House District {house_district} (for ZIP {zip_code}) — "
+            "representative not in current data (dev/seed mode has limited members)."
+        )
+
+    # ── Find Power Broker ──
+    exclude_dist = senate_district or ""
+    broker_member, broker_why = _find_power_broker(
+        exclude_dist,
+        committee_ids=committee_ids,
+        committee_codes=committee_codes or None,
+        category_name=category_label,
+    )
+
+    # ── Find Potential Ally ──
+    ally_member, ally_why = (
+        _find_ally(
+            senator_member, committee_ids=committee_ids, category_name=category_label,
+        )
+        if senator_member
+        else (None, "")
+    )
+
+    # ── Merge: if broker and ally are the same person → "Super Ally" ──
+    broker_card = None
+    ally_card = None
+    super_ally_card = None
+
+    if (
+        broker_member
+        and ally_member
+        and broker_member.id == ally_member.id
+    ):
+        # Same person — merge into a Super Ally with both badges.
+        merged_why = (
+            f"This legislator is both the most influential senator in the chamber "
+            f"AND a physical neighbor of your senator — a uniquely powerful advocacy target. "
+            f"{broker_why} {ally_why}"
+        )
+        super_ally_card = _member_to_card(
+            broker_member,
+            why=merged_why,
+            badges=["Power Broker", "Potential Ally"],
+        )
+    else:
+        if broker_member:
+            broker_card = _member_to_card(broker_member, why=broker_why)
+        if ally_member:
+            ally_card = _member_to_card(ally_member, why=ally_why)
+
+    error = "; ".join(warnings) if warnings else None
+
+    tpl = "_results_partial.html" if is_htmx else "results.html"
+    return templates.TemplateResponse(tpl, {
+        "request": request,
+        "title": "Kei Truck Freedom",
+        "categories": CATEGORY_CHOICES,
+        "seed_mode": SEED_MODE,
+        "zip": zip_code,
+        "category": category,
+        "senate_district": senate_district,
+        "house_district": house_district,
+        "senator": senator_card,
+        "representative": rep_card,
+        "broker": broker_card,
+        "ally": ally_card,
+        "super_ally": super_ally_card,
+        "error": error,
+    })
 
 
 app.include_router(graphql_app, prefix="/graphql")

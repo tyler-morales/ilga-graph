@@ -6,10 +6,10 @@ career_timeline: 2019 - Present
 career_start_year: 2019
 district: 21
 member_url: https://www.ilga.gov/Senate/Members/Details/3339
-bills_introduced: 1
-laws_passed: 1
-law_success_rate: 1.0
-magnet_score: 10.0
+bills_introduced: 0
+laws_passed: 0
+law_success_rate: 0.0
+magnet_score: 0.0
 bridge_score: 0.0
 resolutions_filed: 0
 resolutions_passed: 0
@@ -17,14 +17,14 @@ resolution_pass_rate: 0.0
 total_primary_bills: 1
 total_passed: 1
 overall_pass_rate: 1.0
-moneyball_score: 76.54
-pipeline_depth: 6.0
-network_centrality: 0.4359
-unique_collaborators: 17
+moneyball_score: 14.96
+pipeline_depth: 0.0
+network_centrality: 0.4134
+unique_collaborators: 74
 is_leadership: false
-rank_overall: 2
-rank_chamber: 2
-rank_non_leadership: 2
+rank_overall: 90
+rank_chamber: 45
+rank_non_leadership: 26
 tags: [type/member, chamber/senate, party/democrat, committee/environment-and-conservation, committee/financial-institutions, committee/human-rights, committee/insurance, committee/transportation]
 ---
 
@@ -48,10 +48,10 @@ See [[Scorecard Guide]] for how these metrics are defined.
 ### Lawmaking (HB/SB)
 | Metric | Value | Formula |
 | --- | --- | --- |
-| Bills Introduced | 1 | Count of primary HB/SB |
-| Passed | 1 | HB/SB that became law |
-| Success Rate | 100.0% | Passed ÷ Bills Introduced |
-| Avg Co-Sponsors (Magnet) | 10.0 | Co-sponsors ÷ Introduced |
+| Bills Introduced | 0 | Count of primary HB/SB |
+| Passed | 0 | HB/SB that became law |
+| Success Rate | 0.0% | Passed ÷ Bills Introduced |
+| Avg Co-Sponsors (Magnet) | 0.0 | Co-sponsors ÷ Introduced |
 | Cross-Party (Bridge) | 0.0% | Cross-party co-sponsor ÷ Introduced |
 
 ### Resolutions (HR/SR/HJR/SJR)
@@ -73,15 +73,15 @@ See [[Moneyball Report]] for full rankings and methodology.
 
 | Metric | Value |
 | --- | --- |
-| Moneyball Score | **76.54** / 100 |
-| Rank (Overall) | #2 |
-| Rank (Senate) | #2 |
-| Rank (Non-Leadership) | #2 |
+| Moneyball Score | **14.96** / 100 |
+| Rank (Overall) | #90 |
+| Rank (Senate) | #45 |
+| Rank (Non-Leadership) | #26 |
 | Leadership | No |
-| Pipeline Depth | 6.0 / 6.0 [######] |
-| Network Centrality | 43.59% |
-| Unique Collaborators | 17 |
-| Badges | Closer, Coalition Builder |
+| Pipeline Depth | 0.0 / 6.0 [......] |
+| Network Centrality | 41.34% |
+| Unique Collaborators | 74 |
+| Badges | Wide Tent |
 
 ## Tags
 #type/member
