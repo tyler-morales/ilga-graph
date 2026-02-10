@@ -23,12 +23,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from ilga_graph.main import (  # noqa: E402
+from ilga_graph.config import CACHE_DIR, MOCK_DEV_DIR, get_bill_status_urls  # noqa: E402
+from ilga_graph.etl import (  # noqa: E402
     compute_analytics,
     export_vault,
-    get_bill_status_urls,
+    load_from_cache,
     load_or_scrape_data,
 )
+from ilga_graph.analytics_cache import load_analytics_cache, save_analytics_cache  # noqa: E402
 from ilga_graph.scrapers.votes import scrape_specific_bills  # noqa: E402
 from ilga_graph.scrapers.witness_slips import scrape_all_witness_slips  # noqa: E402
 
@@ -108,14 +110,20 @@ def main() -> None:
         args.fast,
         args.incremental,
     )
-    data = load_or_scrape_data(
-        limit=args.limit,
-        dev_mode=args.fast,
-        seed_mode=seed_mode,
-        incremental=args.incremental,
-        sb_limit=args.sb_limit,
-        hb_limit=args.hb_limit,
-    )
+    if args.export_only:
+        data = load_from_cache(seed_fallback=seed_mode)
+        if data is None:
+            logger.error("No cache found. Run without --export-only to scrape first.")
+            sys.exit(1)
+    else:
+        data = load_or_scrape_data(
+            limit=args.limit,
+            dev_mode=args.fast,
+            seed_mode=seed_mode,
+            incremental=args.incremental,
+            sb_limit=args.sb_limit,
+            hb_limit=args.hb_limit,
+        )
     logger.info(
         "Loaded %d members, %d committees, %d bills.",
         len(data.members),
@@ -147,7 +155,13 @@ def main() -> None:
 
     if args.export or args.export_only:
         logger.info("Computing analytics...")
-        scorecards, moneyball = compute_analytics(data.members)
+        cached = load_analytics_cache(CACHE_DIR, MOCK_DEV_DIR, seed_mode)
+        if cached is not None:
+            scorecards, moneyball = cached
+            logger.info("Using cached analytics.")
+        else:
+            scorecards, moneyball = compute_analytics(data.members, data.committee_rosters)
+            save_analytics_cache(scorecards, moneyball, CACHE_DIR)
         logger.info("Exporting vault...")
         export_vault(
             data,

@@ -5,7 +5,6 @@ import logging
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
 from datetime import datetime
 
 import strawberry
@@ -24,9 +23,18 @@ from .analytics import (
     controversial_score,
     lobbyist_alignment,
 )
+from .analytics_cache import load_analytics_cache, save_analytics_cache
+from .etl import (
+    ScrapedData,
+    compute_analytics,
+    export_vault,
+    load_from_cache,
+    load_or_scrape_data,
+    load_stale_cache_fallback,
+)
 from .exporter import ObsidianExporter
 from .models import Bill, Committee, CommitteeMemberRole, Member, VoteEvent, WitnessSlip
-from .moneyball import MoneyballReport, compute_moneyball, populate_member_roles
+from .moneyball import MoneyballReport
 from .schema import (
     BillAdvancementAnalyticsType,
     BillConnection,
@@ -52,13 +60,7 @@ from .schema import (
     WitnessSlipType,
     paginate,
 )
-from .scraper import ILGAScraper, save_normalized_cache
-from .scrapers.bills import (
-    incremental_bill_scrape,
-    load_bill_cache,
-    scrape_all_bill_indexes,
-    scrape_all_bills,
-)
+from .scraper import ILGAScraper
 from .scrapers.votes import scrape_specific_bills
 from .scrapers.witness_slips import scrape_all_witness_slips
 from .seating import process_seating
@@ -252,6 +254,7 @@ def _log_startup_timing(
 DEV_MODE = cfg.DEV_MODE
 SEED_MODE = cfg.SEED_MODE
 INCREMENTAL = cfg.INCREMENTAL
+LOAD_ONLY = cfg.LOAD_ONLY
 
 # When DEV_MODE is on, override scrape + export limits:
 #   - Scrape 20 members per chamber (40 total)
@@ -266,227 +269,6 @@ else:
     _EXPORT_MEMBER_LIMIT = None
     _EXPORT_COMMITTEE_LIMIT = None
     _EXPORT_BILL_LIMIT = None
-
-
-# ── Composable ETL steps ─────────────────────────────────────────────────────
-
-
-@dataclass
-class ScrapedData:
-    """Container for raw scraped/loaded data before analytics."""
-
-    members: list[Member]
-    bills_lookup: dict[str, Bill]  # leg_id -> Bill (from bill scraper)
-    committees: list[Committee]
-    committee_rosters: dict[str, list[CommitteeMemberRole]]
-    committee_bills: dict[str, list[str]]
-
-
-def _link_members_to_bills(
-    members: list[Member],
-    bills_lookup: dict[str, Bill],
-) -> None:
-    """Build member-bill relationships from Bill.sponsor_ids.
-
-    For each bill, its ``sponsor_ids`` and ``house_sponsor_ids`` contain
-    member IDs extracted from the BillStatus page.  We build a reverse
-    index so each member knows which bills they sponsor / co-sponsor.
-    """
-    # Build member-id -> Member lookup
-    member_by_id: dict[str, Member] = {m.id: m for m in members}
-
-    # Clear existing linkage (will rebuild)
-    for m in members:
-        m.sponsored_bills = []
-        m.co_sponsor_bills = []
-        m.sponsored_bill_ids = []
-        m.co_sponsor_bill_ids = []
-
-    for bill in bills_lookup.values():
-        all_sponsor_ids = bill.sponsor_ids + bill.house_sponsor_ids
-        if not all_sponsor_ids:
-            continue
-
-        # First sponsor is the chief sponsor
-        chief_id = all_sponsor_ids[0]
-        co_ids = all_sponsor_ids[1:]
-
-        if chief_id in member_by_id:
-            m = member_by_id[chief_id]
-            m.sponsored_bills.append(bill)
-            m.sponsored_bill_ids.append(bill.leg_id)
-
-        for co_id in co_ids:
-            if co_id in member_by_id:
-                m = member_by_id[co_id]
-                m.co_sponsor_bills.append(bill)
-                m.co_sponsor_bill_ids.append(bill.leg_id)
-
-
-def load_or_scrape_data(
-    *,
-    limit: int = 0,
-    dev_mode: bool = False,
-    seed_mode: bool = False,
-    incremental: bool = False,
-    sb_limit: int = 100,
-    hb_limit: int = 100,
-) -> ScrapedData:
-    """Load data from cache/seed or scrape from ilga.gov.
-
-    Parameters
-    ----------
-    limit:
-        Max members to scrape per chamber (0 = all).
-    dev_mode:
-        Use faster request delays when scraping.
-    seed_mode:
-        Fall back to ``mocks/dev/`` when ``cache/`` is missing.
-    incremental:
-        If True and cache exists, only re-scrape changed/new bills.
-    sb_limit:
-        Max Senate bills to scrape from the index (0 = all).
-    hb_limit:
-        Max House bills to scrape from the index (0 = all).
-    """
-    request_delay = 0.25 if dev_mode else 0.5
-
-    scraper = ILGAScraper(
-        request_delay=request_delay,
-        seed_fallback=seed_mode,
-    )
-
-    committees, committee_rosters, committee_bills = scraper.fetch_all_committees()
-
-    senate_members = scraper.fetch_members("Senate", limit=limit)
-    house_members = scraper.fetch_members("House", limit=limit)
-    members = senate_members + house_members
-
-    if cfg.TEST_MEMBER_URL:
-        test_member = scraper.fetch_member_by_url(cfg.TEST_MEMBER_URL, cfg.TEST_MEMBER_CHAMBER)
-        if test_member is not None:
-            members.append(test_member)
-
-    # ── Bills: scrape from legislation pages (single source of truth) ──
-    if incremental:
-        LOGGER.info("Incremental bill scrape (SB limit=%d, HB limit=%d)...", sb_limit, hb_limit)
-        bills_lookup = incremental_bill_scrape(
-            sb_limit=sb_limit,
-            hb_limit=hb_limit,
-            request_delay=request_delay,
-            rescrape_recent_days=30,
-        )
-    else:
-        # Try cache first, then full scrape
-        bills_lookup = load_bill_cache(seed_fallback=seed_mode)
-        if bills_lookup is None:
-            LOGGER.info("Full bill scrape (SB limit=%d, HB limit=%d)...", sb_limit, hb_limit)
-            index = scrape_all_bill_indexes(
-                sb_limit=sb_limit,
-                hb_limit=hb_limit,
-                request_delay=request_delay,
-            )
-            bills_lookup = scrape_all_bills(
-                index,
-                request_delay=request_delay,
-                use_cache=False,
-                seed_fallback=seed_mode,
-            )
-        else:
-            LOGGER.info("Loaded %d bills from cache.", len(bills_lookup))
-
-    # ── Link members to bills using sponsor_ids from BillStatus ──
-    _link_members_to_bills(members, bills_lookup)
-    LOGGER.info(
-        "Linked %d members to %d bills via sponsor IDs.",
-        len(members),
-        len(bills_lookup),
-    )
-
-    # Persist normalized cache so next run can load members (and bills) from disk.
-    save_normalized_cache(members, bills_lookup)
-
-    return ScrapedData(
-        members=members,
-        bills_lookup=bills_lookup,
-        committees=committees,
-        committee_rosters=committee_rosters,
-        committee_bills=committee_bills,
-    )
-
-
-def compute_analytics(
-    members: list[Member],
-    committee_rosters: dict[str, list[CommitteeMemberRole]] | None = None,
-) -> tuple[dict[str, MemberScorecard], MoneyballReport]:
-    """Compute scorecards and moneyball analytics for all members.
-
-    When *committee_rosters* is provided, each member's ``roles`` list is
-    populated first (profile title + committee roster titles) so the
-    Moneyball institutional-power bonus can be calculated.
-    """
-    if committee_rosters is not None:
-        populate_member_roles(members, committee_rosters)
-    scorecards = compute_all_scorecards(members)
-    moneyball = compute_moneyball(members, scorecards=scorecards)
-    return scorecards, moneyball
-
-
-def export_vault(
-    data: ScrapedData,
-    scorecards: dict[str, MemberScorecard],
-    moneyball: MoneyballReport,
-    *,
-    member_export_limit: int | None = None,
-    committee_export_limit: int | None = None,
-    bill_export_limit: int | None = None,
-) -> None:
-    """Export the Obsidian vault from processed data."""
-    ObsidianExporter(
-        committees=data.committees,
-        committee_rosters=data.committee_rosters,
-        committee_bills=data.committee_bills,
-        member_export_limit=member_export_limit,
-        committee_export_limit=committee_export_limit,
-        bill_export_limit=bill_export_limit,
-    ).export(
-        data.members,
-        scorecards=scorecards,
-        moneyball=moneyball,
-        all_bills=data.bills_lookup.values(),
-    )
-
-
-def run_etl(
-    limit: int = 0,
-    *,
-    member_export_limit: int | None = None,
-    committee_export_limit: int | None = None,
-    bill_export_limit: int | None = None,
-    incremental: bool = False,
-    sb_limit: int = 100,
-    hb_limit: int = 100,
-) -> list[Member]:
-    """Full ETL pipeline: scrape/load -> analytics -> vault export."""
-    data = load_or_scrape_data(
-        limit=limit,
-        dev_mode=DEV_MODE,
-        seed_mode=SEED_MODE,
-        incremental=incremental,
-        sb_limit=sb_limit,
-        hb_limit=hb_limit,
-    )
-    scorecards, moneyball = compute_analytics(data.members, data.committee_rosters)
-    process_seating(data.members, cfg.MOCK_DEV_DIR / "senate_seats.json")
-    export_vault(
-        data,
-        scorecards,
-        moneyball,
-        member_export_limit=member_export_limit,
-        committee_export_limit=committee_export_limit,
-        bill_export_limit=bill_export_limit,
-    )
-    return data.members
 
 
 # ── App state container ──────────────────────────────────────────────────────
@@ -590,50 +372,84 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         )
 
     # ── Step 1: Load or scrape data (resilient) ──────────────────────────
-    try:
-        t_load = _time.perf_counter()
-        data = load_or_scrape_data(
-            limit=_SCRAPE_MEMBER_LIMIT,
-            dev_mode=DEV_MODE,
-            seed_mode=SEED_MODE,
-            incremental=INCREMENTAL,
-            sb_limit=100,
-            hb_limit=100,
-        )
-        state.members = data.members
-        elapsed_load = _time.perf_counter() - t_load
-    except Exception:
-        LOGGER.exception("ETL load/scrape failed. Attempting stale-cache fallback...")
-        # Try to load whatever cache exists on disk so the app can serve
-        # stale data rather than starting completely empty.
-        try:
-            data = _load_stale_cache_fallback()
+    t_load = _time.perf_counter()
+    if LOAD_ONLY:
+        data = load_from_cache(seed_fallback=SEED_MODE)
+        if data is None:
+            LOGGER.warning("ILGA_LOAD_ONLY=1 but no cache found. Trying stale-cache fallback...")
+            try:
+                data = load_stale_cache_fallback(seed_fallback=SEED_MODE)
+                state.members = data.members
+                LOGGER.warning(
+                    "Loaded stale cache: %d members, %d bills.",
+                    len(data.members),
+                    len(data.bills_lookup),
+                )
+            except Exception:
+                LOGGER.exception("Stale-cache fallback failed. App will start with EMPTY state.")
+                data = ScrapedData(
+                    members=[],
+                    bills_lookup={},
+                    committees=[],
+                    committee_rosters={},
+                    committee_bills={},
+                )
+                state.members = []
+        else:
             state.members = data.members
-            elapsed_load = _time.perf_counter() - t_startup_begin
-            LOGGER.warning(
-                "Loaded stale cache: %d members, %d bills.",
-                len(data.members),
-                len(data.bills_lookup),
+        elapsed_load = _time.perf_counter() - t_load
+    else:
+        try:
+            data = load_or_scrape_data(
+                limit=_SCRAPE_MEMBER_LIMIT,
+                dev_mode=DEV_MODE,
+                seed_mode=SEED_MODE,
+                incremental=INCREMENTAL,
+                sb_limit=100,
+                hb_limit=100,
             )
+            state.members = data.members
+            elapsed_load = _time.perf_counter() - t_load
         except Exception:
-            LOGGER.exception(
-                "Stale-cache fallback also failed. "
-                "App will start with EMPTY state (health.ready=false)."
-            )
-            data = ScrapedData(
-                members=[],
-                bills_lookup={},
-                committees=[],
-                committee_rosters={},
-                committee_bills={},
-            )
+            LOGGER.exception("ETL load/scrape failed. Attempting stale-cache fallback...")
+            try:
+                data = load_stale_cache_fallback(seed_fallback=SEED_MODE)
+                state.members = data.members
+                elapsed_load = _time.perf_counter() - t_startup_begin
+                LOGGER.warning(
+                    "Loaded stale cache: %d members, %d bills.",
+                    len(data.members),
+                    len(data.bills_lookup),
+                )
+            except Exception:
+                LOGGER.exception(
+                    "Stale-cache fallback also failed. "
+                    "App will start with EMPTY state (health.ready=false)."
+                )
+                data = ScrapedData(
+                    members=[],
+                    bills_lookup={},
+                    committees=[],
+                    committee_rosters={},
+                    committee_bills={},
+                )
+                state.members = []
 
-    # ── Step 2: Compute analytics ────────────────────────────────────────
+    # ── Step 2: Compute analytics (or load from cache when fresh) ───────────
     try:
         t_analytics = _time.perf_counter()
-        state.scorecards, state.moneyball = compute_analytics(
-            state.members, data.committee_rosters,
+        cached = load_analytics_cache(
+            cfg.CACHE_DIR, cfg.MOCK_DEV_DIR, SEED_MODE,
         )
+        if cached is not None:
+            state.scorecards, state.moneyball = cached
+        else:
+            state.scorecards, state.moneyball = compute_analytics(
+                state.members, data.committee_rosters,
+            )
+            save_analytics_cache(
+                state.scorecards, state.moneyball, cfg.CACHE_DIR,
+            )
         elapsed_analytics = _time.perf_counter() - t_analytics
     except Exception:
         LOGGER.exception("Analytics computation failed; scorecards will be empty.")
@@ -1161,11 +977,19 @@ class Query:
 
 from strawberry.extensions import QueryDepthLimiter  # noqa: E402
 
+from .loaders import create_loaders  # noqa: E402
+
+
+async def get_graphql_context() -> dict:
+    """Request-scoped context with state and batch loaders for GraphQL."""
+    return create_loaders(state)
+
+
 schema = strawberry.Schema(
     query=Query,
     extensions=[QueryDepthLimiter(max_depth=10)],
 )
-graphql_app = GraphQLRouter(schema)
+graphql_app = GraphQLRouter(schema, context_getter=get_graphql_context)
 
 app = FastAPI(title="ILGA Graph", lifespan=lifespan)
 

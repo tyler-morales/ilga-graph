@@ -537,21 +537,21 @@ def paginate(items: list, offset: int, limit: int) -> tuple[list, PageInfo]:
 @strawberry.type
 class Query:
     @strawberry.field(description="Look up a single member by exact name.")
-    def member(self, name: str) -> MemberType | None:
+    def member(self, name: str, info: strawberry.Info) -> MemberType | None:
         model = state.member_lookup.get(name)
         if model is None:
             return None
-        return MemberType.from_model(
-            model,
-            state.scorecards.get(model.id),
-            _mb_profile(model.id),
-        )
+        ctx = info.context
+        sc = ctx["scorecard_loader"].load(model.id)
+        mb = ctx["moneyball_loader"].load(model.id)
+        return MemberType.from_model(model, sc, mb)
 
     @strawberry.field(
         description="Paginated list of members with optional sorting and chamber filter.",
     )
     def members(
         self,
+        info: strawberry.Info,
         sort_by: MemberSortField | None = None,
         sort_order: SortOrder | None = None,
         chamber: Chamber | None = None,
@@ -573,10 +573,14 @@ class Query:
                 result.sort(key=lambda m: m.name, reverse=reverse)
 
         page, page_info = paginate(result, offset, limit)
+        ctx = info.context
+        ids = [m.id for m in page]
+        scorecards = ctx["scorecard_loader"].batch_load(ids)
+        profiles = ctx["moneyball_loader"].batch_load(ids)
         return MemberConnection(
             items=[
-                MemberType.from_model(m, state.scorecards.get(m.id), _mb_profile(m.id))
-                for m in page
+                MemberType.from_model(m, scorecards[i], profiles[i])
+                for i, m in enumerate(page)
             ],
             page_info=page_info,
         )
@@ -584,6 +588,7 @@ class Query:
     @strawberry.field(description="Ranked leaderboard by Moneyball Score or any analytics metric.")
     def moneyball_leaderboard(
         self,
+        info: strawberry.Info,
         chamber: Chamber | None = None,
         exclude_leadership: bool = False,
         limit: int = 0,
@@ -655,10 +660,14 @@ class Query:
             members.sort(key=lambda m: rank.get(m.id, len(ids)))
 
         page, page_info = paginate(members, offset, limit)
+        ctx = info.context
+        ids = [m.id for m in page]
+        scorecards = ctx["scorecard_loader"].batch_load(ids)
+        profiles = ctx["moneyball_loader"].batch_load(ids)
         return MemberConnection(
             items=[
-                MemberType.from_model(m, state.scorecards.get(m.id), _mb_profile(m.id))
-                for m in page
+                MemberType.from_model(m, scorecards[i], profiles[i])
+                for i, m in enumerate(page)
             ],
             page_info=page_info,
         )
