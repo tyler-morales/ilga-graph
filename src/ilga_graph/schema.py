@@ -19,6 +19,7 @@ from .models import Member as MemberModel
 from .models import Office as OfficeModel
 from .models import VoteEvent as VoteEventModel
 from .models import WitnessSlip as WitnessSlipModel
+from .metrics_definitions import get_metrics_glossary
 from .moneyball import MoneyballProfile as MoneyballProfileModel
 
 # ── Enums ─────────────────────────────────────────────────────────────────────
@@ -175,6 +176,40 @@ class ScorecardType:
             resolutions_count=sc.resolutions_count,
             resolutions_passed_count=sc.resolutions_passed_count,
         )
+
+
+@strawberry.type
+class EmpiricalMetricDefinitionType:
+    """Human-readable definition of one empirical (raw) metric."""
+
+    id: str
+    name: str
+    short_definition: str
+    formula: str | None = None
+
+
+@strawberry.type
+class MoneyballComponentType:
+    """One component of the Moneyball composite score."""
+
+    id: str
+    weight_pct: float
+    name: str
+    short_definition: str
+
+
+@strawberry.type
+class MetricsGlossaryType:
+    """What every metric means: empirical stats and Moneyball formula.
+
+    Use this to show tooltips, 'How is this calculated?', or docs so derived
+    metrics are not a black box.
+    """
+
+    empirical: list[EmpiricalMetricDefinitionType]
+    effectiveness_score: EmpiricalMetricDefinitionType
+    moneyball_one_liner: str
+    moneyball_components: list[MoneyballComponentType]
 
 
 @strawberry.type
@@ -536,6 +571,39 @@ def paginate(items: list, offset: int, limit: int) -> tuple[list, PageInfo]:
 
 @strawberry.type
 class Query:
+    @strawberry.field(
+        description="Definitions of all metrics (empirical and derived) so UIs can explain what each number means.",
+    )
+    def metrics_glossary(self) -> MetricsGlossaryType:
+        g = get_metrics_glossary()
+        return MetricsGlossaryType(
+            empirical=[
+                EmpiricalMetricDefinitionType(
+                    id=e["id"],
+                    name=e["name"],
+                    short_definition=e["short_definition"],
+                    formula=e.get("formula"),
+                )
+                for e in g.empirical
+            ],
+            effectiveness_score=EmpiricalMetricDefinitionType(
+                id=g.effectiveness_score["id"],
+                name=g.effectiveness_score["name"],
+                short_definition=g.effectiveness_score["short_definition"],
+                formula=g.effectiveness_score.get("formula"),
+            ),
+            moneyball_one_liner=g.moneyball_one_liner,
+            moneyball_components=[
+                MoneyballComponentType(
+                    id=c["id"],
+                    weight_pct=c["weight_pct"],
+                    name=c["name"],
+                    short_definition=c["short_definition"],
+                )
+                for c in g.moneyball_components
+            ],
+        )
+
     @strawberry.field(description="Look up a single member by exact name.")
     def member(self, name: str, info: strawberry.Info) -> MemberType | None:
         model = state.member_lookup.get(name)

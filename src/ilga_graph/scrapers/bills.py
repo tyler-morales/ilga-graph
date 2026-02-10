@@ -115,6 +115,10 @@ def _parse_range_page(html: str, doc_type: str) -> list[BillIndexEntry]:
     return entries
 
 
+# Each legislation range page returns up to 100 bills (e.g. num1=1, num2=100).
+_RANGE_PAGE_SIZE = 100
+
+
 def scrape_bill_index(
     doc_type: str = "SB",
     limit: int = 0,
@@ -124,23 +128,39 @@ def scrape_bill_index(
 ) -> list[BillIndexEntry]:
     """Scrape the legislation index for a doc type (SB or HB).
 
-    Fetches the top-level page to discover range chunks, then scrapes the
-    first range page. With ``limit > 0``, returns at most *limit* entries.
+    Paginates through range pages (0001-0100, 0101-0200, ...) until we have
+    enough entries or a page returns no bills. With ``limit > 0``, returns at
+    most *limit* entries. With ``limit == 0``, fetches all range pages until
+    empty (full index, ~4800 SB + ~4800 HB per session).
     """
     sess = session or _build_session()
+    entries: list[BillIndexEntry] = []
+    num1 = 1
 
-    # Fetch the first range page (0001-0100) to get bills
-    url = _range_url(doc_type, 1, 100)
-    LOGGER.info("Fetching bill index: %s", url)
-    resp = sess.get(url, timeout=timeout)
-    resp.raise_for_status()
-    time.sleep(request_delay)
+    while True:
+        num2 = num1 + _RANGE_PAGE_SIZE - 1
+        url = _range_url(doc_type, num1, num2)
+        LOGGER.info("Fetching bill index: %s (range %d-%d)", doc_type, num1, num2)
+        resp = sess.get(url, timeout=timeout)
+        resp.raise_for_status()
+        time.sleep(request_delay)
 
-    entries = _parse_range_page(resp.text, doc_type)
-    LOGGER.info("Parsed %d %s bills from range page.", len(entries), doc_type)
+        page_entries = _parse_range_page(resp.text, doc_type)
+        if not page_entries:
+            LOGGER.info("No more %s bills at range %d-%d; stopping.", doc_type, num1, num2)
+            break
 
-    if limit > 0:
-        entries = entries[:limit]
+        entries.extend(page_entries)
+        LOGGER.info("Parsed %d %s from range %d-%d (total %s: %d).", len(page_entries), doc_type, num1, num2, doc_type, len(entries))
+
+        if limit > 0 and len(entries) >= limit:
+            entries = entries[:limit]
+            break
+        if len(page_entries) < _RANGE_PAGE_SIZE:
+            # Last page was partial; no more pages
+            break
+        num1 = num2 + 1
+
     return entries
 
 

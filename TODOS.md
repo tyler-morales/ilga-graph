@@ -8,6 +8,18 @@
 
 - None — Steps 3–5 (ETL split, analytics cache, DataLoaders) are done; use **Next** when you pick up work again.
 
+## Done (this session)
+
+- **Full bill index + scrape-200:** Bill index previously only fetched one range page (100 SB + 100 HB). Implemented pagination in `scrape_bill_index()`: loop over range pages (0001-0100, 0101-0200, ...) until we have enough or a page is empty. `limit=0` means all pages (~9600+ bills). Added **make scrape-200** (200 SB + 200 HB, 2 range pages per type) to test pagination and **make scrape-full** (--sb-limit 0 --hb-limit 0) for full index. README and scrape.py docstring updated. Full scrape is slow (many index pages + one BillStatus request per bill).
+
+- **Scrape → dev/prod pipeline:** Simplified to a clear two-step flow: (1) scrape data into cache (choose size), (2) serve via API. **make scrape** = full scrape for prod (all members, 300 SB + 300 HB). **make scrape-dev** = light scrape for dev (20/chamber, 100 SB + 100 HB, fast). **make dev** / **make dev-full** / **make run** now set **ILGA_LOAD_ONLY=1** so the server only loads from cache (no scraping on startup). Removed **make scrape-fast** in favor of **make scrape-dev**. README and scrape.py docstring updated; .env.example documents ILGA_LOAD_ONLY.
+
+- **Evidence-based script hints & "How we pick these targets":** Script hints were hardcoded generic strings ("high effectiveness, deep network connections") that assumed the user already understood the system. A first-time visitor had no way to know *why* a legislator was chosen or what "effectiveness" meant. Changes: (1) Added `_build_script_hint_*` helpers in `main.py` that inject real numbers (laws passed X of Y, Z% passage rate, W% cross-party) into each card's script hint. Senator/Rep hints include ZIP and district. Power Broker hint explains Chair vs Moneyball selection with stats. Ally hint cites cross-party %. Super Ally merges both with evidence. (2) Template macro `member_card` now reads `member.script_hint` from the card dict instead of receiving a hardcoded 4th argument. (3) Added collapsible "How we pick these targets" section at the bottom of results: plain-language definitions of Senator/Rep (Census ZIP match), Power Broker (committee chair or highest Moneyball), Potential Ally (seatmate with highest cross-party rate), and Super Ally (merged). (4) Nested collapsible "How is the Moneyball score calculated?" with a table of the 6 components, weights, and what each measures. (5) Added CSS for `.how-it-works` collapsible and `.formula-table` in `base.html`. No algorithm changes — only explanation and evidence in the UI.
+
+- **Scorecard / Moneyball clarity:** User wanted empirical stats (bills passed, vetoed, passage rate) front and center and derived metrics (Moneyball, effectiveness) clearly defined to avoid vagueness and bloat. (1) Added `src/ilga_graph/metrics_definitions.py` as single source of truth: empirical metric definitions (laws filed/passed, passage rate, magnet, bridge, pipeline, centrality, etc.) and Moneyball formula (one-liner + component list with weights). (2) Advocacy cards now show empirical first: "Laws passed: X of Y (Z% passage)", "Cross-party co-sponsorship: W%", then "Moneyball: N (composite rank 0–100)" with a "?" tooltip that shows the one-liner. (3) GraphQL query `metricsGlossary` returns full glossary (empirical, effectiveness_score, moneyball_one_liner, moneyball_components) so any client can render tooltips or docs. (4) README section "Metrics: empirical vs derived" documents the approach. No new metrics added; we only clarified and reordered display.
+
+- **Advocacy full-data / seed-mode clarity:** Banner was always showing "Only 40 of 177 legislators" and "~14 demo ZIPs" even when full cache was loaded. Root cause: `make dev` sets `ILGA_SEED_MODE=1`, so (1) members load from cache when present (so user can have 177 after `make scrape`), but (2) ZIP crosswalk always used hardcoded seed (~14 ZIPs) when seed mode ON. Changes: (1) Advocacy banner now uses actual `member_count` and `zip_count` and only shows "Only N of 177" when N < 100; explains how to get full data (`make run` or `ILGA_SEED_MODE=0`). (2) Added `make dev-full` (dev profile + `ILGA_SEED_MODE=0`) to run with full cache + full Census ZCTA for testing. (3) Documented in README ("Testing with full data") and .env.example. To test advocacy with all members and all ZIPs: `make scrape` then `make dev-full` or `make run`.
+
 ---
 
 ## Next (when you're ready)
@@ -30,7 +42,7 @@
 ## Backlog / Future
 
 - Full-text search for bill descriptions and member bios.
-- Full bill index scrape (~9,600 bills, all range pages).
+- (Done: full bill index via `make scrape-full` — pagination in bills.py; 0 = all pages.)
 - Optionally derive vote/slip bill list from cache for broader coverage.
 - Advocacy frontend: add member photos, richer script text, email links.
 - Advocacy frontend: move embedded CSS to `static/style.css` when it grows.

@@ -1,7 +1,6 @@
-.PHONY: install dev run scrape scrape-incremental seed export test lint clean help
+.PHONY: install dev dev-full run scrape scrape-200 scrape-full scrape-dev scrape-incremental export seed test lint lint-fix clean help
 
-# ── Virtual environment auto-detection ────────────────────────────────────────
-# Searches common venv locations. Override with: make dev VENV=path/to/venv
+# ── Virtual environment ─────────────────────────────────────────────────────
 VENV ?= $(or $(wildcard .venv), $(wildcard venv), $(wildcard src/ilga_graph/.venv))
 ifdef VENV
   PYTHON := $(VENV)/bin/python
@@ -13,40 +12,60 @@ endif
 
 # Default target
 help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
-install: ## Install the project with dev dependencies
+# ═══════════════════════════════════════════════════════════════════════════════
+# Pipeline: scrape (once) → then serve in dev or prod.
+#   make scrape      → 300 SB + 300 HB (prod-style)
+#   make scrape-200  → 200 SB + 200 HB (test index pagination)
+#   make scrape-full → all ~9600+ bills (full index; slow)
+#   make scrape-dev  → light: 20/chamber, 100+100, fast
+#   make dev / run   → serve from cache (LOAD_ONLY=1)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+scrape: ## Prod-style: all members, 300 SB + 300 HB, export
+	$(PYTHON) scripts/scrape.py --sb-limit 300 --hb-limit 300 --export
+
+scrape-200: ## Test pagination: 200 SB + 200 HB (2 range pages per type), export
+	$(PYTHON) scripts/scrape.py --sb-limit 200 --hb-limit 200 --export
+
+scrape-full: ## Full bill index: all ~9600+ bills (slow; complete data)
+	$(PYTHON) scripts/scrape.py --sb-limit 0 --hb-limit 0 --export
+
+scrape-dev: ## Light dev: 20/chamber, 100 SB + 100 HB, fast, export
+	$(PYTHON) scripts/scrape.py --limit 20 --sb-limit 100 --hb-limit 100 --fast --export
+
+scrape-incremental: ## Incremental: only new/changed bills (keeps existing cache)
+	$(PYTHON) scripts/scrape.py --incremental --fast --export
+
+dev: ## Serve from cache in dev mode (run 'make scrape-dev' or 'make scrape' first)
+	ILGA_LOAD_ONLY=1 ILGA_PROFILE=dev $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src
+
+dev-full: ## Serve from cache in dev mode with full Census ZIPs (no seed fallback)
+	ILGA_LOAD_ONLY=1 ILGA_PROFILE=dev ILGA_SEED_MODE=0 $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src
+
+run: ## Serve from cache in prod mode (run 'make scrape' first)
+	ILGA_LOAD_ONLY=1 ILGA_PROFILE=prod $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src
+
+# ── Other ────────────────────────────────────────────────────────────────────
+
+install: ## Install project with dev dependencies
 	$(BIN)pip install -e ".[dev]"
 
-dev: ## Start server in dev mode with mocks/dev (instant, no scraping)
-	ILGA_PROFILE=dev $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src
-
-run: ## Start server using cache/ (no mock fallback)
-	ILGA_PROFILE=prod $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src
-
-scrape: ## Full scrape to cache/ (no server)
-	$(PYTHON) scripts/scrape.py --export
-
-scrape-fast: ## Dev scrape (20/chamber, fast delay) to cache/ with export
-	$(PYTHON) scripts/scrape.py --limit 20 --fast --export --bill-limit 100
-
-scrape-incremental: ## Incremental scrape (only new/changed bills)
-	$(PYTHON) scripts/scrape.py --incremental --fast --export
+export: ## Re-export vault from cache only (no scrape)
+	$(PYTHON) scripts/scrape.py --export-only --fast
 
 seed: ## Regenerate mocks/dev/ from current cache/
 	$(PYTHON) scripts/generate_seed.py
 
-export: ## Re-export vault from cached data (no scraping, no server)
-	$(PYTHON) scripts/scrape.py --export-only --fast
-
 test: ## Run pytest
 	PYTHONPATH=src $(BIN)pytest
 
-lint: ## Run ruff linter and formatter check
+lint: ## Run ruff check + format check
 	$(BIN)ruff check .
 	$(BIN)ruff format --check .
 
-lint-fix: ## Auto-fix lint issues
+lint-fix: ## Auto-fix lint and format
 	$(BIN)ruff check --fix .
 	$(BIN)ruff format .
 
@@ -56,4 +75,4 @@ clean: ## Remove cache/ and generated vault files
 	rm -f ILGA_Graph_Vault/*.base
 	rm -f ILGA_Graph_Vault/Moneyball\ Report.md
 	rm -f .startup_timings.csv
-	@echo "Cleaned. Run 'make dev' or 'make scrape' to regenerate."
+	@echo "Cleaned. Run 'make scrape' or 'make scrape-dev' then 'make dev' or 'make run'."

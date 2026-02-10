@@ -66,6 +66,7 @@ from .scrapers.witness_slips import scrape_all_witness_slips
 from .seating import process_seating
 from .vote_name_normalizer import normalize_vote_events
 from .vote_timeline import compute_bill_vote_timeline
+from .metrics_definitions import MONEYBALL_ONE_LINER
 from .zip_crosswalk import ZipDistrictInfo, load_zip_crosswalk
 
 # ── Configure logging ────────────────────────────────────────────────────────
@@ -1117,7 +1118,13 @@ def _committee_member_ids(committee_codes: list[str]) -> set[str]:
 
 
 def _member_to_card(member: Member, *, why: str = "", badges: list[str] | None = None) -> dict:
-    """Convert a Member to a template-friendly dict for card rendering."""
+    """Convert a Member to a template-friendly dict for card rendering.
+
+    Includes empirical stats first (laws passed, passage rate, cross-party %),
+    then Moneyball composite with a short explanation so derived metrics are clear.
+    ``script_hint`` is set to ``""`` here; callers populate it with an
+    evidence-based hint via the ``_build_script_hint_*`` helpers.
+    """
     phone = None
     for office in member.offices:
         if office.phone:
@@ -1128,6 +1135,12 @@ def _member_to_card(member: Member, *, why: str = "", badges: list[str] | None =
     if state.moneyball:
         mb = state.moneyball.profiles.get(member.id)
 
+    # Empirical (raw) stats — directly from data
+    laws_filed = mb.laws_filed if mb else None
+    laws_passed = mb.laws_passed if mb else None
+    passage_rate_pct = round((mb.effectiveness_rate * 100), 1) if mb and mb.laws_filed else None
+    bridge_pct = round((mb.bridge_score * 100), 1) if mb else None
+
     return {
         "name": member.name,
         "id": member.id,
@@ -1135,12 +1148,125 @@ def _member_to_card(member: Member, *, why: str = "", badges: list[str] | None =
         "party": member.party,
         "chamber": member.chamber,
         "phone": phone,
-        "moneyball_score": round(mb.moneyball_score, 2) if mb else None,
+        "laws_filed": laws_filed,
+        "laws_passed": laws_passed,
+        "passage_rate_pct": passage_rate_pct,
         "bridge_score": round(mb.bridge_score, 4) if mb else None,
+        "bridge_pct": bridge_pct,
+        "moneyball_score": round(mb.moneyball_score, 2) if mb else None,
+        "moneyball_explanation": MONEYBALL_ONE_LINER,
         "member_url": member.member_url,
         "why": why,
         "badges": badges or [],
+        "script_hint": "",
     }
+
+
+# ── Evidence-based script hint builders ──────────────────────────────────────
+
+
+def _stats_sentence(card: dict) -> str:
+    """Build a short stats clause from the card's empirical fields.
+
+    Example: "They've passed 4 of 12 laws (33.3% passage rate) and 25.0% of
+    their bills have cross-party co-sponsors."
+    """
+    parts: list[str] = []
+    if card.get("laws_filed") and card.get("laws_passed") is not None:
+        parts.append(
+            f"they've passed {card['laws_passed']} of {card['laws_filed']} laws "
+            f"({card['passage_rate_pct'] or 0}% passage rate)"
+        )
+    if card.get("bridge_pct") is not None and card["bridge_pct"] > 0:
+        parts.append(
+            f"{card['bridge_pct']}% of their bills have cross-party co-sponsors"
+        )
+    if parts:
+        return parts[0][0].upper() + parts[0][1:] + (
+            " and " + parts[1] if len(parts) > 1 else ""
+        ) + "."
+    return ""
+
+
+def _build_script_hint_senator(card: dict, zip_code: str, district: str) -> str:
+    """Evidence-based script hint for Your Senator."""
+    stats = _stats_sentence(card)
+    stats_line = f" {stats}" if stats else ""
+    return (
+        f"This is YOUR state senator. Call their office, say you live in "
+        f"ZIP {zip_code} (District {district}), and tell them you support "
+        f"kei truck legalization in Illinois. Constituent calls are tracked "
+        f"\u2014 yours counts.{stats_line}"
+    )
+
+
+def _build_script_hint_rep(card: dict, zip_code: str, district: str) -> str:
+    """Evidence-based script hint for Your Representative."""
+    stats = _stats_sentence(card)
+    stats_line = f" {stats}" if stats else ""
+    return (
+        f"This is YOUR state representative. They vote on bills in the House "
+        f"before they reach the Senate. Call their office, reference ZIP "
+        f"{zip_code} (District {district}), and ask them to sponsor or support "
+        f"kei truck legislation.{stats_line}"
+    )
+
+
+def _build_script_hint_broker(card: dict, broker_why: str) -> str:
+    """Evidence-based script hint for Power Broker."""
+    # Determine if chosen as Chair or by Moneyball
+    is_chair = "Chair of the" in broker_why
+    stats = _stats_sentence(card)
+
+    if is_chair:
+        lead = (
+            "This legislator chairs the committee that controls whether your bill "
+            "gets a hearing \u2014 they are the institutional gatekeeper."
+        )
+    else:
+        lead = (
+            "This legislator has the highest overall influence score (Moneyball) "
+            "in the Senate outside your district."
+        )
+
+    evidence = f" {stats}" if stats else ""
+    action = (
+        " When you call, reference the bill, mention broad constituent support, "
+        "and ask for their co-sponsorship."
+    )
+    return lead + evidence + action
+
+
+def _build_script_hint_ally(card: dict) -> str:
+    """Evidence-based script hint for Potential Ally."""
+    bridge = card.get("bridge_pct")
+    if bridge and bridge > 0:
+        evidence = (
+            f" They have a {bridge}% cross-party co-sponsorship rate \u2014 "
+            "meaning they regularly work across the aisle."
+        )
+    else:
+        evidence = ""
+    return (
+        "This senator sits physically next to yours in the chamber."
+        + evidence
+        + " Ask your senator to partner with them on kei truck legislation "
+        "\u2014 proximity and bipartisan track record make them a natural ally."
+    )
+
+
+def _build_script_hint_super_ally(card: dict) -> str:
+    """Evidence-based script hint for Super Ally (merged Broker + Ally)."""
+    stats = _stats_sentence(card)
+    evidence = f" {stats}" if stats else ""
+    return (
+        "This legislator is both the most influential senator in the chamber "
+        "AND a physical neighbor of your senator \u2014 a uniquely powerful "
+        "advocacy target." + evidence + " Ask your senator to partner with "
+        "them directly. When you call their office, reference the bill and "
+        "the fact that they sit next to your senator. This is your "
+        "highest-value strategic target."
+    )
 
 
 def _find_member_by_district(chamber: str, district: str) -> Member | None:
@@ -1381,6 +1507,9 @@ async def advocacy_search(
             senator_member,
             why=f"Represents IL Senate District {senate_district}, which contains ZIP {zip_code}.",
         )
+        senator_card["script_hint"] = _build_script_hint_senator(
+            senator_card, zip_code, senate_district,
+        )
     elif senate_district:
         warnings.append(
             f"Senate District {senate_district} (for ZIP {zip_code}) — "
@@ -1396,6 +1525,9 @@ async def advocacy_search(
         rep_card = _member_to_card(
             rep_member,
             why=f"Represents IL House District {house_district}, which contains ZIP {zip_code}.",
+        )
+        rep_card["script_hint"] = _build_script_hint_rep(
+            rep_card, zip_code, house_district,
         )
     elif house_district:
         warnings.append(
@@ -1442,20 +1574,29 @@ async def advocacy_search(
             why=merged_why,
             badges=["Power Broker", "Potential Ally"],
         )
+        super_ally_card["script_hint"] = _build_script_hint_super_ally(super_ally_card)
     else:
         if broker_member:
             broker_card = _member_to_card(broker_member, why=broker_why)
+            broker_card["script_hint"] = _build_script_hint_broker(
+                broker_card, broker_why,
+            )
         if ally_member:
             ally_card = _member_to_card(ally_member, why=ally_why)
+            ally_card["script_hint"] = _build_script_hint_ally(ally_card)
 
     error = "; ".join(warnings) if warnings else None
 
+    member_count = len(state.members)
+    zip_count = len(state.zip_to_district)
     tpl = "_results_partial.html" if is_htmx else "results.html"
     return templates.TemplateResponse(tpl, {
         "request": request,
         "title": "Kei Truck Freedom",
         "categories": CATEGORY_CHOICES,
         "seed_mode": SEED_MODE,
+        "member_count": member_count,
+        "zip_count": zip_count,
         "zip": zip_code,
         "category": category,
         "senate_district": senate_district,

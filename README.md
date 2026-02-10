@@ -177,6 +177,16 @@ Ties everything together:
 | `votes(billNumber)` | `billNumber` (required) | All vote events for a specific bill (floor + committee) |
 | `billVoteTimeline(billNumber, chamber)` | `billNumber` and `chamber` (both required) | Full vote timeline tracking every member's journey across committee and floor events |
 | `allVoteEvents(voteType, chamber)` | Both optional filters | All scraped vote events, optionally filtered by type and chamber |
+| `metricsGlossary` | *(none)* | Definitions of every metric (empirical and derived) so UIs can show "what does this mean?" |
+
+### Metrics: empirical vs derived
+
+We show **empirical** stats first (directly from bill/member data): laws filed, laws passed, passage rate, vetoed, stuck, cross-party co-sponsorship %, pipeline depth (0–6), etc. **Derived** metrics are explained so they are not a black box:
+
+- **Moneyball score** — A 0–100 composite used to rank legislators (e.g. for Power Broker). It combines passage rate, pipeline depth, co-sponsor pull, cross-party rate, network centrality, and institutional role. Exact weights and one-sentence definitions for each component are in `metrics_definitions.py` and exposed via the GraphQL query `metricsGlossary`.
+- **Effectiveness** — We prefer showing *laws passed* and *passage rate* separately; the legacy "effectiveness score" (volume × rate) is documented in the glossary for transparency.
+
+The advocacy UI shows "Laws passed (X of Y — Z% passage)" and "Cross-party co-sponsorship %" before the Moneyball composite, with a tooltip that explains the composite. Use `metricsGlossary` in your client to build tooltips or a "How is this calculated?" panel.
 
 ## Obsidian Vault Features
 
@@ -223,44 +233,42 @@ Or manually:
 pip install -e ".[dev]"
 ```
 
-### Run (local dev)
+### Pipeline: scrape → serve
+
+Data is scraped once into `cache/`; the API then **serves only from cache** (no scraping on startup).
+
+| Step | Command | What it does |
+|------|---------|--------------|
+| **Scrape (choose size)** | `make scrape` | Prod-style: all members, 300 SB + 300 HB. |
+| | `make scrape-200` | Test pagination: 200 SB + 200 HB (2 range pages per type). |
+| | `make scrape-full` | Full index: all ~9600+ bills (slow; many range pages + detail fetches). |
+| | `make scrape-dev` | Light: 20 members/chamber, 100 SB + 100 HB, fast. |
+| **Serve** | `make dev` | Start API in dev mode (load from cache; seed fallback if no cache). |
+| | `make dev-full` | Start API in dev mode with full Census ZIPs. |
+| | `make run` | Start API in prod mode (cache only). |
+
+**Typical flows:**
+
+- **Quick dev:** `make scrape-dev` then `make dev` — small cache, fast iteration.
+- **See pagination:** `make scrape-200` then `make dev` — 200 SB + 200 HB from index (2 range pages per type).
+- **Full dev / prod:** `make scrape` then `make dev-full` or `make run` — more bills, all IL ZIPs.
+- **Complete data:** `make scrape-full` (takes a long time) then serve as above.
+
+If you run `make dev` or `make run` with no cache, the server will try to load from cache and, in dev, fall back to `mocks/dev/` when available.
+
+### Other commands
 
 ```bash
-make dev            # instant startup using seed data
+make export         # re-export vault from cache (no scrape)
+make seed           # regenerate mocks/dev/ from current cache
+make scrape-incremental   # only new/changed bills
+make test           # pytest
+make lint           # ruff check + format check
+make lint-fix       # auto-fix
+make clean          # remove cache/ and vault files
 ```
 
-This loads from `mocks/dev/` (committed to the repo), computes analytics, exports the vault, and starts the GraphQL server. No internet needed.
-
-### Run (full scrape)
-
-```bash
-make scrape         # scrape ilga.gov to cache/ (no server)
-make run            # start server using cache/
-```
-
-### Other Commands
-
-```bash
-make test           # run pytest
-make lint           # ruff check + format check (run before opening a PR)
-make lint-fix       # auto-fix ruff issues
-make seed           # regenerate mocks/dev/ (20 members, 100 bills)
-make export         # re-export vault from cache (no server)
-make clean          # remove cache/ and generated vault files
-```
-
-**Before opening a PR:** run `make lint` and `make test` so CI passes.
-
-### Run Manually
-
-```bash
-uvicorn ilga_graph.main:app --reload
-```
-
-The app will:
-1. Load from cache or seed data (or scrape ilga.gov if neither exists) on startup.
-2. Write/update the Obsidian vault in `ILGA_Graph_Vault/`.
-3. Serve the GraphQL playground at [http://localhost:8000/graphql](http://localhost:8000/graphql).
+**Before opening a PR:** run `make lint` and `make test`.
 
 ### Environment Variables
 
@@ -302,7 +310,8 @@ All variables:
 | `ILGA_DEV_MODE` | *profile* | `1` = lighter scrape, faster delays; `0` = production. |
 | `ILGA_SEED_MODE` | *profile* | `1` = use seed when cache missing; `0` = require cache or live scrape. |
 | `ILGA_INCREMENTAL` | `0` | `1` = incremental bill scrape (new/changed only). |
-| `ILGA_MEMBER_LIMIT` | `0` | Max members per chamber (0 = all; dev mode defaults to 20). |
+| `ILGA_LOAD_ONLY` | `0` | When `1`, API only loads from cache (no scrape on startup). `make dev` and `make run` set this. |
+| `ILGA_MEMBER_LIMIT` | `0` | Max members per chamber (0 = all). |
 | `ILGA_TEST_MEMBER_URL` | *(empty)* | Optional single member URL for testing. |
 | `ILGA_TEST_MEMBER_CHAMBER` | `Senate` | Chamber for the test member URL. |
 | `ILGA_CORS_ORIGINS` | *profile* | Comma-separated CORS origins. |

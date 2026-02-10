@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
-"""Standalone scraping CLI -- scrape ilga.gov to cache/ without starting a server.
+"""Standalone scraping CLI -- populate cache/ for the API (no server).
 
 Usage::
 
-    python scripts/scrape.py                    # full scrape (members + 100 SB + 100 HB)
-    python scripts/scrape.py --incremental      # incremental: only new/changed bills
-    python scripts/scrape.py --limit 20         # scrape 20 members per chamber
-    python scripts/scrape.py --export           # scrape + export vault
-    python scripts/scrape.py --export-only      # skip scraping, just export from cache
-    python scripts/scrape.py --force-refresh    # ignore existing cache, re-scrape
+    make scrape          # 300 SB + 300 HB (prod-style)
+    make scrape-200      # 200 SB + 200 HB (test pagination: 2 range pages per type)
+    make scrape-full     # full index: all ~9600+ bills (slow)
+    make scrape-dev      # light: 20/chamber, 100+100, fast
+    make scrape-incremental   # only new/changed bills
+
+    python scripts/scrape.py --sb-limit 0 --hb-limit 0 --export   # full index (~9600+ bills)
+    python scripts/scrape.py --sb-limit 200 --hb-limit 200 --export # 200 per type
+    python scripts/scrape.py --export-only   # re-export vault from cache only
+    python scripts/scrape.py --force-refresh # clear cache and re-scrape
 """
 
 from __future__ import annotations
@@ -52,13 +56,13 @@ def main() -> None:
         "--sb-limit",
         type=int,
         default=100,
-        help="Max Senate bills to scrape from index (default: 100)",
+        help="Max Senate bills from index (0 = all pages, ~4800; default: 100)",
     )
     parser.add_argument(
         "--hb-limit",
         type=int,
         default=100,
-        help="Max House bills to scrape from index (default: 100)",
+        help="Max House bills from index (0 = all pages, ~4800; default: 100)",
     )
     parser.add_argument(
         "--export",

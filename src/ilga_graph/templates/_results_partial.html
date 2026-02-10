@@ -2,9 +2,15 @@
 
 {% if seed_mode is defined and seed_mode %}
 <div class="seed-notice">
-    <strong>Dev/Seed Mode:</strong> District data is approximate (hardcoded for ~14 demo ZIPs).
-    Only 40 of 177 legislators are loaded. Some districts will show no results.
-    In production, real Census ZCTA data is used.
+    <strong>Dev/Seed mode.</strong>
+    {% if member_count is defined and member_count < 100 %}
+    Only {{ member_count }} of 177 legislators are loaded.
+    {% endif %}
+    {% if zip_count is defined and zip_count < 100 %}
+    District data uses ~{{ zip_count }} demo ZIPs (not full Census).
+    {% endif %}
+    Some districts may show no results.
+    To test with <strong>full data</strong> (all members + all IL ZIPs), run <code>make run</code> or set <code>ILGA_SEED_MODE=0</code> (after <code>make scrape</code>).
 </div>
 {% endif %}
 
@@ -12,7 +18,12 @@
 <div class="error-msg">{{ error }}</div>
 {% endif %}
 
-{% macro member_card(member, role_label, role_class, script_hint) %}
+{# ── Member card macro ─────────────────────────────────────────────────── #}
+{# script_hint is now read from the card dict (member.script_hint).          #}
+{# Cross-party % only shown when member has at least one substantive bill  #}
+{# (otherwise 0% would mean "no data" and is misleading).                   #}
+
+{% macro member_card(member, role_label, role_class) %}
 <div class="card">
     {% for badge in member.badges %}
     <span class="role-label role-badge">{{ badge }}</span>
@@ -33,14 +44,22 @@
         <dd><a href="tel:{{ member.phone }}">{{ member.phone }}</a></dd>
         {% endif %}
 
-        {% if member.moneyball_score is not none %}
-        <dt>Moneyball</dt>
-        <dd>{{ member.moneyball_score }}</dd>
+        {# Empirical stats: only show when we have data #}
+        {% if member.laws_passed is not none and member.laws_filed is not none %}
+        <dt>Laws passed</dt>
+        <dd>{{ member.laws_passed }} of {{ member.laws_filed }} filed ({{ member.passage_rate_pct or 0 }}% passage rate)</dd>
         {% endif %}
 
-        {% if member.bridge_score is not none %}
-        <dt>Bridge Score</dt>
-        <dd>{{ "%.0f%%"|format(member.bridge_score * 100) }}</dd>
+        {# Cross-party % only when we have substantive bills to measure (else 0% is misleading) #}
+        {% if member.bridge_pct is not none and member.laws_filed and member.laws_filed > 0 %}
+        <dt>Cross-party co-sponsorship</dt>
+        <dd>{{ member.bridge_pct }}%</dd>
+        {% endif %}
+
+        {# Derived: composite rank with tooltip #}
+        {% if member.moneyball_score is not none %}
+        <dt title="{{ member.moneyball_explanation|e }}">Moneyball <span class="metric-help" title="{{ member.moneyball_explanation|e }}">?</span></dt>
+        <dd>{{ member.moneyball_score }} <span class="metric-note">(composite rank 0&ndash;100)</span></dd>
         {% endif %}
     </dl>
     {% if member.why %}
@@ -48,11 +67,52 @@
         <strong>Why this target:</strong> {{ member.why }}
     </div>
     {% endif %}
+    {% if member.script_hint %}
     <div class="script-hint">
-        <strong>Script Hint:</strong> {{ script_hint }}
+        <strong>Script Hint:</strong> {{ member.script_hint }}
     </div>
+    {% endif %}
 </div>
 {% endmacro %}
+
+{# ── Two-column layout when we have cards: aside = How we pick; main = scrollable cards ── #}
+
+{% if senator or representative or broker or ally or super_ally %}
+<div class="results-layout">
+    <aside class="results-aside">
+        <div class="how-it-works">
+            <h3 class="hiw-title">How we pick these targets</h3>
+            <div class="hiw-body">
+                <dl>
+                    <dt>Your Senator &amp; Representative</dt>
+                    <dd>ZIP is matched to IL Senate/House districts via Census (ZCTA). These are your reps.</dd>
+
+                    <dt>Power Broker</dt>
+                    <dd>With a <strong>policy category</strong>: the <strong>committee chair</strong> for that topic. Otherwise: Senate member (not your district) with the <strong>highest Moneyball score</strong>.</dd>
+
+                    <dt>Potential Ally</dt>
+                    <dd>Senator who <strong>sits next to yours</strong> and has the <strong>highest cross-party co-sponsorship rate</strong> among those seatmates.</dd>
+
+                    <dt>Super Ally</dt>
+                    <dd>When Power Broker and Ally are the <strong>same person</strong> &mdash; merged into one card.</dd>
+                </dl>
+                <details class="hiw-details">
+                    <summary>Moneyball formula</summary>
+                    <table class="formula-table">
+                        <tr><th>Factor</th><th>Wt</th><th>Measures</th></tr>
+                        <tr><td>Passage rate</td><td>24%</td><td>Laws passed &divide; filed</td></tr>
+                        <tr><td>Pipeline depth</td><td>16%</td><td>How far bills go (0&ndash;6)</td></tr>
+                        <tr><td>Co-sponsor pull</td><td>16%</td><td>Avg co-sponsors vs max</td></tr>
+                        <tr><td>Cross-party rate</td><td>12%</td><td>Bills with opposite-party co-sponsor</td></tr>
+                        <tr><td>Network centrality</td><td>12%</td><td>Unique co-sponsorship peers</td></tr>
+                        <tr><td>Institutional role</td><td>20%</td><td>Leadership bonus</td></tr>
+                    </table>
+                </details>
+            </div>
+        </div>
+    </aside>
+    <main class="results-main">
+{% endif %}
 
 {# ── Your Legislators ── #}
 
@@ -62,27 +122,17 @@
 {% endif %}
 
 {% if senator %}
-{{ member_card(
-    senator,
-    "Your Senator",
-    "role-senator",
-    "This is YOUR state senator. Call their office, say you live in ZIP " ~ zip ~ " (District " ~ senate_district ~ "), and tell them you support kei truck legalization in Illinois. Constituent calls are tracked — yours counts."
-) }}
+{{ member_card(senator, "Your Senator", "role-senator") }}
 {% endif %}
 
 {% if representative %}
-{{ member_card(
-    representative,
-    "Your Representative",
-    "role-rep",
-    "This is YOUR state representative. They vote on bills in the House before they reach the Senate. Call their office, reference ZIP " ~ zip ~ " (District " ~ house_district ~ "), and ask them to sponsor or support kei truck legislation."
-) }}
+{{ member_card(representative, "Your Representative", "role-rep") }}
 {% endif %}
 
 {# ── Strategic Targets ── #}
 
 {% if super_ally or broker or ally %}
-<h2>Strategic Targets{% if category %} — {{ category }}{% endif %}</h2>
+<h2>Strategic Targets{% if category %} &mdash; {{ category }}{% endif %}</h2>
 <p class="section-desc">
     {% if category %}
     Filtered to legislators on <strong>{{ category }}</strong> committees.
@@ -93,28 +143,18 @@
 {% endif %}
 
 {% if super_ally %}
-{{ member_card(
-    super_ally,
-    "Super Ally",
-    "role-super-ally",
-    "This legislator is extraordinary — they are both the most influential senator in the chamber AND a physical neighbor of your senator. They have maximum leverage and direct proximity. Ask your senator to partner with them directly. When you call their office, reference both the bill and the fact that they sit next to your senator. This is your highest-value strategic target."
-) }}
+{{ member_card(super_ally, "Super Ally", "role-super-ally") }}
 {% endif %}
 
 {% if broker %}
-{{ member_card(
-    broker,
-    "Power Broker",
-    "role-broker",
-    "This legislator has outsized influence in the chamber — high effectiveness, deep network connections. Even though they are not your senator, pressuring them moves the needle. Reference the bill, mention broad constituent support, and ask for their co-sponsorship."
-) }}
+{{ member_card(broker, "Power Broker", "role-broker") }}
 {% endif %}
 
 {% if ally %}
-{{ member_card(
-    ally,
-    "Potential Ally",
-    "role-ally",
-    "This senator sits physically near yours in the chamber and has a track record of building bipartisan bridges. They are a natural recruitment target — ask your senator to work with them on kei truck legislation."
-) }}
+{{ member_card(ally, "Potential Ally", "role-ally") }}
+{% endif %}
+
+{% if senator or representative or broker or ally or super_ally %}
+    </main>
+</div>
 {% endif %}
