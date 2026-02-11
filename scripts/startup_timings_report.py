@@ -374,9 +374,7 @@ def _render(report: dict[str, Any]) -> None:
             f"→ {last.timestamp.isoformat()}"
         )
         print(
-            "Last total: "
-            f"{last.total_s:.2f}s  load={last.load_s:.2f}s "
-            f"export={last.export_s:.2f}s"
+            f"Last total: {last.total_s:.2f}s  load={last.load_s:.2f}s export={last.export_s:.2f}s"
         )
         return
 
@@ -396,8 +394,8 @@ def _render(report: dict[str, Any]) -> None:
     header.append("\n")
     header.append(f"{len(timings)} runs  ", style="bold")
     header.append(f"{first.timestamp.isoformat()} → {last.timestamp.isoformat()}", style="dim")
-    has_single_non_v2_schema = (
-        len(schema_counts) == 1 and list(schema_counts.keys())[0] != len(V2_COLS)
+    has_single_non_v2_schema = len(schema_counts) == 1 and list(schema_counts.keys())[0] != len(
+        V2_COLS
     )
     if len(schema_counts) > 1 or has_single_non_v2_schema:
         header.append("\n")

@@ -684,7 +684,10 @@ def paginate(items: list, offset: int, limit: int) -> tuple[list, PageInfo]:
 @strawberry.type
 class Query:
     @strawberry.field(
-        description="Definitions of all metrics (empirical and derived) so UIs can explain what each number means.",
+        description=(
+            "Definitions of all metrics (empirical and derived) "
+            "so UIs can explain what each number means."
+        ),
     )
     def metrics_glossary(self) -> MetricsGlossaryType:
         g = get_metrics_glossary()
@@ -759,8 +762,7 @@ class Query:
         profiles = ctx["moneyball_loader"].batch_load(ids)
         return MemberConnection(
             items=[
-                MemberType.from_model(m, scorecards[i], profiles[i])
-                for i, m in enumerate(page)
+                MemberType.from_model(m, scorecards[i], profiles[i]) for i, m in enumerate(page)
             ],
             page_info=page_info,
         )
@@ -846,8 +848,7 @@ class Query:
         profiles = ctx["moneyball_loader"].batch_load(ids)
         return MemberConnection(
             items=[
-                MemberType.from_model(m, scorecards[i], profiles[i])
-                for i, m in enumerate(page)
+                MemberType.from_model(m, scorecards[i], profiles[i]) for i, m in enumerate(page)
             ],
             page_info=page_info,
         )

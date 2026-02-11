@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-
 # ── Empirical (raw) metrics: directly from bill/member data ──────────────────
 
 
@@ -27,13 +26,18 @@ EMPIRICAL_METRICS: list[MetricDefinition] = [
     MetricDefinition(
         id="laws_filed",
         name="Laws filed (HB/SB)",
-        short_definition="Number of substantive bills (HB/SB) the member is primary sponsor of. Excludes resolutions (HR/SR) and shell/technical placeholders.",
+        short_definition=(
+            "Number of substantive bills (HB/SB) the member is primary sponsor of. "
+            "Excludes resolutions (HR/SR) and shell/technical placeholders."
+        ),
         formula="Count of primary-sponsored HB/SB, excluding shell bills.",
     ),
     MetricDefinition(
         id="laws_passed",
         name="Laws passed",
-        short_definition="Number of those bills that became law (signed by Governor or adopted both houses).",
+        short_definition=(
+            "Number of those bills that became law (signed by Governor or adopted both houses)."
+        ),
         formula="Count of primary-sponsored HB/SB with last_action indicating passage.",
     ),
     MetricDefinition(
@@ -60,30 +64,47 @@ EMPIRICAL_METRICS: list[MetricDefinition] = [
     MetricDefinition(
         id="in_progress_count",
         name="Bills in progress",
-        short_definition="Primary-sponsored bills currently moving through the process (not passed, vetoed, or stuck).",
+        short_definition=(
+            "Primary-sponsored bills currently moving through the process "
+            "(not passed, vetoed, or stuck)."
+        ),
     ),
     MetricDefinition(
         id="magnet_score",
         name="Avg co-sponsors per law",
-        short_definition="Average number of co-sponsors on the member's substantive bills. Higher = more colleagues signing on.",
+        short_definition=(
+            "Average number of co-sponsors on the member's substantive bills. "
+            "Higher = more colleagues signing on."
+        ),
         formula="Total co-sponsors on member's HB/SB ÷ number of those bills.",
     ),
     MetricDefinition(
         id="bridge_score",
         name="Cross-party co-sponsorship %",
-        short_definition="Share of the member's substantive bills that have at least one co-sponsor from the other party.",
+        short_definition=(
+            "Share of the member's substantive bills that have at least one "
+            "co-sponsor from the other party."
+        ),
         formula="(Bills with ≥1 opposite-party co-sponsor) ÷ laws_filed (0–100%).",
     ),
     MetricDefinition(
         id="pipeline_depth_avg",
         name="Pipeline depth (avg 0–6)",
-        short_definition="How far the member's bills typically go. 0 = filed only, 6 = signed by Governor.",
-        formula="Stages: 0 filed → 1 committee → 2 committee passed → 3 second reading → 4 chamber passed → 5 both chambers → 6 signed. Average over member's HB/SB.",
+        short_definition=(
+            "How far the member's bills typically go. 0 = filed only, 6 = signed by Governor."
+        ),
+        formula=(
+            "Stages: 0 filed → 1 committee → 2 committee passed → 3 second reading "
+            "→ 4 chamber passed → 5 both chambers → 6 signed. Average over member's HB/SB."
+        ),
     ),
     MetricDefinition(
         id="network_centrality",
         name="Co-sponsorship network centrality",
-        short_definition="How connected the member is in the co-sponsorship graph: share of other legislators they have co-sponsored with.",
+        short_definition=(
+            "How connected the member is in the co-sponsorship graph: "
+            "share of other legislators they have co-sponsored with."
+        ),
         formula="(Unique co-sponsorship partners) ÷ (total legislators − 1). 0–1.",
     ),
     MetricDefinition(
@@ -120,7 +141,9 @@ def get_moneyball_components() -> list[MoneyballComponent]:
             id="pipeline",
             weight_pct=16.0,
             name="Pipeline depth",
-            short_definition="How far the member's bills go on average (0–6 scale, normalized to 0–1).",
+            short_definition=(
+                "How far the member's bills go on average (0–6 scale, normalized to 0–1)."
+            ),
         ),
         MoneyballComponent(
             id="magnet",
@@ -138,13 +161,18 @@ def get_moneyball_components() -> list[MoneyballComponent]:
             id="centrality",
             weight_pct=12.0,
             name="Network centrality",
-            short_definition="How many unique colleagues they co-sponsor with (degree in co-sponsorship graph).",
+            short_definition=(
+                "How many unique colleagues they co-sponsor with (degree in co-sponsorship graph)."
+            ),
         ),
         MoneyballComponent(
             id="institutional",
             weight_pct=20.0,
             name="Institutional power",
-            short_definition="Bonus for leadership roles: President/Leader/Speaker (1.0), Chair/Spokesperson (0.5), Whip/Caucus Chair (0.25).",
+            short_definition=(
+                "Bonus for leadership roles: President/Leader/Speaker (1.0), "
+                "Chair/Spokesperson (0.5), Whip/Caucus Chair (0.25)."
+            ),
         ),
     ]
 
@@ -158,11 +186,15 @@ MONEYBALL_ONE_LINER: str = (
 
 
 def get_effectiveness_score_definition() -> MetricDefinition:
-    """Clarify the legacy 'effectiveness_score' (volume × rate) so it's not confused with passage rate."""
+    """Clarify the legacy `effectiveness_score` (volume x rate) vs passage rate."""
     return MetricDefinition(
         id="effectiveness_score",
         name="Volume‑weighted passage (legacy)",
-        short_definition="Primary bill count × overall passage rate. Conflates volume and success; we prefer showing laws passed and passage rate separately.",
+        short_definition=(
+            "Primary bill count x overall passage rate. "
+            "Conflates volume and success; we prefer showing laws passed and "
+            "passage rate separately."
+        ),
         formula="primary_bill_count × success_rate (all primary bills).",
     )
 

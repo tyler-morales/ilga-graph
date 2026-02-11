@@ -743,7 +743,10 @@ class ILGAScraper:
     def fetch_committee_rosters(
         self, committees: Iterable[Committee]
     ) -> dict[str, list[CommitteeMemberRole]]:
-        """Scrape rosters for all committees (no separate cache — stored in unified committees.json)."""
+        """Scrape rosters for all committees.
+
+        No separate cache; stored in unified ``committees.json``.
+        """
         items = [(c.code, c.members_list_url) for c in committees if c.members_list_url]
         rosters: dict[str, list[CommitteeMemberRole]] = {}
         with ThreadPoolExecutor(max_workers=self.max_workers) as pool:
@@ -761,7 +764,9 @@ class ILGAScraper:
         return rosters
 
     def fetch_committee_bills(self, committees: Iterable[Committee]) -> dict[str, list[str]]:
-        """Scrape the bills page for each committee (no separate cache — stored in unified committees.json).
+        """Scrape the bills page for each committee.
+
+        No separate cache; stored in unified ``committees.json``.
 
         Derives the bills URL from each committee's members_list_url by
         replacing '/MembersList/' (or '/Members/') with '/Bills/'.

@@ -146,18 +146,23 @@ def _discover_doc_types(
             n1 = re.search(r"num1=(\d+)", rh)
             n2 = re.search(r"num2=(\d+)", rh)
             if n1 and n2:
-                ranges.append((
-                    int(n1.group(1)),
-                    int(n2.group(1)),
-                    urljoin(BASE_URL, rh),
-                ))
+                ranges.append(
+                    (
+                        int(n1.group(1)),
+                        int(n2.group(1)),
+                        urljoin(BASE_URL, rh),
+                    )
+                )
 
         if ranges:
             doc_types.append(DocTypeInfo(doc_type=doc_type, label=label, range_urls=ranges))
             LOGGER.debug(
                 "  %s (%s): %d range pages, %d–%d",
-                doc_type, label, len(ranges),
-                ranges[0][0], ranges[-1][1],
+                doc_type,
+                label,
+                len(ranges),
+                ranges[0][0],
+                ranges[-1][1],
             )
 
     LOGGER.info(
@@ -216,13 +221,12 @@ _RANGE_PAGE_SIZE = 100
 def _save_index_checkpoint(index_data: dict[str, list[BillIndexEntry]]) -> None:
     """Save bill index checkpoint to disk."""
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    
+
     # Convert BillIndexEntry objects to dicts
     serializable = {
-        doc_type: [asdict(entry) for entry in entries]
-        for doc_type, entries in index_data.items()
+        doc_type: [asdict(entry) for entry in entries] for doc_type, entries in index_data.items()
     }
-    
+
     with open(BILL_INDEX_CHECKPOINT_FILE, "w", encoding="utf-8") as f:
         json.dump(serializable, f, indent=2, ensure_ascii=False)
 
@@ -231,11 +235,11 @@ def _load_index_checkpoint() -> dict[str, list[BillIndexEntry]]:
     """Load bill index checkpoint from disk, or return empty dict."""
     if not BILL_INDEX_CHECKPOINT_FILE.exists():
         return {}
-    
+
     try:
         with open(BILL_INDEX_CHECKPOINT_FILE, encoding="utf-8") as f:
             raw = json.load(f)
-        
+
         # Convert dicts back to BillIndexEntry objects
         return {
             doc_type: [BillIndexEntry(**entry_dict) for entry_dict in entries]
@@ -281,7 +285,11 @@ def scrape_bill_index(
         for page_idx, (num1, num2, url) in enumerate(range_urls, 1):
             LOGGER.info(
                 "Fetching %s %d–%d (page %d/%d)",
-                doc_type, num1, num2, page_idx, total_pages,
+                doc_type,
+                num1,
+                num2,
+                page_idx,
+                total_pages,
             )
 
             resp = sess.get(url, timeout=timeout)
@@ -322,7 +330,10 @@ def scrape_bill_index(
 
             LOGGER.info(
                 "Fetching bill index: %s %04d-%04d (page %d)",
-                doc_type, num1, num2, page_num,
+                doc_type,
+                num1,
+                num2,
+                page_num,
             )
 
             resp = sess.get(url, timeout=timeout)
@@ -342,8 +353,11 @@ def scrape_bill_index(
                     LOGGER.info(
                         "Range page %s %04d-%04d returned %s (outside requested "
                         "range); end of %s index reached.",
-                        doc_type, num1, num2,
-                        page_entries[0].bill_number, doc_type,
+                        doc_type,
+                        num1,
+                        num2,
+                        page_entries[0].bill_number,
+                        doc_type,
                     )
                     break
 
@@ -454,7 +468,9 @@ def scrape_all_bill_indexes(
         if _checkpoint_looks_complete(existing, limit):
             LOGGER.info(
                 "✓ %s (%s): loaded %d from checkpoint",
-                dt.doc_type, dt.label, len(existing),
+                dt.doc_type,
+                dt.label,
+                len(existing),
             )
             entries = existing[:limit] if limit > 0 else existing
         else:
@@ -471,7 +487,9 @@ def scrape_all_bill_indexes(
         all_entries.extend(entries)
         LOGGER.info(
             "  %s (%s): %d entries indexed",
-            dt.doc_type, dt.label, len(entries),
+            dt.doc_type,
+            dt.label,
+            len(entries),
         )
 
     # ── Step 4: Clean up and log summary ──

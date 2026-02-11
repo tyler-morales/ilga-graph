@@ -626,11 +626,11 @@ def _build_committee_name_index(
         index[lower + " committee"] = c.code
         # "Approp- Health and Human" -> also match "Appropriations- Health..."
         if lower.startswith("approp-"):
-            expanded = "appropriations-" + lower[len("approp-"):]
+            expanded = "appropriations-" + lower[len("approp-") :]
             index[expanded] = c.code
             index[expanded + " committee"] = c.code
             # Some action_history uses "Appropriations- " (with space)
-            expanded_sp = "appropriations- " + lower[len("approp- "):].lstrip()
+            expanded_sp = "appropriations- " + lower[len("approp- ") :].lstrip()
             index[expanded_sp] = c.code
             index[expanded_sp + " committee"] = c.code
     return index
@@ -723,7 +723,9 @@ def compute_committee_stats(
 
     # Merge ILGA page data + action_history for full coverage
     full_bills = _build_full_committee_bills(
-        committees, committee_bills, list(bill_lookup.values()),
+        committees,
+        committee_bills,
+        list(bill_lookup.values()),
     )
 
     stats: dict[str, CommitteeStats] = {}
@@ -795,17 +797,9 @@ def build_member_committee_roles(
                 "is_leadership": is_leadership,
                 "total_bills": cstats.total_bills if cstats else 0,
                 "advanced_count": cstats.advanced_count if cstats else 0,
-                "advancement_rate_pct": (
-                    round(cstats.advancement_rate * 100)
-                    if cstats
-                    else 0
-                ),
+                "advancement_rate_pct": (round(cstats.advancement_rate * 100) if cstats else 0),
                 "passed_count": cstats.passed_count if cstats else 0,
-                "pass_rate_pct": (
-                    round(cstats.pass_rate * 100)
-                    if cstats
-                    else 0
-                ),
+                "pass_rate_pct": (round(cstats.pass_rate * 100) if cstats else 0),
             }
 
             member_roles.setdefault(cmr.member_id, []).append(entry)

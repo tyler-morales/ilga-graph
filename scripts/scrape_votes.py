@@ -21,7 +21,7 @@ Usage::
     python scripts/scrape_votes.py --workers 8  # 8 parallel workers
     python scripts/scrape_votes.py --fast       # shorter request delay
     python scripts/scrape_votes.py --reset      # wipe progress, start over
-    
+
     # Sample strategy (10% representative sample first)
     python scripts/scrape_votes.py --sample 10  # every 10th bill
     python scripts/scrape_votes.py --sample 10 --limit 0  # all sampled bills
@@ -112,15 +112,11 @@ def scrape_one_bill(
     votes = []
     slips = []
     try:
-        votes = scrape_bill_votes(
-            status_url, session=sess, request_delay=request_delay
-        )
+        votes = scrape_bill_votes(status_url, session=sess, request_delay=request_delay)
     except Exception:
         logger.exception("  Failed votes for %s", bill_number)
     try:
-        slips = scrape_witness_slips(
-            status_url, session=sess, request_delay=request_delay
-        )
+        slips = scrape_witness_slips(status_url, session=sess, request_delay=request_delay)
     except Exception:
         logger.exception("  Failed slips for %s", bill_number)
 
@@ -136,11 +132,11 @@ def get_sample_bills(
     sample_rate: int,
 ) -> list[tuple[str, str]]:
     """Extract every Nth bill for sample strategy.
-    
+
     Args:
         all_bills: List of (bill_number, status_url) tuples sorted by bill_number
         sample_rate: Take every Nth bill (e.g., 10 = every 10th bill = 10% sample)
-    
+
     Returns:
         Sampled bills in original order
     """
@@ -210,14 +206,10 @@ def main() -> None:
             bill_by_number[bill.bill_number] = bill
 
     all_todo = sorted(
-        [
-            (bn, bill_by_number[bn].status_url)
-            for bn in bill_by_number
-            if bn not in already_done
-        ],
+        [(bn, bill_by_number[bn].status_url) for bn in bill_by_number if bn not in already_done],
         key=lambda t: t[0],
     )
-    
+
     # ── Apply sample strategy if requested ───────────────────────────────
     if args.sample:
         if progress["sample_complete"]:
@@ -329,17 +321,20 @@ def main() -> None:
                 # Update progress
                 scraped_bills.add(bill_number)
                 progress["scraped_bill_numbers"] = list(scraped_bills)
-                
+
                 # Mark sample complete if we just finished a sample batch
                 if args.sample and progress["sample_phase"] and not progress["sample_complete"]:
                     # Check if we've done all sample bills
-                    sample_set = set(bn for bn, _ in get_sample_bills(
-                        sorted([(b, bill_by_number[b].status_url) for b in bill_by_number]),
-                        args.sample,
-                    ))
+                    sample_set = set(
+                        bn
+                        for bn, _ in get_sample_bills(
+                            sorted([(b, bill_by_number[b].status_url) for b in bill_by_number]),
+                            args.sample,
+                        )
+                    )
                     if sample_set.issubset(scraped_bills):
                         progress["sample_complete"] = True
-                
+
                 save_progress(progress)
 
                 # Print real-time line
@@ -375,7 +370,7 @@ def main() -> None:
         f"have votes/slips data.",
         flush=True,
     )
-    
+
     # Sample-specific messaging
     if args.sample and progress["sample_complete"] and not interrupted:
         print(
@@ -385,7 +380,8 @@ def main() -> None:
         remaining_after_sample = total_eligible - new_total_done
         if remaining_after_sample > 0:
             print(
-                f"  Run again WITHOUT --sample to fill {remaining_after_sample} remaining bills (gap-fill phase).",
+                "  Run again WITHOUT --sample to fill "
+                f"{remaining_after_sample} remaining bills (gap-fill phase).",
                 flush=True,
             )
     else:
@@ -397,7 +393,7 @@ def main() -> None:
             )
         else:
             print("  All bills complete!", flush=True)
-    
+
     print("-" * 72, flush=True)
     print(flush=True)
 

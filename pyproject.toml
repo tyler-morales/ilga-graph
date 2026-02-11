@@ -25,6 +25,7 @@ dev = [
     "ruff",
     "httpx",
     "rich",
+    "pre-commit",
 ]
 
 [tool.pytest.ini_options]

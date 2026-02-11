@@ -191,9 +191,7 @@ def load_or_scrape_data(
     members = senate_members + house_members
 
     if cfg.TEST_MEMBER_URL:
-        test_member = scraper.fetch_member_by_url(
-            cfg.TEST_MEMBER_URL, cfg.TEST_MEMBER_CHAMBER
-        )
+        test_member = scraper.fetch_member_by_url(cfg.TEST_MEMBER_URL, cfg.TEST_MEMBER_CHAMBER)
         if test_member is not None:
             members.append(test_member)
 

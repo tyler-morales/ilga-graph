@@ -157,6 +157,7 @@ class ObsidianExporter:
         # Determine which bills to write to disk.
         bills_to_write = list(unique_bills.items())
         if self.bill_export_limit is not None:
+
             def _bill_sort_key(item: tuple[str, Bill]) -> datetime:
                 try:
                     return datetime.strptime(item[1].last_action_date, "%m/%d/%Y")
@@ -201,9 +202,7 @@ class ObsidianExporter:
 
     # ── rendering ────────────────────────────────────────────────────────
 
-    def _resolve_bill_links(
-        self, bill_ids: list[str], bills_lookup: dict[str, Bill]
-    ) -> str:
+    def _resolve_bill_links(self, bill_ids: list[str], bills_lookup: dict[str, Bill]) -> str:
         """Resolve a list of leg_ids to [[bill_number]] wikilinks."""
         links = []
         for lid in bill_ids:
@@ -349,10 +348,7 @@ class ObsidianExporter:
                 f"| {a.date} | {a.chamber} | {a.action} |" for a in bill.action_history
             )
             actions_section = (
-                "\n## Actions\n"
-                "| Date | Chamber | Action |\n"
-                "| --- | --- | --- |\n"
-                f"{action_lines}\n"
+                f"\n## Actions\n| Date | Chamber | Action |\n| --- | --- | --- |\n{action_lines}\n"
             )
         else:
             actions_section = "\n## Actions\nNo actions recorded.\n"
@@ -497,7 +493,7 @@ class ObsidianExporter:
             header = "## Associated Representatives"
         else:
             header = "## Associated Senator"
-        
+
         content = self._render_associated_links(member.associated_members)
         return f"{header}\n{content}"
 

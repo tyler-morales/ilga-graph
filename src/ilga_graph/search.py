@@ -64,7 +64,7 @@ def _snippet(text: str, query_lower: str, context_chars: int = 80) -> str:
     idx = text.lower().find(query_lower)
     if idx == -1:
         # Shouldn't happen if the caller verified the match, but be safe.
-        return text[:context_chars * 2] + ("..." if len(text) > context_chars * 2 else "")
+        return text[: context_chars * 2] + ("..." if len(text) > context_chars * 2 else "")
 
     start = max(0, idx - context_chars)
     end = min(len(text), idx + len(query_lower) + context_chars)
@@ -119,7 +119,8 @@ def _search_members(
 
         # Primary: name
         r = _check_field(
-            m.name, query_lower,
+            m.name,
+            query_lower,
             exact_score=_SCORE_EXACT_NAME,
             prefix_score=_SCORE_PREFIX_NAME,
             contains_score=_SCORE_CONTAINS_NAME,
@@ -130,7 +131,8 @@ def _search_members(
 
         # Primary: id
         r = _check_field(
-            m.id, query_lower,
+            m.id,
+            query_lower,
             exact_score=_SCORE_EXACT_ID,
             prefix_score=_SCORE_PREFIX_NAME,
             contains_score=_SCORE_CONTAINS_NAME,
@@ -148,7 +150,8 @@ def _search_members(
             ("email", m.email or ""),
         ]:
             r = _check_field(
-                value, query_lower,
+                value,
+                query_lower,
                 exact_score=_SCORE_CONTAINS_SECONDARY + 0.05,
                 prefix_score=_SCORE_CONTAINS_SECONDARY + 0.02,
                 contains_score=_SCORE_CONTAINS_SECONDARY,
@@ -160,7 +163,8 @@ def _search_members(
         # Committees (list of committee code strings)
         for comm in m.committees:
             r = _check_field(
-                comm, query_lower,
+                comm,
+                query_lower,
                 exact_score=_SCORE_CONTAINS_DESC,
                 prefix_score=_SCORE_CONTAINS_SECONDARY + 0.05,
                 contains_score=_SCORE_CONTAINS_SECONDARY,
@@ -173,7 +177,8 @@ def _search_members(
         # Description-tier: bio_text
         if m.bio_text:
             r = _check_field(
-                m.bio_text, query_lower,
+                m.bio_text,
+                query_lower,
                 exact_score=_SCORE_CONTAINS_DESC,
                 prefix_score=_SCORE_CONTAINS_DESC,
                 contains_score=_SCORE_CONTAINS_DESC,
@@ -185,14 +190,16 @@ def _search_members(
         best = _best_hit(candidates)
         if best:
             score, field_name, snippet = best
-            hits.append(SearchHit(
-                entity_type=EntityType.MEMBER,
-                entity_id=m.id,
-                match_field=field_name,
-                match_snippet=snippet,
-                relevance_score=score,
-                member=m,
-            ))
+            hits.append(
+                SearchHit(
+                    entity_type=EntityType.MEMBER,
+                    entity_id=m.id,
+                    match_field=field_name,
+                    match_snippet=snippet,
+                    relevance_score=score,
+                    member=m,
+                )
+            )
 
     return hits
 
@@ -209,7 +216,8 @@ def _search_bills(
 
         # Primary: bill_number (exact or prefix is very high value)
         r = _check_field(
-            b.bill_number, query_lower,
+            b.bill_number,
+            query_lower,
             exact_score=_SCORE_EXACT_ID,
             prefix_score=_SCORE_PREFIX_NAME,
             contains_score=_SCORE_CONTAINS_NAME,
@@ -220,7 +228,8 @@ def _search_bills(
 
         # Description / synopsis
         r = _check_field(
-            b.description, query_lower,
+            b.description,
+            query_lower,
             exact_score=_SCORE_CONTAINS_DESC + 0.05,
             prefix_score=_SCORE_CONTAINS_DESC + 0.02,
             contains_score=_SCORE_CONTAINS_DESC,
@@ -231,7 +240,8 @@ def _search_bills(
 
         if b.synopsis:
             r = _check_field(
-                b.synopsis, query_lower,
+                b.synopsis,
+                query_lower,
                 exact_score=_SCORE_CONTAINS_DESC + 0.03,
                 prefix_score=_SCORE_CONTAINS_DESC + 0.01,
                 contains_score=_SCORE_CONTAINS_DESC,
@@ -247,7 +257,8 @@ def _search_bills(
             ("chamber", b.chamber),
         ]:
             r = _check_field(
-                value, query_lower,
+                value,
+                query_lower,
                 exact_score=_SCORE_CONTAINS_SECONDARY + 0.05,
                 prefix_score=_SCORE_CONTAINS_SECONDARY + 0.02,
                 contains_score=_SCORE_CONTAINS_SECONDARY,
@@ -259,14 +270,16 @@ def _search_bills(
         best = _best_hit(candidates)
         if best:
             score, field_name, snippet = best
-            hits.append(SearchHit(
-                entity_type=EntityType.BILL,
-                entity_id=b.bill_number,
-                match_field=field_name,
-                match_snippet=snippet,
-                relevance_score=score,
-                bill=b,
-            ))
+            hits.append(
+                SearchHit(
+                    entity_type=EntityType.BILL,
+                    entity_id=b.bill_number,
+                    match_field=field_name,
+                    match_snippet=snippet,
+                    relevance_score=score,
+                    bill=b,
+                )
+            )
 
     return hits
 
@@ -283,7 +296,8 @@ def _search_committees(
 
         # Code (exact match is very valuable)
         r = _check_field(
-            c.code, query_lower,
+            c.code,
+            query_lower,
             exact_score=_SCORE_EXACT_ID,
             prefix_score=_SCORE_PREFIX_NAME,
             contains_score=_SCORE_CONTAINS_NAME,
@@ -294,7 +308,8 @@ def _search_committees(
 
         # Name
         r = _check_field(
-            c.name, query_lower,
+            c.name,
+            query_lower,
             exact_score=_SCORE_EXACT_NAME,
             prefix_score=_SCORE_PREFIX_NAME,
             contains_score=_SCORE_CONTAINS_NAME,
@@ -306,14 +321,16 @@ def _search_committees(
         best = _best_hit(candidates)
         if best:
             score, field_name, snippet = best
-            hits.append(SearchHit(
-                entity_type=EntityType.COMMITTEE,
-                entity_id=c.code,
-                match_field=field_name,
-                match_snippet=snippet,
-                relevance_score=score,
-                committee=c,
-            ))
+            hits.append(
+                SearchHit(
+                    entity_type=EntityType.COMMITTEE,
+                    entity_id=c.code,
+                    match_field=field_name,
+                    match_snippet=snippet,
+                    relevance_score=score,
+                    committee=c,
+                )
+            )
 
     return hits
 

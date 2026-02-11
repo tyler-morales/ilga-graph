@@ -461,13 +461,11 @@ def compute_power_badges(
             )
         elif profile.institutional_weight >= 0.5:
             explanation = (
-                f"Committee leader \u2014 {role_display}. "
-                "Controls which bills get hearings."
+                f"Committee leader \u2014 {role_display}. Controls which bills get hearings."
             )
         else:
             explanation = (
-                f"Party management \u2014 {role_display}. "
-                "Coordinates caucus votes and whip counts."
+                f"Party management \u2014 {role_display}. Coordinates caucus votes and whip counts."
             )
         badges.append(
             PowerBadge(
@@ -487,9 +485,7 @@ def compute_power_badges(
 
     if chaired:
         if len(chaired) == 1:
-            explanation = (
-                f"Controls which bills get hearings in {chaired[0]}."
-            )
+            explanation = f"Controls which bills get hearings in {chaired[0]}."
         else:
             names = ", ".join(chaired)
             explanation = (
@@ -509,9 +505,7 @@ def compute_power_badges(
     if chamber_size > 0 and profile.rank_chamber > 0:
         cutoff = max(math.ceil(chamber_size * 0.05), 1)
         if profile.rank_chamber <= cutoff:
-            chamber_label = (
-                "senators" if profile.chamber == "Senate" else "representatives"
-            )
+            chamber_label = "senators" if profile.chamber == "Senate" else "representatives"
             pct = round((profile.rank_chamber / chamber_size) * 100, 1)
             explanation = (
                 f"Ranked #{profile.rank_chamber} of {chamber_size} "
@@ -674,7 +668,8 @@ def compute_moneyball(
             profile.caucus_avg_passage_rate = round(avg_rate, 4)
             if avg_rate > 0:
                 profile.passage_rate_vs_caucus = round(
-                    profile.effectiveness_rate / avg_rate, 1,
+                    profile.effectiveness_rate / avg_rate,
+                    1,
                 )
 
     # Co-sponsored bill passage rate & peer-normalised baseline
@@ -690,12 +685,14 @@ def compute_moneyball(
         if profile is None:
             continue
         cosponsor_bills = [
-            b for b in member.co_sponsor_bills
+            b
+            for b in member.co_sponsor_bills
             if is_substantive(b.bill_number) and not is_shell_bill(b)
         ]
         if cosponsor_bills:
             cosponsor_passed = sum(
-                1 for b in cosponsor_bills
+                1
+                for b in cosponsor_bills
                 if classify_bill_status(b.last_action) == BillStatus.PASSED
             )
             rate = cosponsor_passed / len(cosponsor_bills)
@@ -727,7 +724,8 @@ def compute_moneyball(
         profile.chamber_median_cosponsor_rate = round(median_rate, 4)
         if median_rate > 0:
             profile.cosponsor_passage_multiplier = round(
-                rate / median_rate, 1,
+                rate / median_rate,
+                1,
             )
 
     # ── Step 4: Compute composite scores ──

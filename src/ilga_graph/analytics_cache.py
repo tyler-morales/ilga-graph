@@ -84,14 +84,8 @@ def load_analytics_cache(
         return None
 
     try:
-        scorecards = {
-            mid: MemberScorecard(**d)
-            for mid, d in sc_raw.items()
-        }
-        profiles = {
-            mid: MoneyballProfile(**d)
-            for mid, d in mb_raw["profiles"].items()
-        }
+        scorecards = {mid: MemberScorecard(**d) for mid, d in sc_raw.items()}
+        profiles = {mid: MoneyballProfile(**d) for mid, d in mb_raw["profiles"].items()}
         weights = MoneyballWeights(**mb_raw["weights_used"])
         report = MoneyballReport(
             profiles=profiles,

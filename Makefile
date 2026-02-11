@@ -1,4 +1,4 @@
-.PHONY: install dev dev-full run scrape scrape-200 scrape-full scrape-dev scrape-incremental scrape-votes export seed test lint lint-fix clean help
+.PHONY: install dev dev-full run scrape scrape-200 scrape-full scrape-dev scrape-incremental scrape-votes export seed test lint lint-fix hooks hooks-run clean help
 .PHONY: startup-report
 
 # ── Virtual environment ─────────────────────────────────────────────────────
@@ -77,6 +77,12 @@ lint: ## Run ruff check + format check
 lint-fix: ## Auto-fix lint and format
 	$(BIN)ruff check --fix .
 	$(BIN)ruff format .
+
+hooks: ## Install git pre-commit hooks (ruff check + format on commit)
+	$(BIN)pre-commit install
+
+hooks-run: ## Run pre-commit checks on all files
+	$(BIN)pre-commit run --all-files
 
 clean: ## Remove cache/ and generated vault files
 	rm -rf cache/

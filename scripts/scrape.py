@@ -27,6 +27,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
+from ilga_graph.analytics_cache import load_analytics_cache, save_analytics_cache  # noqa: E402
 from ilga_graph.config import CACHE_DIR, MOCK_DEV_DIR  # noqa: E402
 from ilga_graph.etl import (  # noqa: E402
     compute_analytics,
@@ -34,7 +35,6 @@ from ilga_graph.etl import (  # noqa: E402
     load_from_cache,
     load_or_scrape_data,
 )
-from ilga_graph.analytics_cache import load_analytics_cache, save_analytics_cache  # noqa: E402
 from ilga_graph.scraper import save_normalized_cache  # noqa: E402
 
 
@@ -150,11 +150,10 @@ def main() -> None:
         save_normalized_cache(data.members, data.bills_lookup)
         logger.info(
             "Saved cache: %d members, %d bills.",
-            len(data.members), len(data.bills_lookup),
+            len(data.members),
+            len(data.bills_lookup),
         )
-        logger.info(
-            "Votes/slips: run 'make scrape-votes' to incrementally add vote + slip data."
-        )
+        logger.info("Votes/slips: run 'make scrape-votes' to incrementally add vote + slip data.")
 
     # ── PHASE 4: ANALYTICS + EXPORT (optional) ───────────────────────────
     if args.export or args.export_only:

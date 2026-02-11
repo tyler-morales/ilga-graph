@@ -535,16 +535,21 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     try:
         t_analytics = _time.perf_counter()
         cached = load_analytics_cache(
-            cfg.CACHE_DIR, cfg.MOCK_DEV_DIR, SEED_MODE,
+            cfg.CACHE_DIR,
+            cfg.MOCK_DEV_DIR,
+            SEED_MODE,
         )
         if cached is not None:
             state.scorecards, state.moneyball = cached
         else:
             state.scorecards, state.moneyball = compute_analytics(
-                state.members, data.committee_rosters,
+                state.members,
+                data.committee_rosters,
             )
             save_analytics_cache(
-                state.scorecards, state.moneyball, cfg.CACHE_DIR,
+                state.scorecards,
+                state.moneyball,
+                cfg.CACHE_DIR,
             )
         elapsed_analytics = _time.perf_counter() - t_analytics
     except Exception:
@@ -586,10 +591,14 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     try:
         t_committee = _time.perf_counter()
         state.committee_stats = compute_committee_stats(
-            state.committees, state.committee_bills, data.bills_lookup,
+            state.committees,
+            state.committee_bills,
+            data.bills_lookup,
         )
         state.member_committee_roles = build_member_committee_roles(
-            state.committees, state.committee_rosters, state.committee_stats,
+            state.committees,
+            state.committee_rosters,
+            state.committee_stats,
         )
         elapsed_committee = _time.perf_counter() - t_committee
         LOGGER.info(
@@ -621,10 +630,13 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         t_vr = _time.perf_counter()
         bn_lookup = _collect_unique_bills_by_number(data.bills_lookup)
         state.member_vote_records = build_member_vote_index(
-            state.vote_events, state.member_lookup, bn_lookup,
+            state.vote_events,
+            state.member_lookup,
+            bn_lookup,
         )
         state.category_bill_sets = build_all_category_bill_sets(
-            _CATEGORY_COMMITTEES, state.committee_bills,
+            _CATEGORY_COMMITTEES,
+            state.committee_bills,
         )
         elapsed_voting_records = _time.perf_counter() - t_vr
         LOGGER.info(
@@ -1166,15 +1178,17 @@ class Query:
             elif hit.committee is not None:
                 committee_type = CommitteeType.from_model(hit.committee)
 
-            items.append(SearchResultType(
-                entity_type=hit.entity_type.value,
-                match_field=hit.match_field,
-                match_snippet=hit.match_snippet,
-                relevance_score=round(hit.relevance_score, 4),
-                member=member_type,
-                bill=bill_type,
-                committee=committee_type,
-            ))
+            items.append(
+                SearchResultType(
+                    entity_type=hit.entity_type.value,
+                    match_field=hit.match_field,
+                    match_snippet=hit.match_snippet,
+                    relevance_score=round(hit.relevance_score, 4),
+                    member=member_type,
+                    bill=bill_type,
+                    committee=committee_type,
+                )
+            )
 
         return SearchConnection(items=items, page_info=page_info)
 
@@ -1413,7 +1427,8 @@ def _member_to_card(member: Member, *, why: str = "", badges: list[str] | None =
             "cosponsor_passage_rate_pct": round(mb.cosponsor_passage_rate * 100, 1),
             "cosponsor_passage_multiplier": mb.cosponsor_passage_multiplier,
             "chamber_median_cosponsor_rate_pct": round(
-                mb.chamber_median_cosponsor_rate * 100, 1,
+                mb.chamber_median_cosponsor_rate * 100,
+                1,
             ),
             "passage_rate_vs_caucus": mb.passage_rate_vs_caucus,
             "caucus_avg_passage_rate_pct": round(mb.caucus_avg_passage_rate * 100, 1),
@@ -1460,10 +1475,14 @@ def _member_to_card(member: Member, *, why: str = "", badges: list[str] | None =
     chamber_size = 0
     if mb:
         chamber_size = (
-            len(state.moneyball.rankings_house)
-            if member.chamber == "House"
-            else len(state.moneyball.rankings_senate)
-        ) if state.moneyball else 0
+            (
+                len(state.moneyball.rankings_house)
+                if member.chamber == "House"
+                else len(state.moneyball.rankings_senate)
+            )
+            if state.moneyball
+            else 0
+        )
         raw_badges = compute_power_badges(mb, committee_roles, chamber_size)
         power_badges_list = [
             {
@@ -1493,14 +1512,21 @@ def _member_to_card(member: Member, *, why: str = "", badges: list[str] | None =
 
     # ── Active bill count ──
     active_count = 0
-    for bid in (member.sponsored_bill_ids or []):
+    for bid in member.sponsored_bill_ids or []:
         b = state.bill_lookup.get(bid)
         if b and b.last_action:
             action_lower = b.last_action.lower()
-            if not any(kw in action_lower for kw in (
-                "public act", "effective date", "vetoed", "tabled",
-                "postponed indefinitely", "session sine die",
-            )):
+            if not any(
+                kw in action_lower
+                for kw in (
+                    "public act",
+                    "effective date",
+                    "vetoed",
+                    "tabled",
+                    "postponed indefinitely",
+                    "session sine die",
+                )
+            ):
                 active_count += 1
 
     return {
@@ -1553,13 +1579,14 @@ def _stats_sentence(card: dict) -> str:
             f"({card['passage_rate_pct'] or 0}% passage rate)"
         )
     if card.get("bridge_pct") is not None and card["bridge_pct"] > 0:
-        parts.append(
-            f"{card['bridge_pct']}% of their bills have cross-party co-sponsors"
-        )
+        parts.append(f"{card['bridge_pct']}% of their bills have cross-party co-sponsors")
     if parts:
-        return parts[0][0].upper() + parts[0][1:] + (
-            " and " + parts[1] if len(parts) > 1 else ""
-        ) + "."
+        return (
+            parts[0][0].upper()
+            + parts[0][1:]
+            + (" and " + parts[1] if len(parts) > 1 else "")
+            + "."
+        )
     return ""
 
 
@@ -1691,17 +1718,13 @@ def _find_power_broker(
                         cmt = state.committee_lookup.get(code)
                         if cmt:
                             committee_name = cmt.name
-                        parts = [
-                            f"Chair of the {committee_name or code} committee"
-                        ]
+                        parts = [f"Chair of the {committee_name or code} committee"]
                         if category_name:
                             parts.append(
                                 f"the institutional gatekeeper for {category_name} legislation"
                             )
                         mb = (
-                            state.moneyball.profiles.get(cmr.member_id)
-                            if state.moneyball
-                            else None
+                            state.moneyball.profiles.get(cmr.member_id) if state.moneyball else None
                         )
                         if mb:
                             parts.append(
@@ -1805,9 +1828,7 @@ def _find_ally(
                 f"bridge score of {mb.bridge_score:.0%} (cross-party co-sponsorship rate)"
             )
     if senator.seatmate_affinity > 0:
-        why_parts.append(
-            f"{senator.seatmate_affinity:.0%} bill overlap with seatmates"
-        )
+        why_parts.append(f"{senator.seatmate_affinity:.0%} bill overlap with seatmates")
     why = ". ".join(why_parts) + "."
     return best_member, why
 
@@ -1815,11 +1836,14 @@ def _find_ally(
 @app.get("/advocacy")
 async def advocacy_index(request: Request):
     """Render the advocacy search page."""
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "title": "Kei Truck Freedom",
-        "categories": CATEGORY_CHOICES,
-    })
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "title": "Kei Truck Freedom",
+            "categories": CATEGORY_CHOICES,
+        },
+    )
 
 
 @app.post("/advocacy/search")
@@ -1856,12 +1880,15 @@ async def advocacy_search(
             "Please enter a valid 5-digit Illinois ZIP code."
         )
         tpl = "_results_partial.html" if is_htmx else "index.html"
-        return templates.TemplateResponse(tpl, {
-            "request": request,
-            "title": "Kei Truck Freedom",
-            "categories": CATEGORY_CHOICES,
-            "error": error,
-        })
+        return templates.TemplateResponse(
+            tpl,
+            {
+                "request": request,
+                "title": "Kei Truck Freedom",
+                "categories": CATEGORY_CHOICES,
+                "error": error,
+            },
+        )
 
     senate_district = district_info.il_senate
     house_district = district_info.il_house
@@ -1883,7 +1910,9 @@ async def advocacy_search(
             why=f"Represents IL Senate District {senate_district}, which contains ZIP {zip_code}.",
         )
         senator_card["script_hint"] = _build_script_hint_senator(
-            senator_card, zip_code, senate_district,
+            senator_card,
+            zip_code,
+            senate_district,
         )
     elif senate_district:
         warnings.append(
@@ -1892,9 +1921,7 @@ async def advocacy_search(
         )
 
     # ── Find Your Representative ──
-    rep_member = (
-        _find_member_by_district("house", house_district) if house_district else None
-    )
+    rep_member = _find_member_by_district("house", house_district) if house_district else None
     rep_card = None
     if rep_member:
         rep_card = _member_to_card(
@@ -1902,7 +1929,9 @@ async def advocacy_search(
             why=f"Represents IL House District {house_district}, which contains ZIP {zip_code}.",
         )
         rep_card["script_hint"] = _build_script_hint_rep(
-            rep_card, zip_code, house_district,
+            rep_card,
+            zip_code,
+            house_district,
         )
     elif house_district:
         warnings.append(
@@ -1922,7 +1951,9 @@ async def advocacy_search(
     # ── Find Potential Ally ──
     ally_member, ally_why = (
         _find_ally(
-            senator_member, committee_ids=committee_ids, category_name=category_label,
+            senator_member,
+            committee_ids=committee_ids,
+            category_name=category_label,
         )
         if senator_member
         else (None, "")
@@ -1933,11 +1964,7 @@ async def advocacy_search(
     ally_card = None
     super_ally_card = None
 
-    if (
-        broker_member
-        and ally_member
-        and broker_member.id == ally_member.id
-    ):
+    if broker_member and ally_member and broker_member.id == ally_member.id:
         # Same person — merge into a Super Ally with both badges.
         merged_why = (
             f"This legislator is both the most influential senator in the chamber "
@@ -1954,7 +1981,8 @@ async def advocacy_search(
         if broker_member:
             broker_card = _member_to_card(broker_member, why=broker_why)
             broker_card["script_hint"] = _build_script_hint_broker(
-                broker_card, broker_why,
+                broker_card,
+                broker_why,
             )
         if ally_member:
             ally_card = _member_to_card(ally_member, why=ally_why)
@@ -1965,24 +1993,27 @@ async def advocacy_search(
     member_count = len(state.members)
     zip_count = len(state.zip_to_district)
     tpl = "_results_partial.html" if is_htmx else "results.html"
-    return templates.TemplateResponse(tpl, {
-        "request": request,
-        "title": "Kei Truck Freedom",
-        "categories": CATEGORY_CHOICES,
-        "seed_mode": SEED_MODE,
-        "member_count": member_count,
-        "zip_count": zip_count,
-        "zip": zip_code,
-        "category": category,
-        "senate_district": senate_district,
-        "house_district": house_district,
-        "senator": senator_card,
-        "representative": rep_card,
-        "broker": broker_card,
-        "ally": ally_card,
-        "super_ally": super_ally_card,
-        "error": error,
-    })
+    return templates.TemplateResponse(
+        tpl,
+        {
+            "request": request,
+            "title": "Kei Truck Freedom",
+            "categories": CATEGORY_CHOICES,
+            "seed_mode": SEED_MODE,
+            "member_count": member_count,
+            "zip_count": zip_count,
+            "zip": zip_code,
+            "category": category,
+            "senate_district": senate_district,
+            "house_district": house_district,
+            "senator": senator_card,
+            "representative": rep_card,
+            "broker": broker_card,
+            "ally": ally_card,
+            "super_ally": super_ally_card,
+            "error": error,
+        },
+    )
 
 
 app.include_router(graphql_app, prefix="/graphql")

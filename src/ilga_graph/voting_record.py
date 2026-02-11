@@ -112,45 +112,53 @@ def build_member_vote_index(
         bill_url = bill.status_url if bill else ""
 
         for name in event.yea_votes:
-            records_by_member[name].append(MemberVoteRecord(
-                bill_number=event.bill_number,
-                bill_description=bill_desc,
-                date=event.date,
-                vote="YES",
-                bill_status=bill_status,
-                vote_type=event.vote_type,
-                bill_status_url=bill_url,
-            ))
+            records_by_member[name].append(
+                MemberVoteRecord(
+                    bill_number=event.bill_number,
+                    bill_description=bill_desc,
+                    date=event.date,
+                    vote="YES",
+                    bill_status=bill_status,
+                    vote_type=event.vote_type,
+                    bill_status_url=bill_url,
+                )
+            )
         for name in event.nay_votes:
-            records_by_member[name].append(MemberVoteRecord(
-                bill_number=event.bill_number,
-                bill_description=bill_desc,
-                date=event.date,
-                vote="NO",
-                bill_status=bill_status,
-                vote_type=event.vote_type,
-                bill_status_url=bill_url,
-            ))
+            records_by_member[name].append(
+                MemberVoteRecord(
+                    bill_number=event.bill_number,
+                    bill_description=bill_desc,
+                    date=event.date,
+                    vote="NO",
+                    bill_status=bill_status,
+                    vote_type=event.vote_type,
+                    bill_status_url=bill_url,
+                )
+            )
         for name in event.present_votes:
-            records_by_member[name].append(MemberVoteRecord(
-                bill_number=event.bill_number,
-                bill_description=bill_desc,
-                date=event.date,
-                vote="PRESENT",
-                bill_status=bill_status,
-                vote_type=event.vote_type,
-                bill_status_url=bill_url,
-            ))
+            records_by_member[name].append(
+                MemberVoteRecord(
+                    bill_number=event.bill_number,
+                    bill_description=bill_desc,
+                    date=event.date,
+                    vote="PRESENT",
+                    bill_status=bill_status,
+                    vote_type=event.vote_type,
+                    bill_status_url=bill_url,
+                )
+            )
         for name in event.nv_votes:
-            records_by_member[name].append(MemberVoteRecord(
-                bill_number=event.bill_number,
-                bill_description=bill_desc,
-                date=event.date,
-                vote="NV",
-                bill_status=bill_status,
-                vote_type=event.vote_type,
-                bill_status_url=bill_url,
-            ))
+            records_by_member[name].append(
+                MemberVoteRecord(
+                    bill_number=event.bill_number,
+                    bill_description=bill_desc,
+                    date=event.date,
+                    vote="NV",
+                    bill_status=bill_status,
+                    vote_type=event.vote_type,
+                    bill_status_url=bill_url,
+                )
+            )
 
     # Step 2: compute party alignment per member
     party_stats = _compute_all_party_alignment(vote_events, member_lookup)
@@ -311,7 +319,9 @@ def build_all_category_bill_sets(
     for category in category_committees:
         if category:  # skip the empty "" (All) category
             result[category] = build_category_bill_set(
-                category, category_committees, committee_bills,
+                category,
+                category_committees,
+                committee_bills,
             )
     return result
 
@@ -324,9 +334,7 @@ def filter_summary_by_category(
 
     Recalculates all counts and rates from the filtered record set.
     """
-    filtered_records = [
-        r for r in summary.records if r.bill_number in category_bill_numbers
-    ]
+    filtered_records = [r for r in summary.records if r.bill_number in category_bill_numbers]
 
     if not filtered_records:
         return VotingSummary(records=[])

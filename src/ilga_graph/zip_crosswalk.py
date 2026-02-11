@@ -27,8 +27,7 @@ IL_STATEFP = "17"  # Illinois FIPS code
 
 # Official Census 2020 relationship files (pipe-delimited, first row is header).
 URL_CD_ZCTA = (
-    "https://www2.census.gov/geo/docs/maps-data/data/rel2020/"
-    "cd-sld/tab20_cd11920_zcta520_natl.txt"
+    "https://www2.census.gov/geo/docs/maps-data/data/rel2020/cd-sld/tab20_cd11920_zcta520_natl.txt"
 )
 URL_SLDL_ZCTA = (
     "https://www2.census.gov/geo/docs/maps-data/data/rel2020/"
@@ -184,16 +183,25 @@ def build_zip_to_district() -> dict[str, ZipDistrictInfo]:
     depending on connection speed (files are ~10-30 MB each).
     """
     cd_map = _build_dominant_map_by_zcta(
-        URL_CD_ZCTA, IL_STATEFP,
-        "GEOID_CD119_20", "GEOID_ZCTA5_20", "AREALAND_PART",
+        URL_CD_ZCTA,
+        IL_STATEFP,
+        "GEOID_CD119_20",
+        "GEOID_ZCTA5_20",
+        "AREALAND_PART",
     )
     sldl_map = _build_dominant_map_by_zcta(
-        URL_SLDL_ZCTA, IL_STATEFP,
-        "GEOID_SLDL2022_20", "GEOID_ZCTA5_20", "AREALAND_PART",
+        URL_SLDL_ZCTA,
+        IL_STATEFP,
+        "GEOID_SLDL2022_20",
+        "GEOID_ZCTA5_20",
+        "AREALAND_PART",
     )
     sldu_map = _build_dominant_map_by_zcta(
-        URL_SLDU_ZCTA, IL_STATEFP,
-        "GEOID_SLDU2022_20", "GEOID_ZCTA5_20", "AREALAND_PART",
+        URL_SLDU_ZCTA,
+        IL_STATEFP,
+        "GEOID_SLDU2022_20",
+        "GEOID_ZCTA5_20",
+        "AREALAND_PART",
     )
 
     # Union of all ZCTAs seen for Illinois.
@@ -235,10 +243,7 @@ def _load_cache(cache_dir: Path) -> dict[str, ZipDistrictInfo] | None:
     try:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
-        result = {
-            zcta: ZipDistrictInfo(**info)
-            for zcta, info in data.items()
-        }
+        result = {zcta: ZipDistrictInfo(**info) for zcta, info in data.items()}
         LOGGER.info("Loaded ZIP crosswalk from cache: %d entries.", len(result))
         return result
     except Exception:
@@ -299,6 +304,7 @@ def load_zip_crosswalk(
         _save_cache(crosswalk, cache_dir)
         return crosswalk
     except Exception:
-        LOGGER.error("Failed to build ZIP crosswalk from Census; falling back to seed data.",
-                     exc_info=True)
+        LOGGER.error(
+            "Failed to build ZIP crosswalk from Census; falling back to seed data.", exc_info=True
+        )
         return dict(_SEED_CROSSWALK)

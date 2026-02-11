@@ -73,6 +73,16 @@
 
 ## Done (this session)
 
+- **Lint hardening + cleanup (Ruff E501/W293):**
+  - Wrapped long metric/help strings and cleaned blank-line whitespace in:
+    `scripts/scrape_votes.py`, `src/ilga_graph/metrics_definitions.py`,
+    `src/ilga_graph/schema.py`, `src/ilga_graph/scraper.py`,
+    `tests/conftest.py`, and `tests/test_scrape_votes_sample.py`.
+  - Added commit-time lint guard: new `.pre-commit-config.yaml` with Ruff check
+    (`--fix`) and Ruff format hooks.
+  - Added `pre-commit` to dev dependencies and Make targets:
+    `make hooks` (install hooks) and `make hooks-run` (run on all files).
+
 - **Incremental votes/slips scraper (`make scrape-votes`):**
   - Created `scripts/scrape_votes.py` -- standalone incremental scraper for roll-call votes and witness slips. Derives bill list from `cache/bills.json` (all bills with `status_url`), not from hardcoded URLs. Progress tracked in `cache/votes_slips_progress.json` so each run picks up where the last left off.
   - **Resumable:** Progress saved after each bill completes (atomic writes). Ctrl+C at any time -- completed bills are already persisted. Run again to continue from next unscraped bill.

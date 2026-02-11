@@ -12,7 +12,9 @@ def sample_bill() -> Bill:
     return Bill(
         bill_number="SB1527",
         leg_id="160173",
-        description="Amends the Illinois Power Agency Act to repeal the nuclear moratorium provision",
+        description=(
+            "Amends the Illinois Power Agency Act to repeal the nuclear moratorium provision"
+        ),
         chamber="S",
         last_action="Rule 3-9(a) / Re-referred to Assignments",
         last_action_date="6/2/2025",
@@ -39,7 +41,10 @@ def sample_bill_passed() -> Bill:
     return Bill(
         bill_number="HB0100",
         leg_id="200001",
-        description="Amends the Environmental Protection Act to establish clean energy standards for utilities",
+        description=(
+            "Amends the Environmental Protection Act to establish "
+            "clean energy standards for utilities"
+        ),
         chamber="H",
         last_action="Public Act 104-0001",
         last_action_date="7/1/2025",
@@ -53,7 +58,10 @@ def sample_bill_sb_passed() -> Bill:
     return Bill(
         bill_number="SB0200",
         leg_id="200002",
-        description="Amends the School Code to reform teacher certification and training requirements statewide",
+        description=(
+            "Amends the School Code to reform teacher certification "
+            "and training requirements statewide"
+        ),
         chamber="S",
         last_action="Signed by Governor",
         last_action_date="8/15/2025",
@@ -67,7 +75,10 @@ def sample_bill_stuck() -> Bill:
     return Bill(
         bill_number="HB0300",
         leg_id="200003",
-        description="Amends the Illinois Income Tax Act to restructure individual and corporate tax brackets",
+        description=(
+            "Amends the Illinois Income Tax Act to restructure "
+            "individual and corporate tax brackets"
+        ),
         chamber="H",
         last_action="Referred to Assignments",
         last_action_date="3/1/2025",
@@ -270,7 +281,10 @@ def cosponsor_republican() -> Member:
     hb100 = Bill(
         bill_number="HB0100",
         leg_id="200001",
-        description="Amends the Environmental Protection Act to establish clean energy standards for utilities",
+        description=(
+            "Amends the Environmental Protection Act to establish "
+            "clean energy standards for utilities"
+        ),
         chamber="H",
         last_action="Public Act 104-0001",
         last_action_date="7/1/2025",
@@ -297,7 +311,10 @@ def cosponsor_democrat() -> Member:
     hb100 = Bill(
         bill_number="HB0100",
         leg_id="200001",
-        description="Amends the Environmental Protection Act to establish clean energy standards for utilities",
+        description=(
+            "Amends the Environmental Protection Act to establish "
+            "clean energy standards for utilities"
+        ),
         chamber="H",
         last_action="Public Act 104-0001",
         last_action_date="7/1/2025",
@@ -306,7 +323,10 @@ def cosponsor_democrat() -> Member:
     sb200 = Bill(
         bill_number="SB0200",
         leg_id="200002",
-        description="Amends the School Code to reform teacher certification and training requirements statewide",
+        description=(
+            "Amends the School Code to reform teacher certification "
+            "and training requirements statewide"
+        ),
         chamber="S",
         last_action="Signed by Governor",
         last_action_date="8/15/2025",
