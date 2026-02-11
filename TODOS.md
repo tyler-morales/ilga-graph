@@ -82,6 +82,12 @@
     (`--fix`) and Ruff format hooks.
   - Added `pre-commit` to dev dependencies and Make targets:
     `make hooks` (install hooks) and `make hooks-run` (run on all files).
+  - Fixed exporter regression in `exporter.py`: `_render_member()` now falls back
+    to member-attached bills (`sponsored_bills` / `co_sponsor_bills`) when no
+    global `bills_lookup` is passed, restoring `[[SBxxxx]]` / `[[HBxxxx]]` links
+    in direct rendering tests.
+  - Strengthened commit gate: `.pre-commit-config.yaml` now runs full
+    `make test` in addition to Ruff, blocking commits on failing tests.
 
 - **Incremental votes/slips scraper (`make scrape-votes`):**
   - Created `scripts/scrape_votes.py` -- standalone incremental scraper for roll-call votes and witness slips. Derives bill list from `cache/bills.json` (all bills with `status_url`), not from hardcoded URLs. Progress tracked in `cache/votes_slips_progress.json` so each run picks up where the last left off.

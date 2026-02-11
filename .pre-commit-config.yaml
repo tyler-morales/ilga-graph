@@ -5,3 +5,10 @@ repos:
       - id: ruff-check
         args: [--fix]
       - id: ruff-format
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest (full suite)
+        entry: make test
+        language: system
+        pass_filenames: false

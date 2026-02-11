@@ -222,6 +222,13 @@ class ObsidianExporter:
             scorecard = compute_scorecard(member)
         if bills_lookup is None:
             bills_lookup = {}
+
+        # Fallback for direct calls (e.g., unit tests) where a global bill lookup
+        # is not provided: derive leg_id -> Bill from member-attached bill objects.
+        if not bills_lookup:
+            for bill in [*member.sponsored_bills, *member.co_sponsor_bills]:
+                if bill.leg_id:
+                    bills_lookup[bill.leg_id] = bill
         tags = self._build_tags(member)
         career_start_year = ""
         if member.career_ranges:
