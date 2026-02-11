@@ -35,6 +35,7 @@ from ilga_graph.etl import (  # noqa: E402
     load_or_scrape_data,
 )
 from ilga_graph.analytics_cache import load_analytics_cache, save_analytics_cache  # noqa: E402
+from ilga_graph.scraper import save_normalized_cache  # noqa: E402
 from ilga_graph.scrapers.votes import scrape_specific_bills  # noqa: E402
 from ilga_graph.scrapers.witness_slips import scrape_all_witness_slips  # noqa: E402
 
@@ -114,12 +115,16 @@ def main() -> None:
         args.fast,
         args.incremental,
     )
+
     if args.export_only:
         data = load_from_cache(seed_fallback=seed_mode)
         if data is None:
             logger.error("No cache found. Run without --export-only to scrape first.")
             sys.exit(1)
     else:
+        # ══════════════════════════════════════════════════════════════════
+        # PHASE 1: EXTRACT — scrape all raw data (no intermediate saves)
+        # ══════════════════════════════════════════════════════════════════
         data = load_or_scrape_data(
             limit=args.limit,
             dev_mode=args.fast,
@@ -127,16 +132,16 @@ def main() -> None:
             incremental=args.incremental,
             sb_limit=args.sb_limit,
             hb_limit=args.hb_limit,
+            save_cache=False,  # defer save until all data is assembled
         )
-    logger.info(
-        "Loaded %d members, %d committees, %d bills.",
-        len(data.members),
-        len(data.committees),
-        len(data.bills_lookup),
-    )
+        logger.info(
+            "Extracted %d members, %d committees, %d bills.",
+            len(data.members),
+            len(data.committees),
+            len(data.bills_lookup),
+        )
 
-    # ── Scrape votes + witness slips for the configured bill URLs ──
-    if not args.export_only:
+        # Extract votes + witness slips
         bill_urls = get_bill_status_urls()
         delay = 0.25 if args.fast else 0.5
         logger.info("Scraping votes + witness slips for %d bill(s)...", len(bill_urls))
@@ -157,6 +162,49 @@ def main() -> None:
         )
         logger.info("Scraped %d witness slips.", len(witness_slips))
 
+        # ══════════════════════════════════════════════════════════════════
+        # PHASE 2: TRANSFORM — merge, link, enrich
+        # ══════════════════════════════════════════════════════════════════
+
+        # Merge vote events and witness slips into per-bill fields
+        bill_by_number = {b.bill_number: b for b in data.bills_lookup.values()}
+
+        # Clear existing per-bill lists first (to avoid duplicates on re-run)
+        for bill in data.bills_lookup.values():
+            bill.vote_events = []
+            bill.witness_slips = []
+
+        merged_votes = 0
+        for ve in vote_events:
+            bill = bill_by_number.get(ve.bill_number)
+            if bill:
+                bill.vote_events.append(ve)
+                merged_votes += 1
+
+        merged_slips = 0
+        for ws in witness_slips:
+            bill = bill_by_number.get(ws.bill_number)
+            if bill:
+                bill.witness_slips.append(ws)
+                merged_slips += 1
+
+        logger.info(
+            "Merged %d vote events and %d witness slips into bills.",
+            merged_votes, merged_slips,
+        )
+
+        # ══════════════════════════════════════════════════════════════════
+        # PHASE 3: PERSIST — save complete, fully-assembled cache ONCE
+        # ══════════════════════════════════════════════════════════════════
+        # save_normalized_cache writes both members.json and bills.json
+        # (bills now include inline vote_events + witness_slips)
+        save_normalized_cache(data.members, data.bills_lookup)
+        logger.info(
+            "Saved cache: %d members, %d bills (with inline votes/slips).",
+            len(data.members), len(data.bills_lookup),
+        )
+
+    # ── PHASE 4: ANALYTICS + EXPORT (optional) ───────────────────────────
     if args.export or args.export_only:
         logger.info("Computing analytics...")
         cached = load_analytics_cache(CACHE_DIR, MOCK_DEV_DIR, seed_mode)

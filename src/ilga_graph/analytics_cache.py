@@ -14,19 +14,31 @@ LOGGER = logging.getLogger(__name__)
 _SCORECARDS_FILE = "scorecards.json"
 _MONEYBALL_FILE = "moneyball.json"
 _MEMBERS_FILE = "members.json"
+_BILLS_FILE = "bills.json"
 
 
-def _member_cache_mtime(cache_dir: Path, mock_dir: Path, seed_mode: bool) -> float:
-    """Return mtime of the member data file used as source of truth for staleness.
+def _source_data_mtime(cache_dir: Path, mock_dir: Path, seed_mode: bool) -> float:
+    """Return the latest mtime of source data files (members + bills).
 
-    When seed_mode, use mock_dir/members.json; else cache_dir/members.json.
-    Returns 0.0 if the file does not exist.
+    Analytics depend on BOTH members.json and bills.json.  If either is
+    updated (e.g. a full bill scrape), the analytics cache should be
+    recomputed.  Returns the *maximum* mtime of the two, or 0.0 if
+    neither file exists.
     """
-    path = (mock_dir / _MEMBERS_FILE) if seed_mode else (cache_dir / _MEMBERS_FILE)
-    try:
-        return path.stat().st_mtime
-    except OSError:
-        return 0.0
+    data_dir = mock_dir if seed_mode else cache_dir
+    mtimes: list[float] = []
+    for fname in (_MEMBERS_FILE, _BILLS_FILE):
+        try:
+            mtimes.append((data_dir / fname).stat().st_mtime)
+        except OSError:
+            pass
+    # Also check bills in cache_dir when seed_mode (members from mock, bills from cache)
+    if seed_mode:
+        try:
+            mtimes.append((cache_dir / _BILLS_FILE).stat().st_mtime)
+        except OSError:
+            pass
+    return max(mtimes) if mtimes else 0.0
 
 
 def _scorecards_path(cache_dir: Path) -> Path:
@@ -48,7 +60,7 @@ def load_analytics_cache(
     moneyball.json exist and are newer than the member data file. Returns
     None if any file is missing or stale.
     """
-    source_mtime = _member_cache_mtime(cache_dir, mock_dir, seed_mode)
+    source_mtime = _source_data_mtime(cache_dir, mock_dir, seed_mode)
     if source_mtime <= 0:
         return None
 

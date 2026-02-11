@@ -210,7 +210,7 @@ def _committee_member_role_from_dict(d: dict) -> CommitteeMemberRole:
 
 
 def _bill_from_dict(b: dict) -> Bill:
-    from .models import ActionEntry
+    from .models import ActionEntry, VoteEvent, WitnessSlip
 
     action_history = []
     for a in b.get("action_history", []):
@@ -218,6 +218,41 @@ def _bill_from_dict(b: dict) -> Bill:
             action_history.append(
                 ActionEntry(date=a["date"], chamber=a["chamber"], action=a["action"])
             )
+
+    vote_events = []
+    for v in b.get("vote_events", []):
+        if isinstance(v, dict):
+            vote_events.append(
+                VoteEvent(
+                    bill_number=v.get("bill_number", ""),
+                    date=v.get("date", ""),
+                    description=v.get("description", ""),
+                    chamber=v.get("chamber", ""),
+                    yea_votes=v.get("yea_votes", []),
+                    nay_votes=v.get("nay_votes", []),
+                    present_votes=v.get("present_votes", []),
+                    nv_votes=v.get("nv_votes", []),
+                    pdf_url=v.get("pdf_url", ""),
+                    vote_type=v.get("vote_type", "floor"),
+                )
+            )
+
+    witness_slips = []
+    for ws in b.get("witness_slips", []):
+        if isinstance(ws, dict):
+            witness_slips.append(
+                WitnessSlip(
+                    name=ws.get("name", ""),
+                    organization=ws.get("organization", ""),
+                    representing=ws.get("representing", ""),
+                    position=ws.get("position", ""),
+                    hearing_committee=ws.get("hearing_committee", ""),
+                    hearing_date=ws.get("hearing_date", ""),
+                    testimony_type=ws.get("testimony_type", "Record of Appearance Only"),
+                    bill_number=ws.get("bill_number", ""),
+                )
+            )
+
     return Bill(
         bill_number=b["bill_number"],
         leg_id=b["leg_id"],
@@ -231,6 +266,8 @@ def _bill_from_dict(b: dict) -> Bill:
         sponsor_ids=b.get("sponsor_ids", []),
         house_sponsor_ids=b.get("house_sponsor_ids", []),
         action_history=action_history,
+        vote_events=vote_events,
+        witness_slips=witness_slips,
     )
 
 
@@ -264,18 +301,24 @@ def save_normalized_cache(
     members: list[Member],
     bills: dict[str, Bill],
 ) -> None:
-    """Save members and bills in normalized format (no embedded bill objects)."""
+    """Save members and bills in normalized format (atomic writes)."""
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Members
     members_data = [_member_metadata_dict(m) for m in members]
     path_m = CACHE_DIR / "members.json"
-    with open(path_m, "w", encoding="utf-8") as f:
+    tmp_m = path_m.with_suffix(".json.tmp")
+    with open(tmp_m, "w", encoding="utf-8") as f:
         json.dump(members_data, f, indent=2, ensure_ascii=False)
+    tmp_m.replace(path_m)
 
+    # Bills
     bills_data = {lid: asdict(b) for lid, b in bills.items()}
     path_b = CACHE_DIR / "bills.json"
-    with open(path_b, "w", encoding="utf-8") as f:
+    tmp_b = path_b.with_suffix(".json.tmp")
+    with open(tmp_b, "w", encoding="utf-8") as f:
         json.dump(bills_data, f, indent=2, ensure_ascii=False)
+    tmp_b.replace(path_b)
 
     LOGGER.info(
         "Saved normalized cache: %d members (%s), %d bills (%s)",
@@ -585,32 +628,29 @@ class ILGAScraper:
     ]:
         """Fetch committees, rosters, and bills for both chambers.
 
-        Uses three separate cache files:
-
-        - ``committees.json`` -- list of Committee objects
-        - ``committee_rosters.json`` -- ``{code: [roles]}``
-        - ``committee_bills.json`` -- ``{code: [bill_numbers]}``
+        Uses a single ``committees.json`` where each committee entry includes
+        its ``roster`` and ``bill_numbers`` inline.
         """
-        # ── Try loading committees list from cache/seed ──
+        # ── Try loading from unified committees.json cache/seed ──
         _warn_stale_cache("committees.json")
         committees_raw = load_cache("committees.json", seed_fallback=self.seed_fallback)
 
         if committees_raw is not None:
-            committees = [_committee_from_dict(d) for d in committees_raw]
-
-            # Rosters and bills are optional -- return empty dicts if missing
-            rosters_raw = load_dict_cache(
-                "committee_rosters.json", seed_fallback=self.seed_fallback
-            )
+            committees: list[Committee] = []
             rosters: dict[str, list[CommitteeMemberRole]] = {}
-            if rosters_raw is not None:
-                rosters = {
-                    code: [_committee_member_role_from_dict(r) for r in roles]
-                    for code, roles in rosters_raw.items()
-                }
+            bills: dict[str, list[str]] = {}
 
-            bills_raw = load_dict_cache("committee_bills.json", seed_fallback=self.seed_fallback)
-            bills: dict[str, list[str]] = bills_raw if bills_raw is not None else {}
+            for d in committees_raw:
+                committees.append(_committee_from_dict(d))
+                code = d["code"]
+                # Parse inline roster if present
+                roster_raw = d.get("roster", [])
+                if roster_raw:
+                    rosters[code] = [_committee_member_role_from_dict(r) for r in roster_raw]
+                # Parse inline bill_numbers if present
+                bill_nums = d.get("bill_numbers", [])
+                if bill_nums:
+                    bills[code] = bill_nums
 
             LOGGER.info(
                 "\u2705 Loaded %d committees from cache (rosters: %s, bills: %s).",
@@ -629,26 +669,31 @@ class ILGAScraper:
         rosters = self.fetch_committee_rosters(committees)
         bills = self.fetch_committee_bills(committees)
 
-        self._save_split_committee_cache(committees, rosters, bills)
+        self._save_unified_committee_cache(committees, rosters, bills)
         LOGGER.info("\u2705 Scraped and cached %d committees.", len(committees))
         return committees, rosters, bills
 
-    def _save_split_committee_cache(
+    def _save_unified_committee_cache(
         self,
         committees: list[Committee],
         rosters: dict[str, list[CommitteeMemberRole]],
         bills: dict[str, list[str]],
     ) -> None:
-        """Save committees, rosters, and bills as separate cache files."""
-        save_cache(
-            "committees.json",
-            [asdict(c) for c in committees],
-        )
-        save_dict_cache(
-            "committee_rosters.json",
-            {code: [asdict(r) for r in role_list] for code, role_list in rosters.items()},
-        )
-        save_dict_cache("committee_bills.json", bills)
+        """Save all committee data into a single committees.json (atomic write)."""
+        data = []
+        for c in committees:
+            entry = asdict(c)
+            entry["roster"] = [asdict(r) for r in rosters.get(c.code, [])]
+            entry["bill_numbers"] = bills.get(c.code, [])
+            data.append(entry)
+
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        path = CACHE_DIR / "committees.json"
+        tmp_path = path.with_suffix(".json.tmp")
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        tmp_path.replace(path)
+        LOGGER.info("Saved %d committees to %s", len(data), path)
 
     def fetch_committees_index(self, chamber: str = "Senate") -> list[Committee]:
         cache_filename = f"{chamber.lower()}_committees.json"
@@ -698,29 +743,9 @@ class ILGAScraper:
     def fetch_committee_rosters(
         self, committees: Iterable[Committee]
     ) -> dict[str, list[CommitteeMemberRole]]:
-        cache_filename = "committee_rosters.json"
-        cached = load_dict_cache(cache_filename, seed_fallback=self.seed_fallback)
-        if cached is not None:
-            rosters: dict[str, list[CommitteeMemberRole]] = {}
-            for code, roles in cached.items():
-                rosters[code] = [
-                    CommitteeMemberRole(
-                        member_id=r["member_id"],
-                        member_name=r["member_name"],
-                        member_url=r["member_url"],
-                        role=r["role"],
-                    )
-                    for r in roles
-                ]
-            LOGGER.info(
-                "Loaded %d committee rosters from cache (%s).",
-                len(rosters),
-                cache_filename,
-            )
-            return rosters
-
+        """Scrape rosters for all committees (no separate cache — stored in unified committees.json)."""
         items = [(c.code, c.members_list_url) for c in committees if c.members_list_url]
-        rosters = {}
+        rosters: dict[str, list[CommitteeMemberRole]] = {}
         with ThreadPoolExecutor(max_workers=self.max_workers) as pool:
             future_to_code = {
                 pool.submit(self._scrape_committee_roster, url): code for code, url in items
@@ -733,40 +758,15 @@ class ILGAScraper:
                         rosters[code] = roster
                 except Exception:
                     LOGGER.exception("Unexpected error scraping roster for %s", code)
-        save_dict_cache(
-            cache_filename,
-            {
-                code: [
-                    {
-                        "member_id": r.member_id,
-                        "member_name": r.member_name,
-                        "member_url": r.member_url,
-                        "role": r.role,
-                    }
-                    for r in roles
-                ]
-                for code, roles in rosters.items()
-            },
-        )
         return rosters
 
     def fetch_committee_bills(self, committees: Iterable[Committee]) -> dict[str, list[str]]:
-        """Scrape the bills page for each committee.
+        """Scrape the bills page for each committee (no separate cache — stored in unified committees.json).
 
         Derives the bills URL from each committee's members_list_url by
         replacing '/MembersList/' (or '/Members/') with '/Bills/'.
         Returns a dict mapping committee code -> list of bill number strings.
         """
-        cache_filename = "committee_bills.json"
-        cached = load_dict_cache(cache_filename, seed_fallback=self.seed_fallback)
-        if cached is not None:
-            LOGGER.info(
-                "Loaded %d committee bill lists from cache (%s).",
-                len(cached),
-                cache_filename,
-            )
-            return cached
-
         items: list[tuple[str, str]] = []
         for c in committees:
             if not c.members_list_url:
@@ -801,7 +801,6 @@ class ILGAScraper:
                         "Unexpected error scraping bills for committee %s",
                         code,
                     )
-        save_dict_cache(cache_filename, result)
         return result
 
     # ── detail scraping ──────────────────────────────────────────────────

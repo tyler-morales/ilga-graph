@@ -163,8 +163,18 @@ def load_or_scrape_data(
     incremental: bool = False,
     sb_limit: int = 100,
     hb_limit: int = 100,
+    save_cache: bool = True,
 ) -> ScrapedData:
-    """Load data from cache/seed or scrape from ilga.gov."""
+    """Load data from cache/seed or scrape from ilga.gov.
+
+    Parameters
+    ----------
+    save_cache:
+        If True (default), saves normalized cache (members.json, bills.json)
+        at the end.  Set to False when the caller will do additional
+        transformations (e.g. merging vote events / witness slips) before
+        saving — avoids writing an incomplete intermediate cache.
+    """
     request_delay = 0.25 if dev_mode else 0.5
 
     scraper = ILGAScraper(
@@ -172,8 +182,10 @@ def load_or_scrape_data(
         seed_fallback=seed_mode,
     )
 
+    # ── EXTRACT: committees ──────────────────────────────────────────────
     committees, committee_rosters, committee_bills = scraper.fetch_all_committees()
 
+    # ── EXTRACT: members ─────────────────────────────────────────────────
     senate_members = scraper.fetch_members("Senate", limit=limit)
     house_members = scraper.fetch_members("House", limit=limit)
     members = senate_members + house_members
@@ -185,6 +197,7 @@ def load_or_scrape_data(
         if test_member is not None:
             members.append(test_member)
 
+    # ── EXTRACT: bills ───────────────────────────────────────────────────
     if incremental:
         LOGGER.info("Incremental bill scrape (SB limit=%d, HB limit=%d)...", sb_limit, hb_limit)
         bills_lookup = incremental_bill_scrape(
@@ -211,6 +224,7 @@ def load_or_scrape_data(
         else:
             LOGGER.info("Loaded %d bills from cache.", len(bills_lookup))
 
+    # ── TRANSFORM: link members ↔ bills ──────────────────────────────────
     _link_members_to_bills(members, bills_lookup)
     LOGGER.info(
         "Linked %d members to %d bills via sponsor IDs.",
@@ -218,7 +232,9 @@ def load_or_scrape_data(
         len(bills_lookup),
     )
 
-    save_normalized_cache(members, bills_lookup)
+    # ── PERSIST (optional) ───────────────────────────────────────────────
+    if save_cache:
+        save_normalized_cache(members, bills_lookup)
 
     return ScrapedData(
         members=members,

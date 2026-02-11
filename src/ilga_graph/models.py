@@ -40,6 +40,9 @@ class Bill:
     sponsor_ids: list[str] = field(default_factory=list)  # member IDs of all sponsors
     house_sponsor_ids: list[str] = field(default_factory=list)  # house sponsors
     action_history: list[ActionEntry] = field(default_factory=list)
+    # Per-bill vote events and witness slips (populated during scrape or cache load)
+    vote_events: list[VoteEvent] = field(default_factory=list)
+    witness_slips: list[WitnessSlip] = field(default_factory=list)
 
 
 @dataclass

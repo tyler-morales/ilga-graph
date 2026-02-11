@@ -11,6 +11,7 @@ from .analytics import (
     controversial_score,
     lobbyist_alignment,
 )
+from .models import ActionEntry as ActionEntryModel
 from .models import Bill as BillModel
 from .models import CareerRange as CareerRangeModel
 from .models import Committee as CommitteeModel
@@ -84,6 +85,19 @@ class PageInfo:
 
 
 @strawberry.type
+class ActionEntryType:
+    """One action in a bill's legislative history."""
+
+    date: str
+    chamber: str
+    action: str
+
+    @classmethod
+    def from_model(cls, a: ActionEntryModel) -> ActionEntryType:
+        return cls(date=a.date, chamber=a.chamber, action=a.action)
+
+
+@strawberry.type
 class BillType:
     bill_number: str
     leg_id: str
@@ -96,6 +110,7 @@ class BillType:
     status_url: str = ""
     sponsor_ids: list[str] = strawberry.field(default_factory=list)
     house_sponsor_ids: list[str] = strawberry.field(default_factory=list)
+    action_history: list[ActionEntryType] = strawberry.field(default_factory=list)
 
     @classmethod
     def from_model(cls, b: BillModel) -> BillType:
@@ -111,6 +126,7 @@ class BillType:
             status_url=b.status_url,
             sponsor_ids=b.sponsor_ids,
             house_sponsor_ids=b.house_sponsor_ids,
+            action_history=[ActionEntryType.from_model(a) for a in b.action_history],
         )
 
 
@@ -403,11 +419,13 @@ class MemberType:
     career_timeline_text: str = ""
     career_ranges: list[CareerRangeType] = strawberry.field(default_factory=list)
     committees: list[str] = strawberry.field(default_factory=list)
-    associated_members: str | None = None
+    associated_senator: str | None = None  # For Representatives: their Senator
+    associated_representatives: str | None = None  # For Senators: their Representatives
     email: str | None = None
     offices: list[OfficeType] = strawberry.field(default_factory=list)
-    sponsored_bills: list[BillType] = strawberry.field(default_factory=list)
-    co_sponsor_bills: list[BillType] = strawberry.field(default_factory=list)
+    # References only — no embedded bill objects (separation of concerns)
+    sponsored_bill_ids: list[str] = strawberry.field(default_factory=list)
+    co_sponsor_bill_ids: list[str] = strawberry.field(default_factory=list)
     scorecard: ScorecardType | None = None
     moneyball: MoneyballProfileType | None = None
     # ── Seating chart (Whisper Network) ──
@@ -424,6 +442,12 @@ class MemberType:
         moneyball_profile: MoneyballProfileModel | None = None,
     ) -> MemberType:
         sc = scorecard if scorecard is not None else compute_scorecard(m)
+
+        # Determine chamber-specific associated member fields
+        is_senate = m.chamber.lower() == "senate"
+        associated_senator = m.associated_members if not is_senate else None
+        associated_representatives = m.associated_members if is_senate else None
+
         return cls(
             id=m.id,
             name=m.name,
@@ -436,11 +460,12 @@ class MemberType:
             career_timeline_text=m.career_timeline_text,
             career_ranges=[CareerRangeType.from_model(cr) for cr in m.career_ranges],
             committees=list(m.committees),
-            associated_members=m.associated_members,
+            associated_senator=associated_senator,
+            associated_representatives=associated_representatives,
             email=m.email,
             offices=[OfficeType.from_model(o) for o in m.offices],
-            sponsored_bills=[BillType.from_model(b) for b in m.sponsored_bills],
-            co_sponsor_bills=[BillType.from_model(b) for b in m.co_sponsor_bills],
+            sponsored_bill_ids=list(m.sponsored_bill_ids),
+            co_sponsor_bill_ids=list(m.co_sponsor_bill_ids),
             scorecard=ScorecardType.from_model(sc),
             moneyball=(
                 MoneyballProfileType.from_model(moneyball_profile)

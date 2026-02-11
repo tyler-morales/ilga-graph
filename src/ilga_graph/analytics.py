@@ -175,15 +175,23 @@ def is_shell_bill(bill: Bill) -> bool:
     pass on their own merits.  They should be excluded from the effectiveness
     denominator so they don't penalise leadership who file them.
 
-    A bill is considered a shell bill when:
-    - Its description contains "Technical" or "Shell" (case-insensitive), **or**
-    - Its description is trivially short (< 50 characters).
+    Detection uses keyword matching on the abbreviated ILGA description:
+
+    - Description contains "Technical" or "Shell" (case-insensitive), **or**
+    - Description ends with "-TECH" (ILGA abbreviation for technical bills,
+      e.g. "LOCAL GOVERNMENT-TECH", "TRANSPORTATION-TECH").
+
+    Note: The ``bill.description`` field from ILGA index pages is always
+    short (≤30 chars).  We do NOT use a length threshold — that would
+    incorrectly mark every bill as a shell.
     """
     desc = (bill.description or "").strip()
-    desc_lower = desc.lower()
-    if "technical" in desc_lower or "shell" in desc_lower:
+    desc_upper = desc.upper()
+    if "TECHNICAL" in desc_upper or "SHELL" in desc_upper:
         return True
-    return len(desc) < 50
+    if desc_upper.endswith("-TECH"):
+        return True
+    return False
 
 
 # ── Co-sponsor map ───────────────────────────────────────────────────────────

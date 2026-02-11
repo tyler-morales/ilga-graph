@@ -26,6 +26,7 @@ from .analytics import (
 from .analytics_cache import load_analytics_cache, save_analytics_cache
 from .etl import (
     ScrapedData,
+    _link_members_to_bills,
     compute_analytics,
     export_vault,
     load_from_cache,
@@ -61,8 +62,7 @@ from .schema import (
     paginate,
 )
 from .scraper import ILGAScraper
-from .scrapers.votes import scrape_specific_bills
-from .scrapers.witness_slips import scrape_all_witness_slips
+from .scrapers.bills import load_bill_cache
 from .seating import process_seating
 from .vote_name_normalizer import normalize_vote_events
 from .vote_timeline import compute_bill_vote_timeline
@@ -487,40 +487,33 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     state.committee_rosters = data.committee_rosters
     state.committee_bills = data.committee_bills
 
-    # ── Step 4: Scrape roll-call votes ───────────────────────────────────
-    _vote_bill_urls = cfg.get_bill_status_urls()
-
+    # ── Step 4: Build vote events from per-bill data ─────────────────────
     try:
         t_votes = _time.perf_counter()
-        state.vote_events = scrape_specific_bills(
-            _vote_bill_urls,
-            request_delay=0.3,
-            use_cache=True,
-            seed_fallback=SEED_MODE,
-        )
-        for ve in state.vote_events:
-            state.vote_lookup.setdefault(ve.bill_number, []).append(ve)
+        for bill in state.bills:
+            for ve in bill.vote_events:
+                state.vote_events.append(ve)
+                state.vote_lookup.setdefault(ve.bill_number, []).append(ve)
 
         # ── Normalize vote names to canonical member names ──
-        normalize_vote_events(state.vote_events, state.member_lookup)
+        if state.vote_events:
+            normalize_vote_events(state.vote_events, state.member_lookup)
         elapsed_votes = _time.perf_counter() - t_votes
+        LOGGER.info("Built %d vote events from bill data.", len(state.vote_events))
     except Exception:
-        LOGGER.exception("Vote scraping failed; vote data will be empty.")
+        LOGGER.exception("Vote event loading failed; vote data will be empty.")
 
-    # ── Step 5: Scrape / load witness slips ─────────────────────────────
+    # ── Step 5: Build witness slips from per-bill data ───────────────────
     try:
         t_slips = _time.perf_counter()
-        state.witness_slips = scrape_all_witness_slips(
-            _vote_bill_urls,
-            request_delay=0.3,
-            use_cache=True,
-            seed_fallback=SEED_MODE,
-        )
-        for ws in state.witness_slips:
-            state.witness_slips_lookup.setdefault(ws.bill_number, []).append(ws)
+        for bill in state.bills:
+            for ws in bill.witness_slips:
+                state.witness_slips.append(ws)
+                state.witness_slips_lookup.setdefault(ws.bill_number, []).append(ws)
         elapsed_slips = _time.perf_counter() - t_slips
+        LOGGER.info("Built %d witness slips from bill data.", len(state.witness_slips))
     except Exception:
-        LOGGER.exception("Witness slip scraping failed; slip data will be empty.")
+        LOGGER.exception("Witness slip loading failed; slip data will be empty.")
 
     # ── Step 6: Load ZIP-to-district crosswalk ───────────────────────────
     try:
