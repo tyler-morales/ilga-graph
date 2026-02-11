@@ -243,15 +243,15 @@ Data is scraped once into `cache/`; the API then **serves only from cache** (no 
 | | `make scrape-200` | Test pagination: 200 SB + 200 HB (2 range pages per type). |
 | | `make scrape-full` | Full index: all ~9600+ bills (slow; many range pages + detail fetches). |
 | | `make scrape-dev` | Light: 20 members/chamber, 100 SB + 100 HB, fast. |
-| **Serve** | `make dev` | Start API in dev mode (load from cache; seed fallback if no cache). |
-| | `make dev-full` | Start API in dev mode with full Census ZIPs. |
+| **Serve** | `make dev` | Start API in dev mode (cache load; dev export cap keeps startup lighter). |
+| | `make dev-full` | Start API from full cache in dev shell (no dev caps, no seed fallback). |
 | | `make run` | Start API in prod mode (cache only). |
 
 **Typical flows:**
 
 - **Quick dev:** `make scrape-dev` then `make dev` — small cache, fast iteration.
 - **See pagination:** `make scrape-200` then `make dev` — 200 SB + 200 HB from index (2 range pages per type).
-- **Full dev / prod:** `make scrape` then `make dev-full` or `make run` — more bills, all IL ZIPs.
+- **Full dev / prod:** `make scrape` then `make dev-full` or `make run` — full cached dataset.
 - **Complete data:** `make scrape-full` (takes a long time) then serve as above.
 
 If you run `make dev` or `make run` with no cache, the server will try to load from cache and, in dev, fall back to `mocks/dev/` when available.

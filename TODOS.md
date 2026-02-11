@@ -1,14 +1,92 @@
 # TODOS
 
-**State of the system:** Modularity Roadmap Steps 1–5 complete. ETL lives in `etl.py`; API can start without scrapers when `ILGA_LOAD_ONLY=1`. Scorecards and Moneyball are cached to `cache/` and reused when member data is unchanged. GraphQL resolvers use request-scoped batch loaders (scorecard, moneyball profile, bill, member). `ILGA_PROFILE=dev|prod`; config; seating; SSR advocacy at `/advocacy`; Moneyball v2 (shell bill filter, institutional bonus, chair-first Power Broker).
+**State of the system:** Modularity Roadmap Steps 1–5 complete. ETL lives in `etl.py`; API can start without scrapers when `ILGA_LOAD_ONLY=1`. Scorecards and Moneyball are cached to `cache/` and reused when member data is unchanged. GraphQL resolvers use request-scoped batch loaders (scorecard, moneyball profile, bill, member). `ILGA_PROFILE=dev|prod`; config; seating; SSR advocacy at `/advocacy`; Moneyball v2 (shell bill filter, institutional bonus, chair-first Power Broker). **Unified GraphQL `search` query** — free-text search across members, bills, and committees with relevance scoring, entity-type filtering, and pagination (`search.py`). **Committee Power Dashboard** — each advocacy card now shows committee assignments with leadership roles, power explanations, and per-committee bill advancement stats. **Institutional Power Badges** — visual hierarchy badges (LEADERSHIP, COMMITTEE CHAIR, TOP 5% INFLUENCE) at the top of each advocacy card with click-to-expand explanations. **Power Card Redesign** — advocacy cards restructured into a consolidated "Power Card" layout matching advocacy professional needs: badge row, inline name with party/district, "Why this person matters" power context box, compact scorecard with caucus comparison, contact row (phone/email/ILGA profile), and expandable detail sections.
 
 ---
 
 ## Current
 
-- **Fixed "laws passed: 0 of 0 filed" — all members showing accurate bill stats now.**
+- **Power Card Redesign (advocacy card layout overhaul):**
+  - **Card layout restructured** to match advocacy professional mockup. Old layout had data scattered across separate expandable sections. New layout consolidates the key "power signals" into a single up-front narrative box.
+  - **New card structure (top to bottom):**
+    1. **Badge row:** Role label (Your Senator / Power Broker / etc.) + power badges (LEADERSHIP, COMMITTEE CHAIR, TOP 5% INFLUENCE) side by side.
+    2. **Name line:** `"Senator Jane Smith (R-Senate District 47)"` — inline party abbreviation and district.
+    3. **"Why this person matters" box** (blue-bordered callout) with bulleted power signals:
+       - **Committee chair positions** — "CHAIR: Transportation — Decides which bills get hearings — Advanced 29 of 51 bills (57% success rate) - 29 became law"
+       - **Ranking** — "#32 of 60 senators" with Top N% highlight when in top 10%
+       - **Network** — "Co-sponsors with 174 legislators — 56 Republicans, 118 Democrats — high bipartisan reach" + co-sponsor pull multiplier + co-sponsor passage multiplier
+       - **Track record** — "1108 YES / 0 NO across 1144 votes — Votes with party 99.1% — breaks ranks 8x (potentially persuadable)"
+       - **Workload** — "Currently managing N active bills"
+    4. **Compact scorecard** (always visible, not collapsible): Laws passed with caucus comparison ("2.0x caucus average"), cross-party %, co-sponsor pull with chamber average, Moneyball with rank.
+    5. **Contact row:** Phone / Email / ILGA Profile — all inline with icons.
+    6. **Why this target + Script Hint** — existing evidence-based content.
+    7. **Expandable details:** Voting Record, Committee Assignments, Full Legislative Scorecard (moved to bottom, still collapsible).
+  - **`_member_to_card()` (main.py):** Added `rank_chamber`, `chamber_size`, `rank_percentile`, `party_abbr`, `email`, `role`, `active_bills` to card dict. Active bill count computed by checking `last_action` for non-terminal statuses.
+  - **`moneyball.py`:** Added `passage_rate_vs_caucus` and `caucus_avg_passage_rate` fields to `MoneyballProfile`. New computation in `compute_moneyball()` calculates party+chamber average passage rate (caucus avg) and each member's multiplier against it. E.g., "2.0x caucus average" means this member passes bills at twice the rate of their party peers.
+  - **`analytics_cache.py`:** Updated serialization to include new MoneyballProfile fields.
+  - **`_results_partial.html`:** Complete rewrite of the `member_card` macro. Influence network section and old `<dl>` stats section removed from inline — data now consolidated into the power context box and compact scorecard.
+  - **`base.html`:** Added CSS for `.card-badge-row` (flex row), `.card-name-meta` (inline party/district), `.power-context` (blue-bordered box with `.power-context-title`, `.power-context-list`, `.power-signal`, `.power-sub`, `.power-highlight`), `.compact-scorecard` (beige bordered box), `.compact-stats`, `.caucus-compare` (green bold for multipliers), `.contact-row` (flex row with icon prefixes for phone/email/profile).
+
+- **Voting Pattern History (Track Record) on advocacy cards:**
+  - **`voting_record.py` (new module):** Created `MemberVoteRecord` dataclass (bill_number, bill_description, date, vote=YES/NO/PRESENT/NV, bill_status, vote_type) and `VotingSummary` dataclass (total_floor_votes, yes/no/present/nv counts, yes_rate_pct, party_alignment_pct, party_defection_count, records list). Core functions: `build_member_vote_index()` — iterates all vote events and builds a reverse index (member_name -> VotingSummary) with per-member vote records sorted by date descending; `_compute_all_party_alignment()` — single-pass computation across all floor votes determining each party's majority direction per event then scoring each member's alignment (ties are skipped; PRESENT/NV counted as defections); `build_all_category_bill_sets()` — precomputes bill_number sets for each policy category from committee-bill mappings; `filter_summary_by_category()` — returns a new VotingSummary filtered to only category-relevant bills with recalculated counts.
+  - **`main.py` (AppState + lifespan):** Added `state.member_vote_records` (dict[str, VotingSummary]) and `state.category_bill_sets` (dict[str, set[str]]) fields. New Step 4b in lifespan computes both after vote normalization. `_member_to_card()` now accepts optional `category` parameter; when provided, filters voting record to category bills. Returns `voting_record` dict with: records (up to 10 most recent), yes/no/present/nv counts, yes_rate_pct, party_alignment_pct, party_defection_count, is_persuadable flag, and category_label. All `_member_to_card()` calls in `advocacy_search()` pass the selected category.
+  - **`_results_partial.html`:** New collapsible "Voting Record" `<details>` section between Legislative Network and Committee Assignments. Shows category-qualified title when filtered (e.g., "Voting Record: Transportation Bills (5 floor votes)"). Each vote row displays: bill number (bold), truncated description, color-coded vote indicator (YES=green, NO=red, PRESENT=amber, NV=gray), bill outcome. Summary bar shows YES/NO pattern with yes rate. Party alignment line when data available. "Potentially persuadable" callout (amber left-border box) when party_defection_count > 0 — the key advocacy signal.
+  - **`base.html`:** Added CSS for `.card-voting-record` (collapsible, matching existing pattern), `.vote-list`, `.vote-row` (flexbox layout), `.vote-bill`, `.vote-desc`, `.vote-indicator` with `.vote-yes`/`.vote-no`/`.vote-present`/`.vote-nv` colour variants, `.vote-outcome` with status-based colours, `.vote-summary`, `.vote-pattern`, `.persuadable-callout` (amber left-border on cream background).
+  - **Why it matters:** Tells advocacy groups: (1) Is this person persuadable? (votes against party sometimes = yes), (2) Do they support our issue? (voted YES on X of Y related bills). Section only renders when vote data exists, so no empty sections.
+
+- **Institutional Power Badges (visual hierarchy):**
+  - **`moneyball.py`:** Added `PowerBadge` dataclass (`label`, `icon`, `explanation`, `css_class`) and `compute_power_badges()` function. Three additive badge types: (1) **LEADERSHIP** — awarded when `institutional_weight >= 0.25`; explanation dynamically built from `member.role` with tier-specific context (top chamber leader / committee leader / party management). (2) **COMMITTEE CHAIR** — awarded for each committee where member is Chair (not Vice-Chair); explanation names the committee(s) and explains gatekeeper power. Multiple chairs consolidated into one badge. (3) **TOP N% INFLUENCE** — awarded when `rank_chamber` is in top 5% of their chamber (`ceil(chamber_size * 0.05)`); explanation shows exact rank and chamber size (e.g., "Ranked #3 of 59 senators").
+  - **`main.py` (_member_to_card):** Computes chamber size from `state.moneyball.rankings_house` / `rankings_senate` lengths. Calls `compute_power_badges(mb, committee_roles, chamber_size)` and serialises results as `power_badges` list of dicts in each card. Imported `compute_power_badges` from moneyball module.
+  - **`_results_partial.html`:** New `power-badges` div at the top of each card macro, rendered *above* existing role/achievement badges. Each badge uses native `<details>/<summary>` for click-to-expand explanations — no JavaScript required. Icons via CSS `::before` pseudo-elements with Unicode text presentation selectors.
+  - **`base.html`:** Added CSS for `.power-badges` (flex row), `.power-badge-wrapper` (inline details), `.power-badge` (summary styled as badge with marker removal for all browsers), three colour variants (`.power-badge-leadership` navy, `.power-badge-chair` gold-brown, `.power-badge-influence` red), icon prefix classes (`.power-icon-leadership/chair/influence` using Unicode shield/lightning/fire), `.power-badge-explanation` (tooltip-like box below badge on expand). Hover state with brightness filter for clickability affordance.
+
+- **Influence Network Visualization (human-readable power picture):**
+  - **`moneyball.py` (MoneyballProfile + compute_moneyball):** Added 7 new fields to `MoneyballProfile`: `collaborator_republicans`, `collaborator_democrats`, `collaborator_other` (party breakdown of co-sponsorship peers), `magnet_vs_chamber` (member magnet / chamber avg magnet multiplier, e.g. "1.2x"), `cosponsor_passage_rate` (passage rate of bills this member co-sponsors), `cosponsor_passage_multiplier` (vs **chamber median co-sponsor rate**, not raw chamber passage rate -- avoids selection bias where popular/likely-to-pass bills naturally attract more co-sponsors), `chamber_median_cosponsor_rate` (the baseline, shown in parenthetical for transparency). New Step 3b in `compute_moneyball()` computes all three metrics: iterates adjacency peers for party breakdown, computes per-chamber magnet averages, and calculates co-sponsored bill passage rates vs peer-normalised baselines.
+  - **`analytics_cache.py`:** Updated `_profile_to_dict()` to serialize new fields. Deserialization (`MoneyballProfile(**d)`) handles old caches gracefully via defaults.
+  - **`main.py` (_member_to_card):** Added `influence_network` dict to card data with all computed metrics. Bipartisan label computed from party balance of network peers but NOT displayed on the card (removed to avoid confusion with the cross-party support metric which measures their own bills). Included in return dict for template access.
+  - **`_results_partial.html`:** New "Legislative Network" section between summary stats and Committee Assignments. Three plain-language lines (each guarded by `{% if %}`): (1) "Shares bills with **N legislators** (X Republicans, Y Democrats)", (2) "Their own bills attract **N co-sponsors** on average (Nx the chamber average)", (3) "Bills they join as co-sponsor pass at **Nx** the typical rate (X% vs Y% chamber median)" (only shown when multiplier > 1.0). Wording carefully distinguishes "their own bills" vs "bills they join" to avoid confusion with the top-level cross-party support metric. All numbers shown with transparent baselines — no mystery multipliers. Renamed top-level "Cross-party co-sponsorship" to "Cross-party support: X% of their bills have opposite-party co-sponsors" for clarity. Also replaced "Network centrality: 0.342" in the Moneyball Composite table with "Network reach: N collaborators (0.342)" for contextualised display.
+  - **`base.html`:** Added CSS for `.influence-network` (green-left-border box on light green background), `.influence-title`, `.influence-list`, `.influence-detail`. Consistent with existing card section styling.
+
+- **Committee Power Dashboard on advocacy cards:**
+  - **`analytics.py`:** Added `CommitteeStats` dataclass (total_bills, advanced_count, passed_count, advancement_rate, pass_rate) and `compute_committee_stats()` function that classifies each committee's bills by pipeline stage and status. Added `build_member_committee_roles()` which builds a reverse index (member_id -> list of committee assignment dicts) with role, leadership flag, committee name, and per-committee bill advancement stats. Roles sorted: Chair > Vice-Chair > Minority Spokesperson > Member.
+  - **`main.py` (AppState + lifespan):** Added `state.committee_stats` and `state.member_committee_roles` fields. Computed at startup (Step 3b) after committee data loads. `_member_to_card()` now includes a `committee_roles` list in each card dict, populated from the pre-built reverse index.
+  - **`_results_partial.html`:** New collapsible "Committee Assignments (N)" `<details>` block on each card, positioned between summary stats and Legislative Scorecard. Leadership positions (Chair, Vice-Chair, Minority Spokesperson) shown prominently with role badge, plain-language power explanation ("Controls bill hearings and scheduling"), and bill advancement stats ("Advanced 8 of 12 bills (67%) - 3 became law"). Regular memberships listed compactly as comma-separated names.
+  - **`base.html`:** Added CSS for `.card-committees`, `.committees-body`, `.committee-row`, `.committee-role-badge` (color-coded: Chair = brown, Vice-Chair = olive, Spokesperson = slate, Member = gray), `.committee-power-note`, `.committee-stats`, `.committee-member-list`. Follows existing collapsible pattern (`.card-scorecard`).
+  - **Fix: committee stats showed "0 of N advanced" for all committees.** Two root causes: (1) **Bill number format mismatch** — committee pages list bills without leading zeros (`SB79`) and sometimes with amendment suffixes (`SB228 (SCA1)`), while the bill cache uses zero-padded numbers (`SB0079`). Added `_normalise_committee_bill_number()` to strip suffixes and zero-pad to 4 digits. This fixed 26% of bill lookups (2,658 of 10,105). (2) **ILGA committee bills page only shows currently-pending bills** — bills that already passed through committee are no longer listed. This meant we were only seeing bills stuck at depth 1 ("Assigned to X"). Fix: Added `_build_full_committee_bills()` which scans every bill's `action_history` for "Assigned to"/"Referred to" actions and matches committee names (with fuzzy matching for "X Committee" suffixes and abbreviation variants). This merges historical assignments with the ILGA page data, giving true throughput. Result: Transportation committee went from "0 of 11 (0%)" to "29 of 51 advanced (57%); 29 became law". Overall: 15,182 bills tracked across all committees, 1,063 advanced, 1,057 became law.
+
+- **Scorecard UI added to advocacy cards:**
+  - **`_member_to_card()` (main.py):** Now looks up `state.scorecards.get(member.id)` and attaches a `scorecard` dict with template-friendly fields: Lawmaking (laws_filed, laws_passed, law_pass_rate_pct, magnet_score, bridge_pct), Resolutions (resolutions_filed, resolutions_passed, resolution_pass_rate_pct), Overall (total_bills, total_passed, overall_pass_rate_pct, vetoed_count, stuck_count, in_progress_count). Only included when scorecard data exists and the member has at least one bill.
+  - **`_results_partial.html`:** Each advocacy card now has a collapsible `<details class="card-scorecard">` block ("Legislative Scorecard") between the summary stats and "Why this target". Three-section table: Lawmaking (HB/SB), Resolutions (HR/SR/HJR/SJR), Overall. Vetoed/stuck/in-progress rows shown only when non-zero. Tooltips on Magnet and Bridge labels.
+  - **`base.html`:** Container widened from `max-width: 760px` to `920px` so the main content column (~600px) has enough room for the scorecard table without label wrapping. Added `.card-scorecard`, `.scorecard-body`, `.scorecard-table`, and `.scorecard-section-head` styles (consistent with existing `.how-it-works` / `.formula-table` look).
+  - **Width note:** If scorecard tables still wrap on narrow viewports, increase `.container` max-width further or reduce aside width. The 920px value gives ~600px to `.results-main`.
+
+- **Scorecard: Magnet/Bridge definitions, Moneyball breakdown, wider layout:**
+  - Magnet and Bridge rows in the scorecard table now have inline definitions: Magnet = "avg co-sponsors per bill -- higher means the legislator attracts more support"; Bridge = "% of bills with at least one cross-party co-sponsor -- measures bipartisan reach".
+  - New "Moneyball Composite" section in the scorecard table shows the individual component scores with weights: Passage rate (24%), Pipeline depth (16%), Co-sponsor pull (16%), Cross-party rate (12%), Network centrality (12%), Institutional role (20%). Data passed via new `moneyball` dict in `_member_to_card()`.
+  - Container max-width increased from 920px to 1120px for a wider content area.
+
+- **GraphQL unified search query (`search`):**
+  - Created `src/ilga_graph/search.py` — in-memory search engine with tiered relevance scoring (exact ID > exact name > prefix > contains name > contains description > secondary fields). Searches Members (name, id, role, party, district, chamber, committees, bio_text), Bills (bill_number, description, synopsis, primary_sponsor, last_action), and Committees (code, name). Returns `SearchHit` dataclasses with `entity_type`, `match_field`, `match_snippet`, `relevance_score`, and the underlying model. No new dependencies.
+  - Added to `schema.py`: `SearchEntityType` enum (MEMBER, BILL, COMMITTEE), `SearchResultType` (entity_type, match_field, match_snippet, relevance_score, optional member/bill/committee), `SearchConnection` (items + page_info).
+  - New `search(query, entityTypes, offset, limit)` resolver on Query class. Accepts free-text query, optional entity-type filter, and pagination. Member results include scorecard + moneyball via batch loaders.
+  - Future: fuzzy matching (Levenshtein), search indexing at startup, vote events and witness slips as searchable entities, autocomplete endpoint.
 
 ## Done (this session)
+
+- **Incremental votes/slips scraper (`make scrape-votes`):**
+  - Created `scripts/scrape_votes.py` -- standalone incremental scraper for roll-call votes and witness slips. Derives bill list from `cache/bills.json` (all bills with `status_url`), not from hardcoded URLs. Progress tracked in `cache/votes_slips_progress.json` so each run picks up where the last left off.
+  - **Resumable:** Progress saved after each bill completes (atomic writes). Ctrl+C at any time -- completed bills are already persisted. Run again to continue from next unscraped bill.
+  - **Parallel:** Uses `ThreadPoolExecutor` (default 5 workers) for concurrent bill scraping. `--workers N` to tune.
+  - **Real-time output:** Each bill prints a progress line as it completes (`[3/10] HB0034 -- 4 votes, 3217 slips (2.1s)`), plus a summary at end or on interrupt.
+  - **CLI:** `--limit N` (default 10, 0 = all remaining), `--workers N` (default 5), `--fast` (shorter delay), `--reset` (wipe progress).
+  - **Makefile:** `make scrape-votes` (next 10), `make scrape-votes LIMIT=50`, `make scrape-votes LIMIT=0` (all).
+  - **scrape.py cleanup:** Removed inline votes/slips scraping from `scripts/scrape.py`. Bill scrape now preserves existing per-bill `vote_events`/`witness_slips` in cache (no wipe). Log message points to `make scrape-votes`.
+
+- **Roll-call votes / witness slips count verified (not a display bug):**
+  - Startup table now shows bill coverage: e.g. "13 vote events (5 bills)" and "17440 slips (5 bills)" so it's clear data is from a subset.
+
+- **Fixed "laws passed: 0 of 0 filed" — all members showing accurate bill stats now.**
+
 
 - **Fixed "laws passed: 0 of 0 filed" bug (two root causes):**
   - **`is_shell_bill()` false positive** (`analytics.py`): The `len(desc) < 50` threshold was marking **every single bill** as a "shell bill" because ILGA index descriptions are abbreviated titles (max 30 chars, median 25). For example, "CRIM CD-FIREARM SILENCER" (24 chars) was flagged as a shell bill. Fix: Removed the length threshold entirely. Now only matches keyword "Technical", "Shell", or the `-TECH` suffix (ILGA abbreviation for technical/procedural bills like "LOCAL GOVERNMENT-TECH"). This correctly identifies ~1 true shell bill per ~70 substantive bills.
@@ -68,9 +146,16 @@
 
 ## Next (when you're ready)
 
+- **Sample-based vote/slip scraping** (PRIORITY): Implemented two-phase strategy to get complete data faster:
+  - **Phase 1 (Sample)**: `make scrape-votes-sample` or `python scripts/scrape_votes.py --sample 10 --limit 0` scrapes every 10th bill (~1,172 bills, ~75 minutes). Gives 10% representative dataset for testing analytics with real distribution of votes/slips.
+  - **Phase 2 (Gap-fill)**: `make scrape-votes-gap-fill` to fill remaining 90% of bills (~10,549 bills, ~11 hours).
+  - **Test suite**: `tests/test_scrape_votes_sample.py` validates sample strategy, progress tracking, and data structure. Run with `PYTHONPATH=src pytest tests/test_scrape_votes_sample.py`.
+  - **Why**: Get statistically representative data quickly to verify analytics accuracy before committing to full 12-hour scrape. Sample will expose any data quality issues early. Can interrupt and resume at any time.
+  
+- **Verify GraphQL:** After sample completes, restart server and check that scorecards/Moneyball recompute with sampled data. Spot-check 3-4 members' "Laws passed: X of Y" against ilga.gov to verify accuracy. Test advocacy frontend with real ZIPs to see if Power Broker / Ally selections make sense with partial data.
+
 - **Run full scrape:** Delete `cache/` and run `make scrape-full`. Bill index now discovers ALL 11 doc types (~15,000 entries across 125 range pages, ~20 min index + detail scraping).
-- **Verify GraphQL:** Check `bill { actionHistory { date chamber action } }`, `member { sponsoredBillIds coSponsorBillIds }`, and `votes(billNumber)` / `witnessSlips(billNumber)` still work.
-- **Vote/slip coverage:** Currently votes/witness slips are only scraped for 5 hardcoded bills (in `config.py:DEFAULT_BILL_STATUS_URLS`). For broader coverage, consider adding a `--scrape-all-votes` flag or deriving the bill list from cache.
+
 - When shifting to prod: set `ILGA_PROFILE=prod`, `ILGA_CORS_ORIGINS`, and optionally `ILGA_API_KEY`.
 
 ---
@@ -87,9 +172,10 @@
 
 ## Backlog / Future
 
-- Full-text search for bill descriptions and member bios.
+- (Done: unified GraphQL `search` query — cross-entity free-text search with relevance scoring.)
+- Search enhancements: fuzzy matching (Levenshtein), startup index for O(1) lookups, vote events / witness slips as searchable entities, autocomplete / query suggestions endpoint, TF-IDF weighting if data grows.
 - (Done: full bill index via `make scrape-full` — pagination in bills.py; 0 = all pages.)
-- Optionally derive vote/slip bill list from cache for broader coverage.
+- (Done: `make scrape-votes` derives vote/slip bill list from cache for incremental coverage.)
 - Advocacy frontend: add member photos, richer script text, email links.
 - Advocacy frontend: move embedded CSS to `static/style.css` when it grows.
 - Advocacy frontend: htmx-powered "drill down" on each card (click to expand full member profile inline).
@@ -106,7 +192,11 @@
 
 **ETL:** Composable steps — `load_or_scrape_data()`, `compute_analytics()`, `export_vault()`; CLI `scripts/scrape.py` can run each step or full pipeline.
 
-**Resilience & performance:** HTTPAdapter with retries and connection pooling; stale cache warnings; startup timing logs and `.startup_timings.csv`; startup summary table with 7 numbered steps (load, analytics, seating, export, votes, slips, ZIP crosswalk), per-step times and details (counts, cache/seed hints); CSV includes seating_s, slips_s, zip_s, votes, slips, zctas; vote/slip cache eliminates re-scraping on every start.
+**Resilience & performance:** HTTPAdapter with retries and connection pooling; stale cache warnings; startup timing logs and `.startup_timings.csv`; startup summary table now uses chronological ETL-oriented phases with explicit per-step times/details (core load, analytics, seating, vault export, committee indexes, vote index + normalization, member voting records, witness slips, ZIP crosswalk); CSV includes seating_s, slips_s, zip_s, votes, slips, zctas; vote/slip cache eliminates re-scraping on every start.
+
+- (Done) Add `scripts/startup_timings_report.py`: rich/animated CLI to analyze `.startup_timings.csv` across schema versions and show recent-vs-baseline regressions (`make startup-report`).
+- (Done) Clarify full-cache runtime mode: `make dev-full` now sets `ILGA_DEV_MODE=0` so startup does not imply 20/chamber + top-100 caps, and startup logs now explicitly distinguish cache-only vs scrape startup.
+- (Done) Rework startup summary table into chronological ETL-oriented phases with clearer per-step timing/details (adds committee-index and member-voting-record steps so timing output maps to actual runtime order).
 
 **Witness slips & GraphQL:** Slips and votes share bill list (`ILGA_VOTE_BILL_URLS`); witness slip summary and paginated summaries; `billSlipAnalytics`, `memberSlipAlignment`; advancement analytics (`billAdvancementAnalyticsSummary`); docs in `graphql/README.md` and main README.
 

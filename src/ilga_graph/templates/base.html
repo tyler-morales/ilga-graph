@@ -1,12 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Kei Truck Freedom{% endblock %}</title>
     <style>
         /* ── 2005 Functional CSS ── */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: Georgia, "Times New Roman", serif;
             background: #f4f4f0;
@@ -14,28 +20,41 @@
             line-height: 1.5;
             padding: 20px;
         }
+
         .container {
-            max-width: 760px;
+            max-width: 1120px;
+            /* widened from 920px for better readability with two-column layout */
             margin: 0 auto;
             background: #fff;
             border: 1px solid #ccc;
             padding: 24px 32px;
         }
+
         h1 {
             font-size: 1.6em;
             border-bottom: 2px solid #333;
             padding-bottom: 6px;
             margin-bottom: 16px;
         }
+
         h2 {
             font-size: 1.2em;
             margin-top: 20px;
             margin-bottom: 8px;
             color: #444;
         }
-        p { margin-bottom: 10px; }
-        a { color: #0645ad; }
-        a:visited { color: #551a8b; }
+
+        p {
+            margin-bottom: 10px;
+        }
+
+        a {
+            color: #0645ad;
+        }
+
+        a:visited {
+            color: #551a8b;
+        }
 
         /* ── Form ── */
         .search-form {
@@ -44,17 +63,20 @@
             background: #fafafa;
             border: 1px solid #ddd;
         }
+
         .search-form label {
             display: block;
             font-weight: bold;
             margin-bottom: 6px;
         }
+
         .search-form input[type="text"] {
             font-size: 1em;
             padding: 6px 10px;
             border: 1px solid #999;
             width: 200px;
         }
+
         .search-form select {
             font-size: 1em;
             padding: 5px 8px;
@@ -62,6 +84,7 @@
             width: 260px;
             background: #fff;
         }
+
         .search-form button {
             font-size: 1em;
             padding: 6px 16px;
@@ -70,7 +93,10 @@
             border: 1px solid #111;
             cursor: pointer;
         }
-        .search-form button:hover { background: #555; }
+
+        .search-form button:hover {
+            background: #555;
+        }
 
         /* ── Cards ── */
         .card {
@@ -79,12 +105,28 @@
             margin: 14px 0;
             background: #fdfdfd;
         }
-        .card h3 {
+
+        .card-badge-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 8px;
+            align-items: flex-start;
+        }
+
+        .card h3.card-name {
             font-size: 1.1em;
             margin-bottom: 6px;
             border-bottom: 1px solid #ddd;
             padding-bottom: 4px;
         }
+
+        .card-name-meta {
+            font-weight: normal;
+            font-size: 0.88em;
+            color: #555;
+        }
+
         .card .role-label {
             display: inline-block;
             font-size: 0.8em;
@@ -93,34 +135,232 @@
             letter-spacing: 0.05em;
             color: #fff;
             padding: 2px 8px;
+        }
+
+        .role-senator {
+            background: #336;
+        }
+
+        .role-rep {
+            background: #346;
+        }
+
+        .role-broker {
+            background: #633;
+        }
+
+        .role-ally {
+            background: #363;
+        }
+
+        .role-super-ally {
+            background: #a60;
+        }
+
+        .role-badge {
+            background: #555;
+            margin-right: 4px;
+        }
+
+        /* ── Institutional Power Badges ── */
+        .power-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
             margin-bottom: 8px;
         }
-        .role-senator    { background: #336; }
-        .role-rep        { background: #346; }
-        .role-broker     { background: #633; }
-        .role-ally       { background: #363; }
-        .role-super-ally { background: #a60; }
-        .role-badge      { background: #555; margin-right: 4px; }
-        .card dl { margin: 6px 0; }
-        .card dt {
-            font-weight: bold;
-            float: left;
-            clear: left;
-            width: 120px;
-            margin-bottom: 4px;
+
+        .power-badge-wrapper {
+            display: inline-block;
         }
-        .card dd { margin-left: 126px; margin-bottom: 4px; }
+
+        .power-badge {
+            display: inline-block;
+            font-size: 0.75em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #fff;
+            padding: 3px 10px;
+            cursor: pointer;
+            list-style: none;        /* remove default <details> marker */
+            user-select: none;
+        }
+
+        .power-badge::-webkit-details-marker {
+            display: none;           /* Safari marker removal */
+        }
+
+        .power-badge::marker {
+            content: "";             /* Firefox/Chrome marker removal */
+        }
+
+        .power-badge:hover {
+            filter: brightness(1.2);
+        }
+
+        .power-badge-leadership {
+            background: #2c2c54;
+        }
+
+        .power-badge-chair {
+            background: #7b5b2a;
+        }
+
+        .power-badge-influence {
+            background: #a63d2f;
+        }
+
+        /* Icon prefixes via Unicode — no emoji dependencies */
+        .power-icon-leadership::before {
+            content: "\1F6E1\FE0E ";    /* shield */
+        }
+
+        .power-icon-chair::before {
+            content: "\26A1\FE0E ";      /* lightning bolt */
+        }
+
+        .power-icon-influence::before {
+            content: "\1F525\FE0E ";     /* fire */
+        }
+
+        .power-badge-explanation {
+            font-size: 0.82em;
+            line-height: 1.4;
+            color: #333;
+            background: #fafaf5;
+            border: 1px solid #ddd;
+            border-top: none;
+            padding: 6px 10px;
+            margin-top: 0;
+            max-width: 360px;
+        }
+
+        /* ── Power Context box ── */
+        .power-context {
+            margin: 10px 0;
+            padding: 12px 16px;
+            background: #f0f4fa;
+            border: 1px solid #c0cde0;
+            border-left: 4px solid #3a6eb5;
+        }
+
+        .power-context-title {
+            font-size: 0.92em;
+            font-weight: bold;
+            color: #2a4a7a;
+            margin: 0 0 8px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .power-context-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            font-size: 0.88em;
+            line-height: 1.5;
+        }
+
+        .power-context-list li {
+            padding: 4px 0;
+        }
+
+        .power-context-list li + li {
+            border-top: 1px solid #d5dde8;
+            margin-top: 2px;
+            padding-top: 6px;
+        }
+
+        .power-signal {
+            color: #2a4a7a;
+        }
+
+        .power-sub {
+            margin: 1px 0 0 0;
+            padding-left: 16px;
+            font-size: 0.92em;
+            color: #445;
+        }
+
+        .power-highlight {
+            font-weight: bold;
+            color: #8b4513;
+        }
+
+        /* ── Compact Scorecard (always visible) ── */
+        .compact-scorecard {
+            margin: 10px 0;
+            padding: 8px 14px;
+            background: #fafaf5;
+            border: 1px solid #ddd;
+        }
+
+        .compact-stats {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            font-size: 0.88em;
+            line-height: 1.6;
+        }
+
+        .compact-stats li {
+            padding: 1px 0;
+        }
+
+        .caucus-compare {
+            font-weight: bold;
+            color: #2a6a2a;
+            font-size: 0.92em;
+        }
+
+        /* ── Contact row ── */
+        .contact-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 10px 0;
+            padding: 8px 0;
+            border-top: 1px solid #ddd;
+            border-bottom: 1px solid #ddd;
+            font-size: 0.88em;
+        }
+
+        .contact-link {
+            text-decoration: none;
+            color: #0645ad;
+            padding: 2px 0;
+        }
+
+        .contact-link:hover {
+            text-decoration: underline;
+        }
+
+        .contact-phone::before {
+            content: "\260E\FE0E ";
+        }
+
+        .contact-email::before {
+            content: "\2709\FE0E ";
+        }
+
+        .contact-profile::before {
+            content: "\1F517\FE0E ";
+        }
+
         .card .metric-help {
             font-size: 0.85em;
             color: #666;
             cursor: help;
             margin-left: 2px;
         }
+
         .card .metric-note {
             font-size: 0.8em;
             color: #666;
             font-weight: normal;
         }
+
         .card .why-chosen {
             margin-top: 10px;
             padding: 8px 12px;
@@ -129,6 +369,7 @@
             font-size: 0.9em;
             color: #335;
         }
+
         .card .script-hint {
             margin-top: 10px;
             padding: 8px 12px;
@@ -137,6 +378,331 @@
             font-style: italic;
             font-size: 0.95em;
         }
+
+        /* ── Collapsible Legislative Scorecard inside cards ── */
+        .card-scorecard {
+            margin-top: 10px;
+            border: 1px solid #ccd;
+            background: #f8f9fc;
+        }
+
+        .card-scorecard summary {
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9em;
+            padding: 6px 10px;
+            color: #335;
+            border-bottom: 1px solid #ccd;
+        }
+
+        .card-scorecard[open] summary {
+            border-bottom: 1px solid #ccd;
+        }
+
+        .scorecard-body {
+            padding: 6px 10px 10px;
+        }
+
+        .scorecard-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85em;
+        }
+
+        .scorecard-table th,
+        .scorecard-table td {
+            text-align: left;
+            padding: 2px 6px;
+            border-bottom: 1px solid #dde;
+        }
+
+        .scorecard-section-head {
+            background: #eef0f5;
+            font-size: 0.95em;
+            padding: 4px 6px;
+            color: #335;
+        }
+
+        .scorecard-table td:last-child {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ── Collapsible Committee Assignments inside cards ── */
+        .card-committees {
+            margin-top: 10px;
+            border: 1px solid #ccd;
+            background: #f9faf8;
+        }
+
+        .card-committees summary {
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9em;
+            padding: 6px 10px;
+            color: #335;
+            border-bottom: 1px solid #ccd;
+        }
+
+        .card-committees[open] summary {
+            border-bottom: 1px solid #ccd;
+        }
+
+        .committees-body {
+            padding: 8px 10px 10px;
+        }
+
+        .committee-row {
+            margin-bottom: 8px;
+        }
+
+        .committee-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .committee-role-badge {
+            display: inline-block;
+            font-size: 0.75em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #fff;
+            padding: 1px 6px;
+            margin-right: 4px;
+            vertical-align: middle;
+        }
+
+        .badge-chair {
+            background: #8b4513;
+        }
+
+        .badge-vice-chair {
+            background: #6a6a3a;
+        }
+
+        .badge-minority-spokesperson {
+            background: #556;
+        }
+
+        .badge-member {
+            background: #889;
+        }
+
+        .committee-name {
+            font-size: 0.9em;
+        }
+
+        .committee-power-note {
+            margin: 2px 0 2px 0;
+            font-size: 0.82em;
+            color: #555;
+            font-style: italic;
+            padding-left: 4px;
+        }
+
+        .committee-stats {
+            font-size: 0.82em;
+            color: #445;
+            padding-left: 4px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .committee-members {
+            font-size: 0.88em;
+        }
+
+        .committee-member-list {
+            color: #444;
+            font-size: 0.9em;
+        }
+
+        /* ── Collapsible Voting Record inside cards ── */
+        .card-voting-record {
+            margin-top: 10px;
+            border: 1px solid #ccd;
+            background: #faf9f6;
+        }
+
+        .card-voting-record summary {
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9em;
+            padding: 6px 10px;
+            color: #335;
+            border-bottom: 1px solid #ccd;
+        }
+
+        .card-voting-record[open] summary {
+            border-bottom: 1px solid #ccd;
+        }
+
+        .voting-record-body {
+            padding: 8px 10px 10px;
+        }
+
+        .vote-list {
+            margin: 0 0 8px 0;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .vote-row {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            padding: 3px 0;
+            font-size: 0.85em;
+            border-bottom: 1px solid #eee;
+        }
+
+        .vote-row:last-child {
+            border-bottom: none;
+        }
+
+        .vote-bill {
+            font-weight: bold;
+            white-space: nowrap;
+            min-width: 72px;
+            color: #335;
+            text-decoration: none;
+        }
+
+        a.vote-bill {
+            color: #0645ad;
+        }
+
+        a.vote-bill:hover {
+            text-decoration: underline;
+        }
+
+        a.vote-bill:visited {
+            color: #551a8b;
+        }
+
+        .vote-desc {
+            flex: 1;
+            color: #555;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .vote-indicator {
+            font-weight: bold;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            padding: 1px 6px;
+            white-space: nowrap;
+        }
+
+        .vote-yes {
+            color: #2a7a2a;
+            background: #e6f4e6;
+        }
+
+        .vote-no {
+            color: #a03030;
+            background: #fbe8e8;
+        }
+
+        .vote-present {
+            color: #886600;
+            background: #fdf5dd;
+        }
+
+        .vote-nv {
+            color: #666;
+            background: #f0f0f0;
+        }
+
+        .vote-outcome {
+            font-size: 0.8em;
+            white-space: nowrap;
+            padding: 1px 5px;
+        }
+
+        .vote-outcome-passed {
+            color: #2a6a2a;
+        }
+
+        .vote-outcome-vetoed,
+        .vote-outcome-stuck {
+            color: #993333;
+        }
+
+        .vote-outcome-in-progress {
+            color: #886600;
+        }
+
+        .vote-outcome-unknown {
+            color: #888;
+        }
+
+        .vote-summary {
+            font-size: 0.85em;
+            color: #445;
+            padding: 6px 0 2px;
+            border-top: 1px solid #dde;
+        }
+
+        .vote-summary span {
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .vote-pattern {
+            font-variant-numeric: tabular-nums;
+        }
+
+        .persuadable-callout {
+            margin-top: 6px;
+            padding: 6px 10px;
+            background: #fff8e6;
+            border-left: 3px solid #d4a017;
+            font-size: 0.88em;
+            color: #665500;
+        }
+
+        /* ── Influence Network section inside cards ── */
+        .influence-network {
+            margin-top: 10px;
+            padding: 10px 14px;
+            background: #f5f8f0;
+            border: 1px solid #cdc;
+            border-left: 3px solid #6a6;
+        }
+
+        .influence-title {
+            font-size: 0.9em;
+            font-weight: bold;
+            color: #353;
+            margin: 0 0 6px 0;
+        }
+
+        .influence-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            font-size: 0.88em;
+            line-height: 1.55;
+        }
+
+        .influence-list li {
+            padding: 2px 0;
+        }
+
+        .influence-list li + li {
+            border-top: 1px solid #dde8d8;
+            margin-top: 2px;
+            padding-top: 4px;
+        }
+
+        .influence-detail {
+            color: #556;
+            font-size: 0.92em;
+        }
+
         .section-desc {
             font-size: 0.9em;
             color: #666;
@@ -150,6 +716,7 @@
             margin-top: 12px;
             align-items: flex-start;
         }
+
         .results-aside {
             width: 260px;
             flex-shrink: 0;
@@ -158,6 +725,7 @@
             max-height: calc(100vh - 24px);
             overflow-y: auto;
         }
+
         .results-main {
             flex: 1;
             min-width: 0;
@@ -169,6 +737,7 @@
             background: #f8f9fc;
             font-size: 0.85em;
         }
+
         .how-it-works .hiw-title {
             margin: 0;
             padding: 8px 10px;
@@ -177,37 +746,45 @@
             color: #335;
             border-bottom: 1px solid #ccd;
         }
+
         .how-it-works .hiw-body {
             padding: 8px 10px 12px;
             line-height: 1.45;
         }
+
         .how-it-works .hiw-body dt {
             font-weight: bold;
             margin-top: 8px;
             font-size: 0.95em;
         }
+
         .how-it-works .hiw-body dd {
             margin: 2px 0 0 0;
         }
+
         .how-it-works .hiw-details {
             margin-top: 8px;
         }
+
         .how-it-works .hiw-details summary {
             cursor: pointer;
             font-weight: bold;
         }
+
         .how-it-works .formula-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 4px;
             font-size: 0.88em;
         }
+
         .how-it-works .formula-table th,
         .how-it-works .formula-table td {
             text-align: left;
             padding: 2px 6px;
             border-bottom: 1px solid #dde;
         }
+
         .how-it-works .formula-table th {
             background: #eef0f5;
         }
@@ -241,6 +818,7 @@
             color: #777;
             text-align: center;
         }
+
         /* ── HTMX indicator ── */
         .htmx-indicator {
             display: none;
@@ -248,13 +826,20 @@
             color: #888;
             margin-left: 8px;
         }
-        .htmx-request .htmx-indicator { display: inline; }
-        .htmx-request button { opacity: 0.6; }
+
+        .htmx-request .htmx-indicator {
+            display: inline;
+        }
+
+        .htmx-request button {
+            opacity: 0.6;
+        }
     </style>
     <script src="https://unpkg.com/htmx.org@2.0.4"
-            integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
-            crossorigin="anonymous"></script>
+        integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
+        crossorigin="anonymous"></script>
 </head>
+
 <body>
     <div class="container">
         {% block content %}{% endblock %}
@@ -263,4 +848,5 @@
         </div>
     </div>
 </body>
+
 </html>

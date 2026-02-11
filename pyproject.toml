@@ -24,6 +24,7 @@ dev = [
     "pytest",
     "ruff",
     "httpx",
+    "rich",
 ]
 
 [tool.pytest.ini_options]

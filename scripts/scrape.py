@@ -27,7 +27,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from ilga_graph.config import CACHE_DIR, MOCK_DEV_DIR, get_bill_status_urls  # noqa: E402
+from ilga_graph.config import CACHE_DIR, MOCK_DEV_DIR  # noqa: E402
 from ilga_graph.etl import (  # noqa: E402
     compute_analytics,
     export_vault,
@@ -36,8 +36,6 @@ from ilga_graph.etl import (  # noqa: E402
 )
 from ilga_graph.analytics_cache import load_analytics_cache, save_analytics_cache  # noqa: E402
 from ilga_graph.scraper import save_normalized_cache  # noqa: E402
-from ilga_graph.scrapers.votes import scrape_specific_bills  # noqa: E402
-from ilga_graph.scrapers.witness_slips import scrape_all_witness_slips  # noqa: E402
 
 
 def main() -> None:
@@ -141,67 +139,21 @@ def main() -> None:
             len(data.bills_lookup),
         )
 
-        # Extract votes + witness slips
-        bill_urls = get_bill_status_urls()
-        delay = 0.25 if args.fast else 0.5
-        logger.info("Scraping votes + witness slips for %d bill(s)...", len(bill_urls))
-
-        vote_events = scrape_specific_bills(
-            bill_urls,
-            request_delay=delay,
-            use_cache=not args.force_refresh,
-            seed_fallback=False,
-        )
-        logger.info("Scraped %d vote events.", len(vote_events))
-
-        witness_slips = scrape_all_witness_slips(
-            bill_urls,
-            request_delay=delay,
-            use_cache=not args.force_refresh,
-            seed_fallback=False,
-        )
-        logger.info("Scraped %d witness slips.", len(witness_slips))
-
         # ══════════════════════════════════════════════════════════════════
-        # PHASE 2: TRANSFORM — merge, link, enrich
+        # PHASE 2: PERSIST — save members + bills cache
         # ══════════════════════════════════════════════════════════════════
-
-        # Merge vote events and witness slips into per-bill fields
-        bill_by_number = {b.bill_number: b for b in data.bills_lookup.values()}
-
-        # Clear existing per-bill lists first (to avoid duplicates on re-run)
-        for bill in data.bills_lookup.values():
-            bill.vote_events = []
-            bill.witness_slips = []
-
-        merged_votes = 0
-        for ve in vote_events:
-            bill = bill_by_number.get(ve.bill_number)
-            if bill:
-                bill.vote_events.append(ve)
-                merged_votes += 1
-
-        merged_slips = 0
-        for ws in witness_slips:
-            bill = bill_by_number.get(ws.bill_number)
-            if bill:
-                bill.witness_slips.append(ws)
-                merged_slips += 1
-
-        logger.info(
-            "Merged %d vote events and %d witness slips into bills.",
-            merged_votes, merged_slips,
-        )
-
-        # ══════════════════════════════════════════════════════════════════
-        # PHASE 3: PERSIST — save complete, fully-assembled cache ONCE
-        # ══════════════════════════════════════════════════════════════════
-        # save_normalized_cache writes both members.json and bills.json
-        # (bills now include inline vote_events + witness_slips)
+        # Note: votes/slips are scraped incrementally via a separate command:
+        #   make scrape-votes          (next 10 bills, resumable)
+        #   make scrape-votes LIMIT=0  (all remaining bills)
+        # Existing per-bill vote_events/witness_slips in bills.json are
+        # preserved -- this scrape does NOT clear them.
         save_normalized_cache(data.members, data.bills_lookup)
         logger.info(
-            "Saved cache: %d members, %d bills (with inline votes/slips).",
+            "Saved cache: %d members, %d bills.",
             len(data.members), len(data.bills_lookup),
+        )
+        logger.info(
+            "Votes/slips: run 'make scrape-votes' to incrementally add vote + slip data."
         )
 
     # ── PHASE 4: ANALYTICS + EXPORT (optional) ───────────────────────────

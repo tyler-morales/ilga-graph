@@ -11,6 +11,7 @@ from .analytics import (
     controversial_score,
     lobbyist_alignment,
 )
+from .metrics_definitions import get_metrics_glossary
 from .models import ActionEntry as ActionEntryModel
 from .models import Bill as BillModel
 from .models import CareerRange as CareerRangeModel
@@ -20,8 +21,8 @@ from .models import Member as MemberModel
 from .models import Office as OfficeModel
 from .models import VoteEvent as VoteEventModel
 from .models import WitnessSlip as WitnessSlipModel
-from .metrics_definitions import get_metrics_glossary
 from .moneyball import MoneyballProfile as MoneyballProfileModel
+from .search import SearchHit
 
 # ── Enums ─────────────────────────────────────────────────────────────────────
 
@@ -64,6 +65,15 @@ class LeaderboardSortField(Enum):
 class SortOrder(Enum):
     ASC = "asc"
     DESC = "desc"
+
+
+@strawberry.enum
+class SearchEntityType(Enum):
+    """Entity types available for the unified search query."""
+
+    MEMBER = "member"
+    BILL = "bill"
+    COMMITTEE = "committee"
 
 
 # ── Pagination ────────────────────────────────────────────────────────────────
@@ -572,6 +582,83 @@ class WitnessSlipConnection:
     """Paginated list of witness slips."""
 
     items: list[WitnessSlipType]
+    page_info: PageInfo
+
+
+# ── Unified search types ─────────────────────────────────────────────────────
+
+
+@strawberry.type
+class SearchResultType:
+    """One result from the unified search query.
+
+    Exactly one of ``member``, ``bill``, or ``committee`` is populated,
+    depending on ``entity_type``.
+    """
+
+    entity_type: str = strawberry.field(
+        description='The kind of entity: "member", "bill", or "committee".',
+    )
+    match_field: str = strawberry.field(
+        description="Which field the query matched (e.g. 'name', 'description', 'synopsis').",
+    )
+    match_snippet: str = strawberry.field(
+        description="A short excerpt of the matched text with surrounding context.",
+    )
+    relevance_score: float = strawberry.field(
+        description="Relevance ranking 0.0–1.0 (higher is a better match).",
+    )
+    member: MemberType | None = strawberry.field(
+        default=None,
+        description="Populated when entity_type is 'member'.",
+    )
+    bill: BillType | None = strawberry.field(
+        default=None,
+        description="Populated when entity_type is 'bill'.",
+    )
+    committee: CommitteeType | None = strawberry.field(
+        default=None,
+        description="Populated when entity_type is 'committee'.",
+    )
+
+    @classmethod
+    def from_hit(
+        cls,
+        hit: SearchHit,
+        *,
+        scorecard_loader: object | None = None,
+        moneyball_loader: object | None = None,
+    ) -> SearchResultType:
+        """Convert a SearchHit into a GraphQL-ready SearchResultType."""
+        member_type: MemberType | None = None
+        bill_type: BillType | None = None
+        committee_type: CommitteeType | None = None
+
+        if hit.member is not None:
+            sc = scorecard_loader.load(hit.member.id) if scorecard_loader else None  # type: ignore[union-attr]
+            mb = moneyball_loader.load(hit.member.id) if moneyball_loader else None  # type: ignore[union-attr]
+            member_type = MemberType.from_model(hit.member, sc, mb)
+        elif hit.bill is not None:
+            bill_type = BillType.from_model(hit.bill)
+        elif hit.committee is not None:
+            committee_type = CommitteeType.from_model(hit.committee)
+
+        return cls(
+            entity_type=hit.entity_type.value,
+            match_field=hit.match_field,
+            match_snippet=hit.match_snippet,
+            relevance_score=round(hit.relevance_score, 4),
+            member=member_type,
+            bill=bill_type,
+            committee=committee_type,
+        )
+
+
+@strawberry.type
+class SearchConnection:
+    """Paginated results from the unified search query."""
+
+    items: list[SearchResultType]
     page_info: PageInfo
 
 

@@ -179,6 +179,31 @@ def _build_variant_map(
                     if key not in variant_map:
                         variant_map[key] = canonical
 
+            # 2b. First-initial-only variant: "Harris, N" / "Harris,N"
+            # Senate/House floor PDFs disambiguate duplicate last names with
+            # just the first letter when the initial alone is unambiguous
+            # (e.g. "Harris, N." for Napoleon Harris III).
+            first_initial = fm_stripped[0] if fm_stripped else ""
+            if first_initial:
+                v_init_spaced = f"{last}, {first_initial}"
+                key = (chamber, _norm_key(v_init_spaced))
+                if key not in variant_map:
+                    variant_map[key] = canonical
+                v_init_nospace = f"{last},{first_initial}"
+                key = (chamber, _norm_key(v_init_nospace))
+                if key not in variant_map:
+                    variant_map[key] = canonical
+
+                if suffix:
+                    v_si = f"{last} {suffix}, {first_initial}"
+                    key = (chamber, _norm_key(v_si))
+                    if key not in variant_map:
+                        variant_map[key] = canonical
+                    v_sin = f"{last} {suffix},{first_initial}"
+                    key = (chamber, _norm_key(v_sin))
+                    if key not in variant_map:
+                        variant_map[key] = canonical
+
         # 3. Bare last name — only when unambiguous in this chamber
         if last_counts[(chamber, _norm_key(last))] == 1:
             variant_map[(chamber, _norm_key(last))] = canonical

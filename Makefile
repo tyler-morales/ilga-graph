@@ -1,4 +1,5 @@
-.PHONY: install dev dev-full run scrape scrape-200 scrape-full scrape-dev scrape-incremental export seed test lint lint-fix clean help
+.PHONY: install dev dev-full run scrape scrape-200 scrape-full scrape-dev scrape-incremental scrape-votes export seed test lint lint-fix clean help
+.PHONY: startup-report
 
 # ── Virtual environment ─────────────────────────────────────────────────────
 VENV ?= $(or $(wildcard .venv), $(wildcard venv), $(wildcard src/ilga_graph/.venv))
@@ -15,12 +16,11 @@ help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Pipeline: scrape (once) → then serve in dev or prod.
-#   make scrape      → 300 SB + 300 HB (prod-style)
-#   make scrape-200  → 200 SB + 200 HB (test index pagination)
-#   make scrape-full → all ~9600+ bills (full index; slow)
-#   make scrape-dev  → light: 20/chamber, 100+100, fast
-#   make dev / run   → serve from cache (LOAD_ONLY=1)
+# Pipeline: scrape (once) → scrape-votes (incremental) → serve.
+#   make scrape        → 300 SB + 300 HB (prod-style)
+#   make scrape-full   → all ~9600+ bills (full index; slow)
+#   make scrape-votes  → next 10 bills for votes + slips (resumable)
+#   make dev / run     → serve from cache (LOAD_ONLY=1)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 scrape: ## Prod-style: all members, 300 SB + 300 HB, export
@@ -38,11 +38,20 @@ scrape-dev: ## Light dev: 20/chamber, 100 SB + 100 HB, fast, export
 scrape-incremental: ## Incremental: only new/changed bills (keeps existing cache)
 	$(PYTHON) scripts/scrape.py --incremental --fast --export
 
+scrape-votes: ## Incremental: scrape votes + witness slips for next N bills (default 10)
+	$(PYTHON) scripts/scrape_votes.py --limit $(or $(LIMIT),10) --fast
+
+scrape-votes-sample: ## Sample strategy: scrape every 10th bill first (10% sample, ~75min)
+	$(PYTHON) scripts/scrape_votes.py --sample 10 --limit 0 --fast
+
+scrape-votes-gap-fill: ## Gap-fill: complete remaining bills after sample (run without --sample)
+	$(PYTHON) scripts/scrape_votes.py --limit 0 --fast
+
 dev: ## Serve from cache in dev mode (run 'make scrape-dev' or 'make scrape' first)
 	ILGA_LOAD_ONLY=1 ILGA_PROFILE=dev $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src
 
-dev-full: ## Serve from cache in dev mode with full Census ZIPs (no seed fallback)
-	ILGA_LOAD_ONLY=1 ILGA_PROFILE=dev ILGA_SEED_MODE=0 $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src
+dev-full: ## Serve full cache in dev shell (no dev caps, full ZIP crosswalk)
+	ILGA_LOAD_ONLY=1 ILGA_PROFILE=dev ILGA_DEV_MODE=0 ILGA_SEED_MODE=0 $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src
 
 run: ## Serve from cache in prod mode (run 'make scrape' first)
 	ILGA_LOAD_ONLY=1 ILGA_PROFILE=prod $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src
@@ -76,3 +85,6 @@ clean: ## Remove cache/ and generated vault files
 	rm -f ILGA_Graph_Vault/Moneyball\ Report.md
 	rm -f .startup_timings.csv
 	@echo "Cleaned. Run 'make scrape' or 'make scrape-dev' then 'make dev' or 'make run'."
+
+startup-report: ## Pretty startup timing report from .startup_timings.csv
+	$(PYTHON) scripts/startup_timings_report.py
