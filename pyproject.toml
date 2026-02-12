@@ -27,6 +27,14 @@ dev = [
     "rich",
     "pre-commit",
 ]
+ml = [
+    "polars",
+    "pyarrow",
+    "scikit-learn",
+    "rich",
+    "rapidfuzz",
+    "networkx",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

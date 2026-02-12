@@ -1,4 +1,4 @@
-.PHONY: scrape dev serve install test lint lint-fix clean help
+.PHONY: scrape dev serve install test lint lint-fix clean help ml-setup ml-pipeline ml-resolve ml-predict
 
 # ── Virtual environment ─────────────────────────────────────────────────────
 VENV ?= $(or $(wildcard .venv), $(wildcard venv), $(wildcard src/ilga_graph/.venv))
@@ -61,8 +61,25 @@ lint-fix: ## Auto-fix lint and format
 	$(BIN)ruff check --fix .
 	$(BIN)ruff format .
 
-clean: ## Remove cache/ and generated vault files
+# ── ML Pipeline ───────────────────────────────────────────────────────────────
+
+ml-setup: ## Install ML dependencies
+	$(BIN)pip install -e ".[ml]"
+
+ml-pipeline: ## Run ML data pipeline: cache/*.json -> processed/*.parquet
+	PYTHONPATH=src $(PYTHON) scripts/ml_pipeline.py
+
+ml-resolve: ## Interactive entity resolution (vote name -> member ID)
+	PYTHONPATH=src $(PYTHON) scripts/ml_resolve.py $(if $(AUTO),--auto) $(if $(STATS),--stats)
+
+ml-predict: ## Bill outcome prediction (train + interactive review)
+	PYTHONPATH=src $(PYTHON) scripts/ml_predict.py $(if $(TRAIN),--train) $(if $(EVAL),--evaluate)
+
+# ── Utilities ──────────────────────────────────────────────────────────────────
+
+clean: ## Remove cache/, processed/, and generated vault files
 	rm -rf cache/
+	rm -rf processed/*.parquet processed/*.pkl
 	rm -rf ILGA_Graph_Vault/Bills/ ILGA_Graph_Vault/Committees/ ILGA_Graph_Vault/Members/
 	rm -f ILGA_Graph_Vault/*.base
 	rm -f ILGA_Graph_Vault/Moneyball\ Report.md
