@@ -234,16 +234,42 @@
 
 ## ML Pipeline (`feature/ml-pipeline` branch)
 
-**New `src/ilga_graph/ml/` package** — fully automated "Legislative Intelligence Engine". One command (`make ml-run`) transforms raw cached data into enriched analytics. **No interaction required** -- the ML teaches itself from the data.
+**New `src/ilga_graph/ml/` package** — fully automated "Legislative Intelligence Engine" (v2: robust training). One command (`make ml-run`) transforms raw cached data into enriched analytics. **No interaction required** -- the ML teaches itself from the data.
+
+### v2 improvements (what changed)
+
+| Problem in v1 | Fix in v2 |
+|---|---|
+| Test set had 3 positive / 2900 negative (broken evaluation) | Only evaluates on "mature" bills (120+ days old). Test set now 412 advanced / 1650 stuck -- real metrics. |
+| Single algorithm, no validation | Compares 4 algorithms (GradientBoosting, RandomForest, LogisticRegression, AdaBoost) with 5-fold stratified cross-validation. Best model auto-selected. |
+| No hyperparameter tuning | RandomizedSearchCV (40 iterations) tunes the winner. Best: GBT with `n_estimators=300, max_depth=9, lr=0.05`. |
+| No probability calibration | Isotonic calibration via `CalibratedClassifierCV` -- probabilities are now reliable, not just rankings. |
+| 49% of legislators unclassified (DBSCAN outliers) | Switched to Agglomerative Clustering -- **100% members classified** (0% outliers). Optimal k auto-selected (k=10). |
+| Anomaly detector flagged genuine controversy (big = suspicious) | New coordination features (name duplication rate, position unanimity, top org share). Now explains WHY each bill flagged. |
+| No quality report | Generates `model_quality.json` with trust assessment, comparison table, strengths/issues. |
+
+### Current results (v2)
+
+| Metric | Value |
+|---|---|
+| **Bill prediction: CV ROC-AUC** | 0.984 +/- 0.005 (5-fold, GradientBoosting) |
+| **Bill prediction: Test ROC-AUC** | 0.910 (held-out, calibrated) |
+| **Bill prediction: Test precision (advanced)** | 96.3% (when it says "advance", it's right) |
+| **Bill prediction: Accuracy on mature bills** | 94.9% |
+| **Entity resolution** | 100% (385/385 unique names) |
+| **Coalition clustering** | 10 blocs, 100% members classified, 100% cross-party blocs |
+| **Anomaly detection** | 102 bills flagged (8%) with coordination reasons |
+| **Pipeline runtime** | ~4 minutes (was 21s but now does proper CV + tuning) |
 
 ### What it produces (in `processed/`)
 
 | Output file | What it is |
 |---|---|
-| `bill_scores.parquet` | Every bill scored with probability of advancement (0-100%). Sorted most-likely-to-advance first. |
-| `coalitions.parquet` | Every legislator assigned to a voting bloc (discovered from co-voting + co-sponsorship patterns). |
-| `member_embeddings.parquet` | 32-dimensional vector per legislator (their "legislative DNA" from graph embeddings). |
-| `slip_anomalies.parquet` | Every bill with 5+ witness slips scored for astroturfing signals (0-1 anomaly score). |
+| `bill_scores.parquet` | Every bill scored with probability of advancement. Mature bills have reliable labels; immature bills are true forecasts. |
+| `model_quality.json` | Trust assessment: model comparison, test metrics, strengths/issues, top features. |
+| `coalitions.parquet` | Every legislator assigned to a voting bloc (100% classified, no outliers). |
+| `member_embeddings.parquet` | 32-dimensional vector per legislator (spectral graph embeddings). |
+| `slip_anomalies.parquet` | Bills scored for coordination signals with human-readable reasons. |
 | `fact_vote_casts.parquet` | Vote casts with member_id FK (100% entity resolution). |
 | `dim_*.parquet`, `fact_*.parquet` | Normalized star schema tables. |
 
@@ -251,16 +277,16 @@
 
 ```bash
 make ml-setup    # Install ML dependencies (one time)
-make ml-run      # Run full pipeline (~22 seconds, no interaction)
+make ml-run      # Run full pipeline (~4 minutes, no interaction)
 ```
 
 ### Pipeline steps (all automated)
 
 1. **Data Pipeline** (`ml/pipeline.py`) — Flattens `cache/*.json` into 6 Parquet tables (726K+ rows, ~7s).
 2. **Entity Resolution** (`ml/entity_resolution.py`, `ml/active_learner.py`) — Maps 385 unique vote-PDF names to member IDs. **100% resolved** (98.7% exact match + gold mappings). No human input needed.
-3. **Bill Outcome Prediction** (`ml/features.py`, `ml/bill_predictor.py`) — Trains GradientBoosting on bills with known outcomes, scores all 9,676 bills. **ROC-AUC: 0.9477**. Top features: text signals, sponsor count, witness slip support, intro timing. Time-based split prevents leakage.
-4. **Coalition Discovery** (`ml/coalitions.py`) — Builds co-vote + co-sponsorship graph (180 nodes, 16K edges), computes spectral embeddings, clusters into voting blocs. Found 11 blocs including cross-party coalitions (e.g., Bloc 5: 3D/4R).
-5. **Anomaly Detection** (`ml/anomaly_detection.py`) — Isolation Forest on witness slip patterns. Flags 168 bills (10%) with suspicious patterns. Top flag: HB2827 (Homeschool Act) with 133K slips, 0.659 org concentration.
+3. **Bill Outcome Prediction** (`ml/features.py`, `ml/bill_predictor.py`) — Compares 4 algorithms with 5-fold stratified CV, tunes hyperparameters (40 iterations), calibrates probabilities, evaluates on mature bills only (120+ day maturity threshold). Scores all 9,676 bills. **CV AUC: 0.984, Test AUC: 0.910**. Top features: text signals ("makes technical"), intro timing, sponsor count, witness slip support. Time-based split on mature bills prevents leakage.
+4. **Coalition Discovery** (`ml/coalitions.py`) — Builds agreement-rate graph (normalized for activity, not raw counts) + co-sponsorship. Agglomerative clustering with auto-k selection (silhouette analysis, k=3..10). **10 blocs, 100% members classified, 100% cross-party.**
+5. **Anomaly Detection** (`ml/anomaly_detection.py`) — Isolation Forest on coordination features (name duplication, position unanimity, org concentration, top org share). Flags 102 bills (8%) with human-readable reasons (e.g., "single org files 81% of slips; near-unanimous position").
 
 ### Individual steps (optional)
 

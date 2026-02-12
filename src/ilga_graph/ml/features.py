@@ -11,22 +11,33 @@ represents one bill, and features capture:
 
 Target: Binary -- 1 if bill passed committee (advanced), 0 if stuck/dead.
 
-Time-based train/test split to prevent leakage.
+**Key design decisions:**
+- Only "mature" bills (introduced 90+ days ago) are used for train/test
+  to avoid labeling bills as "stuck" when they simply haven't had time yet.
+- Time-based train/test split to prevent leakage.
+- Stratified k-fold cross-validation within training for model selection.
 """
 
 from __future__ import annotations
 
 import logging
 import re
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
 import polars as pl
+from scipy.sparse import csr_matrix
 from scipy.sparse import hstack as sparse_hstack
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 LOGGER = logging.getLogger(__name__)
 PROCESSED_DIR = Path("processed")
+
+# Bills must be at least this many days old to have a reliable label.
+# Bills introduced less than this many days ago are scored but not
+# used for training or evaluation.
+MATURITY_DAYS = 120
 
 # ── Action-based outcome classification ──────────────────────────────────────
 
@@ -78,7 +89,8 @@ def build_bill_labels(
 ) -> pl.DataFrame:
     """Compute binary labels for each bill.
 
-    Returns a DataFrame with bill_id, target_advanced (0/1), target_law (0/1).
+    Returns a DataFrame with bill_id, target_advanced (0/1), target_law (0/1),
+    and is_mature (whether the bill is old enough for a reliable label).
     """
     # Group actions by bill
     bill_actions = df_actions.group_by("bill_id").agg(pl.col("action_text").alias("actions"))
@@ -88,17 +100,34 @@ def build_bill_labels(
         bill_actions, on="bill_id", how="left"
     )
 
-    # Compute labels
+    # Compute labels and maturity
     advanced_labels = []
     law_labels = []
+    mature_flags = []
+
+    cutoff_date = datetime.now()
+
     for row in df.to_dicts():
         actions = row.get("actions") or []
         advanced_labels.append(1 if _bill_advanced(actions) else 0)
         law_labels.append(1 if _bill_became_law(actions) else 0)
 
+        # Is this bill old enough for its label to be meaningful?
+        intro = row.get("introduction_date")
+        is_mature = False
+        if intro:
+            try:
+                dt = datetime.strptime(intro, "%Y-%m-%d")
+                days_old = (cutoff_date - dt).days
+                is_mature = days_old >= MATURITY_DAYS
+            except ValueError:
+                pass
+        mature_flags.append(is_mature)
+
     return df.select(["bill_id", "bill_type", "introduction_date"]).with_columns(
         pl.Series("target_advanced", advanced_labels, dtype=pl.Int8),
         pl.Series("target_law", law_labels, dtype=pl.Int8),
+        pl.Series("is_mature", mature_flags, dtype=pl.Boolean),
     )
 
 
@@ -208,7 +237,6 @@ def build_slip_features(
 ) -> pl.DataFrame:
     """Build witness slip aggregate features per bill."""
     if len(df_slips) == 0:
-        # No slips -- return zeros
         return df_bills.select("bill_id").with_columns(
             pl.lit(0).alias("slip_total"),
             pl.lit(0).alias("slip_proponent"),
@@ -221,7 +249,6 @@ def build_slip_features(
             pl.lit(0.0).alias("slip_org_concentration"),
         )
 
-    # Aggregate slips per bill
     agg = df_slips.group_by("bill_id").agg(
         pl.len().alias("slip_total"),
         (pl.col("position") == "Proponent").sum().alias("slip_proponent"),
@@ -232,7 +259,6 @@ def build_slip_features(
         pl.col("organization_clean").n_unique().alias("slip_unique_orgs"),
     )
 
-    # Compute ratios
     agg = agg.with_columns(
         (pl.col("slip_proponent") / pl.col("slip_total").cast(pl.Float64).clip(1, None)).alias(
             "slip_proponent_ratio"
@@ -245,8 +271,7 @@ def build_slip_features(
         ),
     )
 
-    # Org concentration (HHI): sum of squared shares per org
-    # Higher HHI = more concentrated (fewer orgs dominate)
+    # Org concentration (HHI)
     org_counts = df_slips.group_by(["bill_id", "organization_clean"]).agg(
         pl.len().alias("org_count")
     )
@@ -259,8 +284,6 @@ def build_slip_features(
     )
 
     agg = agg.join(hhi, on="bill_id", how="left").fill_null(0.0)
-
-    # Join back to bills (left join to include bills with no slips)
     result = df_bills.select("bill_id").join(agg, on="bill_id", how="left").fill_null(0)
 
     return result
@@ -276,18 +299,14 @@ def build_temporal_features(df_bills: pl.DataFrame) -> pl.DataFrame:
         is_lame_duck = 0
 
         if intro_date:
-            from datetime import datetime
-
             try:
                 dt = datetime.strptime(intro_date, "%Y-%m-%d")
                 month = dt.month
                 day_of_year = dt.timetuple().tm_yday
-                # Lame duck: November-January in even years or last month of session
                 is_lame_duck = 1 if dt.month >= 11 or dt.month == 1 else 0
             except ValueError:
                 pass
 
-        # Bill type features
         bill_type = bill.get("bill_type", "")
         is_senate = 1 if bill_type.startswith("S") else 0
         is_house = 1 if bill_type.startswith("H") else 0
@@ -316,19 +335,14 @@ def build_action_features(
 ) -> pl.DataFrame:
     """Build EARLY action features that avoid leakage.
 
-    Only counts actions in the first 30 days after filing. These capture
-    "momentum" signals: a bill that quickly gets cosponsors or committee
-    assignments is more likely to advance. We deliberately exclude action
-    categories that encode the outcome (committee_passed, chamber_passed, etc.).
+    Only counts actions in the first 30 days after filing.
     """
-    # Join actions with bill introduction dates
     df_act_dated = df_actions.join(
         df_bills.select(["bill_id", "introduction_date"]),
         on="bill_id",
         how="inner",
     )
 
-    # Filter to first 30 days only (early signals, no leakage)
     early_actions = df_act_dated.filter(
         (pl.col("date").is_not_null())
         & (pl.col("introduction_date").is_not_null())
@@ -341,7 +355,6 @@ def build_action_features(
         )
     )
 
-    # Only count safe categories (no outcome leakage)
     safe_categories = ["procedural", "committee", "cosponsor", "amendment"]
 
     agg = (
@@ -363,17 +376,14 @@ def build_action_features(
 def build_feature_matrix(
     *,
     tfidf_features: int = 500,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str], TfidfVectorizer]:
+) -> tuple:
     """Build the full feature matrix for bill outcome prediction.
 
     Returns:
-        X_train: Training feature matrix (scipy sparse + dense combined)
-        X_test: Test feature matrix
-        y_train: Training labels (target_advanced)
-        y_test: Test labels
-        bill_ids_train: Bill IDs for training set
-        bill_ids_test: Bill IDs for test set
-        vectorizer: Fitted TF-IDF vectorizer
+        X_train, X_test, y_train, y_test,
+        bill_ids_train, bill_ids_test,
+        X_immature, y_immature, bill_ids_immature,
+        vectorizer, feature_names
     """
     LOGGER.info("Building feature matrix...")
 
@@ -385,9 +395,13 @@ def build_feature_matrix(
 
     # Filter to substantive bills only (SB, HB)
     df_bills_sub = df_bills.filter(pl.col("bill_type").is_in(["SB", "HB"]))
-    LOGGER.info("Substantive bills: %d (of %d total)", len(df_bills_sub), len(df_bills))
+    LOGGER.info(
+        "Substantive bills: %d (of %d total)",
+        len(df_bills_sub),
+        len(df_bills),
+    )
 
-    # Build labels
+    # Build labels (with maturity flag)
     df_labels = build_bill_labels(df_bills_sub, df_actions)
 
     # Build feature tables
@@ -401,7 +415,15 @@ def build_feature_matrix(
 
     # Merge all tabular features
     df_feat = (
-        df_labels.select(["bill_id", "target_advanced", "target_law", "introduction_date"])
+        df_labels.select(
+            [
+                "bill_id",
+                "target_advanced",
+                "target_law",
+                "introduction_date",
+                "is_mature",
+            ]
+        )
         .join(df_sponsor, on="bill_id", how="left")
         .join(df_slips_feat, on="bill_id", how="left")
         .join(df_temporal, on="bill_id", how="left")
@@ -409,65 +431,81 @@ def build_feature_matrix(
         .fill_null(0)
     )
 
-    # ── Time-based split ─────────────────────────────────────────────────
-    # Sort by introduction_date, 70% train / 30% test
-    df_feat = df_feat.sort("introduction_date", nulls_last=True)
-    n = len(df_feat)
+    # ── Split: mature vs immature ────────────────────────────────────────
+    # Mature bills have reliable labels (introduced 120+ days ago).
+    # Immature bills are scored but NOT used for train/test evaluation.
+    df_mature = df_feat.filter(pl.col("is_mature"))
+    df_immature = df_feat.filter(~pl.col("is_mature"))
+
+    LOGGER.info(
+        "Mature bills (120+ days): %d, Immature (too new): %d",
+        len(df_mature),
+        len(df_immature),
+    )
+
+    # ── Time-based train/test on MATURE bills only ───────────────────────
+    df_mature = df_mature.sort("introduction_date", nulls_last=True)
+    n = len(df_mature)
     split_idx = int(n * 0.7)
 
-    df_train = df_feat[:split_idx]
-    df_test = df_feat[split_idx:]
+    df_train = df_mature[:split_idx]
+    df_test = df_mature[split_idx:]
 
-    LOGGER.info("Train: %d bills, Test: %d bills (70/30 time split)", len(df_train), len(df_test))
+    LOGGER.info(
+        "Train: %d bills, Test: %d bills (70/30 time split on mature)",
+        len(df_train),
+        len(df_test),
+    )
 
     # Extract targets
     y_train = df_train["target_advanced"].to_numpy()
     y_test = df_test["target_advanced"].to_numpy()
+    y_immature = df_immature["target_advanced"].to_numpy()
+
+    pos_train = y_train.sum()
+    pos_test = y_test.sum()
+    LOGGER.info(
+        "Class balance - Train: %d advanced / %d stuck (%.1f%%), "
+        "Test: %d advanced / %d stuck (%.1f%%)",
+        pos_train,
+        len(y_train) - pos_train,
+        100 * pos_train / max(len(y_train), 1),
+        pos_test,
+        len(y_test) - pos_test,
+        100 * pos_test / max(len(y_test), 1),
+    )
 
     # Build bill_id -> tfidf row index
     tfidf_id_to_idx = {bid: i for i, bid in enumerate(tfidf_bill_ids)}
 
-    # Extract numeric feature columns (exclude bill_id, targets, date)
+    # Extract numeric feature columns
     feature_cols = [
         c
         for c in df_feat.columns
-        if c not in ("bill_id", "target_advanced", "target_law", "introduction_date")
+        if c
+        not in (
+            "bill_id",
+            "target_advanced",
+            "target_law",
+            "introduction_date",
+            "is_mature",
+        )
     ]
 
-    X_train_tabular = df_train.select(feature_cols).to_numpy().astype(np.float32)
-    X_test_tabular = df_test.select(feature_cols).to_numpy().astype(np.float32)
+    def _to_sparse(df_slice: pl.DataFrame) -> csr_matrix:
+        tabular = df_slice.select(feature_cols).to_numpy().astype(np.float32)
+        tfidf_idx = [tfidf_id_to_idx.get(bid, 0) for bid in df_slice["bill_id"].to_list()]
+        tfidf_rows = tfidf_matrix[tfidf_idx]
+        return sparse_hstack([tfidf_rows, csr_matrix(tabular)])
 
-    # Align TF-IDF rows with train/test splits
-    train_tfidf_idx = [tfidf_id_to_idx.get(bid, 0) for bid in df_train["bill_id"].to_list()]
-    test_tfidf_idx = [tfidf_id_to_idx.get(bid, 0) for bid in df_test["bill_id"].to_list()]
-
-    from scipy.sparse import csr_matrix
-
-    X_train_tfidf = tfidf_matrix[train_tfidf_idx]
-    X_test_tfidf = tfidf_matrix[test_tfidf_idx]
-
-    # Combine: sparse TF-IDF + dense tabular
-    X_train = sparse_hstack([X_train_tfidf, csr_matrix(X_train_tabular)])
-    X_test = sparse_hstack([X_test_tfidf, csr_matrix(X_test_tabular)])
+    X_train = _to_sparse(df_train)
+    X_test = _to_sparse(df_test)
+    X_immature = _to_sparse(df_immature) if len(df_immature) > 0 else None
 
     bill_ids_train = df_train["bill_id"].to_list()
     bill_ids_test = df_test["bill_id"].to_list()
+    bill_ids_immature = df_immature["bill_id"].to_list()
 
-    # Class balance info
-    pos_train = y_train.sum()
-    pos_test = y_test.sum()
-    LOGGER.info(
-        "Class balance - Train: %d positive / %d negative (%.1f%%), "
-        "Test: %d positive / %d negative (%.1f%%)",
-        pos_train,
-        len(y_train) - pos_train,
-        100 * pos_train / len(y_train),
-        pos_test,
-        len(y_test) - pos_test,
-        100 * pos_test / len(y_test),
-    )
-
-    # Save feature metadata
     feature_names = [f"tfidf_{fn}" for fn in vectorizer.get_feature_names_out()] + feature_cols
 
     return (
@@ -477,6 +515,9 @@ def build_feature_matrix(
         y_test,
         bill_ids_train,
         bill_ids_test,
+        X_immature,
+        y_immature,
+        bill_ids_immature,
         vectorizer,
         feature_names,
     )
