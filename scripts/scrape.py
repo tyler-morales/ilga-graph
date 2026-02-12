@@ -1,18 +1,34 @@
 #!/usr/bin/env python3
-"""Standalone scraping CLI -- populate cache/ for the API (no server).
+"""Unified ILGA data pipeline — one command for everything.
+
+Smart incremental scraping with tiered index scanning:
+
+  Phase 1+2: Members + Bills
+    - <24h since last scan → SKIP index (just re-scrape recently active bills)
+    - <7 days since full scan → TAIL-ONLY scan (~2 min, checks last page per
+      doc type for new bills)
+    - >7 days / first run → FULL scan (all 125 pages, ~30 min)
+    Vote/slip data is always preserved when re-scraping bill details.
+
+  Phase 3: Votes + witness slips (incremental, resumable)
+  Phase 4: Analytics + Obsidian export (optional, --export)
 
 Usage::
 
-    make scrape          # 300 SB + 300 HB (prod-style)
-    make scrape-200      # 200 SB + 200 HB (test pagination: 2 range pages per type)
-    make scrape-full     # full index: all ~9600+ bills (slow)
-    make scrape-dev      # light: 20/chamber, 100+100, fast
-    make scrape-incremental   # only new/changed bills
+    make scrape                  # smart incremental (daily, ~2 min)
+    make scrape FULL=1           # force full index walk (~30 min)
+    make scrape FRESH=1          # nuke cache and re-scrape from scratch
+    make scrape LIMIT=100        # limit votes/slips to 100 bills
+    make scrape WORKERS=10       # more parallel workers for votes
 
-    python scripts/scrape.py --sb-limit 0 --hb-limit 0 --export   # full index (~9600+ bills)
-    python scripts/scrape.py --sb-limit 200 --hb-limit 200 --export # 200 per type
-    python scripts/scrape.py --export-only   # re-export vault from cache only
-    python scripts/scrape.py --force-refresh # clear cache and re-scrape
+    python scripts/scrape.py                   # smart tiered scan
+    python scripts/scrape.py --full            # force full index walk
+    python scripts/scrape.py --fresh           # clear cache, re-scrape
+    python scripts/scrape.py --skip-votes      # phases 1-2 only (no votes)
+    python scripts/scrape.py --export          # include vault export
+    python scripts/scrape.py --export-only     # export from cache only
+    python scripts/scrape.py --workers 10      # more vote/slip workers
+    python scripts/scrape.py --vote-limit 50   # limit vote/slip bills
 """
 
 from __future__ import annotations
@@ -20,6 +36,7 @@ from __future__ import annotations
 import argparse
 import logging
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -39,56 +56,82 @@ from ilga_graph.scraper import save_normalized_cache  # noqa: E402
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="ILGA Graph scraper CLI")
-    parser.add_argument(
-        "--limit",
-        type=int,
-        default=0,
-        help="Max members to scrape per chamber (0 = all)",
+    parser = argparse.ArgumentParser(
+        description="ILGA Graph unified data pipeline.",
     )
+
+    # ── Core options ──────────────────────────────────────────────────────
     parser.add_argument(
-        "--incremental",
+        "--fresh",
         action="store_true",
-        help="Incremental scrape: only fetch new/changed bills",
+        help="Delete cache/ and re-scrape everything from scratch.",
     )
     parser.add_argument(
-        "--sb-limit",
-        type=int,
-        default=100,
-        help="Max Senate bills from index (0 = all pages, ~4800; default: 100)",
+        "--full",
+        action="store_true",
+        help="Force full index walk (all 125 pages). Default: smart tiered scan.",
     )
     parser.add_argument(
-        "--hb-limit",
-        type=int,
-        default=100,
-        help="Max House bills from index (0 = all pages, ~4800; default: 100)",
+        "--skip-votes",
+        action="store_true",
+        help="Skip Phase 3 (votes + witness slips).",
     )
     parser.add_argument(
         "--export",
         action="store_true",
-        help="Also export the Obsidian vault after scraping",
+        help="Include Phase 4: analytics + Obsidian vault export.",
     )
     parser.add_argument(
         "--export-only",
         action="store_true",
-        help="Skip scraping; export vault from existing cache",
+        help="Skip scraping entirely; just export vault from cache.",
+    )
+
+    # ── Tuning ────────────────────────────────────────────────────────────
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=5,
+        help="Parallel workers for vote/slip scraping (default: 5).",
+    )
+    parser.add_argument(
+        "--vote-limit",
+        type=int,
+        default=0,
+        help="Max bills to scrape votes/slips for (0 = all remaining).",
+    )
+    parser.add_argument(
+        "--fast",
+        action="store_true",
+        help="Use shorter request delays.",
+    )
+
+    # ── Legacy/advanced (hidden from help) ────────────────────────────────
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=0,
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--sb-limit",
+        type=int,
+        default=0,
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--hb-limit",
+        type=int,
+        default=0,
+        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--bill-limit",
         type=int,
         default=None,
-        help="Max bills to export (default: all)",
+        help=argparse.SUPPRESS,
     )
-    parser.add_argument(
-        "--force-refresh",
-        action="store_true",
-        help="Delete cache/ before scraping to force a full refresh",
-    )
-    parser.add_argument(
-        "--fast",
-        action="store_true",
-        help="Use dev-mode request delay (0.25s instead of 1.0s)",
-    )
+
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -97,22 +140,14 @@ def main() -> None:
     )
     logger = logging.getLogger("scrape")
 
-    if args.force_refresh:
+    # ── Fresh start ──────────────────────────────────────────────────────
+    if args.fresh:
         cache_dir = ROOT / "cache"
         if cache_dir.exists():
             logger.info("Removing cache directory: %s", cache_dir)
             shutil.rmtree(cache_dir)
 
-    # Never use seed fallback when explicitly scraping
     seed_mode = args.export_only
-
-    logger.info(
-        "Loading data (limit=%d, seed_mode=%s, dev_delay=%s, incremental=%s)...",
-        args.limit,
-        seed_mode,
-        args.fast,
-        args.incremental,
-    )
 
     if args.export_only:
         data = load_from_cache(seed_fallback=seed_mode)
@@ -121,59 +156,91 @@ def main() -> None:
             sys.exit(1)
     else:
         # ══════════════════════════════════════════════════════════════════
-        # PHASE 1: EXTRACT — scrape all raw data (no intermediate saves)
+        # PHASE 1+2: Members + Bill index + Bill details
         # ══════════════════════════════════════════════════════════════════
+        logger.info("=" * 72)
+        logger.info("  PHASE 1+2: Members + Bills (incremental)")
+        logger.info("=" * 72)
         data = load_or_scrape_data(
             limit=args.limit,
             dev_mode=args.fast,
             seed_mode=seed_mode,
-            incremental=args.incremental,
+            incremental=True,  # always incremental
             sb_limit=args.sb_limit,
             hb_limit=args.hb_limit,
-            save_cache=False,  # defer save until all data is assembled
+            save_cache=False,
+            force_full_index=args.full,
         )
         logger.info(
-            "Extracted %d members, %d committees, %d bills.",
+            "  %d members, %d committees, %d bills.",
             len(data.members),
             len(data.committees),
             len(data.bills_lookup),
         )
-
-        # ══════════════════════════════════════════════════════════════════
-        # PHASE 2: PERSIST — save members + bills cache
-        # ══════════════════════════════════════════════════════════════════
-        # Note: votes/slips are scraped incrementally via a separate command:
-        #   make scrape-votes          (next 10 bills, resumable)
-        #   make scrape-votes LIMIT=0  (all remaining bills)
-        # Existing per-bill vote_events/witness_slips in bills.json are
-        # preserved -- this scrape does NOT clear them.
         save_normalized_cache(data.members, data.bills_lookup)
-        logger.info(
-            "Saved cache: %d members, %d bills.",
-            len(data.members),
-            len(data.bills_lookup),
-        )
-        logger.info("Votes/slips: run 'make scrape-votes' to incrementally add vote + slip data.")
+        logger.info("  Saved to cache/.")
 
-    # ── PHASE 4: ANALYTICS + EXPORT (optional) ───────────────────────────
+        # ══════════════════════════════════════════════════════════════════
+        # PHASE 3: Votes + witness slips (incremental)
+        # ══════════════════════════════════════════════════════════════════
+        if not args.skip_votes:
+            logger.info("")
+            logger.info("=" * 72)
+            logger.info("  PHASE 3: Votes + witness slips (incremental)")
+            logger.info("=" * 72)
+
+            # Delegate to scrape_votes.py as a subprocess so it gets its
+            # own signal handling, progress tracking, and real-time output.
+            vote_cmd = [
+                sys.executable,
+                str(ROOT / "scripts" / "scrape_votes.py"),
+                "--limit",
+                str(args.vote_limit),
+                "--workers",
+                str(args.workers),
+                "--fast",
+            ]
+            logger.info("  Running: %s", " ".join(vote_cmd))
+            result = subprocess.run(vote_cmd, cwd=str(ROOT))
+            if result.returncode != 0:
+                logger.warning(
+                    "  Vote/slip scraping exited with code %d (partial data saved).",
+                    result.returncode,
+                )
+            else:
+                logger.info("  Vote/slip scraping complete.")
+
+            # Reload data to pick up the new vote/slip data
+            data = load_from_cache(seed_fallback=False)
+            if data is None:
+                logger.error("Failed to reload cache after vote scraping.")
+                sys.exit(1)
+
+    # ══════════════════════════════════════════════════════════════════════
+    # PHASE 4: Analytics + Obsidian export (optional)
+    # ══════════════════════════════════════════════════════════════════════
     if args.export or args.export_only:
-        logger.info("Computing analytics...")
+        logger.info("")
+        logger.info("=" * 72)
+        logger.info("  PHASE 4: Analytics + Vault export")
+        logger.info("=" * 72)
         cached = load_analytics_cache(CACHE_DIR, MOCK_DEV_DIR, seed_mode)
         if cached is not None:
             scorecards, moneyball = cached
-            logger.info("Using cached analytics.")
+            logger.info("  Using cached analytics.")
         else:
             scorecards, moneyball = compute_analytics(data.members, data.committee_rosters)
             save_analytics_cache(scorecards, moneyball, CACHE_DIR)
-        logger.info("Exporting vault...")
+        logger.info("  Exporting vault...")
         export_vault(
             data,
             scorecards,
             moneyball,
             bill_export_limit=args.bill_limit,
         )
-        logger.info("Vault exported to ILGA_Graph_Vault/")
+        logger.info("  Vault exported to ILGA_Graph_Vault/")
 
+    logger.info("")
     logger.info("Done.")
 
 

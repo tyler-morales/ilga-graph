@@ -73,6 +73,52 @@
 
 ## Done (this session)
 
+- **Smart tiered index scanning (`scrapers/bills.py`):**
+  - **Problem:** Every `make scrape` walked all 125 ILGA index pages (~30 min) even when nothing changed. Wasteful for daily runs.
+  - **Tiered strategy:** `incremental_bill_scrape()` now auto-decides scan depth based on `scrape_metadata.json` timestamps:
+    - **<24h since last scan → SKIP** index entirely. Only re-scrapes bills with recent activity (from cached `last_action_date`). Takes ~seconds.
+    - **<7 days since last full scan → TAIL-ONLY** scan. New `tail_only_bill_indexes()` fetches the ILGA `/Legislation` page once to discover doc types, then only checks range pages at or beyond the highest cached bill number per doc type. E.g., if highest SB is 4052, only page 41 of 41 is fetched (not pages 1-40). Takes ~1-2 min vs 30 min.
+    - **>7 days or first run → FULL** scan. All 125 pages as before.
+    - **`FULL=1` override:** `make scrape FULL=1` forces a full walk regardless of timestamps.
+  - **Metadata tracking:** `scrape_metadata.json` now stores `last_full_scan`, `last_tail_scan`, and `highest_bill_per_type` (e.g., `{"SB": 4052, "HB": 5623, "SR": 614}`). Updated on every scrape. Full scans update both timestamps; tail scans update only `last_tail_scan`.
+  - **Helper functions:** `_hours_since()` (timestamp age), `_extract_highest_bill_numbers()` (scan cached bills for max number per doc type), `_bill_number_to_int()` (extract numeric suffix), `tail_only_bill_indexes()` (the tail scan implementation).
+  - **Re-scrape logic improved:** Recently active bills (last 30 days) are now re-scraped regardless of scan type — even on "skip" runs. Build entries from cached `Bill.status_url` so no index walk is needed.
+
+- **Pipeline resilience + Makefile overhaul:**
+  - **Data loss fix (`scrapers/bills.py`):** `incremental_bill_scrape()` and `scrape_all_bills()` now preserve existing `vote_events` and `witness_slips` when re-scraping bills. Previously, re-running `make scrape` would create fresh `Bill` objects with empty arrays and overwrite the cached bill — destroying hours of vote/slip scraping work. Fix: both functions now carry forward `old.vote_events` and `old.witness_slips` from the existing cached bill before overwriting.
+  - **Unified pipeline (`scripts/scrape.py`):** Merged the separate `scripts/scrape.py` (members+bills) and `scripts/scrape_votes.py` (votes+slips) into a single pipeline with 4 phases:
+    1. **Phase 1+2:** Members + Bill index + Bill details (incremental, preserves vote/slip data)
+    2. **Phase 3:** Votes + witness slips for bills that need them (delegates to `scrape_votes.py` as subprocess)
+    3. **Phase 4:** Analytics + Obsidian vault export (optional, `--export`)
+  - **Makefile simplified:** Replaced 15+ targets with 8 clear ones:
+    - `make scrape` — Smart tiered scan (daily ~2 min, auto-decides). Env vars: `FULL=1` (force full walk), `FRESH=1` (nuke cache), `LIMIT=100` (vote/slip bill limit), `WORKERS=10` (parallel workers), `SKIP_VOTES=1` (phases 1-2 only), `EXPORT=1` (include vault export).
+    - `make dev` — Serve from cache (dev mode, auto-reload)
+    - `make serve` — Serve from cache (prod mode)
+    - `make install` — Install project with dev deps
+    - `make test` — Run pytest
+    - `make lint` / `make lint-fix` — Ruff check + format
+    - `make clean` — Remove cache/ and generated files
+  - **No backwards compatibility needed.** Old targets are gone. One command for all data: `make scrape`.
+
+- **Vote PDF tally mismatch fix (`scrapers/votes.py`):**
+  - **Root cause:** Single-letter middle initials (E, P, N) in committee vote PDFs were being parsed as vote codes (Excused, Present, Nay). Example: `Y Hastings, Michael E Y Martwick, Robert F` → "E" treated as Excused, so Martwick's Y vote was lost. Always manifested as "expected N yeas, got N-1".
+  - **Fix:** Extended the `SMART_A` disambiguation pattern to all single-letter codes that can be middle initials: E, P, N, A. Each code uses a negative lookahead — it's only treated as a vote code when NOT immediately followed by another vote code (e.g., `E(?!\s+(?:NV|Y|N|P|A)\s)`). This means "Michael E Y Martwick" → E followed by Y → middle initial, name becomes "Hastings, Michael E". But "E Smith Y Jones" → E followed by "Smith" → real Excused vote.
+  - **PDF artifact fix:** Added post-processing to handle `Y NV Mayfield` extraction artifacts where `NV` gets captured as part of a name. Names starting with a vote code prefix are re-split into the correct code + name.
+  - **Tested:** 15 committee + floor vote PDFs, all 15 pass (previously 3+ were failing on every committee PDF with middle initials). Regression tests on floor votes (87Y/28N, 55Y) all pass.
+
+- **Vote/slip scraper robustness overhaul + data recovery (`scrape_votes.py`):**
+  - **Root cause:** Progress file (`votes_slips_progress.json`) tracked "done" bills by bill_number but didn't verify actual data existed in `bills.json`. After a cache regeneration, all 11,721 bills were marked "done" in progress but had empty `vote_events`/`witness_slips` arrays. Scraper would report "Nothing to do" while startup showed 0 vote events / 0 slips.
+  - **Data recovery:** Merged standalone `cache/vote_events.json` (18 records, 8 bills) and `cache/witness_slips.json` (17,440 records, 5 bills) into `bills.json`. Result: 129 vote events across 62 bills, 17,444 witness slips across 9 bills now load correctly at startup.
+  - **Data-verified progress:** Progress validation now checks actual `bill.vote_events` / `bill.witness_slips` arrays, not just the progress file. Stale entries (marked "done" but no data) are automatically dropped. New `--verify` flag rebuilds progress entirely from `bills.json` data.
+  - **Dual-track progress:** New `checked_no_data` list tracks bills that were scraped but genuinely had no votes/slips (distinguishes "checked and empty" from "never checked"). Prevents re-scraping known-empty bills.
+  - **Heuristic skip:** Bills stalled at intro/assignments (only "Filed with Secretary", "First Reading", "Referred to Assignments" actions) are skipped without HTTP requests — saves ~3,800+ round-trips. These bills can't have votes or witness slips.
+  - **Batch saves:** `bills.json` now saved every 25 bills (configurable via `--save-interval`) instead of after every single bill. Eliminates writing ~50MB JSON 11,000+ times. Progress file also batched.
+  - **Smart ordering:** SB/HB scraped first (most important), then resolutions, AM last. Previously alphabetical (AM came first, SB/HB never reached).
+  - **ETA display:** Each progress line now shows estimated time remaining.
+  - **Standalone merge:** Scraper auto-merges `vote_events.json` / `witness_slips.json` into bills at startup if they exist.
+  - **Makefile:** Added `make scrape-votes-verify` target.
+  - **Estimated full scrape:** ~100 minutes for all ~11,400 remaining bills (5 workers, 0.15s delay). Heuristic skip removes ~255 stalled bills instantly.
+
 - **Lint hardening + cleanup (Ruff E501/W293):**
   - Wrapped long metric/help strings and cleaned blank-line whitespace in:
     `scripts/scrape_votes.py`, `src/ilga_graph/metrics_definitions.py`,
@@ -162,15 +208,15 @@
 
 ## Next (when you're ready)
 
-- **Sample-based vote/slip scraping** (PRIORITY): Implemented two-phase strategy to get complete data faster:
-  - **Phase 1 (Sample)**: `make scrape-votes-sample` or `python scripts/scrape_votes.py --sample 10 --limit 0` scrapes every 10th bill (~1,172 bills, ~75 minutes). Gives 10% representative dataset for testing analytics with real distribution of votes/slips.
-  - **Phase 2 (Gap-fill)**: `make scrape-votes-gap-fill` to fill remaining 90% of bills (~10,549 bills, ~11 hours).
-  - **Test suite**: `tests/test_scrape_votes_sample.py` validates sample strategy, progress tracking, and data structure. Run with `PYTHONPATH=src pytest tests/test_scrape_votes_sample.py`.
-  - **Why**: Get statistically representative data quickly to verify analytics accuracy before committing to full 12-hour scrape. Sample will expose any data quality issues early. Can interrupt and resume at any time.
+- **Run full pipeline** (PRIORITY): Pipeline is fixed and unified with smart tiered scanning.
+  - `make scrape` — Daily run (~2 min if <24h since last scan, auto-decides tier).
+  - `make scrape FULL=1` — Force full index walk (all 125 pages, ~30 min). Use weekly or after major ILGA updates.
+  - `make scrape WORKERS=10` — More parallel workers for votes/slips.
+  - `make scrape LIMIT=100` — Limit vote/slip phase to 100 bills (for testing).
+  - `make scrape FRESH=1` — Nuke cache and re-scrape from scratch.
+  - Can Ctrl+C and resume at any time. Batch saves every 25 bills. Vote/slip data is never lost by re-scraping bills.
   
-- **Verify GraphQL:** After sample completes, restart server and check that scorecards/Moneyball recompute with sampled data. Spot-check 3-4 members' "Laws passed: X of Y" against ilga.gov to verify accuracy. Test advocacy frontend with real ZIPs to see if Power Broker / Ally selections make sense with partial data.
-
-- **Run full scrape:** Delete `cache/` and run `make scrape-full`. Bill index now discovers ALL 11 doc types (~15,000 entries across 125 range pages, ~20 min index + detail scraping).
+- **Verify GraphQL:** After scrape completes, `make dev` and check that scorecards/Moneyball recompute with vote data. Spot-check 3-4 members' "Laws passed: X of Y" against ilga.gov to verify accuracy. Test advocacy frontend with real ZIPs to see if Power Broker / Ally selections make sense with real vote/slip data.
 
 - When shifting to prod: set `ILGA_PROFILE=prod`, `ILGA_CORS_ORIGINS`, and optionally `ILGA_API_KEY`.
 

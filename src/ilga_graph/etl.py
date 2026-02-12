@@ -164,6 +164,7 @@ def load_or_scrape_data(
     sb_limit: int = 100,
     hb_limit: int = 100,
     save_cache: bool = True,
+    force_full_index: bool = False,
 ) -> ScrapedData:
     """Load data from cache/seed or scrape from ilga.gov.
 
@@ -203,6 +204,7 @@ def load_or_scrape_data(
             hb_limit=hb_limit,
             request_delay=request_delay,
             rescrape_recent_days=30,
+            force_full=force_full_index,
         )
     else:
         bills_lookup = load_bill_cache(seed_fallback=seed_mode)

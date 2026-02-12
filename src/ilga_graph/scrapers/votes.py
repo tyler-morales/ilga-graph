@@ -33,16 +33,26 @@ VOTE_MOCK_DEV_FILE = MOCK_DEV_DIR / "vote_events.json"
 # when the actual code is 'NV'.  Lazy capture stops at the next vote code or EOL.
 # Codes: Y=Yea, N=Nay, P=Present, NV=Not Voting, E=Excused, A=Absent
 #
-# The tricky part: 'A' can also be a middle initial (e.g. "Kimberly A" in committee
-# PDFs with full names).  We disambiguate: treat 'A' as a vote code ONLY when it is
-# NOT immediately followed by another vote code (Y/N/P/E/NV).  In "Kimberly A Y Murphy"
-# the A is followed by Y (a vote code) → middle initial.  In "Davidsmeyer A Jones"
-# the A is followed by "Jones" (a name) → Absent vote code.
+# The tricky part: single-letter vote codes (A, E, P, N) can also be middle
+# initials in committee PDFs with full names (e.g. "Hastings, Michael E",
+# "DeWitte, Donald P", "Lightford, Kimberly A").  We disambiguate: treat a
+# single-letter code as a vote code ONLY when it is NOT immediately followed
+# by another vote code.  Example:
+#   "Hastings, Michael E Y Martwick" → E followed by Y → middle initial
+#   "Davidsmeyer A Jones"            → A followed by "Jones" → Absent vote
+#
+# This prevents "Michael E" from being split into Y:"Michael" + E:"Y Martwick"
+# which was causing the "expected N yeas, got N-1" tally mismatches on every
+# committee vote PDF with middle initials.
 _SMART_A = r"A(?!\s+(?:NV|Y|N|P|E)\s)"
+_SMART_E = r"E(?!\s+(?:NV|Y|N|P|A)\s)"
+_SMART_P = r"P(?!\s+(?:NV|Y|N|E|A)\s)"
+_SMART_N = r"N(?!\s+(?:NV|Y|P|E|A)\s)"
+_ALL_CODES = rf"NV|Y|{_SMART_N}|{_SMART_P}|{_SMART_E}|{_SMART_A}"
 _RE_VOTE_ENTRY = re.compile(
-    rf"\b(NV|Y|N|P|E|{_SMART_A})\s+"
+    rf"\b({_ALL_CODES})\s+"
     r"([\w][\w\s,.\'\-\"]+?)"
-    rf"(?=\s+(?:NV|Y|N|P|E|{_SMART_A})\s|\s*$)",
+    rf"(?=\s+(?:{_ALL_CODES})\s|\s*$)",
 )
 
 # Metadata lines at the bottom of the PDF
@@ -80,6 +90,10 @@ def _parse_vote_text(raw_text: str) -> dict[str, Any]:
 
     bucket_map = {"Y": yeas, "N": nays, "P": present, "NV": nv, "E": nv, "A": nv}
 
+    # Regex to detect names that start with a vote code prefix due to
+    # PDF extraction artifacts (e.g. "Y NV Mayfield" → name="NV Mayfield").
+    _re_name_starts_with_code = re.compile(r"^(NV|Y|N|P|E|A)\s+(.+)$")
+
     for line in raw_text.splitlines():
         # Skip metadata / header lines that start with digits (tally) or known keywords
         stripped = line.strip()
@@ -89,11 +103,21 @@ def _parse_vote_text(raw_text: str) -> dict[str, Any]:
         for match in _RE_VOTE_ENTRY.finditer(stripped):
             code = match.group(1)
             name = match.group(2).strip().rstrip(",").strip()
-            if name and name != "Mr. President":
-                bucket_map[code].append(name)
-            elif name == "Mr. President":
-                # Include as-is
-                bucket_map[code].append(name)
+            if not name:
+                continue
+
+            # Fix PDF artifacts: if name starts with a vote code
+            # (e.g. "NV Mayfield, Rita"), split into the real code + name.
+            code_in_name = _re_name_starts_with_code.match(name)
+            if code_in_name:
+                real_code = code_in_name.group(1)
+                real_name = code_in_name.group(2).strip()
+                if real_name:
+                    # The outer code was wrong; use the embedded code
+                    bucket_map[real_code].append(real_name)
+                    continue
+
+            bucket_map[code].append(name)
 
     # ── Extract metadata ──
     date_match = _RE_DATE.search(raw_text)
