@@ -29,7 +29,7 @@ help: ## Show this help
 #   make serve               Serve from cache (prod mode)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-scrape: ## Smart incremental scrape (members + bills + votes + slips)
+scrape: ## Smart incremental scrape (members + bills + votes + slips + ML)
 	$(PYTHON) scripts/scrape.py \
 		--fast \
 		$(if $(FRESH),--fresh) \
@@ -38,6 +38,8 @@ scrape: ## Smart incremental scrape (members + bills + votes + slips)
 		$(if $(WORKERS),--workers $(WORKERS)) \
 		$(if $(EXPORT),--export) \
 		$(if $(SKIP_VOTES),--skip-votes)
+	@echo "Running ML pipeline..."
+	PYTHONPATH=src $(PYTHON) scripts/ml_run.py || echo "ML pipeline skipped (run make ml-setup first)"
 
 dev: ## Serve from cache (dev mode, auto-reload)
 	ILGA_LOAD_ONLY=1 ILGA_PROFILE=dev $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src

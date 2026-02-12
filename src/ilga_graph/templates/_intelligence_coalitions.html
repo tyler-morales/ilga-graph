@@ -1,0 +1,54 @@
+{# Voting Coalitions tab partial #}
+{% if not groups %}
+<div class="intel-empty">No coalition data available.</div>
+{% else %}
+
+<div class="intel-section-header">
+    <h2>Voting Coalitions</h2>
+    <p>{{ groups|length }} voting blocs discovered via graph analysis of voting patterns and co-sponsorship.
+       Cross-party blocs are highlighted.</p>
+</div>
+
+<div class="coalition-grid">
+    {% for g in groups %}
+    <div class="coalition-card {% if g.cross_party %}coalition-cross-party{% endif %}">
+        <div class="coalition-header">
+            <h3>Coalition {{ g.id + 1 }}</h3>
+            <span class="coalition-size">{{ g.size }} members</span>
+        </div>
+        <div class="coalition-party-bar">
+            {% if g.dem > 0 %}
+            <div class="party-dem" style="width: {{ (g.dem / g.size * 100)|int }}%"
+                 title="{{ g.dem }} Democrats">D: {{ g.dem }}</div>
+            {% endif %}
+            {% if g.rep > 0 %}
+            <div class="party-rep" style="width: {{ (g.rep / g.size * 100)|int }}%"
+                 title="{{ g.rep }} Republicans">R: {{ g.rep }}</div>
+            {% endif %}
+        </div>
+        {% if g.cross_party %}
+        <div class="coalition-cross-label">Cross-party bloc</div>
+        {% endif %}
+        <details class="coalition-members-toggle">
+            <summary>Show members ({{ g.size }})</summary>
+            <table class="intel-table intel-table-compact">
+                <thead>
+                    <tr><th>Name</th><th>Party</th><th>Chamber</th><th>District</th></tr>
+                </thead>
+                <tbody>
+                    {% for m in g.members %}
+                    <tr>
+                        <td>{{ m.name }}</td>
+                        <td><span class="party-tag party-{{ m.party[0]|upper }}">{{ m.party }}</span></td>
+                        <td>{{ m.chamber }}</td>
+                        <td>{{ m.district }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </details>
+    </div>
+    {% endfor %}
+</div>
+
+{% endif %}

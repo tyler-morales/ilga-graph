@@ -298,11 +298,26 @@ make ml-predict    # Bill scoring only
 
 - **Dependencies**: `polars`, `pyarrow`, `scikit-learn`, `rapidfuzz`, `networkx`, `rich` in `[project.optional-dependencies] ml`.
 
+### v3: Intelligence Dashboard & Self-Correcting Feedback Loop
+
+- **Backtester module** (`ml/backtester.py`): Snapshots predictions after each run, backtests previous predictions against new actual outcomes on the next run, accumulates accuracy history in `processed/accuracy_history.json`. Tracks precision, recall, F1, confidence calibration, and biggest misses per run.
+- **Chained pipeline** (`Makefile`): `make scrape` now automatically triggers `make ml-run` at the end, so new data is immediately processed and predictions backtested.
+- **ML data loader** (`ml_loader.py`): Reads all ML outputs (bill scores, coalitions, anomalies, model quality, accuracy history) into typed dataclasses for API consumption. Loaded at app startup into `state.ml`.
+- **GraphQL API**: 7 new resolvers — `billPredictions` (filterable by outcome, confidence, reliability, forecasts), `billPrediction` (single bill), `votingCoalitions` (grouped with party breakdown), `slipAnomalies` (filterable, sorted by score), `modelQuality` (trust assessment, metrics, feature importances, model comparison), `predictionAccuracy` (accuracy history across runs).
+- **Web dashboard** (`/intelligence`): HTMX tabbed interface with 4 views:
+  - **Predictions tab**: All bill scores with inline score bars, client-side filters (forecasts only, ADVANCE/STUCK, high confidence)
+  - **Coalitions tab**: Voting bloc cards with party composition bars, cross-party highlights, expandable member lists
+  - **Anomalies tab**: Flagged bills with coordination signal details (org HHI, position unanimity, top org share)
+  - **Model Quality & Accuracy tab**: Model comparison, trust assessment, feature importances, accuracy history trend, biggest misses
+- **Navigation**: Links between `/advocacy` and `/intelligence` dashboards.
+- **Pipeline steps updated** (7 steps): 0=Backtest, 1=Data Pipeline, 2=Entity Resolution, 3=Bill Scoring, 4=Coalitions, 5=Anomaly Detection, 6=Snapshot
+
 - **Next (ML backlog)**:
   - Individual vote prediction (recommender system using member embeddings from matrix factorization)
   - "Poison pill" detector (semantic similarity between original and amendment synopses)
   - Committee assignment prediction (multi-class text classifier)
-  - Expose ML outputs through the GraphQL API (bill scores, coalition data, anomaly flags)
+  - Accuracy trend visualization (sparklines or mini chart in accuracy tab)
+  - Per-bill prediction history (track how confidence changes over time)
 
 ---
 

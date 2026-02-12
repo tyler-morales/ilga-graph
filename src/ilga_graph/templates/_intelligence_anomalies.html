@@ -1,0 +1,79 @@
+{# Anomaly Detection tab partial #}
+{% if not anomalies %}
+<div class="intel-empty">No anomaly data available.</div>
+{% else %}
+
+<div class="intel-section-header">
+    <h2>Witness Slip Anomaly Detection</h2>
+    <p>{{ anomalies|length }} bills analyzed for astroturfing signals.
+       Flagged bills have suspicious coordination patterns in witness slips.</p>
+</div>
+
+<div class="intel-filters">
+    <label><input type="checkbox" id="filter-flagged" onchange="filterAnomalies()"> Flagged only</label>
+</div>
+
+<table class="intel-table" id="anomalies-table">
+    <thead>
+        <tr>
+            <th>Bill</th>
+            <th>Description</th>
+            <th>Total Slips</th>
+            <th>Anomaly Score</th>
+            <th>Flagged?</th>
+            <th>Reason</th>
+            <th>Top Org %</th>
+            <th>HHI</th>
+            <th>Unanimity</th>
+            <th>Pro / Opp</th>
+            <th>Orgs</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for a in anomalies %}
+        <tr class="anomaly-row {% if a.is_anomaly %}anomaly-flagged{% endif %}"
+            data-flagged="{{ 'true' if a.is_anomaly else 'false' }}">
+            <td class="bill-num"><strong>{{ a.bill_number }}</strong></td>
+            <td class="desc-cell" title="{{ a.description }}">{{ a.description[:60] }}{% if a.description|length > 60 %}&hellip;{% endif %}</td>
+            <td style="text-align:right">{{ a.total_slips }}</td>
+            <td>
+                <div class="score-bar-container">
+                    {% set score_pct = [((a.anomaly_score + 0.5) * 100)|int, 100]|min %}
+                    <div class="score-bar {% if a.is_anomaly %}score-anomaly{% else %}score-normal{% endif %}"
+                         style="width: {{ score_pct }}%">
+                    </div>
+                    <span class="score-text">{{ "%.3f"|format(a.anomaly_score) }}</span>
+                </div>
+            </td>
+            <td>
+                {% if a.is_anomaly %}
+                <span class="intel-flag">FLAGGED</span>
+                {% else %}
+                <span class="intel-normal">Normal</span>
+                {% endif %}
+            </td>
+            <td class="reason-cell">{{ a.anomaly_reason }}</td>
+            <td style="text-align:right">{{ "%.0f"|format(a.top_org_share * 100) }}%</td>
+            <td style="text-align:right">{{ "%.3f"|format(a.org_hhi) }}</td>
+            <td style="text-align:right">{{ "%.0f"|format(a.position_unanimity * 100) }}%</td>
+            <td style="text-align:right">{{ a.n_proponent }} / {{ a.n_opponent }}</td>
+            <td style="text-align:right">{{ a.unique_orgs }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+function filterAnomalies() {
+    const flaggedOnly = document.getElementById('filter-flagged').checked;
+    document.querySelectorAll('#anomalies-table .anomaly-row').forEach(row => {
+        if (flaggedOnly && row.dataset.flagged !== 'true') {
+            row.style.display = 'none';
+        } else {
+            row.style.display = '';
+        }
+    });
+}
+</script>
+
+{% endif %}

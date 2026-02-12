@@ -370,6 +370,7 @@ class AppState:
         self.witness_slips: list[WitnessSlip] = []
         self.witness_slips_lookup: dict[str, list[WitnessSlip]] = {}  # bill_number -> slips
         self.zip_to_district: dict[str, ZipDistrictInfo] = {}  # ZCTA -> district info
+        self.ml: object | None = None  # MLData from ml_loader (optional)
 
 
 state = AppState()
@@ -668,6 +669,25 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         LOGGER.info("ZIP crosswalk loaded: %d ZCTAs.", len(state.zip_to_district))
     except Exception:
         LOGGER.exception("ZIP crosswalk loading failed; advocacy search will be limited.")
+
+    # ── Step 7: Load ML intelligence data (optional) ────────────────────
+    try:
+        from .ml_loader import load_ml_data
+
+        state.ml = load_ml_data()
+        if state.ml and state.ml.available:
+            LOGGER.info(
+                "ML intelligence loaded: %d predictions, %d coalitions, "
+                "%d anomalies, %d backtest runs.",
+                len(state.ml.bill_scores),
+                len(state.ml.coalitions),
+                len(state.ml.anomalies),
+                len(state.ml.accuracy_history),
+            )
+        else:
+            LOGGER.info("ML data not available (run 'make ml-run' to generate).")
+    except Exception:
+        LOGGER.exception("ML data loading failed (non-critical).")
 
     # ── Print startup summary table ──────────────────────────────────────
     elapsed_total = _time.perf_counter() - t_startup_begin
@@ -1191,6 +1211,317 @@ class Query:
             )
 
         return SearchConnection(items=items, page_info=page_info)
+
+    # ── ML Intelligence queries ─────────────────────────────────────────
+
+    @strawberry.field(
+        description="Bill predictions from the ML pipeline.",
+    )
+    def bill_predictions(
+        self,
+        outcome: str | None = None,
+        min_confidence: float | None = None,
+        reliable_only: bool = False,
+        forecasts_only: bool = False,
+        sort_by: str = "prob_advance",
+        offset: int = 0,
+        limit: int = 50,
+    ) -> BillPredictionConnection:
+        ml = state.ml
+        if not ml or not ml.available:
+            empty_page = PageInfo(total_count=0, has_next_page=False, has_previous_page=False)
+            return BillPredictionConnection(items=[], page_info=empty_page)
+
+        results = list(ml.bill_scores)
+        if outcome:
+            results = [s for s in results if s.predicted_outcome == outcome.upper()]
+        if min_confidence is not None:
+            results = [s for s in results if s.confidence >= min_confidence]
+        if reliable_only:
+            results = [s for s in results if s.label_reliable]
+        if forecasts_only:
+            results = [s for s in results if not s.label_reliable]
+
+        if sort_by == "confidence":
+            results.sort(key=lambda s: -s.confidence)
+        else:
+            results.sort(key=lambda s: -s.prob_advance)
+
+        page, page_info = paginate(results, offset, limit)
+        return BillPredictionConnection(
+            items=[
+                BillPredictionType(
+                    bill_number=s.bill_number,
+                    description=s.description,
+                    sponsor=s.sponsor,
+                    prob_advance=round(s.prob_advance, 4),
+                    predicted_outcome=s.predicted_outcome,
+                    actual_outcome=s.actual_outcome,
+                    confidence=round(s.confidence, 4),
+                    label_reliable=s.label_reliable,
+                    chamber_origin=s.chamber_origin,
+                    introduction_date=s.introduction_date,
+                )
+                for s in page
+            ],
+            page_info=page_info,
+        )
+
+    @strawberry.field(description="Prediction for a single bill by number.")
+    def bill_prediction(self, bill_number: str) -> BillPredictionType | None:
+        ml = state.ml
+        if not ml or not ml.available:
+            return None
+        for s in ml.bill_scores:
+            if s.bill_number == bill_number:
+                return BillPredictionType(
+                    bill_number=s.bill_number,
+                    description=s.description,
+                    sponsor=s.sponsor,
+                    prob_advance=round(s.prob_advance, 4),
+                    predicted_outcome=s.predicted_outcome,
+                    actual_outcome=s.actual_outcome,
+                    confidence=round(s.confidence, 4),
+                    label_reliable=s.label_reliable,
+                    chamber_origin=s.chamber_origin,
+                    introduction_date=s.introduction_date,
+                )
+        return None
+
+    @strawberry.field(description="Discovered voting coalitions from the ML pipeline.")
+    def voting_coalitions(self) -> list[CoalitionGroupType]:
+        ml = state.ml
+        if not ml or not ml.available:
+            return []
+        groups: dict[int, list] = {}
+        for m in ml.coalitions:
+            groups.setdefault(m.coalition_id, []).append(m)
+        result = []
+        for cid, members in sorted(groups.items()):
+            dem = sum(1 for m in members if m.party == "Democrat")
+            rep = sum(1 for m in members if m.party == "Republican")
+            result.append(
+                CoalitionGroupType(
+                    coalition_id=cid,
+                    size=len(members),
+                    dem_count=dem,
+                    rep_count=rep,
+                    members=[
+                        CoalitionMemberType(
+                            name=m.name,
+                            party=m.party,
+                            chamber=m.chamber,
+                            district=m.district,
+                        )
+                        for m in members
+                    ],
+                )
+            )
+        return result
+
+    @strawberry.field(description="Slip anomalies (astroturfing detection) from the ML pipeline.")
+    def slip_anomalies(
+        self,
+        flagged_only: bool = False,
+        min_score: float | None = None,
+        offset: int = 0,
+        limit: int = 50,
+    ) -> SlipAnomalyConnection:
+        ml = state.ml
+        if not ml or not ml.available:
+            empty_page = PageInfo(total_count=0, has_next_page=False, has_previous_page=False)
+            return SlipAnomalyConnection(items=[], page_info=empty_page)
+        results = list(ml.anomalies)
+        if flagged_only:
+            results = [a for a in results if a.is_anomaly]
+        if min_score is not None:
+            results = [a for a in results if a.anomaly_score >= min_score]
+        results.sort(key=lambda a: -a.anomaly_score)
+        page, page_info = paginate(results, offset, limit)
+        return SlipAnomalyConnection(
+            items=[
+                SlipAnomalyType(
+                    bill_number=a.bill_number,
+                    description=a.description,
+                    total_slips=a.total_slips,
+                    anomaly_score=round(a.anomaly_score, 4),
+                    is_anomaly=a.is_anomaly,
+                    anomaly_reason=a.anomaly_reason,
+                    top_org_share=round(a.top_org_share, 4),
+                    org_hhi=round(a.org_hhi, 4),
+                    position_unanimity=round(a.position_unanimity, 4),
+                    n_proponent=a.n_proponent,
+                    n_opponent=a.n_opponent,
+                    unique_orgs=a.unique_orgs,
+                )
+                for a in page
+            ],
+            page_info=page_info,
+        )
+
+    @strawberry.field(description="Model quality assessment from the ML pipeline.")
+    def model_quality(self) -> ModelQualityType | None:
+        ml = state.ml
+        if not ml or not ml.available or not ml.quality:
+            return None
+        q = ml.quality
+        trust = q.get("trust_assessment", {})
+        ts = q.get("test_set_metrics", {})
+        return ModelQualityType(
+            model_selected=q.get("model_selected", ""),
+            trust_overall=trust.get("overall", "UNKNOWN"),
+            strengths=trust.get("strengths", []),
+            issues=trust.get("issues", []),
+            test_roc_auc=ts.get("roc_auc"),
+            test_accuracy=ts.get("accuracy"),
+            test_precision_pos=ts.get("precision_pos"),
+            test_recall_pos=ts.get("recall_pos"),
+            test_f1_pos=ts.get("f1_pos"),
+            top_features=[
+                FeatureImportanceType(name=f["name"], importance=round(f["importance"], 4))
+                for f in q.get("top_features", [])[:15]
+            ],
+            last_run_date=ml.last_run_date,
+        )
+
+    @strawberry.field(description="Prediction accuracy history across pipeline runs.")
+    def prediction_accuracy(self, limit_runs: int = 20) -> list[AccuracySnapshotType]:
+        ml = state.ml
+        if not ml or not ml.available:
+            return []
+        runs = ml.accuracy_history[-limit_runs:]
+        return [
+            AccuracySnapshotType(
+                run_date=r.run_date,
+                snapshot_date=r.snapshot_date,
+                days_elapsed=r.days_elapsed,
+                total_testable=r.total_testable,
+                correct=r.correct,
+                accuracy=round(r.accuracy, 4),
+                precision_advance=round(r.precision_advance, 4),
+                recall_advance=round(r.recall_advance, 4),
+                f1_advance=round(r.f1_advance, 4),
+                model_version=r.model_version,
+                biggest_misses=[
+                    PredictionMissType(
+                        bill_number=m.get("bill_number", ""),
+                        description=m.get("description", ""),
+                        predicted=m.get("predicted", ""),
+                        actual=m.get("actual", ""),
+                        confidence=m.get("confidence", 0),
+                    )
+                    for m in r.biggest_misses[:10]
+                ],
+            )
+            for r in runs
+        ]
+
+
+# ── ML Intelligence GraphQL types ────────────────────────────────────────
+
+
+@strawberry.type
+class BillPredictionType:
+    bill_number: str
+    description: str
+    sponsor: str
+    prob_advance: float
+    predicted_outcome: str
+    actual_outcome: str
+    confidence: float
+    label_reliable: bool
+    chamber_origin: str
+    introduction_date: str
+
+
+@strawberry.type
+class BillPredictionConnection:
+    items: list[BillPredictionType]
+    page_info: PageInfo
+
+
+@strawberry.type
+class CoalitionMemberType:
+    name: str
+    party: str
+    chamber: str
+    district: str
+
+
+@strawberry.type
+class CoalitionGroupType:
+    coalition_id: int
+    size: int
+    dem_count: int
+    rep_count: int
+    members: list[CoalitionMemberType]
+
+
+@strawberry.type
+class SlipAnomalyType:
+    bill_number: str
+    description: str
+    total_slips: int
+    anomaly_score: float
+    is_anomaly: bool
+    anomaly_reason: str
+    top_org_share: float
+    org_hhi: float
+    position_unanimity: float
+    n_proponent: int
+    n_opponent: int
+    unique_orgs: int
+
+
+@strawberry.type
+class SlipAnomalyConnection:
+    items: list[SlipAnomalyType]
+    page_info: PageInfo
+
+
+@strawberry.type
+class FeatureImportanceType:
+    name: str
+    importance: float
+
+
+@strawberry.type
+class ModelQualityType:
+    model_selected: str
+    trust_overall: str
+    strengths: list[str]
+    issues: list[str]
+    test_roc_auc: float | None
+    test_accuracy: float | None
+    test_precision_pos: float | None
+    test_recall_pos: float | None
+    test_f1_pos: float | None
+    top_features: list[FeatureImportanceType]
+    last_run_date: str
+
+
+@strawberry.type
+class PredictionMissType:
+    bill_number: str
+    description: str
+    predicted: str
+    actual: str
+    confidence: float
+
+
+@strawberry.type
+class AccuracySnapshotType:
+    run_date: str
+    snapshot_date: str
+    days_elapsed: int
+    total_testable: int
+    correct: int
+    accuracy: float
+    precision_advance: float
+    recall_advance: float
+    f1_advance: float
+    model_version: str
+    biggest_misses: list[PredictionMissType]
 
 
 from strawberry.extensions import QueryDepthLimiter  # noqa: E402
@@ -2012,6 +2343,143 @@ async def advocacy_search(
             "ally": ally_card,
             "super_ally": super_ally_card,
             "error": error,
+        },
+    )
+
+
+# ── ML Intelligence Dashboard routes ─────────────────────────────────────
+
+
+@app.get("/intelligence")
+async def intelligence_dashboard(request: Request):
+    """ML Intelligence dashboard -- overview of all ML outputs."""
+    ml = state.ml
+    available = ml and ml.available
+
+    # Summary stats for the overview
+    summary = {}
+    if available:
+        scores = ml.bill_scores
+        advance_count = sum(1 for s in scores if s.predicted_outcome == "ADVANCE")
+        stuck_count = sum(1 for s in scores if s.predicted_outcome == "STUCK")
+        forecast_count = sum(1 for s in scores if not s.label_reliable)
+        flagged = sum(1 for a in ml.anomalies if a.is_anomaly)
+        n_coalitions = len(set(m.coalition_id for m in ml.coalitions))
+        summary = {
+            "total_predictions": len(scores),
+            "advance_count": advance_count,
+            "stuck_count": stuck_count,
+            "forecast_count": forecast_count,
+            "flagged_anomalies": flagged,
+            "total_anomalies": len(ml.anomalies),
+            "n_coalitions": n_coalitions,
+            "n_coalition_members": len(ml.coalitions),
+            "last_run": ml.last_run_date,
+            "model": ml.quality.get("model_selected", ""),
+            "trust": ml.quality.get("trust_assessment", {}).get("overall", ""),
+            "roc_auc": ml.quality.get("test_set_metrics", {}).get("roc_auc"),
+            "accuracy_runs": len(ml.accuracy_history),
+        }
+
+    return templates.TemplateResponse(
+        "intelligence.html",
+        {
+            "request": request,
+            "title": "ML Intelligence",
+            "available": available,
+            "summary": summary,
+            "ml": ml,
+        },
+    )
+
+
+@app.get("/intelligence/predictions")
+async def intelligence_predictions(request: Request):
+    """Tab: bill predictions."""
+    ml = state.ml
+    if not ml or not ml.available:
+        return templates.TemplateResponse(
+            "_intelligence_predictions.html",
+            {"request": request, "predictions": [], "ml": None},
+        )
+
+    predictions = sorted(ml.bill_scores, key=lambda s: -s.prob_advance)
+    return templates.TemplateResponse(
+        "_intelligence_predictions.html",
+        {"request": request, "predictions": predictions, "ml": ml},
+    )
+
+
+@app.get("/intelligence/coalitions")
+async def intelligence_coalitions(request: Request):
+    """Tab: voting coalitions."""
+    ml = state.ml
+    if not ml or not ml.available:
+        return templates.TemplateResponse(
+            "_intelligence_coalitions.html",
+            {"request": request, "groups": [], "ml": None},
+        )
+
+    groups: dict[int, list] = {}
+    for m in ml.coalitions:
+        groups.setdefault(m.coalition_id, []).append(m)
+
+    coalition_list = []
+    for cid, members in sorted(groups.items()):
+        dem = sum(1 for m in members if m.party == "Democrat")
+        rep = sum(1 for m in members if m.party == "Republican")
+        members_sorted = sorted(members, key=lambda m: (m.party, m.name))
+        coalition_list.append(
+            {
+                "id": cid,
+                "size": len(members),
+                "dem": dem,
+                "rep": rep,
+                "cross_party": dem > 0 and rep > 0,
+                "members": members_sorted,
+            }
+        )
+
+    return templates.TemplateResponse(
+        "_intelligence_coalitions.html",
+        {"request": request, "groups": coalition_list, "ml": ml},
+    )
+
+
+@app.get("/intelligence/anomalies")
+async def intelligence_anomalies(request: Request):
+    """Tab: anomaly detection."""
+    ml = state.ml
+    if not ml or not ml.available:
+        return templates.TemplateResponse(
+            "_intelligence_anomalies.html",
+            {"request": request, "anomalies": [], "ml": None},
+        )
+
+    anomalies = sorted(ml.anomalies, key=lambda a: -a.anomaly_score)
+    return templates.TemplateResponse(
+        "_intelligence_anomalies.html",
+        {"request": request, "anomalies": anomalies, "ml": ml},
+    )
+
+
+@app.get("/intelligence/accuracy")
+async def intelligence_accuracy(request: Request):
+    """Tab: accuracy history / feedback loop."""
+    ml = state.ml
+    if not ml or not ml.available:
+        return templates.TemplateResponse(
+            "_intelligence_accuracy.html",
+            {"request": request, "history": [], "quality": {}, "ml": None},
+        )
+
+    return templates.TemplateResponse(
+        "_intelligence_accuracy.html",
+        {
+            "request": request,
+            "history": ml.accuracy_history,
+            "quality": ml.quality,
+            "ml": ml,
         },
     )
 

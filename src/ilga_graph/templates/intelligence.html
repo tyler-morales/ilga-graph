@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} — ML Intelligence Dashboard{% endblock %}
+
+{% block content %}
+<div class="intel-nav">
+    <a href="/advocacy">&larr; Advocacy Portal</a>
+</div>
+<h1>ML Intelligence Dashboard</h1>
+<p class="intel-subtitle">Automated legislative intelligence from the ML pipeline. Self-correcting on each scrape cycle.</p>
+
+{% if not available %}
+<div class="intel-empty">
+    <h2>No ML Data Available</h2>
+    <p>Run <code>make ml-run</code> to generate intelligence data from your scraped legislative records.</p>
+    <p>Once generated, this dashboard will show bill predictions, voting coalitions, anomaly detection, and accuracy tracking.</p>
+</div>
+{% else %}
+
+{# ── Summary cards ─────────────────────────────────────────────────── #}
+<div class="intel-summary-grid">
+    <div class="intel-summary-card">
+        <div class="intel-summary-value">{{ summary.total_predictions }}</div>
+        <div class="intel-summary-label">Bills Scored</div>
+        <div class="intel-summary-detail">{{ summary.advance_count }} advance &middot; {{ summary.stuck_count }} stuck</div>
+    </div>
+    <div class="intel-summary-card">
+        <div class="intel-summary-value">{{ summary.forecast_count }}</div>
+        <div class="intel-summary-label">Forecasts</div>
+        <div class="intel-summary-detail">New bills (outcome unknown)</div>
+    </div>
+    <div class="intel-summary-card">
+        <div class="intel-summary-value">{{ summary.n_coalitions }}</div>
+        <div class="intel-summary-label">Coalitions</div>
+        <div class="intel-summary-detail">{{ summary.n_coalition_members }} members clustered</div>
+    </div>
+    <div class="intel-summary-card">
+        <div class="intel-summary-value">{{ summary.flagged_anomalies }}</div>
+        <div class="intel-summary-label">Anomalies Flagged</div>
+        <div class="intel-summary-detail">of {{ summary.total_anomalies }} bills analyzed</div>
+    </div>
+    <div class="intel-summary-card">
+        <div class="intel-summary-value">
+            {% if summary.roc_auc %}{{ "%.3f"|format(summary.roc_auc) }}{% else %}--{% endif %}
+        </div>
+        <div class="intel-summary-label">Model ROC-AUC</div>
+        <div class="intel-summary-detail">
+            <span class="intel-trust-badge intel-trust-{{ summary.trust|lower }}">{{ summary.trust or 'N/A' }}</span>
+            {{ summary.model or '' }}
+        </div>
+    </div>
+    <div class="intel-summary-card">
+        <div class="intel-summary-value">{{ summary.accuracy_runs }}</div>
+        <div class="intel-summary-label">Backtest Runs</div>
+        <div class="intel-summary-detail">Last: {{ summary.last_run or 'never' }}</div>
+    </div>
+</div>
+
+{# ── Tabs ──────────────────────────────────────────────────────────── #}
+<div class="intel-tabs" role="tablist">
+    <button class="intel-tab active" role="tab"
+            hx-get="/intelligence/predictions"
+            hx-target="#intel-content"
+            hx-swap="innerHTML"
+            hx-indicator="#intel-spinner"
+            onclick="setActiveTab(this)">Predictions</button>
+    <button class="intel-tab" role="tab"
+            hx-get="/intelligence/coalitions"
+            hx-target="#intel-content"
+            hx-swap="innerHTML"
+            hx-indicator="#intel-spinner"
+            onclick="setActiveTab(this)">Coalitions</button>
+    <button class="intel-tab" role="tab"
+            hx-get="/intelligence/anomalies"
+            hx-target="#intel-content"
+            hx-swap="innerHTML"
+            hx-indicator="#intel-spinner"
+            onclick="setActiveTab(this)">Anomalies</button>
+    <button class="intel-tab" role="tab"
+            hx-get="/intelligence/accuracy"
+            hx-target="#intel-content"
+            hx-swap="innerHTML"
+            hx-indicator="#intel-spinner"
+            onclick="setActiveTab(this)">Model Quality &amp; Accuracy</button>
+    <span id="intel-spinner" class="htmx-indicator">Loading&hellip;</span>
+</div>
+
+<div id="intel-content"
+     hx-get="/intelligence/predictions"
+     hx-trigger="load"
+     hx-swap="innerHTML">
+    <p class="intel-loading">Loading predictions&hellip;</p>
+</div>
+
+<script>
+function setActiveTab(el) {
+    document.querySelectorAll('.intel-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+}
+</script>
+
+{% endif %}
+{% endblock %}

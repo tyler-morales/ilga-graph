@@ -1,0 +1,84 @@
+{# Bill Predictions tab partial #}
+{% if not predictions %}
+<div class="intel-empty">No bill predictions available.</div>
+{% else %}
+
+<div class="intel-section-header">
+    <h2>Bill Outcome Predictions</h2>
+    <p>{{ predictions|length }} bills scored. <strong>Green</strong> = likely to advance. <strong>Red</strong> = likely stuck.
+       Forecasts (label not yet reliable) shown in <em>italics</em>.</p>
+</div>
+
+{# Quick filters #}
+<div class="intel-filters">
+    <label><input type="checkbox" id="filter-forecasts" onchange="filterPredictions()"> Forecasts only (new bills)</label>
+    <label><input type="checkbox" id="filter-advance" onchange="filterPredictions()"> ADVANCE only</label>
+    <label><input type="checkbox" id="filter-stuck" onchange="filterPredictions()"> STUCK only</label>
+    <label><input type="checkbox" id="filter-high-conf" onchange="filterPredictions()"> High confidence (&ge;80%)</label>
+</div>
+
+<table class="intel-table" id="predictions-table">
+    <thead>
+        <tr>
+            <th>Bill</th>
+            <th>Description</th>
+            <th>Sponsor</th>
+            <th>Chamber</th>
+            <th>P(Advance)</th>
+            <th>Prediction</th>
+            <th>Confidence</th>
+            <th>Actual</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in predictions %}
+        <tr class="pred-row {% if not p.label_reliable %}forecast{% endif %}"
+            data-outcome="{{ p.predicted_outcome }}"
+            data-confidence="{{ p.confidence }}"
+            data-forecast="{{ 'true' if not p.label_reliable else 'false' }}">
+            <td class="bill-num"><strong>{{ p.bill_number }}</strong></td>
+            <td class="desc-cell" title="{{ p.description }}">{{ p.description[:80] }}{% if p.description|length > 80 %}&hellip;{% endif %}</td>
+            <td>{{ p.sponsor }}</td>
+            <td>{{ p.chamber_origin }}</td>
+            <td>
+                <div class="score-bar-container">
+                    <div class="score-bar {% if p.prob_advance >= 0.7 %}score-high{% elif p.prob_advance >= 0.4 %}score-mid{% else %}score-low{% endif %}"
+                         style="width: {{ (p.prob_advance * 100)|int }}%">
+                    </div>
+                    <span class="score-text">{{ "%.1f"|format(p.prob_advance * 100) }}%</span>
+                </div>
+            </td>
+            <td>
+                <span class="intel-outcome intel-outcome-{{ p.predicted_outcome|lower }}">{{ p.predicted_outcome }}</span>
+            </td>
+            <td>{{ "%.0f"|format(p.confidence * 100) }}%</td>
+            <td>
+                {% if p.label_reliable %}
+                <span class="intel-outcome intel-outcome-{{ p.actual_outcome|lower }}">{{ p.actual_outcome }}</span>
+                {% else %}
+                <span class="intel-forecast-label">TBD</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+function filterPredictions() {
+    const forecastOnly = document.getElementById('filter-forecasts').checked;
+    const advanceOnly = document.getElementById('filter-advance').checked;
+    const stuckOnly = document.getElementById('filter-stuck').checked;
+    const highConf = document.getElementById('filter-high-conf').checked;
+    document.querySelectorAll('#predictions-table .pred-row').forEach(row => {
+        let show = true;
+        if (forecastOnly && row.dataset.forecast !== 'true') show = false;
+        if (advanceOnly && row.dataset.outcome !== 'ADVANCE') show = false;
+        if (stuckOnly && row.dataset.outcome !== 'STUCK') show = false;
+        if (highConf && parseFloat(row.dataset.confidence) < 0.8) show = false;
+        row.style.display = show ? '' : 'none';
+    });
+}
+</script>
+
+{% endif %}
