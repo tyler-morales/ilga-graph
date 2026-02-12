@@ -1,4 +1,4 @@
-.PHONY: scrape dev serve install test lint lint-fix clean help ml-setup ml-pipeline ml-resolve ml-predict
+.PHONY: scrape dev serve install test lint lint-fix clean help ml-setup ml-run ml-pipeline ml-resolve ml-predict
 
 # ── Virtual environment ─────────────────────────────────────────────────────
 VENV ?= $(or $(wildcard .venv), $(wildcard venv), $(wildcard src/ilga_graph/.venv))
@@ -66,14 +66,17 @@ lint-fix: ## Auto-fix lint and format
 ml-setup: ## Install ML dependencies
 	$(BIN)pip install -e ".[ml]"
 
-ml-pipeline: ## Run ML data pipeline: cache/*.json -> processed/*.parquet
+ml-run: ## Run full ML pipeline (no interaction -- scores, coalitions, anomalies)
+	PYTHONPATH=src $(PYTHON) scripts/ml_run.py
+
+ml-pipeline: ## Run data pipeline only: cache/*.json -> processed/*.parquet
 	PYTHONPATH=src $(PYTHON) scripts/ml_pipeline.py
 
-ml-resolve: ## Interactive entity resolution (vote name -> member ID)
+ml-resolve: ## Entity resolution only (AUTO=1 for no interaction)
 	PYTHONPATH=src $(PYTHON) scripts/ml_resolve.py $(if $(AUTO),--auto) $(if $(STATS),--stats)
 
-ml-predict: ## Bill outcome prediction (train + interactive review)
-	PYTHONPATH=src $(PYTHON) scripts/ml_predict.py $(if $(TRAIN),--train) $(if $(EVAL),--evaluate)
+ml-predict: ## Bill outcome prediction only
+	PYTHONPATH=src $(PYTHON) scripts/ml_predict.py
 
 # ── Utilities ──────────────────────────────────────────────────────────────────
 

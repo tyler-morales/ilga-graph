@@ -234,49 +234,49 @@
 
 ## ML Pipeline (`feature/ml-pipeline` branch)
 
-**New `src/ilga_graph/ml/` package** — transforms cached legislative JSON data into a normalized Parquet star schema and provides interactive human-in-the-loop ML training.
+**New `src/ilga_graph/ml/` package** — fully automated "Legislative Intelligence Engine". One command (`make ml-run`) transforms raw cached data into enriched analytics. **No interaction required** -- the ML teaches itself from the data.
 
-- **Data Pipeline** (`ml/pipeline.py`, `scripts/ml_pipeline.py`):
-  - Flattens `cache/bills.json` (11,722 bills), `cache/members.json` (180 members), `cache/vote_events.json` into 6 normalized Parquet tables in `processed/`:
-    - `dim_members.parquet` — 180 rows (member_id PK, name, party, chamber, district, career info)
-    - `dim_bills.parquet` — 11,722 rows (bill_id PK, bill_type, synopsis, sponsor FK, dates)
-    - `fact_bill_actions.parquet` — 103,332 rows (action history with category classification)
-    - `fact_vote_events.parquet` — 6,692 rows (aggregated vote events with outcome)
-    - `fact_vote_casts_raw.parquet` — 210,708 rows (individual vote casts before entity resolution)
-    - `fact_witness_slips.parquet` — 394,203 rows (slip filings with position, org, testimony type)
-  - Runs in ~6.5 seconds via `make ml-pipeline`.
+### What it produces (in `processed/`)
 
-- **Entity Resolution** (`ml/entity_resolution.py`, `ml/active_learner.py`, `scripts/ml_resolve.py`):
-  - Maps raw vote PDF names ("Murphy", "Davis,Will", "Loughran Cappel") to canonical member IDs.
-  - Multi-strategy resolution: exact variant map (handles compound last names, nicknames, PDF artifacts) -> fuzzy match (rapidfuzz) -> human-in-the-loop.
-  - **Auto-resolves 98.7% (380/385 unique names)** out of the box. Remaining 5 names presented interactively.
-  - Rich CLI: presents candidates with scores, user picks correct match, choices persist in `processed/entity_gold.json`.
-  - Output: `processed/fact_vote_casts.parquet` — resolved with member_id FK.
-  - `make ml-resolve` (interactive) or `make ml-resolve AUTO=1` (auto-only).
+| Output file | What it is |
+|---|---|
+| `bill_scores.parquet` | Every bill scored with probability of advancement (0-100%). Sorted most-likely-to-advance first. |
+| `coalitions.parquet` | Every legislator assigned to a voting bloc (discovered from co-voting + co-sponsorship patterns). |
+| `member_embeddings.parquet` | 32-dimensional vector per legislator (their "legislative DNA" from graph embeddings). |
+| `slip_anomalies.parquet` | Every bill with 5+ witness slips scored for astroturfing signals (0-1 anomaly score). |
+| `fact_vote_casts.parquet` | Vote casts with member_id FK (100% entity resolution). |
+| `dim_*.parquet`, `fact_*.parquet` | Normalized star schema tables. |
 
-- **Feature Engineering** (`ml/features.py`):
-  - Builds 526-feature matrix per bill: 500 TF-IDF text features + 26 tabular features.
-  - **Sponsor features**: party, majority status, historical passage rate (computed without leakage), bill count.
-  - **Slip features**: proponent/opponent counts, ratios, org concentration (HHI), written-only ratio.
-  - **Temporal features**: intro month, day of year, lame duck flag, chamber origin, bill type.
-  - **Early action features**: first-30-days actions only (no outcome leakage).
-  - **Time-based train/test split**: 70% train (first by date) / 30% test (latest by date). No random splitting.
+### How to run
 
-- **Bill Outcome Predictor** (`ml/bill_predictor.py`, `scripts/ml_predict.py`):
-  - GradientBoosting classifier predicts whether a bill will advance past committee.
-  - **ROC-AUC: 0.9477** (no data leakage). Top features: text signals ("technical" = shell bill), sponsor count, witness slip support, intro timing.
-  - Interactive active learning: presents least-confident predictions first, user confirms/corrects, model retrains with gold labels.
-  - Corrections persist in `processed/bill_labels_gold.json`. Model saved to `processed/bill_predictor.pkl`.
-  - `make ml-predict` (interactive) or `make ml-predict TRAIN=1` (train-only).
+```bash
+make ml-setup    # Install ML dependencies (one time)
+make ml-run      # Run full pipeline (~22 seconds, no interaction)
+```
+
+### Pipeline steps (all automated)
+
+1. **Data Pipeline** (`ml/pipeline.py`) — Flattens `cache/*.json` into 6 Parquet tables (726K+ rows, ~7s).
+2. **Entity Resolution** (`ml/entity_resolution.py`, `ml/active_learner.py`) — Maps 385 unique vote-PDF names to member IDs. **100% resolved** (98.7% exact match + gold mappings). No human input needed.
+3. **Bill Outcome Prediction** (`ml/features.py`, `ml/bill_predictor.py`) — Trains GradientBoosting on bills with known outcomes, scores all 9,676 bills. **ROC-AUC: 0.9477**. Top features: text signals, sponsor count, witness slip support, intro timing. Time-based split prevents leakage.
+4. **Coalition Discovery** (`ml/coalitions.py`) — Builds co-vote + co-sponsorship graph (180 nodes, 16K edges), computes spectral embeddings, clusters into voting blocs. Found 11 blocs including cross-party coalitions (e.g., Bloc 5: 3D/4R).
+5. **Anomaly Detection** (`ml/anomaly_detection.py`) — Isolation Forest on witness slip patterns. Flags 168 bills (10%) with suspicious patterns. Top flag: HB2827 (Homeschool Act) with 133K slips, 0.659 org concentration.
+
+### Individual steps (optional)
+
+```bash
+make ml-pipeline   # Data pipeline only
+make ml-resolve    # Entity resolution only (AUTO=1 for non-interactive)
+make ml-predict    # Bill scoring only
+```
 
 - **Dependencies**: `polars`, `pyarrow`, `scikit-learn`, `rapidfuzz`, `networkx`, `rich` in `[project.optional-dependencies] ml`.
 
 - **Next (ML backlog)**:
   - Individual vote prediction (recommender system using member embeddings from matrix factorization)
-  - Hidden coalition discovery (Node2Vec graph embeddings on co-vote/co-sponsorship network, DBSCAN clustering)
-  - Witness slip anomaly detection (Isolation Forest for astroturfing)
   - "Poison pill" detector (semantic similarity between original and amendment synopses)
   - Committee assignment prediction (multi-class text classifier)
+  - Expose ML outputs through the GraphQL API (bill scores, coalition data, anomaly flags)
 
 ---
 
