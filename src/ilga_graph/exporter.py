@@ -53,9 +53,13 @@ class ObsidianExporter:
         if not self.committee_lookup:
             self._load_committees_from_vault(self.vault_root / "Committees")
 
+        # Build a leg_id → Bill lookup so member pages can resolve IDs to bill numbers
+        bills_by_leg_id: dict[str, Bill] = {}
+        if all_bills is not None:
+            for b in all_bills:
+                bills_by_leg_id[b.leg_id] = b
+
         # ── Clean up orphaned root-level bill files ──
-        # Bills belong in Bills/, not vault root. Remove stale bill .md files
-        # that may have leaked to root from earlier runs.
         _BILL_PREFIX_RE = re.compile(r"^[HS][BRJ]", re.IGNORECASE)
         _SAFE_ROOT_FILES = {"Moneyball Report.md", "Scorecard Guide.md"}
         for path in self.vault_root.glob("*.md"):
@@ -66,8 +70,6 @@ class ObsidianExporter:
                 path.unlink()
 
         # ── Members ───────────────────────────────────────────────────
-        # When a member limit is set, sort by effectiveness_score (desc)
-        # so we export the most interesting members first.
         members_to_write = list(members)
         if self.member_export_limit is not None:
             members_to_write.sort(
@@ -80,7 +82,6 @@ class ObsidianExporter:
             )
             members_to_write = members_to_write[: self.member_export_limit]
         else:
-            # Full mode: clean up stale member files
             current_files = {f"{self._safe_filename(m.name)}.md" for m in members}
             for path in members_path.glob("*.md"):
                 if path.name not in current_files:
@@ -91,7 +92,12 @@ class ObsidianExporter:
             mb = moneyball.profiles.get(member.id) if moneyball else None
             file_path = members_path / f"{self._safe_filename(member.name)}.md"
             file_path.write_text(
-                self._render_member(member, scorecard=sc, moneyball_profile=mb),
+                self._render_member(
+                    member,
+                    scorecard=sc,
+                    moneyball_profile=mb,
+                    bills_lookup=bills_by_leg_id,
+                ),
                 encoding="utf-8",
             )
 
@@ -128,7 +134,7 @@ class ObsidianExporter:
 
             LOGGER.info("Exported %d committee files.", len(committees_to_write))
 
-        # ── Bill set: from all_bills when provided (bills-first), else from members ──
+        # ── Bill set: built exclusively from all_bills (separation of concerns) ──
         bills_path = self.vault_root / "Bills"
         bills_path.mkdir(parents=True, exist_ok=True)
 
@@ -140,23 +146,18 @@ class ObsidianExporter:
                 if bn not in unique_bills:
                     unique_bills[bn] = bill
                     bill_cosponsors[bn] = []
+
+        # Build cosponsor names by iterating members' co_sponsor_bill_ids
         for member in members:
-            for bill in member.sponsored_bills:
-                bn = bill.bill_number
-                if bn not in unique_bills:
-                    unique_bills[bn] = bill
-                    bill_cosponsors[bn] = []
-            for bill in member.co_sponsor_bills:
-                bn = bill.bill_number
-                if bn not in unique_bills:
-                    unique_bills[bn] = bill
-                    bill_cosponsors[bn] = []
-                bill_cosponsors[bn].append(member.name)
+            for lid in member.co_sponsor_bill_ids:
+                bill = bills_by_leg_id.get(lid)
+                if bill and bill.bill_number in bill_cosponsors:
+                    bill_cosponsors[bill.bill_number].append(member.name)
 
         # Determine which bills to write to disk.
         bills_to_write = list(unique_bills.items())
         if self.bill_export_limit is not None:
-            # Sort by most recent action date so the Top N are the freshest.
+
             def _bill_sort_key(item: tuple[str, Bill]) -> datetime:
                 try:
                     return datetime.strptime(item[1].last_action_date, "%m/%d/%Y")
@@ -166,7 +167,6 @@ class ObsidianExporter:
             bills_to_write.sort(key=_bill_sort_key, reverse=True)
             bills_to_write = bills_to_write[: self.bill_export_limit]
         else:
-            # Full mode: clean up stale bill files
             current_bill_files = {f"{bn}.md" for bn in unique_bills}
             for path in bills_path.glob("*.md"):
                 if path.name not in current_bill_files:
@@ -202,14 +202,33 @@ class ObsidianExporter:
 
     # ── rendering ────────────────────────────────────────────────────────
 
+    def _resolve_bill_links(self, bill_ids: list[str], bills_lookup: dict[str, Bill]) -> str:
+        """Resolve a list of leg_ids to [[bill_number]] wikilinks."""
+        links = []
+        for lid in bill_ids:
+            bill = bills_lookup.get(lid)
+            if bill:
+                links.append(f"- [[{bill.bill_number}]]")
+        return "\n".join(links) if links else "- None"
+
     def _render_member(
         self,
         member: Member,
         scorecard: MemberScorecard | None = None,
         moneyball_profile: MoneyballProfile | None = None,
+        bills_lookup: dict[str, Bill] | None = None,
     ) -> str:
         if scorecard is None:
             scorecard = compute_scorecard(member)
+        if bills_lookup is None:
+            bills_lookup = {}
+
+        # Fallback for direct calls (e.g., unit tests) where a global bill lookup
+        # is not provided: derive leg_id -> Bill from member-attached bill objects.
+        if not bills_lookup:
+            for bill in [*member.sponsored_bills, *member.co_sponsor_bills]:
+                if bill.leg_id:
+                    bills_lookup[bill.leg_id] = bill
         tags = self._build_tags(member)
         career_start_year = ""
         if member.career_ranges:
@@ -266,17 +285,9 @@ class ObsidianExporter:
             "\n\n".join(contact_blocks) if contact_blocks else "No contact info found."
         )
 
-        # ── Legislation sections ──
-        primary_links = (
-            "\n".join(f"- [[{b.bill_number}]]" for b in member.sponsored_bills)
-            if member.sponsored_bills
-            else "- None"
-        )
-        cosponsorship_links = (
-            "\n".join(f"- [[{b.bill_number}]]" for b in member.co_sponsor_bills)
-            if member.co_sponsor_bills
-            else "- None"
-        )
+        # ── Legislation sections (IDs only — separation of concerns) ──
+        primary_links = self._resolve_bill_links(member.sponsored_bill_ids, bills_lookup)
+        cosponsorship_links = self._resolve_bill_links(member.co_sponsor_bill_ids, bills_lookup)
 
         scorecard_section = self._render_scorecard(scorecard)
         moneyball_section = (
@@ -307,8 +318,7 @@ class ObsidianExporter:
             f"{cosponsorship_links}\n\n"
             "## Contact\n"
             f"{contact_section}\n\n"
-            "## Associated Members\n"
-            f"{self._render_associated_links(member.associated_members)}\n\n"
+            f"{self._render_associated_section(member)}\n\n"
             "## Biography\n"
             f"{member.bio_text or 'None'}\n"
         )
@@ -339,6 +349,17 @@ class ObsidianExporter:
             "\n".join(f"- [[{name}]]" for name in sorted(cosponsors)) if cosponsors else "- None"
         )
 
+        # ── Actions section from action_history ──
+        if bill.action_history:
+            action_lines = "\n".join(
+                f"| {a.date} | {a.chamber} | {a.action} |" for a in bill.action_history
+            )
+            actions_section = (
+                f"\n## Actions\n| Date | Chamber | Action |\n| --- | --- | --- |\n{action_lines}\n"
+            )
+        else:
+            actions_section = "\n## Actions\nNo actions recorded.\n"
+
         body = (
             f"# {bill.bill_number}\n\n"
             "## Description\n"
@@ -349,6 +370,7 @@ class ObsidianExporter:
             f"{cosponsor_lines}\n\n"
             "## Status\n"
             f"{bill.last_action} ({bill.last_action_date})\n"
+            f"{actions_section}"
         )
 
         return frontmatter + body
@@ -470,6 +492,17 @@ class ObsidianExporter:
         return "\n".join(f"#{tag}" for tag in tags) if tags else "#tags/none"
 
     # ── associated members ───────────────────────────────────────────────
+
+    def _render_associated_section(self, member: Member) -> str:
+        """Render associated members section with chamber-specific label."""
+        is_senate = member.chamber.lower() == "senate"
+        if is_senate:
+            header = "## Associated Representatives"
+        else:
+            header = "## Associated Senator"
+
+        content = self._render_associated_links(member.associated_members)
+        return f"{header}\n{content}"
 
     def _render_associated_links(self, associated_members: str | None) -> str:
         if not associated_members:

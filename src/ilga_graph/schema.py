@@ -11,6 +11,8 @@ from .analytics import (
     controversial_score,
     lobbyist_alignment,
 )
+from .metrics_definitions import get_metrics_glossary
+from .models import ActionEntry as ActionEntryModel
 from .models import Bill as BillModel
 from .models import CareerRange as CareerRangeModel
 from .models import Committee as CommitteeModel
@@ -20,6 +22,7 @@ from .models import Office as OfficeModel
 from .models import VoteEvent as VoteEventModel
 from .models import WitnessSlip as WitnessSlipModel
 from .moneyball import MoneyballProfile as MoneyballProfileModel
+from .search import SearchHit
 
 # ── Enums ─────────────────────────────────────────────────────────────────────
 
@@ -64,6 +67,15 @@ class SortOrder(Enum):
     DESC = "desc"
 
 
+@strawberry.enum
+class SearchEntityType(Enum):
+    """Entity types available for the unified search query."""
+
+    MEMBER = "member"
+    BILL = "bill"
+    COMMITTEE = "committee"
+
+
 # ── Pagination ────────────────────────────────────────────────────────────────
 
 
@@ -83,6 +95,19 @@ class PageInfo:
 
 
 @strawberry.type
+class ActionEntryType:
+    """One action in a bill's legislative history."""
+
+    date: str
+    chamber: str
+    action: str
+
+    @classmethod
+    def from_model(cls, a: ActionEntryModel) -> ActionEntryType:
+        return cls(date=a.date, chamber=a.chamber, action=a.action)
+
+
+@strawberry.type
 class BillType:
     bill_number: str
     leg_id: str
@@ -95,6 +120,7 @@ class BillType:
     status_url: str = ""
     sponsor_ids: list[str] = strawberry.field(default_factory=list)
     house_sponsor_ids: list[str] = strawberry.field(default_factory=list)
+    action_history: list[ActionEntryType] = strawberry.field(default_factory=list)
 
     @classmethod
     def from_model(cls, b: BillModel) -> BillType:
@@ -110,6 +136,7 @@ class BillType:
             status_url=b.status_url,
             sponsor_ids=b.sponsor_ids,
             house_sponsor_ids=b.house_sponsor_ids,
+            action_history=[ActionEntryType.from_model(a) for a in b.action_history],
         )
 
 
@@ -175,6 +202,40 @@ class ScorecardType:
             resolutions_count=sc.resolutions_count,
             resolutions_passed_count=sc.resolutions_passed_count,
         )
+
+
+@strawberry.type
+class EmpiricalMetricDefinitionType:
+    """Human-readable definition of one empirical (raw) metric."""
+
+    id: str
+    name: str
+    short_definition: str
+    formula: str | None = None
+
+
+@strawberry.type
+class MoneyballComponentType:
+    """One component of the Moneyball composite score."""
+
+    id: str
+    weight_pct: float
+    name: str
+    short_definition: str
+
+
+@strawberry.type
+class MetricsGlossaryType:
+    """What every metric means: empirical stats and Moneyball formula.
+
+    Use this to show tooltips, 'How is this calculated?', or docs so derived
+    metrics are not a black box.
+    """
+
+    empirical: list[EmpiricalMetricDefinitionType]
+    effectiveness_score: EmpiricalMetricDefinitionType
+    moneyball_one_liner: str
+    moneyball_components: list[MoneyballComponentType]
 
 
 @strawberry.type
@@ -368,11 +429,13 @@ class MemberType:
     career_timeline_text: str = ""
     career_ranges: list[CareerRangeType] = strawberry.field(default_factory=list)
     committees: list[str] = strawberry.field(default_factory=list)
-    associated_members: str | None = None
+    associated_senator: str | None = None  # For Representatives: their Senator
+    associated_representatives: str | None = None  # For Senators: their Representatives
     email: str | None = None
     offices: list[OfficeType] = strawberry.field(default_factory=list)
-    sponsored_bills: list[BillType] = strawberry.field(default_factory=list)
-    co_sponsor_bills: list[BillType] = strawberry.field(default_factory=list)
+    # References only — no embedded bill objects (separation of concerns)
+    sponsored_bill_ids: list[str] = strawberry.field(default_factory=list)
+    co_sponsor_bill_ids: list[str] = strawberry.field(default_factory=list)
     scorecard: ScorecardType | None = None
     moneyball: MoneyballProfileType | None = None
     # ── Seating chart (Whisper Network) ──
@@ -389,6 +452,12 @@ class MemberType:
         moneyball_profile: MoneyballProfileModel | None = None,
     ) -> MemberType:
         sc = scorecard if scorecard is not None else compute_scorecard(m)
+
+        # Determine chamber-specific associated member fields
+        is_senate = m.chamber.lower() == "senate"
+        associated_senator = m.associated_members if not is_senate else None
+        associated_representatives = m.associated_members if is_senate else None
+
         return cls(
             id=m.id,
             name=m.name,
@@ -401,11 +470,12 @@ class MemberType:
             career_timeline_text=m.career_timeline_text,
             career_ranges=[CareerRangeType.from_model(cr) for cr in m.career_ranges],
             committees=list(m.committees),
-            associated_members=m.associated_members,
+            associated_senator=associated_senator,
+            associated_representatives=associated_representatives,
             email=m.email,
             offices=[OfficeType.from_model(o) for o in m.offices],
-            sponsored_bills=[BillType.from_model(b) for b in m.sponsored_bills],
-            co_sponsor_bills=[BillType.from_model(b) for b in m.co_sponsor_bills],
+            sponsored_bill_ids=list(m.sponsored_bill_ids),
+            co_sponsor_bill_ids=list(m.co_sponsor_bill_ids),
             scorecard=ScorecardType.from_model(sc),
             moneyball=(
                 MoneyballProfileType.from_model(moneyball_profile)
@@ -515,6 +585,83 @@ class WitnessSlipConnection:
     page_info: PageInfo
 
 
+# ── Unified search types ─────────────────────────────────────────────────────
+
+
+@strawberry.type
+class SearchResultType:
+    """One result from the unified search query.
+
+    Exactly one of ``member``, ``bill``, or ``committee`` is populated,
+    depending on ``entity_type``.
+    """
+
+    entity_type: str = strawberry.field(
+        description='The kind of entity: "member", "bill", or "committee".',
+    )
+    match_field: str = strawberry.field(
+        description="Which field the query matched (e.g. 'name', 'description', 'synopsis').",
+    )
+    match_snippet: str = strawberry.field(
+        description="A short excerpt of the matched text with surrounding context.",
+    )
+    relevance_score: float = strawberry.field(
+        description="Relevance ranking 0.0–1.0 (higher is a better match).",
+    )
+    member: MemberType | None = strawberry.field(
+        default=None,
+        description="Populated when entity_type is 'member'.",
+    )
+    bill: BillType | None = strawberry.field(
+        default=None,
+        description="Populated when entity_type is 'bill'.",
+    )
+    committee: CommitteeType | None = strawberry.field(
+        default=None,
+        description="Populated when entity_type is 'committee'.",
+    )
+
+    @classmethod
+    def from_hit(
+        cls,
+        hit: SearchHit,
+        *,
+        scorecard_loader: object | None = None,
+        moneyball_loader: object | None = None,
+    ) -> SearchResultType:
+        """Convert a SearchHit into a GraphQL-ready SearchResultType."""
+        member_type: MemberType | None = None
+        bill_type: BillType | None = None
+        committee_type: CommitteeType | None = None
+
+        if hit.member is not None:
+            sc = scorecard_loader.load(hit.member.id) if scorecard_loader else None  # type: ignore[union-attr]
+            mb = moneyball_loader.load(hit.member.id) if moneyball_loader else None  # type: ignore[union-attr]
+            member_type = MemberType.from_model(hit.member, sc, mb)
+        elif hit.bill is not None:
+            bill_type = BillType.from_model(hit.bill)
+        elif hit.committee is not None:
+            committee_type = CommitteeType.from_model(hit.committee)
+
+        return cls(
+            entity_type=hit.entity_type.value,
+            match_field=hit.match_field,
+            match_snippet=hit.match_snippet,
+            relevance_score=round(hit.relevance_score, 4),
+            member=member_type,
+            bill=bill_type,
+            committee=committee_type,
+        )
+
+
+@strawberry.type
+class SearchConnection:
+    """Paginated results from the unified search query."""
+
+    items: list[SearchResultType]
+    page_info: PageInfo
+
+
 def paginate(items: list, offset: int, limit: int) -> tuple[list, PageInfo]:
     """Apply offset/limit pagination and build PageInfo.
 
@@ -536,22 +683,58 @@ def paginate(items: list, offset: int, limit: int) -> tuple[list, PageInfo]:
 
 @strawberry.type
 class Query:
+    @strawberry.field(
+        description=(
+            "Definitions of all metrics (empirical and derived) "
+            "so UIs can explain what each number means."
+        ),
+    )
+    def metrics_glossary(self) -> MetricsGlossaryType:
+        g = get_metrics_glossary()
+        return MetricsGlossaryType(
+            empirical=[
+                EmpiricalMetricDefinitionType(
+                    id=e["id"],
+                    name=e["name"],
+                    short_definition=e["short_definition"],
+                    formula=e.get("formula"),
+                )
+                for e in g.empirical
+            ],
+            effectiveness_score=EmpiricalMetricDefinitionType(
+                id=g.effectiveness_score["id"],
+                name=g.effectiveness_score["name"],
+                short_definition=g.effectiveness_score["short_definition"],
+                formula=g.effectiveness_score.get("formula"),
+            ),
+            moneyball_one_liner=g.moneyball_one_liner,
+            moneyball_components=[
+                MoneyballComponentType(
+                    id=c["id"],
+                    weight_pct=c["weight_pct"],
+                    name=c["name"],
+                    short_definition=c["short_definition"],
+                )
+                for c in g.moneyball_components
+            ],
+        )
+
     @strawberry.field(description="Look up a single member by exact name.")
-    def member(self, name: str) -> MemberType | None:
+    def member(self, name: str, info: strawberry.Info) -> MemberType | None:
         model = state.member_lookup.get(name)
         if model is None:
             return None
-        return MemberType.from_model(
-            model,
-            state.scorecards.get(model.id),
-            _mb_profile(model.id),
-        )
+        ctx = info.context
+        sc = ctx["scorecard_loader"].load(model.id)
+        mb = ctx["moneyball_loader"].load(model.id)
+        return MemberType.from_model(model, sc, mb)
 
     @strawberry.field(
         description="Paginated list of members with optional sorting and chamber filter.",
     )
     def members(
         self,
+        info: strawberry.Info,
         sort_by: MemberSortField | None = None,
         sort_order: SortOrder | None = None,
         chamber: Chamber | None = None,
@@ -573,10 +756,13 @@ class Query:
                 result.sort(key=lambda m: m.name, reverse=reverse)
 
         page, page_info = paginate(result, offset, limit)
+        ctx = info.context
+        ids = [m.id for m in page]
+        scorecards = ctx["scorecard_loader"].batch_load(ids)
+        profiles = ctx["moneyball_loader"].batch_load(ids)
         return MemberConnection(
             items=[
-                MemberType.from_model(m, state.scorecards.get(m.id), _mb_profile(m.id))
-                for m in page
+                MemberType.from_model(m, scorecards[i], profiles[i]) for i, m in enumerate(page)
             ],
             page_info=page_info,
         )
@@ -584,6 +770,7 @@ class Query:
     @strawberry.field(description="Ranked leaderboard by Moneyball Score or any analytics metric.")
     def moneyball_leaderboard(
         self,
+        info: strawberry.Info,
         chamber: Chamber | None = None,
         exclude_leadership: bool = False,
         limit: int = 0,
@@ -655,10 +842,13 @@ class Query:
             members.sort(key=lambda m: rank.get(m.id, len(ids)))
 
         page, page_info = paginate(members, offset, limit)
+        ctx = info.context
+        ids = [m.id for m in page]
+        scorecards = ctx["scorecard_loader"].batch_load(ids)
+        profiles = ctx["moneyball_loader"].batch_load(ids)
         return MemberConnection(
             items=[
-                MemberType.from_model(m, state.scorecards.get(m.id), _mb_profile(m.id))
-                for m in page
+                MemberType.from_model(m, scorecards[i], profiles[i]) for i, m in enumerate(page)
             ],
             page_info=page_info,
         )

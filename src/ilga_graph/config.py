@@ -78,6 +78,8 @@ MOCK_DEV_DIR: Path = Path(_env("ILGA_MOCK_DIR", "mocks/dev"))
 DEV_MODE: bool = _env("ILGA_DEV_MODE") == "1"
 SEED_MODE: bool = _env("ILGA_SEED_MODE") == "1"
 INCREMENTAL: bool = _env("ILGA_INCREMENTAL") == "1"
+# When true, API startup only loads from cache (no scraping). Set for fast start.
+LOAD_ONLY: bool = _env("ILGA_LOAD_ONLY") == "1"
 
 # ── Scrape / export limits ───────────────────────────────────────────────────
 MEMBER_LIMIT: int = int(_env("ILGA_MEMBER_LIMIT", "0"))

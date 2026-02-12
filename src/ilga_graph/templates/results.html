@@ -1,0 +1,10 @@
+{% extends "index.html" %}
+{#
+    Full-page results: used when the browser doesn't have htmx (JS disabled,
+    direct form POST).  Inherits the search form from index.html and fills
+    the results block with the same partial that htmx swaps in.
+#}
+
+{% block results %}
+{% include "_results_partial.html" %}
+{% endblock %}

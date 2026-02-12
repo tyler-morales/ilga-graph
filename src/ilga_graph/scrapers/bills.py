@@ -22,12 +22,13 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from ..config import BASE_URL, CACHE_DIR, GA_ID, MOCK_DEV_DIR, SESSION_ID
-from ..models import ActionEntry, Bill
+from ..models import ActionEntry, Bill, VoteEvent, WitnessSlip
 
 LOGGER = logging.getLogger(__name__)
 
 BILLS_CACHE_FILE = CACHE_DIR / "bills.json"
 METADATA_FILE = CACHE_DIR / "scrape_metadata.json"
+BILL_INDEX_CHECKPOINT_FILE = CACHE_DIR / "bill_index_checkpoint.json"
 
 _RE_LEG_ID = re.compile(r"LegId=(\d+)", re.IGNORECASE)
 _RE_DOC_NUM = re.compile(r"DocNum=(\d+)", re.IGNORECASE)
@@ -42,11 +43,20 @@ _RE_MEMBER_ID = re.compile(r"/Members/Details/(\d+)", re.IGNORECASE)
 class BillIndexEntry:
     """Lightweight bill entry from a range page (no detail)."""
 
-    bill_number: str  # e.g. "SB0001"
+    bill_number: str  # e.g. "SB0001", "SR0042", "HJR0003"
     leg_id: str  # e.g. "157091"
     description: str  # e.g. "$GEN ASSEMBLY-TECH"
-    doc_type: str  # "SB" or "HB"
+    doc_type: str  # "SB", "HB", "SR", "HR", "SJR", "HJR", "SJRCA", "HJRCA", "EO", "JSR", "AM"
     status_url: str  # full BillStatus URL
+
+
+@dataclass
+class DocTypeInfo:
+    """A document type discovered from the /Legislation index page."""
+
+    doc_type: str  # e.g. "SB", "HB", "SR", "AM"
+    label: str  # e.g. "Senate Bills", "Appointment Messages"
+    range_urls: list[tuple[int, int, str]]  # [(num1, num2, full_url), ...]
 
 
 # ── Session builder ──────────────────────────────────────────────────────────
@@ -75,6 +85,92 @@ def _range_url(doc_type: str, num1: int, num2: int) -> str:
         f"?num1={num1:04d}&num2={num2:04d}"
         f"&DocTypeID={doc_type}&GaId={GA_ID}&SessionId={SESSION_ID}"
     )
+
+
+_RE_SESSION_HREF = re.compile(r"/Legislation/RegularSession/(\w+)\?SessionId=")
+
+
+def _discover_doc_types(
+    session: requests.Session,
+    timeout: int = 20,
+    request_delay: float = 0.5,
+) -> list[DocTypeInfo]:
+    """Fetch /Legislation and discover all doc types with their range URLs.
+
+    The ILGA Legislation page lists every document type (SB, HB, SR, HR,
+    SJR, HJR, SJRCA, HJRCA, EO, JSR, AM) with clickable range links
+    (e.g. "0001 - 0100", "4001 - 4052").  Parsing this page gives us the
+    exact ranges so we never need blind pagination or recycled-data guards.
+    """
+    url = f"{BASE_URL}Legislation"
+    LOGGER.info("Discovering doc types from %s ...", url)
+
+    try:
+        resp = session.get(url, timeout=timeout)
+        resp.raise_for_status()
+        time.sleep(request_delay)
+    except requests.RequestException as exc:
+        LOGGER.warning("Failed to fetch %s: %s", url, exc)
+        return []
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+    doc_types: list[DocTypeInfo] = []
+
+    # Each section header is an <a> like:
+    #   <a class="btn btn-light fw-bold p-1"
+    #      href="/Legislation/RegularSession/SB?SessionId=114">
+    #     Senate Bills
+    #   </a>
+    # Followed by a sibling <div class="row"> containing the range links.
+    for header_link in soup.find_all("a", href=_RE_SESSION_HREF):
+        label = header_link.get_text(strip=True)
+        href = header_link.get("href", "")
+
+        m = _RE_SESSION_HREF.search(href)
+        if not m:
+            continue
+        doc_type = m.group(1)
+
+        # Walk up to the parent <div class="mt-1 ..."> then find the
+        # next sibling <div class="row"> that holds the range links.
+        parent = header_link.find_parent("div")
+        if not parent:
+            continue
+        row_div = parent.find_next_sibling("div", class_="row")
+        if not row_div:
+            continue
+
+        ranges: list[tuple[int, int, str]] = []
+        for link in row_div.find_all("a", href=True):
+            rh = link["href"]
+            n1 = re.search(r"num1=(\d+)", rh)
+            n2 = re.search(r"num2=(\d+)", rh)
+            if n1 and n2:
+                ranges.append(
+                    (
+                        int(n1.group(1)),
+                        int(n2.group(1)),
+                        urljoin(BASE_URL, rh),
+                    )
+                )
+
+        if ranges:
+            doc_types.append(DocTypeInfo(doc_type=doc_type, label=label, range_urls=ranges))
+            LOGGER.debug(
+                "  %s (%s): %d range pages, %d–%d",
+                doc_type,
+                label,
+                len(ranges),
+                ranges[0][0],
+                ranges[-1][1],
+            )
+
+    LOGGER.info(
+        "Discovered %d doc types: %s",
+        len(doc_types),
+        ", ".join(f"{d.doc_type}({len(d.range_urls)}pg)" for d in doc_types),
+    )
+    return doc_types
 
 
 def _parse_range_page(html: str, doc_type: str) -> list[BillIndexEntry]:
@@ -115,33 +211,202 @@ def _parse_range_page(html: str, doc_type: str) -> list[BillIndexEntry]:
     return entries
 
 
+# Each legislation range page returns up to 100 bills (e.g. num1=1, num2=100).
+_RANGE_PAGE_SIZE = 100
+
+
+# ── Index checkpoint helpers ─────────────────────────────────────────────────
+
+
+def _save_index_checkpoint(index_data: dict[str, list[BillIndexEntry]]) -> None:
+    """Save bill index checkpoint to disk."""
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Convert BillIndexEntry objects to dicts
+    serializable = {
+        doc_type: [asdict(entry) for entry in entries] for doc_type, entries in index_data.items()
+    }
+
+    with open(BILL_INDEX_CHECKPOINT_FILE, "w", encoding="utf-8") as f:
+        json.dump(serializable, f, indent=2, ensure_ascii=False)
+
+
+def _load_index_checkpoint() -> dict[str, list[BillIndexEntry]]:
+    """Load bill index checkpoint from disk, or return empty dict."""
+    if not BILL_INDEX_CHECKPOINT_FILE.exists():
+        return {}
+
+    try:
+        with open(BILL_INDEX_CHECKPOINT_FILE, encoding="utf-8") as f:
+            raw = json.load(f)
+
+        # Convert dicts back to BillIndexEntry objects
+        return {
+            doc_type: [BillIndexEntry(**entry_dict) for entry_dict in entries]
+            for doc_type, entries in raw.items()
+        }
+    except Exception as e:
+        LOGGER.warning("Failed to load index checkpoint: %s", e)
+        return {}
+
+
+def _clear_index_checkpoint() -> None:
+    """Remove the index checkpoint file."""
+    if BILL_INDEX_CHECKPOINT_FILE.exists():
+        BILL_INDEX_CHECKPOINT_FILE.unlink()
+        LOGGER.info("Cleared bill index checkpoint")
+
+
 def scrape_bill_index(
     doc_type: str = "SB",
     limit: int = 0,
     session: requests.Session | None = None,
     timeout: int = 20,
     request_delay: float = 0.5,
+    save_checkpoints: bool = True,
+    range_urls: list[tuple[int, int, str]] | None = None,
 ) -> list[BillIndexEntry]:
-    """Scrape the legislation index for a doc type (SB or HB).
+    """Scrape the legislation index for a single doc type.
 
-    Fetches the top-level page to discover range chunks, then scrapes the
-    first range page. With ``limit > 0``, returns at most *limit* entries.
+    If *range_urls* is provided (from ``_discover_doc_types``), fetches
+    those exact URLs — no guessing, no recycled-data issues.  Otherwise
+    falls back to blind range pagination starting at ``num1=1`` with a
+    recycled-data guard.
+
+    With ``limit > 0``, returns at most *limit* entries.
+    With ``limit == 0``, fetches all entries.
     """
     sess = session or _build_session()
+    entries: list[BillIndexEntry] = []
 
-    # Fetch the first range page (0001-0100) to get bills
-    url = _range_url(doc_type, 1, 100)
-    LOGGER.info("Fetching bill index: %s", url)
-    resp = sess.get(url, timeout=timeout)
-    resp.raise_for_status()
-    time.sleep(request_delay)
+    if range_urls:
+        # ── Known ranges from /Legislation discovery ──
+        total_pages = len(range_urls)
+        for page_idx, (num1, num2, url) in enumerate(range_urls, 1):
+            LOGGER.info(
+                "Fetching %s %d–%d (page %d/%d)",
+                doc_type,
+                num1,
+                num2,
+                page_idx,
+                total_pages,
+            )
 
-    entries = _parse_range_page(resp.text, doc_type)
-    LOGGER.info("Parsed %d %s bills from range page.", len(entries), doc_type)
+            resp = sess.get(url, timeout=timeout)
+            resp.raise_for_status()
+            time.sleep(request_delay)
 
-    if limit > 0:
-        entries = entries[:limit]
+            page_entries = _parse_range_page(resp.text, doc_type)
+            if not page_entries:
+                LOGGER.info("  (empty page)")
+                continue
+
+            entries.extend(page_entries)
+            LOGGER.info(
+                "  ✓ %d entries: %s to %s (total %s: %d)",
+                len(page_entries),
+                page_entries[0].bill_number,
+                page_entries[-1].bill_number,
+                doc_type,
+                len(entries),
+            )
+
+            if save_checkpoints:
+                existing_checkpoint = _load_index_checkpoint()
+                existing_checkpoint[doc_type] = entries
+                _save_index_checkpoint(existing_checkpoint)
+
+            if limit > 0 and len(entries) >= limit:
+                entries = entries[:limit]
+                break
+    else:
+        # ── Fallback: blind range-page pagination ──
+        num1 = 1
+        page_num = 1
+
+        while True:
+            num2 = num1 + _RANGE_PAGE_SIZE - 1
+            url = _range_url(doc_type, num1, num2)
+
+            LOGGER.info(
+                "Fetching bill index: %s %04d-%04d (page %d)",
+                doc_type,
+                num1,
+                num2,
+                page_num,
+            )
+
+            resp = sess.get(url, timeout=timeout)
+            resp.raise_for_status()
+            time.sleep(request_delay)
+
+            page_entries = _parse_range_page(resp.text, doc_type)
+            if not page_entries:
+                LOGGER.info("No more %s entries found; stopping.", doc_type)
+                break
+
+            # Recycled-data guard (fallback path only)
+            first_bill_num_match = re.search(r"(\d+)$", page_entries[0].bill_number)
+            if first_bill_num_match:
+                first_bill_num = int(first_bill_num_match.group(1))
+                if first_bill_num < num1:
+                    LOGGER.info(
+                        "Range page %s %04d-%04d returned %s (outside requested "
+                        "range); end of %s index reached.",
+                        doc_type,
+                        num1,
+                        num2,
+                        page_entries[0].bill_number,
+                        doc_type,
+                    )
+                    break
+
+            entries.extend(page_entries)
+            LOGGER.info(
+                "  ✓ %d entries: %s to %s (total %s: %d)",
+                len(page_entries),
+                page_entries[0].bill_number,
+                page_entries[-1].bill_number,
+                doc_type,
+                len(entries),
+            )
+
+            if save_checkpoints:
+                existing_checkpoint = _load_index_checkpoint()
+                existing_checkpoint[doc_type] = entries
+                _save_index_checkpoint(existing_checkpoint)
+
+            if limit > 0 and len(entries) >= limit:
+                entries = entries[:limit]
+                break
+            if len(page_entries) < _RANGE_PAGE_SIZE:
+                break
+            num1 = num2 + 1
+            page_num += 1
+
     return entries
+
+
+def _checkpoint_looks_complete(
+    existing: list[BillIndexEntry],
+    limit: int,
+) -> bool:
+    """Return True if an index checkpoint has enough entries for *limit*.
+
+    When ``limit == 0`` (all bills) we can't know the true total, so we
+    use a heuristic: if the checkpoint has more entries than the default
+    page size (100) it's likely a genuine partial-or-complete scrape.
+    If it has *exactly* ``_RANGE_PAGE_SIZE`` entries, it was almost
+    certainly produced by the (now-fixed) single-page truncation bug
+    and should be discarded.
+    """
+    if not existing:
+        return False
+    if limit > 0:
+        return len(existing) >= limit
+    # limit == 0 → want ALL bills
+    # Accept checkpoint only if it has more than one page's worth
+    return len(existing) > _RANGE_PAGE_SIZE
 
 
 def scrape_all_bill_indexes(
@@ -150,17 +415,207 @@ def scrape_all_bill_indexes(
     session: requests.Session | None = None,
     timeout: int = 20,
     request_delay: float = 0.5,
+    save_checkpoints: bool = True,
 ) -> list[BillIndexEntry]:
-    """Scrape bill indexes for both SB and HB, returning combined list."""
+    """Discover ALL doc types from /Legislation and scrape their indexes.
+
+    Fetches the ILGA Legislation page once to discover every document type
+    (SB, HB, SR, HR, SJR, HJR, SJRCA, HJRCA, EO, JSR, AM) and their
+    exact range pages.  Then scrapes each range page.
+
+    ``sb_limit`` / ``hb_limit`` control SB and HB counts (0 = all).
+    All other types are always scraped in full (they're small).
+
+    Parameters
+    ----------
+    save_checkpoints:
+        If True, saves progress to checkpoint file as scraping proceeds.
+        If interrupted and rerun, will resume from checkpoint.
+    """
     sess = session or _build_session()
-    sb = scrape_bill_index(
-        "SB", limit=sb_limit, session=sess, timeout=timeout, request_delay=request_delay
+
+    # ── Step 1: Discover all doc types and their exact ranges ──
+    doc_types = _discover_doc_types(sess, timeout, request_delay)
+
+    if not doc_types:
+        LOGGER.warning(
+            "Could not discover doc types from /Legislation page. "
+            "Falling back to SB + HB with blind pagination."
+        )
+        doc_types = [
+            DocTypeInfo("SB", "Senate Bills", []),
+            DocTypeInfo("HB", "House Bills", []),
+        ]
+
+    # ── Step 2: Per-type limits (SB/HB respect CLI flags; others = all) ──
+    limits: dict[str, int] = {}
+    for dt in doc_types:
+        if dt.doc_type == "SB":
+            limits[dt.doc_type] = sb_limit
+        elif dt.doc_type == "HB":
+            limits[dt.doc_type] = hb_limit
+        else:
+            limits[dt.doc_type] = 0  # 0 = all (small types)
+
+    # ── Step 3: Scrape each type (with checkpoint resume) ──
+    checkpoint = _load_index_checkpoint()
+    all_entries: list[BillIndexEntry] = []
+
+    for dt in doc_types:
+        limit = limits.get(dt.doc_type, 0)
+        existing = checkpoint.get(dt.doc_type, [])
+
+        if _checkpoint_looks_complete(existing, limit):
+            LOGGER.info(
+                "✓ %s (%s): loaded %d from checkpoint",
+                dt.doc_type,
+                dt.label,
+                len(existing),
+            )
+            entries = existing[:limit] if limit > 0 else existing
+        else:
+            entries = scrape_bill_index(
+                doc_type=dt.doc_type,
+                limit=limit,
+                session=sess,
+                timeout=timeout,
+                request_delay=request_delay,
+                save_checkpoints=save_checkpoints,
+                range_urls=dt.range_urls if dt.range_urls else None,
+            )
+
+        all_entries.extend(entries)
+        LOGGER.info(
+            "  %s (%s): %d entries indexed",
+            dt.doc_type,
+            dt.label,
+            len(entries),
+        )
+
+    # ── Step 4: Clean up and log summary ──
+    if save_checkpoints:
+        _clear_index_checkpoint()
+
+    by_type: dict[str, int] = {}
+    for e in all_entries:
+        by_type[e.doc_type] = by_type.get(e.doc_type, 0) + 1
+    summary_parts = [f"{count} {dt}" for dt, count in sorted(by_type.items())]
+    LOGGER.info(
+        "Total bill index: %s = %d entries",
+        " + ".join(summary_parts),
+        len(all_entries),
     )
-    hb = scrape_bill_index(
-        "HB", limit=hb_limit, session=sess, timeout=timeout, request_delay=request_delay
-    )
-    LOGGER.info("Total bill index: %d SB + %d HB = %d", len(sb), len(hb), len(sb) + len(hb))
-    return sb + hb
+
+    return all_entries
+
+
+def tail_only_bill_indexes(
+    highest_per_type: dict[str, int],
+    session: requests.Session | None = None,
+    timeout: int = 20,
+    request_delay: float = 0.5,
+) -> list[BillIndexEntry]:
+    """Fast index scan: only fetch range pages beyond the highest known bill.
+
+    Instead of walking all 125 index pages (~30 min), this fetches just the
+    last page per doc type where new bills would appear.  For doc types not
+    yet in ``highest_per_type``, all pages are fetched (they're new).
+
+    Returns only the **new** entries (bill numbers higher than what's cached).
+    Typically finishes in ~1-2 minutes vs 30+ for a full scan.
+    """
+    sess = session or _build_session()
+
+    doc_types = _discover_doc_types(sess, timeout, request_delay)
+    if not doc_types:
+        LOGGER.warning("Tail scan: could not discover doc types, falling back to full.")
+        return scrape_all_bill_indexes(
+            sb_limit=0,
+            hb_limit=0,
+            session=sess,
+            timeout=timeout,
+            request_delay=request_delay,
+        )
+
+    new_entries: list[BillIndexEntry] = []
+
+    for dt in doc_types:
+        highest = highest_per_type.get(dt.doc_type, 0)
+
+        if not dt.range_urls:
+            continue
+
+        if highest == 0:
+            # Never scanned this type before — fetch all pages
+            LOGGER.info(
+                "Tail scan %s: no prior data, fetching all %d pages",
+                dt.doc_type,
+                len(dt.range_urls),
+            )
+            pages_to_fetch = dt.range_urls
+        else:
+            # Only fetch pages whose range includes or exceeds our highest
+            # E.g. if highest SB is 4052 and a page covers 4001-4100, fetch it
+            pages_to_fetch = [(n1, n2, url) for n1, n2, url in dt.range_urls if n2 >= highest]
+            if not pages_to_fetch:
+                # All range pages are below our highest — nothing new
+                LOGGER.info(
+                    "Tail scan %s: highest=%d, all %d pages below — skip",
+                    dt.doc_type,
+                    highest,
+                    len(dt.range_urls),
+                )
+                continue
+            LOGGER.info(
+                "Tail scan %s: highest=%d, checking %d of %d pages",
+                dt.doc_type,
+                highest,
+                len(pages_to_fetch),
+                len(dt.range_urls),
+            )
+
+        for n1, n2, url in pages_to_fetch:
+            try:
+                resp = sess.get(url, timeout=timeout)
+                resp.raise_for_status()
+                time.sleep(request_delay)
+            except requests.RequestException as exc:
+                LOGGER.warning("Tail scan: failed to fetch %s: %s", url, exc)
+                continue
+
+            page_entries = _parse_range_page(resp.text, dt.doc_type)
+            if not page_entries:
+                continue
+
+            # Filter to only truly new entries (beyond our highest)
+            new_on_page = [e for e in page_entries if _bill_number_to_int(e.bill_number) > highest]
+            if new_on_page:
+                new_entries.extend(new_on_page)
+                LOGGER.info(
+                    "  ✓ %s: %d new entries (%s to %s)",
+                    dt.doc_type,
+                    len(new_on_page),
+                    new_on_page[0].bill_number,
+                    new_on_page[-1].bill_number,
+                )
+
+    by_type: dict[str, int] = {}
+    for e in new_entries:
+        by_type[e.doc_type] = by_type.get(e.doc_type, 0) + 1
+
+    if new_entries:
+        summary = ", ".join(f"{c} {dt}" for dt, c in sorted(by_type.items()))
+        LOGGER.info("Tail scan found %d new entries: %s", len(new_entries), summary)
+    else:
+        LOGGER.info("Tail scan: no new bills found.")
+
+    return new_entries
+
+
+def _bill_number_to_int(bill_number: str) -> int:
+    """Extract the numeric suffix from a bill number (e.g. 'SB0042' -> 42)."""
+    m = re.search(r"(\d+)$", bill_number)
+    return int(m.group(1)) if m else 0
 
 
 # ── BillStatus page scraping ─────────────────────────────────────────────────
@@ -341,7 +796,15 @@ def scrape_bill_status(
     primary_sponsor, senate_ids, house_ids = _parse_sponsors(soup)
 
     # Chamber from doc_type
-    chamber = "S" if doc_type.upper().startswith("S") else "H"
+    dt_upper = doc_type.upper()
+    if dt_upper.startswith("S"):
+        chamber = "S"
+    elif dt_upper.startswith("H"):
+        chamber = "H"
+    elif dt_upper in ("EO", "JSR", "AM"):
+        chamber = "J"  # Joint / Executive
+    else:
+        chamber = "H"  # fallback
 
     # Synopsis
     synopsis = _parse_synopsis(soup)
@@ -392,6 +855,10 @@ def scrape_all_bills(
         if cached is not None:
             return cached
 
+    # Load existing cache to preserve vote/slip data even when not
+    # using cache as the primary source (e.g. full re-scrape).
+    _existing_cache = load_bill_cache() or {}
+
     sess = session or _build_session()
     total = len(index)
     LOGGER.info("Scraping %d BillStatus pages...", total)
@@ -420,6 +887,12 @@ def scrape_all_bills(
             try:
                 bill = future.result()
                 if bill:
+                    # Preserve vote/slip data from any existing cache —
+                    # these are scraped separately and must not be lost.
+                    old = _existing_cache.get(bill.leg_id)
+                    if old:
+                        bill.vote_events = old.vote_events
+                        bill.witness_slips = old.witness_slips
                     bills[bill.leg_id] = bill
                     rate = completed / elapsed if elapsed > 0 else 0
                     eta = (total - completed) / rate if rate > 0 else 0
@@ -476,6 +949,41 @@ def _bill_from_dict(d: dict) -> Bill:
             action_history.append(
                 ActionEntry(date=a["date"], chamber=a["chamber"], action=a["action"])
             )
+
+    vote_events = []
+    for v in d.get("vote_events", []):
+        if isinstance(v, dict):
+            vote_events.append(
+                VoteEvent(
+                    bill_number=v.get("bill_number", ""),
+                    date=v.get("date", ""),
+                    description=v.get("description", ""),
+                    chamber=v.get("chamber", ""),
+                    yea_votes=v.get("yea_votes", []),
+                    nay_votes=v.get("nay_votes", []),
+                    present_votes=v.get("present_votes", []),
+                    nv_votes=v.get("nv_votes", []),
+                    pdf_url=v.get("pdf_url", ""),
+                    vote_type=v.get("vote_type", "floor"),
+                )
+            )
+
+    witness_slips = []
+    for ws in d.get("witness_slips", []):
+        if isinstance(ws, dict):
+            witness_slips.append(
+                WitnessSlip(
+                    name=ws.get("name", ""),
+                    organization=ws.get("organization", ""),
+                    representing=ws.get("representing", ""),
+                    position=ws.get("position", ""),
+                    hearing_committee=ws.get("hearing_committee", ""),
+                    hearing_date=ws.get("hearing_date", ""),
+                    testimony_type=ws.get("testimony_type", "Record of Appearance Only"),
+                    bill_number=ws.get("bill_number", ""),
+                )
+            )
+
     return Bill(
         bill_number=d["bill_number"],
         leg_id=d["leg_id"],
@@ -489,15 +997,19 @@ def _bill_from_dict(d: dict) -> Bill:
         sponsor_ids=d.get("sponsor_ids", []),
         house_sponsor_ids=d.get("house_sponsor_ids", []),
         action_history=action_history,
+        vote_events=vote_events,
+        witness_slips=witness_slips,
     )
 
 
 def save_bill_cache(bills: dict[str, Bill]) -> None:
-    """Save bills dict to cache/bills.json."""
+    """Save bills dict to cache/bills.json (atomic write)."""
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     data = {lid: _bill_to_dict(b) for lid, b in bills.items()}
-    with open(BILLS_CACHE_FILE, "w", encoding="utf-8") as f:
+    tmp_path = BILLS_CACHE_FILE.with_suffix(".json.tmp")
+    with open(tmp_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+    tmp_path.replace(BILLS_CACHE_FILE)
     LOGGER.info("Saved %d bills to %s", len(data), BILLS_CACHE_FILE)
 
 
@@ -523,16 +1035,43 @@ def load_bill_cache(*, seed_fallback: bool = False) -> dict[str, Bill] | None:
     return bills
 
 
-def save_scrape_metadata(bill_count: int) -> None:
-    """Save scrape metadata (timestamps, counts)."""
+def save_scrape_metadata(
+    bill_count: int,
+    *,
+    scan_type: str = "full",
+    highest_per_type: dict[str, int] | None = None,
+) -> None:
+    """Save scrape metadata (timestamps, counts, index scan info).
+
+    Parameters
+    ----------
+    scan_type:
+        ``"full"`` or ``"tail"`` — which kind of index scan was performed.
+    highest_per_type:
+        ``{doc_type: highest_bill_number}`` e.g. ``{"SB": 4052, "HB": 5623}``.
+    """
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     existing: dict = {}
     if METADATA_FILE.exists():
         with open(METADATA_FILE, encoding="utf-8") as f:
             existing = json.load(f)
 
-    existing["last_bill_scrape_at"] = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(timezone.utc).isoformat()
+    existing["last_bill_scrape_at"] = now
     existing["bill_index_count"] = bill_count
+
+    if scan_type == "full":
+        existing["last_full_scan"] = now
+        existing["last_tail_scan"] = now  # full implies tail is also fresh
+    elif scan_type == "tail":
+        existing["last_tail_scan"] = now
+
+    if highest_per_type is not None:
+        # Merge — keep the highest we've ever seen per type
+        prev = existing.get("highest_bill_per_type", {})
+        for dt, num in highest_per_type.items():
+            prev[dt] = max(prev.get(dt, 0), num)
+        existing["highest_bill_per_type"] = prev
 
     with open(METADATA_FILE, "w", encoding="utf-8") as f:
         json.dump(existing, f, indent=2)
@@ -547,7 +1086,43 @@ def load_scrape_metadata() -> dict:
     return {}
 
 
+def _hours_since(iso_ts: str | None) -> float:
+    """Return hours elapsed since an ISO-8601 timestamp, or inf if None."""
+    if not iso_ts:
+        return float("inf")
+    try:
+        ts = datetime.fromisoformat(iso_ts)
+        return (datetime.now(timezone.utc) - ts).total_seconds() / 3600
+    except (ValueError, TypeError):
+        return float("inf")
+
+
+def _extract_highest_bill_numbers(
+    bills: dict[str, Bill],
+) -> dict[str, int]:
+    """Scan cached bills and find the highest numeric suffix per doc type.
+
+    E.g. ``{"SB": 4052, "HB": 5623, "SR": 614}``.
+    """
+    highest: dict[str, int] = {}
+    for bill in bills.values():
+        bn = bill.bill_number  # e.g. "SB0042", "HB5623"
+        m = re.match(r"([A-Z]+)(\d+)", bn)
+        if m:
+            dt, num_str = m.group(1), m.group(2)
+            num = int(num_str)
+            if num > highest.get(dt, 0):
+                highest[dt] = num
+    return highest
+
+
 # ── Incremental scraping ─────────────────────────────────────────────────────
+
+
+# ── Tiered scan thresholds ────────────────────────────────────────────────────
+# These control which kind of index scan happens automatically.
+TAIL_SCAN_THRESHOLD_HOURS = 24.0  # < 24h since last tail → skip index
+FULL_SCAN_THRESHOLD_HOURS = 168.0  # < 7 days since last full → tail only
 
 
 def incremental_bill_scrape(
@@ -558,14 +1133,18 @@ def incremental_bill_scrape(
     request_delay: float = 0.5,
     max_workers: int = 3,
     rescrape_recent_days: int = 30,
+    force_full: bool = False,
 ) -> dict[str, Bill]:
-    """Incremental scrape: fetch index, compare to cache, only scrape changes.
+    """Smart incremental scrape with tiered index scanning.
 
-    1. Load existing bill cache
-    2. Scrape bill indexes (range pages) to get current leg_ids
-    3. Identify new bills (not in cache)
-    4. Optionally re-scrape bills with recent last_action_date
-    5. Merge results into cache
+    Tier decision (based on metadata timestamps):
+      - ``force_full=True``  → Full index walk (all 125 pages)
+      - No metadata / >7 days since full scan → Full index walk
+      - >24h since last tail scan → Tail-only scan (last page per doc type)
+      - <24h since last tail scan → Skip index, just re-scrape recent bills
+
+    After the index scan (or skip), newly discovered bills are scraped in
+    detail and merged into the cache.  Vote/slip data is always preserved.
     """
     sess = session or _build_session()
 
@@ -573,31 +1152,76 @@ def incremental_bill_scrape(
     existing = load_bill_cache() or {}
     existing_ids = set(existing.keys())
 
-    # Scrape fresh index
-    index = scrape_all_bill_indexes(
-        sb_limit=sb_limit,
-        hb_limit=hb_limit,
-        session=sess,
-        timeout=timeout,
-        request_delay=request_delay,
-    )
+    # ── Tiered scan decision ──────────────────────────────────────────────
+    meta = load_scrape_metadata()
+    hours_since_full = _hours_since(meta.get("last_full_scan"))
+    hours_since_tail = _hours_since(meta.get("last_tail_scan"))
+    highest_per_type = meta.get("highest_bill_per_type") or {}
+
+    # If we have bills but no highest_per_type in metadata, compute it
+    if existing and not highest_per_type:
+        highest_per_type = _extract_highest_bill_numbers(existing)
+
+    scan_type: str  # "full", "tail", or "skip"
+    index: list[BillIndexEntry] = []
+
+    if force_full or not existing or hours_since_full > FULL_SCAN_THRESHOLD_HOURS:
+        # Full scan: walk all index pages
+        reason = (
+            "forced"
+            if force_full
+            else "no cache"
+            if not existing
+            else f"full scan {hours_since_full:.0f}h ago (>{FULL_SCAN_THRESHOLD_HOURS:.0f}h)"
+        )
+        LOGGER.info("Index strategy: FULL SCAN (%s)", reason)
+        index = scrape_all_bill_indexes(
+            sb_limit=sb_limit,
+            hb_limit=hb_limit,
+            session=sess,
+            timeout=timeout,
+            request_delay=request_delay,
+        )
+        scan_type = "full"
+    elif hours_since_tail > TAIL_SCAN_THRESHOLD_HOURS:
+        # Tail scan: only check last page per doc type for new bills
+        LOGGER.info(
+            "Index strategy: TAIL SCAN (last tail %.0fh ago, full %.0fh ago)",
+            hours_since_tail,
+            hours_since_full,
+        )
+        index = tail_only_bill_indexes(
+            highest_per_type=highest_per_type,
+            session=sess,
+            timeout=timeout,
+            request_delay=request_delay,
+        )
+        scan_type = "tail"
+    else:
+        # Skip: index is fresh enough
+        LOGGER.info(
+            "Index strategy: SKIP (last tail %.1fh ago — within %dh threshold)",
+            hours_since_tail,
+            int(TAIL_SCAN_THRESHOLD_HOURS),
+        )
+        scan_type = "skip"
+
+    # ── Identify new bills from index scan ────────────────────────────────
     fresh_ids = {e.leg_id for e in index}
-
-    # Find new bills
     new_ids = fresh_ids - existing_ids
-    LOGGER.info(
-        "Incremental: %d in index, %d in cache, %d new.",
-        len(fresh_ids),
-        len(existing_ids),
-        len(new_ids),
-    )
+    if index:
+        LOGGER.info(
+            "Index result: %d entries, %d new bills to scrape.",
+            len(index),
+            len(new_ids),
+        )
 
-    # Also find recently-active bills to re-check
+    # ── Re-scrape recently active bills (regardless of scan type) ─────────
     rescrape_ids: set[str] = set()
     if rescrape_recent_days > 0:
         cutoff = datetime.now()
         for lid, bill in existing.items():
-            if lid in fresh_ids and bill.last_action_date:
+            if bill.last_action_date:
                 try:
                     parsed = datetime.strptime(bill.last_action_date, "%m/%d/%Y")
                     age_days = (cutoff - parsed).days
@@ -605,21 +1229,55 @@ def incremental_bill_scrape(
                         rescrape_ids.add(lid)
                 except ValueError:
                     pass
-        LOGGER.info(
-            "Incremental: %d existing bills with activity in last %d days to re-check.",
-            len(rescrape_ids),
-            rescrape_recent_days,
-        )
+        if rescrape_ids:
+            LOGGER.info(
+                "Re-scrape: %d bills with activity in last %d days.",
+                len(rescrape_ids),
+                rescrape_recent_days,
+            )
 
-    # Bills to scrape = new + recently active
-    to_scrape_ids = new_ids | rescrape_ids
-    to_scrape = [e for e in index if e.leg_id in to_scrape_ids]
+    # ── Build scrape list ─────────────────────────────────────────────────
+    # For new bills from index, we have BillIndexEntry objects.
+    # For re-scrape bills, we need to build entries from cached data.
+    to_scrape: list[BillIndexEntry] = []
+
+    # New bills come from the index
+    to_scrape.extend(e for e in index if e.leg_id in new_ids)
+
+    # Re-scrape bills: build index entries from cached bills
+    for lid in rescrape_ids:
+        if lid in new_ids:
+            continue  # already in to_scrape from index
+        bill = existing.get(lid)
+        if bill and bill.status_url:
+            # Extract doc type from bill number (e.g. "SB0042" → "SB")
+            dt_match = re.match(r"([A-Z]+)", bill.bill_number)
+            to_scrape.append(
+                BillIndexEntry(
+                    bill_number=bill.bill_number,
+                    leg_id=lid,
+                    description=bill.description or "",
+                    doc_type=dt_match.group(1) if dt_match else "",
+                    status_url=bill.status_url,
+                )
+            )
 
     if not to_scrape:
         LOGGER.info("Incremental: nothing to scrape, cache is up to date.")
+        # Still update metadata timestamps for the scan we did
+        save_scrape_metadata(
+            len(existing),
+            scan_type=scan_type,
+            highest_per_type=highest_per_type or _extract_highest_bill_numbers(existing),
+        )
         return existing
 
-    LOGGER.info("Incremental: scraping %d BillStatus pages...", len(to_scrape))
+    LOGGER.info(
+        "Incremental: scraping %d BillStatus pages (%d new + %d re-check)...",
+        len(to_scrape),
+        len(new_ids),
+        len(rescrape_ids - new_ids),
+    )
 
     # Scrape only the delta
     t_start = time.perf_counter()
@@ -641,6 +1299,12 @@ def incremental_bill_scrape(
             try:
                 bill = future.result()
                 if bill:
+                    # Preserve vote/slip data from cached version — these
+                    # are scraped separately and must not be overwritten.
+                    old = existing.get(bill.leg_id)
+                    if old:
+                        bill.vote_events = old.vote_events
+                        bill.witness_slips = old.witness_slips
                     existing[bill.leg_id] = bill
             except Exception:
                 LOGGER.exception("Error scraping %s", entry.bill_number)
@@ -653,8 +1317,12 @@ def incremental_bill_scrape(
         len(existing),
     )
 
-    # Save merged cache
+    # Save merged cache + metadata with updated timestamps
     save_bill_cache(existing)
-    save_scrape_metadata(len(existing))
+    save_scrape_metadata(
+        len(existing),
+        scan_type=scan_type,
+        highest_per_type=_extract_highest_bill_numbers(existing),
+    )
 
     return existing

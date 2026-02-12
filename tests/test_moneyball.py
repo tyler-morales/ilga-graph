@@ -291,7 +291,14 @@ class TestComputeMoneyball:
     ) -> None:
         members = [mixed_bill_member, cosponsor_republican]
         # All weight on effectiveness
-        w = MoneyballWeights(effectiveness=1.0, pipeline=0, magnet=0, bridge=0, centrality=0)
+        w = MoneyballWeights(
+            effectiveness=1.0,
+            pipeline=0,
+            magnet=0,
+            bridge=0,
+            centrality=0,
+            institutional=0,
+        )
         report = compute_moneyball(members, weights=w)
         mb = report.profiles[mixed_bill_member.id]
         # Score should be effectiveness_rate * 100

@@ -1,7 +1,6 @@
-.PHONY: install dev run scrape scrape-incremental seed export test lint clean help
+.PHONY: scrape dev serve install test lint lint-fix clean help
 
-# ── Virtual environment auto-detection ────────────────────────────────────────
-# Searches common venv locations. Override with: make dev VENV=path/to/venv
+# ── Virtual environment ─────────────────────────────────────────────────────
 VENV ?= $(or $(wildcard .venv), $(wildcard venv), $(wildcard src/ilga_graph/.venv))
 ifdef VENV
   PYTHON := $(VENV)/bin/python
@@ -13,40 +12,52 @@ endif
 
 # Default target
 help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
-install: ## Install the project with dev dependencies
+# ═══════════════════════════════════════════════════════════════════════════════
+# One pipeline: make scrape → make dev
+#
+#   make scrape              Smart tiered scan (~2 min daily, auto-decides)
+#   make scrape FULL=1       Force full index walk (all 125 pages, ~30 min)
+#   make scrape FRESH=1      Nuke cache and re-scrape from scratch
+#   make scrape LIMIT=100    Limit vote/slip phase to 100 bills
+#   make scrape WORKERS=10   More parallel workers for votes/slips
+#   make scrape SKIP_VOTES=1 Skip vote/slip phase
+#   make scrape EXPORT=1     Include Obsidian vault export
+#
+#   make dev                 Serve from cache (dev mode, auto-reload)
+#   make serve               Serve from cache (prod mode)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+scrape: ## Smart incremental scrape (members + bills + votes + slips)
+	$(PYTHON) scripts/scrape.py \
+		--fast \
+		$(if $(FRESH),--fresh) \
+		$(if $(FULL),--full) \
+		$(if $(LIMIT),--vote-limit $(LIMIT)) \
+		$(if $(WORKERS),--workers $(WORKERS)) \
+		$(if $(EXPORT),--export) \
+		$(if $(SKIP_VOTES),--skip-votes)
+
+dev: ## Serve from cache (dev mode, auto-reload)
+	ILGA_LOAD_ONLY=1 ILGA_PROFILE=dev $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src
+
+serve: ## Serve from cache (prod mode)
+	ILGA_LOAD_ONLY=1 ILGA_PROFILE=prod $(BIN)uvicorn ilga_graph.main:app --app-dir src
+
+# ── Utilities ──────────────────────────────────────────────────────────────────
+
+install: ## Install project with dev dependencies
 	$(BIN)pip install -e ".[dev]"
-
-dev: ## Start server in dev mode with mocks/dev (instant, no scraping)
-	ILGA_PROFILE=dev $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src
-
-run: ## Start server using cache/ (no mock fallback)
-	ILGA_PROFILE=prod $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src
-
-scrape: ## Full scrape to cache/ (no server)
-	$(PYTHON) scripts/scrape.py --export
-
-scrape-fast: ## Dev scrape (20/chamber, fast delay) to cache/ with export
-	$(PYTHON) scripts/scrape.py --limit 20 --fast --export --bill-limit 100
-
-scrape-incremental: ## Incremental scrape (only new/changed bills)
-	$(PYTHON) scripts/scrape.py --incremental --fast --export
-
-seed: ## Regenerate mocks/dev/ from current cache/
-	$(PYTHON) scripts/generate_seed.py
-
-export: ## Re-export vault from cached data (no scraping, no server)
-	$(PYTHON) scripts/scrape.py --export-only --fast
 
 test: ## Run pytest
 	PYTHONPATH=src $(BIN)pytest
 
-lint: ## Run ruff linter and formatter check
+lint: ## Run ruff check + format check
 	$(BIN)ruff check .
 	$(BIN)ruff format --check .
 
-lint-fix: ## Auto-fix lint issues
+lint-fix: ## Auto-fix lint and format
 	$(BIN)ruff check --fix .
 	$(BIN)ruff format .
 
@@ -56,4 +67,4 @@ clean: ## Remove cache/ and generated vault files
 	rm -f ILGA_Graph_Vault/*.base
 	rm -f ILGA_Graph_Vault/Moneyball\ Report.md
 	rm -f .startup_timings.csv
-	@echo "Cleaned. Run 'make dev' or 'make scrape' to regenerate."
+	@echo "Cleaned. Run 'make scrape' then 'make dev'."

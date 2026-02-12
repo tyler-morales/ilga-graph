@@ -5,26 +5,39 @@ import logging
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
 from datetime import datetime
 
 import strawberry
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Form, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from strawberry.fastapi import GraphQLRouter
 
 from . import config as cfg
 from .analytics import (
+    CommitteeStats,
     MemberScorecard,
+    build_member_committee_roles,
     compute_advancement_analytics,
-    compute_all_scorecards,
+    compute_committee_stats,
     controversial_score,
     lobbyist_alignment,
 )
-from .exporter import ObsidianExporter
+from .analytics_cache import load_analytics_cache, save_analytics_cache
+from .etl import (
+    ScrapedData,
+    _link_members_to_bills,
+    compute_analytics,
+    export_vault,
+    load_from_cache,
+    load_or_scrape_data,
+    load_stale_cache_fallback,
+)
+from .metrics_definitions import MONEYBALL_ONE_LINER
 from .models import Bill, Committee, CommitteeMemberRole, Member, VoteEvent, WitnessSlip
-from .moneyball import MoneyballReport, compute_moneyball
+from .moneyball import MoneyballReport, compute_power_badges
 from .schema import (
     BillAdvancementAnalyticsType,
     BillConnection,
@@ -41,6 +54,9 @@ from .schema import (
     MemberSortField,
     MemberType,
     PageInfo,
+    SearchConnection,
+    SearchEntityType,
+    SearchResultType,
     SortOrder,
     VoteEventConnection,
     VoteEventType,
@@ -50,18 +66,19 @@ from .schema import (
     WitnessSlipType,
     paginate,
 )
-from .scraper import ILGAScraper, save_normalized_cache
-from .scrapers.bills import (
-    incremental_bill_scrape,
-    load_bill_cache,
-    scrape_all_bill_indexes,
-    scrape_all_bills,
-)
-from .scrapers.votes import scrape_specific_bills
-from .scrapers.witness_slips import scrape_all_witness_slips
+from .scraper import ILGAScraper
+from .scrapers.bills import load_bill_cache
+from .search import EntityType as SearchEntityTypeEnum
+from .search import search_all
 from .seating import process_seating
 from .vote_name_normalizer import normalize_vote_events
 from .vote_timeline import compute_bill_vote_timeline
+from .voting_record import (
+    VotingSummary,
+    build_all_category_bill_sets,
+    build_member_vote_index,
+)
+from .zip_crosswalk import ZipDistrictInfo, load_zip_crosswalk
 
 # ── Configure logging ────────────────────────────────────────────────────────
 # Ensure our application logs show up in the terminal
@@ -107,69 +124,164 @@ def _format_startup_table(
     elapsed_total: float,
     elapsed_load: float,
     elapsed_analytics: float,
+    elapsed_seating: float,
     elapsed_export: float,
+    elapsed_committee: float,
     elapsed_votes: float,
+    elapsed_voting_records: float,
+    elapsed_slips: float,
+    elapsed_zip: float,
     member_count: int,
     committee_count: int,
     bill_count: int,
+    exported_bill_count: int,
+    member_committee_role_count: int,
+    member_vote_record_count: int,
+    category_bill_set_count: int,
     vote_event_count: int,
+    slip_count: int,
+    bills_with_votes: int,
+    bills_with_slips: int,
+    zcta_count: int,
+    load_only: bool,
     dev_mode: bool,
     seed_mode: bool,
 ) -> str:
-    """Format a nice table showing startup breakdown with colors."""
+    """Format a chronological ETL startup table with phase/time/detail."""
     c = _Colors
+
+    def row(phase: str, label: str, sec: float, detail: str) -> str:
+        return (
+            f"{c.CYAN}{phase:<10}{c.RESET} "
+            f"{c.WHITE}{label:<32}{c.RESET}"
+            f"{c.BRIGHT_GREEN}{sec:>8.2f}s{c.RESET}  "
+            f"{c.WHITE}{detail}{c.RESET}"
+        )
+
+    mode_bits = [
+        f"load_only={load_only}",
+        f"dev_mode={dev_mode}",
+        f"seed_mode={seed_mode}",
+    ]
+    mode_line = ", ".join(mode_bits)
 
     lines = [
         "",
-        f"{c.BOLD}{c.CYAN}{'=' * 80}{c.RESET}",
-        f"{c.BOLD}{c.BRIGHT_CYAN}🚀 Application Startup Complete{c.RESET}",
-        f"{c.BOLD}{c.CYAN}{'=' * 80}{c.RESET}",
+        f"{c.BOLD}{c.CYAN}{'=' * 100}{c.RESET}",
+        f"{c.BOLD}{c.BRIGHT_CYAN}🚀 Application Startup Complete (chronological ETL view){c.RESET}",
+        f"{c.DIM}Mode: {mode_line}{c.RESET}",
+        f"{c.BOLD}{c.CYAN}{'=' * 100}{c.RESET}",
         "",
-        f"{c.BOLD}{'Step':<20} {'Time':>8}  {'Details':<45}{c.RESET}",
-        f"{c.GRAY}{'-' * 80}{c.RESET}",
+        f"{c.BOLD}{'Phase':<10} {'Step':<32} {'Time':>8}  {'Details'}{c.RESET}",
+        f"{c.GRAY}{'-' * 100}{c.RESET}",
     ]
 
-    # Load step
-    load_icon = "📦"
-    load_detail = f"{member_count} members, {committee_count} committees"
-    if seed_mode and elapsed_load < 0.5:
-        load_detail += f" {c.DIM}(from seed){c.RESET}"
+    # 1) Extract / Load core data.
+    load_detail = f"{member_count} members, {committee_count} committees, {bill_count} bills"
+    if load_only:
+        load_detail += f" {c.DIM}(cache-only startup){c.RESET}"
+    elif seed_mode and elapsed_load < 0.5:
+        load_detail += f" {c.DIM}(seed fallback){c.RESET}"
+    else:
+        load_detail += f" {c.DIM}(cache/scrape){c.RESET}"
+    lines.append(row("Extract", "1) Load core data", elapsed_load, load_detail))
+
+    # 2) Transform analytics.
     lines.append(
-        f"{c.GREEN}✓{c.RESET} {load_icon} {c.WHITE}Load Data{c.RESET}"
-        f"{c.BRIGHT_GREEN}{elapsed_load:>11.2f}s{c.RESET}  "
-        f"{c.WHITE}{load_detail}{c.RESET}"
+        row(
+            "Transform",
+            "2) Compute analytics",
+            elapsed_analytics,
+            f"{member_count} scorecards + Moneyball profiles",
+        )
     )
 
-    # Analytics step
+    # 3) Transform seating enrichment.
     lines.append(
-        f"{c.GREEN}✓{c.RESET} 📊 {c.WHITE}Analytics{c.RESET}"
-        f"{c.BRIGHT_GREEN}{elapsed_analytics:>14.2f}s{c.RESET}  "
-        f"{c.WHITE}{member_count} scorecards, {member_count} profiles{c.RESET}"
+        row(
+            "Transform",
+            "3) Seating enrichment",
+            elapsed_seating,
+            "Senate seat blocks + seatmate affinity",
+        )
     )
 
-    # Export step
+    # 4) Load/export Obsidian artifacts.
+    export_detail = f"{exported_bill_count} bills exported ({bill_count} in memory)"
     lines.append(
-        f"{c.GREEN}✓{c.RESET} 📝 {c.WHITE}Export Vault{c.RESET}"
-        f"{c.BRIGHT_GREEN}{elapsed_export:>11.2f}s{c.RESET}  "
-        f"{c.WHITE}{bill_count} bills exported{c.RESET}"
+        row(
+            "Load",
+            "4) Export vault artifacts",
+            elapsed_export,
+            export_detail,
+        )
     )
 
-    # Votes step
-    vote_detail = f"{vote_event_count} events"
-    if elapsed_votes < 0.1:
+    # 5) Transform committee-level indexes.
+    committee_detail = (
+        f"{committee_count} committee stats, {member_committee_role_count} members with roles"
+    )
+    lines.append(
+        row(
+            "Transform",
+            "5) Committee indexes",
+            elapsed_committee,
+            committee_detail,
+        )
+    )
+
+    # 6) Transform vote events and bill-level vote lookup.
+    vote_detail = f"{vote_event_count} vote events"
+    if bills_with_votes > 0:
+        vote_detail += f" ({bills_with_votes} bills)"
+    if elapsed_votes < 0.1 and vote_event_count > 0:
         vote_detail += f" {c.DIM}(cached){c.RESET}"
     lines.append(
-        f"{c.GREEN}✓{c.RESET} 🗳️  {c.WHITE}Roll-Call Votes{c.RESET}"
-        f"{c.BRIGHT_GREEN}{elapsed_votes:>9.2f}s{c.RESET}  "
-        f"{c.WHITE}{vote_detail}{c.RESET}"
+        row(
+            "Transform",
+            "6) Vote event index + normalize",
+            elapsed_votes,
+            vote_detail,
+        )
+    )
+
+    # 7) Transform member voting records and policy category lookups.
+    voting_records_detail = (
+        f"{member_vote_record_count} members, {category_bill_set_count} category bill sets"
+    )
+    lines.append(
+        row(
+            "Transform",
+            "7) Member voting records",
+            elapsed_voting_records,
+            voting_records_detail,
+        )
+    )
+
+    # 8) Transform witness slips.
+    slip_detail = f"{slip_count} slips"
+    if bills_with_slips > 0:
+        slip_detail += f" ({bills_with_slips} bills)"
+    if elapsed_slips < 0.1 and slip_count > 0:
+        slip_detail += f" {c.DIM}(cached){c.RESET}"
+    lines.append(row("Transform", "8) Witness slip index", elapsed_slips, slip_detail))
+
+    # 9) Load reference crosswalk.
+    lines.append(
+        row(
+            "Reference",
+            "9) ZIP district crosswalk",
+            elapsed_zip,
+            f"{zcta_count} ZCTAs → IL Senate/House districts",
+        )
     )
 
     lines.extend(
         [
-            f"{c.GRAY}{'-' * 80}{c.RESET}",
-            f"{c.BOLD}{'Total':<20} {c.BRIGHT_CYAN}{elapsed_total:>8.2f}s{c.RESET}  "
-            f"{c.DIM}Dev: {dev_mode}, Seed: {seed_mode}{c.RESET}",
-            f"{c.BOLD}{c.CYAN}{'=' * 80}{c.RESET}",
+            f"{c.GRAY}{'-' * 100}{c.RESET}",
+            f"{c.BOLD}{'Total':<43}{c.BRIGHT_CYAN}{elapsed_total:>8.2f}s{c.RESET}  "
+            f"{c.DIM}{mode_line}{c.RESET}",
+            f"{c.BOLD}{c.CYAN}{'=' * 100}{c.RESET}",
             "",
         ]
     )
@@ -181,10 +293,16 @@ def _log_startup_timing(
     total_s: float,
     load_s: float,
     analytics_s: float,
+    seating_s: float,
     export_s: float,
     votes_s: float,
+    slips_s: float,
+    zip_s: float,
     member_count: int,
     bill_count: int,
+    vote_count: int,
+    slip_count: int,
+    zcta_count: int,
     dev_mode: bool,
     seed_mode: bool,
 ) -> None:
@@ -195,11 +313,14 @@ def _log_startup_timing(
     with open(log_file, "a", encoding="utf-8") as f:
         if is_new:
             f.write(
-                "timestamp,total_s,load_s,analytics_s,export_s,votes_s,members,bills,dev_mode,seed_mode\n"
+                "timestamp,total_s,load_s,analytics_s,seating_s,export_s,votes_s,slips_s,zip_s,"
+                "members,bills,votes,slips,zctas,dev_mode,seed_mode\n"
             )
         f.write(
             f"{datetime.now().isoformat()},{total_s:.2f},{load_s:.2f},{analytics_s:.2f},"
-            f"{export_s:.2f},{votes_s:.2f},{member_count},{bill_count},{dev_mode},{seed_mode}\n"
+            f"{seating_s:.2f},{export_s:.2f},{votes_s:.2f},{slips_s:.2f},{zip_s:.2f},"
+            f"{member_count},{bill_count},{vote_count},{slip_count},{zcta_count},"
+            f"{dev_mode},{seed_mode}\n"
         )
     LOGGER.debug("Startup timing logged to %s", log_file)
 
@@ -208,6 +329,7 @@ def _log_startup_timing(
 DEV_MODE = cfg.DEV_MODE
 SEED_MODE = cfg.SEED_MODE
 INCREMENTAL = cfg.INCREMENTAL
+LOAD_ONLY = cfg.LOAD_ONLY
 
 # When DEV_MODE is on, override scrape + export limits:
 #   - Scrape 20 members per chamber (40 total)
@@ -224,219 +346,6 @@ else:
     _EXPORT_BILL_LIMIT = None
 
 
-# ── Composable ETL steps ─────────────────────────────────────────────────────
-
-
-@dataclass
-class ScrapedData:
-    """Container for raw scraped/loaded data before analytics."""
-
-    members: list[Member]
-    bills_lookup: dict[str, Bill]  # leg_id -> Bill (from bill scraper)
-    committees: list[Committee]
-    committee_rosters: dict[str, list[CommitteeMemberRole]]
-    committee_bills: dict[str, list[str]]
-
-
-def _link_members_to_bills(
-    members: list[Member],
-    bills_lookup: dict[str, Bill],
-) -> None:
-    """Build member-bill relationships from Bill.sponsor_ids.
-
-    For each bill, its ``sponsor_ids`` and ``house_sponsor_ids`` contain
-    member IDs extracted from the BillStatus page.  We build a reverse
-    index so each member knows which bills they sponsor / co-sponsor.
-    """
-    # Build member-id -> Member lookup
-    member_by_id: dict[str, Member] = {m.id: m for m in members}
-
-    # Clear existing linkage (will rebuild)
-    for m in members:
-        m.sponsored_bills = []
-        m.co_sponsor_bills = []
-        m.sponsored_bill_ids = []
-        m.co_sponsor_bill_ids = []
-
-    for bill in bills_lookup.values():
-        all_sponsor_ids = bill.sponsor_ids + bill.house_sponsor_ids
-        if not all_sponsor_ids:
-            continue
-
-        # First sponsor is the chief sponsor
-        chief_id = all_sponsor_ids[0]
-        co_ids = all_sponsor_ids[1:]
-
-        if chief_id in member_by_id:
-            m = member_by_id[chief_id]
-            m.sponsored_bills.append(bill)
-            m.sponsored_bill_ids.append(bill.leg_id)
-
-        for co_id in co_ids:
-            if co_id in member_by_id:
-                m = member_by_id[co_id]
-                m.co_sponsor_bills.append(bill)
-                m.co_sponsor_bill_ids.append(bill.leg_id)
-
-
-def load_or_scrape_data(
-    *,
-    limit: int = 0,
-    dev_mode: bool = False,
-    seed_mode: bool = False,
-    incremental: bool = False,
-    sb_limit: int = 100,
-    hb_limit: int = 100,
-) -> ScrapedData:
-    """Load data from cache/seed or scrape from ilga.gov.
-
-    Parameters
-    ----------
-    limit:
-        Max members to scrape per chamber (0 = all).
-    dev_mode:
-        Use faster request delays when scraping.
-    seed_mode:
-        Fall back to ``mocks/dev/`` when ``cache/`` is missing.
-    incremental:
-        If True and cache exists, only re-scrape changed/new bills.
-    sb_limit:
-        Max Senate bills to scrape from the index (0 = all).
-    hb_limit:
-        Max House bills to scrape from the index (0 = all).
-    """
-    request_delay = 0.25 if dev_mode else 0.5
-
-    scraper = ILGAScraper(
-        request_delay=request_delay,
-        seed_fallback=seed_mode,
-    )
-
-    committees, committee_rosters, committee_bills = scraper.fetch_all_committees()
-
-    senate_members = scraper.fetch_members("Senate", limit=limit)
-    house_members = scraper.fetch_members("House", limit=limit)
-    members = senate_members + house_members
-
-    if cfg.TEST_MEMBER_URL:
-        test_member = scraper.fetch_member_by_url(cfg.TEST_MEMBER_URL, cfg.TEST_MEMBER_CHAMBER)
-        if test_member is not None:
-            members.append(test_member)
-
-    # ── Bills: scrape from legislation pages (single source of truth) ──
-    if incremental:
-        LOGGER.info("Incremental bill scrape (SB limit=%d, HB limit=%d)...", sb_limit, hb_limit)
-        bills_lookup = incremental_bill_scrape(
-            sb_limit=sb_limit,
-            hb_limit=hb_limit,
-            request_delay=request_delay,
-            rescrape_recent_days=30,
-        )
-    else:
-        # Try cache first, then full scrape
-        bills_lookup = load_bill_cache(seed_fallback=seed_mode)
-        if bills_lookup is None:
-            LOGGER.info("Full bill scrape (SB limit=%d, HB limit=%d)...", sb_limit, hb_limit)
-            index = scrape_all_bill_indexes(
-                sb_limit=sb_limit,
-                hb_limit=hb_limit,
-                request_delay=request_delay,
-            )
-            bills_lookup = scrape_all_bills(
-                index,
-                request_delay=request_delay,
-                use_cache=False,
-                seed_fallback=seed_mode,
-            )
-        else:
-            LOGGER.info("Loaded %d bills from cache.", len(bills_lookup))
-
-    # ── Link members to bills using sponsor_ids from BillStatus ──
-    _link_members_to_bills(members, bills_lookup)
-    LOGGER.info(
-        "Linked %d members to %d bills via sponsor IDs.",
-        len(members),
-        len(bills_lookup),
-    )
-
-    # Persist normalized cache so next run can load members (and bills) from disk.
-    save_normalized_cache(members, bills_lookup)
-
-    return ScrapedData(
-        members=members,
-        bills_lookup=bills_lookup,
-        committees=committees,
-        committee_rosters=committee_rosters,
-        committee_bills=committee_bills,
-    )
-
-
-def compute_analytics(
-    members: list[Member],
-) -> tuple[dict[str, MemberScorecard], MoneyballReport]:
-    """Compute scorecards and moneyball analytics for all members."""
-    scorecards = compute_all_scorecards(members)
-    moneyball = compute_moneyball(members, scorecards=scorecards)
-    return scorecards, moneyball
-
-
-def export_vault(
-    data: ScrapedData,
-    scorecards: dict[str, MemberScorecard],
-    moneyball: MoneyballReport,
-    *,
-    member_export_limit: int | None = None,
-    committee_export_limit: int | None = None,
-    bill_export_limit: int | None = None,
-) -> None:
-    """Export the Obsidian vault from processed data."""
-    ObsidianExporter(
-        committees=data.committees,
-        committee_rosters=data.committee_rosters,
-        committee_bills=data.committee_bills,
-        member_export_limit=member_export_limit,
-        committee_export_limit=committee_export_limit,
-        bill_export_limit=bill_export_limit,
-    ).export(
-        data.members,
-        scorecards=scorecards,
-        moneyball=moneyball,
-        all_bills=data.bills_lookup.values(),
-    )
-
-
-def run_etl(
-    limit: int = 0,
-    *,
-    member_export_limit: int | None = None,
-    committee_export_limit: int | None = None,
-    bill_export_limit: int | None = None,
-    incremental: bool = False,
-    sb_limit: int = 100,
-    hb_limit: int = 100,
-) -> list[Member]:
-    """Full ETL pipeline: scrape/load -> analytics -> vault export."""
-    data = load_or_scrape_data(
-        limit=limit,
-        dev_mode=DEV_MODE,
-        seed_mode=SEED_MODE,
-        incremental=incremental,
-        sb_limit=sb_limit,
-        hb_limit=hb_limit,
-    )
-    scorecards, moneyball = compute_analytics(data.members)
-    process_seating(data.members, cfg.MOCK_DEV_DIR / "senate_seats.json")
-    export_vault(
-        data,
-        scorecards,
-        moneyball,
-        member_export_limit=member_export_limit,
-        committee_export_limit=committee_export_limit,
-        bill_export_limit=bill_export_limit,
-    )
-    return data.members
-
-
 # ── App state container ──────────────────────────────────────────────────────
 
 
@@ -450,12 +359,17 @@ class AppState:
         self.committee_lookup: dict[str, Committee] = {}
         self.committee_rosters: dict[str, list[CommitteeMemberRole]] = {}
         self.committee_bills: dict[str, list[str]] = {}
+        self.committee_stats: dict[str, CommitteeStats] = {}
+        self.member_committee_roles: dict[str, list[dict]] = {}
         self.scorecards: dict[str, MemberScorecard] = {}
         self.moneyball: MoneyballReport | None = None
         self.vote_events: list[VoteEvent] = []
         self.vote_lookup: dict[str, list[VoteEvent]] = {}  # bill_number -> votes
+        self.member_vote_records: dict[str, VotingSummary] = {}  # member_name -> voting summary
+        self.category_bill_sets: dict[str, set[str]] = {}  # category -> bill_numbers
         self.witness_slips: list[WitnessSlip] = []
         self.witness_slips_lookup: dict[str, list[WitnessSlip]] = {}  # bill_number -> slips
+        self.zip_to_district: dict[str, ZipDistrictInfo] = {}  # ZCTA -> district info
 
 
 state = AppState()
@@ -521,69 +435,132 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     t_startup_begin = _time.perf_counter()
     elapsed_load = 0.0
     elapsed_analytics = 0.0
+    elapsed_seating = 0.0
     elapsed_export = 0.0
+    elapsed_committee = 0.0
     elapsed_votes = 0.0
+    elapsed_voting_records = 0.0
+    elapsed_slips = 0.0
+    elapsed_zip = 0.0
     data: ScrapedData | None = None
 
     if DEV_MODE:
-        LOGGER.warning(
-            "\u26a0\ufe0f DEV MODE: %d members/chamber, top %s bills%s",
-            _SCRAPE_MEMBER_LIMIT,
+        if LOAD_ONLY:
+            LOGGER.warning(
+                "\u26a0\ufe0f DEV MODE (cache startup): scrape limit (%d/chamber) is inactive "
+                "under ILGA_LOAD_ONLY=1; vault export bill cap=%s%s.",
+                _SCRAPE_MEMBER_LIMIT,
+                _EXPORT_BILL_LIMIT or "all",
+                " (seed fallback ON)" if SEED_MODE else "",
+            )
+        else:
+            LOGGER.warning(
+                "\u26a0\ufe0f DEV MODE (scrape startup): %d members/chamber, "
+                "vault export bill cap=%s%s.",
+                _SCRAPE_MEMBER_LIMIT,
+                _EXPORT_BILL_LIMIT or "all",
+                " (seed fallback ON)" if SEED_MODE else "",
+            )
+    elif LOAD_ONLY:
+        LOGGER.info(
+            "LOAD-ONLY startup: serving from cache (no scrape); vault export bill cap=%s.",
             _EXPORT_BILL_LIMIT or "all",
-            " (seed ON)" if SEED_MODE else "",
         )
 
     # ── Step 1: Load or scrape data (resilient) ──────────────────────────
-    try:
-        t_load = _time.perf_counter()
-        data = load_or_scrape_data(
-            limit=_SCRAPE_MEMBER_LIMIT,
-            dev_mode=DEV_MODE,
-            seed_mode=SEED_MODE,
-            incremental=INCREMENTAL,
-            sb_limit=100,
-            hb_limit=100,
-        )
-        state.members = data.members
-        elapsed_load = _time.perf_counter() - t_load
-    except Exception:
-        LOGGER.exception("ETL load/scrape failed. Attempting stale-cache fallback...")
-        # Try to load whatever cache exists on disk so the app can serve
-        # stale data rather than starting completely empty.
-        try:
-            data = _load_stale_cache_fallback()
+    t_load = _time.perf_counter()
+    if LOAD_ONLY:
+        data = load_from_cache(seed_fallback=SEED_MODE)
+        if data is None:
+            LOGGER.warning("ILGA_LOAD_ONLY=1 but no cache found. Trying stale-cache fallback...")
+            try:
+                data = load_stale_cache_fallback(seed_fallback=SEED_MODE)
+                state.members = data.members
+                LOGGER.warning(
+                    "Loaded stale cache: %d members, %d bills.",
+                    len(data.members),
+                    len(data.bills_lookup),
+                )
+            except Exception:
+                LOGGER.exception("Stale-cache fallback failed. App will start with EMPTY state.")
+                data = ScrapedData(
+                    members=[],
+                    bills_lookup={},
+                    committees=[],
+                    committee_rosters={},
+                    committee_bills={},
+                )
+                state.members = []
+        else:
             state.members = data.members
-            elapsed_load = _time.perf_counter() - t_startup_begin
-            LOGGER.warning(
-                "Loaded stale cache: %d members, %d bills.",
-                len(data.members),
-                len(data.bills_lookup),
+        elapsed_load = _time.perf_counter() - t_load
+    else:
+        try:
+            data = load_or_scrape_data(
+                limit=_SCRAPE_MEMBER_LIMIT,
+                dev_mode=DEV_MODE,
+                seed_mode=SEED_MODE,
+                incremental=INCREMENTAL,
+                sb_limit=100,
+                hb_limit=100,
             )
+            state.members = data.members
+            elapsed_load = _time.perf_counter() - t_load
         except Exception:
-            LOGGER.exception(
-                "Stale-cache fallback also failed. "
-                "App will start with EMPTY state (health.ready=false)."
-            )
-            data = ScrapedData(
-                members=[],
-                bills_lookup={},
-                committees=[],
-                committee_rosters={},
-                committee_bills={},
-            )
+            LOGGER.exception("ETL load/scrape failed. Attempting stale-cache fallback...")
+            try:
+                data = load_stale_cache_fallback(seed_fallback=SEED_MODE)
+                state.members = data.members
+                elapsed_load = _time.perf_counter() - t_startup_begin
+                LOGGER.warning(
+                    "Loaded stale cache: %d members, %d bills.",
+                    len(data.members),
+                    len(data.bills_lookup),
+                )
+            except Exception:
+                LOGGER.exception(
+                    "Stale-cache fallback also failed. "
+                    "App will start with EMPTY state (health.ready=false)."
+                )
+                data = ScrapedData(
+                    members=[],
+                    bills_lookup={},
+                    committees=[],
+                    committee_rosters={},
+                    committee_bills={},
+                )
+                state.members = []
 
-    # ── Step 2: Compute analytics ────────────────────────────────────────
+    # ── Step 2: Compute analytics (or load from cache when fresh) ───────────
     try:
         t_analytics = _time.perf_counter()
-        state.scorecards, state.moneyball = compute_analytics(state.members)
+        cached = load_analytics_cache(
+            cfg.CACHE_DIR,
+            cfg.MOCK_DEV_DIR,
+            SEED_MODE,
+        )
+        if cached is not None:
+            state.scorecards, state.moneyball = cached
+        else:
+            state.scorecards, state.moneyball = compute_analytics(
+                state.members,
+                data.committee_rosters,
+            )
+            save_analytics_cache(
+                state.scorecards,
+                state.moneyball,
+                cfg.CACHE_DIR,
+            )
         elapsed_analytics = _time.perf_counter() - t_analytics
     except Exception:
         LOGGER.exception("Analytics computation failed; scorecards will be empty.")
 
     # ── Step 2b: Seating chart analytics ─────────────────────────────────
     try:
+        t_seating = _time.perf_counter()
         seating_path = cfg.MOCK_DEV_DIR / "senate_seats.json"
         process_seating(state.members, seating_path)
+        elapsed_seating = _time.perf_counter() - t_seating
     except Exception:
         LOGGER.exception("Seating chart processing failed; seating fields will be empty.")
 
@@ -610,51 +587,119 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     state.committee_rosters = data.committee_rosters
     state.committee_bills = data.committee_bills
 
-    # ── Level 4: Scrape roll-call votes ──────────────────────────────────
-    _vote_bill_urls = cfg.get_bill_status_urls()
+    # ── Step 3b: Compute committee-level stats & member reverse index ────
+    try:
+        t_committee = _time.perf_counter()
+        state.committee_stats = compute_committee_stats(
+            state.committees,
+            state.committee_bills,
+            data.bills_lookup,
+        )
+        state.member_committee_roles = build_member_committee_roles(
+            state.committees,
+            state.committee_rosters,
+            state.committee_stats,
+        )
+        elapsed_committee = _time.perf_counter() - t_committee
+        LOGGER.info(
+            "Committee stats: %d committees, %d members with roles.",
+            len(state.committee_stats),
+            len(state.member_committee_roles),
+        )
+    except Exception:
+        LOGGER.exception("Committee stats computation failed; power dashboard will be empty.")
 
+    # ── Step 4: Build vote events from per-bill data ─────────────────────
     try:
         t_votes = _time.perf_counter()
-        state.vote_events = scrape_specific_bills(
-            _vote_bill_urls,
-            request_delay=0.3,
-            use_cache=True,
-            seed_fallback=SEED_MODE,
-        )
-        for ve in state.vote_events:
-            state.vote_lookup.setdefault(ve.bill_number, []).append(ve)
+        for bill in state.bills:
+            for ve in bill.vote_events:
+                state.vote_events.append(ve)
+                state.vote_lookup.setdefault(ve.bill_number, []).append(ve)
 
         # ── Normalize vote names to canonical member names ──
-        normalize_vote_events(state.vote_events, state.member_lookup)
+        if state.vote_events:
+            normalize_vote_events(state.vote_events, state.member_lookup)
         elapsed_votes = _time.perf_counter() - t_votes
+        LOGGER.info("Built %d vote events from bill data.", len(state.vote_events))
     except Exception:
-        LOGGER.exception("Vote scraping failed; vote data will be empty.")
+        LOGGER.exception("Vote event loading failed; vote data will be empty.")
 
-    # ── Level 5: Scrape / load witness slips ─────────────────────────────
+    # ── Step 4b: Build per-member voting records & category bill sets ────
     try:
-        state.witness_slips = scrape_all_witness_slips(
-            _vote_bill_urls,
-            request_delay=0.3,
-            use_cache=True,
-            seed_fallback=SEED_MODE,
+        t_vr = _time.perf_counter()
+        bn_lookup = _collect_unique_bills_by_number(data.bills_lookup)
+        state.member_vote_records = build_member_vote_index(
+            state.vote_events,
+            state.member_lookup,
+            bn_lookup,
         )
-        for ws in state.witness_slips:
-            state.witness_slips_lookup.setdefault(ws.bill_number, []).append(ws)
+        state.category_bill_sets = build_all_category_bill_sets(
+            _CATEGORY_COMMITTEES,
+            state.committee_bills,
+        )
+        elapsed_voting_records = _time.perf_counter() - t_vr
+        LOGGER.info(
+            "Voting records: %d members indexed, %d category bill sets (%0.2fs).",
+            len(state.member_vote_records),
+            len(state.category_bill_sets),
+            elapsed_voting_records,
+        )
     except Exception:
-        LOGGER.exception("Witness slip scraping failed; slip data will be empty.")
+        LOGGER.exception("Voting record computation failed; voting records will be empty.")
+
+    # ── Step 5: Build witness slips from per-bill data ───────────────────
+    try:
+        t_slips = _time.perf_counter()
+        for bill in state.bills:
+            for ws in bill.witness_slips:
+                state.witness_slips.append(ws)
+                state.witness_slips_lookup.setdefault(ws.bill_number, []).append(ws)
+        elapsed_slips = _time.perf_counter() - t_slips
+        LOGGER.info("Built %d witness slips from bill data.", len(state.witness_slips))
+    except Exception:
+        LOGGER.exception("Witness slip loading failed; slip data will be empty.")
+
+    # ── Step 6: Load ZIP-to-district crosswalk ───────────────────────────
+    try:
+        t_zip = _time.perf_counter()
+        state.zip_to_district = load_zip_crosswalk()
+        elapsed_zip = _time.perf_counter() - t_zip
+        LOGGER.info("ZIP crosswalk loaded: %d ZCTAs.", len(state.zip_to_district))
+    except Exception:
+        LOGGER.exception("ZIP crosswalk loading failed; advocacy search will be limited.")
 
     # ── Print startup summary table ──────────────────────────────────────
     elapsed_total = _time.perf_counter() - t_startup_begin
+    exported_bill_count = (
+        len(state.bills)
+        if _EXPORT_BILL_LIMIT is None
+        else min(len(state.bills), _EXPORT_BILL_LIMIT)
+    )
     summary = _format_startup_table(
         elapsed_total,
         elapsed_load,
         elapsed_analytics,
+        elapsed_seating,
         elapsed_export,
+        elapsed_committee,
         elapsed_votes,
+        elapsed_voting_records,
+        elapsed_slips,
+        elapsed_zip,
         len(state.members),
         len(data.committees),
         len(state.bills),
+        exported_bill_count,
+        len(state.member_committee_roles),
+        len(state.member_vote_records),
+        len(state.category_bill_sets),
         len(state.vote_events),
+        len(state.witness_slips),
+        len(state.vote_lookup),
+        len(state.witness_slips_lookup),
+        len(state.zip_to_district),
+        LOAD_ONLY,
         DEV_MODE,
         SEED_MODE,
     )
@@ -673,10 +718,16 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         elapsed_total,
         elapsed_load,
         elapsed_analytics,
+        elapsed_seating,
         elapsed_export,
         elapsed_votes,
+        elapsed_slips,
+        elapsed_zip,
         len(state.members),
         len(state.bills),
+        len(state.vote_events),
+        len(state.witness_slips),
+        len(state.zip_to_district),
         DEV_MODE,
         SEED_MODE,
     )
@@ -1076,16 +1127,95 @@ class Query:
 
     # ----- End New Query Field -----
 
+    # ── Unified search ─────────────────────────────────────────────────────
+
+    @strawberry.field(
+        description=(
+            "Unified free-text search across members, bills, and committees. "
+            "Returns results ranked by relevance. Use entityTypes to restrict "
+            "which kinds of entities are searched."
+        ),
+    )
+    def search(
+        self,
+        query: str,
+        entity_types: list[SearchEntityType] | None = None,
+        offset: int = 0,
+        limit: int = 20,
+    ) -> SearchConnection:
+        # Map GraphQL enum values to the internal EntityType enum.
+        filter_set: set[SearchEntityTypeEnum] | None = None
+        if entity_types:
+            _map = {
+                SearchEntityType.MEMBER: SearchEntityTypeEnum.MEMBER,
+                SearchEntityType.BILL: SearchEntityTypeEnum.BILL,
+                SearchEntityType.COMMITTEE: SearchEntityTypeEnum.COMMITTEE,
+            }
+            filter_set = {_map[et] for et in entity_types}
+
+        all_hits = search_all(
+            query=query,
+            members=state.members,
+            bills=state.bills,
+            committees=state.committees,
+            entity_types=filter_set,
+        )
+
+        page, page_info = paginate(all_hits, offset, limit)
+
+        items: list[SearchResultType] = []
+        for hit in page:
+            member_type = None
+            bill_type = None
+            committee_type = None
+
+            if hit.member is not None:
+                sc = state.scorecards.get(hit.member.id)
+                mb = _mb_profile(hit.member.id)
+                member_type = MemberType.from_model(hit.member, sc, mb)
+            elif hit.bill is not None:
+                bill_type = BillType.from_model(hit.bill)
+            elif hit.committee is not None:
+                committee_type = CommitteeType.from_model(hit.committee)
+
+            items.append(
+                SearchResultType(
+                    entity_type=hit.entity_type.value,
+                    match_field=hit.match_field,
+                    match_snippet=hit.match_snippet,
+                    relevance_score=round(hit.relevance_score, 4),
+                    member=member_type,
+                    bill=bill_type,
+                    committee=committee_type,
+                )
+            )
+
+        return SearchConnection(items=items, page_info=page_info)
+
 
 from strawberry.extensions import QueryDepthLimiter  # noqa: E402
+
+from .loaders import create_loaders  # noqa: E402
+
+
+async def get_graphql_context() -> dict:
+    """Request-scoped context with state and batch loaders for GraphQL."""
+    return create_loaders(state)
+
 
 schema = strawberry.Schema(
     query=Query,
     extensions=[QueryDepthLimiter(max_depth=10)],
 )
-graphql_app = GraphQLRouter(schema)
+graphql_app = GraphQLRouter(schema, context_getter=get_graphql_context)
 
 app = FastAPI(title="ILGA Graph", lifespan=lifespan)
+
+# ── Static files & Jinja2 templates ──────────────────────────────────────────
+_STATIC_DIR = Path(__file__).parent / "static"
+_TEMPLATE_DIR = Path(__file__).parent / "templates"
+app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
+templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
 
 # ── CORS middleware ──────────────────────────────────────────────────────────
 _cors_origins = [o.strip() for o in cfg.CORS_ORIGINS.split(",") if o.strip()]
@@ -1107,7 +1237,13 @@ async def _api_key_middleware(request: Request, call_next) -> Response:  # type:
     """
     if cfg.API_KEY:
         exempt = {"/health", "/docs", "/openapi.json", "/redoc"}
-        if request.url.path not in exempt and request.method != "OPTIONS":
+        path = request.url.path
+        if (
+            path not in exempt
+            and not path.startswith("/advocacy")
+            and not path.startswith("/static")
+            and request.method != "OPTIONS"
+        ):
             provided = request.headers.get("X-API-Key", "")
             if provided != cfg.API_KEY:
                 return JSONResponse(
@@ -1148,6 +1284,736 @@ async def health() -> dict:
         "committees": len(state.committees),
         "vote_events": len(state.vote_events),
     }
+
+
+# ── SSR Advocacy routes ──────────────────────────────────────────────────────
+
+# Policy categories mapped to Senate committee codes.  When the user picks a
+# category the Power Broker / Ally search is restricted to members who sit on
+# at least one of the listed committees.  "All" (empty string) = no filter.
+_CATEGORY_COMMITTEES: dict[str, list[str]] = {
+    "": [],  # No filter — default
+    "Transportation": ["STRN"],
+    "Agriculture": ["SAGR"],
+    "Commerce & Small Business": ["SCOM", "SBTE"],
+    "Criminal Justice": ["SCRL", "SHRJ"],
+    "Education": ["SESE", "SCHE"],
+    "Energy & Environment": ["SENE", "SNVR"],
+    "Healthcare & Human Services": ["SBMH", "SCHW", "SHUM"],
+    "Housing": ["SHOU"],
+    "Insurance & Finance": ["SINS", "SFIC"],
+    "Labor": ["SLAB"],
+    "Revenue & Pensions": ["SREV", "SPEN"],
+    "State Government": ["SGOA", "SHEE", "SEXC"],
+}
+
+# Labels in display order for the dropdown.
+CATEGORY_CHOICES: list[tuple[str, str]] = [
+    ("", "All categories"),
+    ("Transportation", "Transportation"),
+    ("Agriculture", "Agriculture"),
+    ("Commerce & Small Business", "Commerce & Small Business"),
+    ("Criminal Justice", "Criminal Justice"),
+    ("Education", "Education"),
+    ("Energy & Environment", "Energy & Environment"),
+    ("Healthcare & Human Services", "Healthcare & Human Services"),
+    ("Housing", "Housing"),
+    ("Insurance & Finance", "Insurance & Finance"),
+    ("Labor", "Labor"),
+    ("Revenue & Pensions", "Revenue & Pensions"),
+    ("State Government", "State Government"),
+]
+
+
+def _committee_member_ids(committee_codes: list[str]) -> set[str]:
+    """Return a set of member IDs that sit on any of the given committees."""
+    ids: set[str] = set()
+    for code in committee_codes:
+        for role in state.committee_rosters.get(code, []):
+            ids.add(role.member_id)
+    return ids
+
+
+def _member_to_card(member: Member, *, why: str = "", badges: list[str] | None = None) -> dict:
+    """Convert a Member to a template-friendly dict for card rendering.
+
+    Includes empirical stats first (laws passed, passage rate, cross-party %),
+    then Moneyball composite with a short explanation so derived metrics are clear.
+    A ``scorecard`` sub-dict is attached when scorecard data exists so the
+    template can render the full Legislative Scorecard (Lawmaking / Resolutions
+    / Overall).
+    ``script_hint`` is set to ``""`` here; callers populate it with an
+    evidence-based hint via the ``_build_script_hint_*`` helpers.
+    """
+    phone = None
+    for office in member.offices:
+        if office.phone:
+            phone = office.phone
+            break
+
+    mb = None
+    if state.moneyball:
+        mb = state.moneyball.profiles.get(member.id)
+
+    # Empirical (raw) stats — directly from data
+    laws_filed = mb.laws_filed if mb else None
+    laws_passed = mb.laws_passed if mb else None
+    passage_rate_pct = round((mb.effectiveness_rate * 100), 1) if mb and mb.laws_filed else None
+    bridge_pct = round((mb.bridge_score * 100), 1) if mb else None
+
+    # ── Full scorecard (Lawmaking / Resolutions / Overall) ──
+    sc = state.scorecards.get(member.id)
+    scorecard_dict = None
+    if sc is not None and (sc.primary_bill_count > 0 or sc.law_heat_score > 0):
+        scorecard_dict = {
+            # Lawmaking (HB/SB)
+            "laws_filed": sc.law_heat_score,
+            "laws_passed": sc.law_passed_count,
+            "law_pass_rate_pct": round(sc.law_success_rate * 100, 1),
+            "magnet_score": round(sc.magnet_score, 1),
+            "bridge_pct": round(sc.bridge_score * 100, 1),
+            # Resolutions (HR/SR/HJR/SJR)
+            "resolutions_filed": sc.resolutions_count,
+            "resolutions_passed": sc.resolutions_passed_count,
+            "resolution_pass_rate_pct": round(sc.resolution_pass_rate * 100, 1),
+            # Overall
+            "total_bills": sc.primary_bill_count,
+            "total_passed": sc.passed_count,
+            "overall_pass_rate_pct": round(sc.success_rate * 100, 1),
+            "vetoed_count": sc.vetoed_count,
+            "stuck_count": sc.stuck_count,
+            "in_progress_count": sc.in_progress_count,
+        }
+
+    # ── Moneyball component breakdown for template ──
+    moneyball_dict = None
+    if mb:
+        moneyball_dict = {
+            "effectiveness_rate_pct": round(mb.effectiveness_rate * 100, 1),
+            "pipeline_depth_avg": round(mb.pipeline_depth_avg, 2),
+            "magnet_score": round(mb.magnet_score, 1),
+            "bridge_pct": round(mb.bridge_score * 100, 1),
+            "network_centrality": round(mb.network_centrality, 3),
+            "institutional_weight": round(mb.institutional_weight, 2),
+        }
+
+    # ── Influence Network (human-readable power picture) ──
+    influence_dict = None
+    if mb and mb.unique_collaborators > 0:
+        # Determine bipartisan label based on party balance of collaborators
+        total_collab = (
+            mb.collaborator_republicans + mb.collaborator_democrats + mb.collaborator_other
+        )
+        minority_share = (
+            min(mb.collaborator_republicans, mb.collaborator_democrats) / total_collab
+            if total_collab > 0
+            else 0.0
+        )
+        if minority_share >= 0.3:
+            bipartisan_label = "high bipartisan reach"
+        elif minority_share >= 0.15:
+            bipartisan_label = "moderate bipartisan reach"
+        else:
+            bipartisan_label = ""
+
+        influence_dict = {
+            "unique_collaborators": mb.unique_collaborators,
+            "collaborator_republicans": mb.collaborator_republicans,
+            "collaborator_democrats": mb.collaborator_democrats,
+            "collaborator_other": mb.collaborator_other,
+            "bipartisan_label": bipartisan_label,
+            "magnet_score": round(mb.magnet_score, 1),
+            "magnet_vs_chamber": mb.magnet_vs_chamber,
+            "cosponsor_passage_rate_pct": round(mb.cosponsor_passage_rate * 100, 1),
+            "cosponsor_passage_multiplier": mb.cosponsor_passage_multiplier,
+            "chamber_median_cosponsor_rate_pct": round(
+                mb.chamber_median_cosponsor_rate * 100,
+                1,
+            ),
+            "passage_rate_vs_caucus": mb.passage_rate_vs_caucus,
+            "caucus_avg_passage_rate_pct": round(mb.caucus_avg_passage_rate * 100, 1),
+        }
+
+    # ── Committee assignments with roles and stats ──
+    committee_roles = state.member_committee_roles.get(member.id, [])
+
+    # ── Voting Record ──
+    # Always show the full voting record — category filtering would reduce it
+    # to only bills currently pending in those committees (a tiny subset) and
+    # make the section vanish for most members.
+    voting_record_dict: dict | None = None
+    vr = state.member_vote_records.get(member.name)
+    if vr and vr.total_votes > 0:
+        voting_record_dict = {
+            "total_votes": vr.total_votes,
+            "total_floor_votes": vr.total_floor_votes,
+            "total_committee_votes": vr.total_committee_votes,
+            "yes_count": vr.yes_count,
+            "no_count": vr.no_count,
+            "present_count": vr.present_count,
+            "nv_count": vr.nv_count,
+            "yes_rate_pct": vr.yes_rate_pct,
+            "party_alignment_pct": vr.party_alignment_pct,
+            "party_defection_count": vr.party_defection_count,
+            "is_persuadable": vr.party_defection_count > 0,
+            "records": [
+                {
+                    "bill_number": r.bill_number,
+                    "bill_description": r.bill_description,
+                    "date": r.date,
+                    "vote": r.vote,
+                    "bill_status": r.bill_status,
+                    "vote_type": r.vote_type,
+                    "bill_status_url": r.bill_status_url,
+                }
+                for r in vr.records
+            ],
+        }
+
+    # ── Institutional Power Badges ──
+    power_badges_list: list[dict] = []
+    chamber_size = 0
+    if mb:
+        chamber_size = (
+            (
+                len(state.moneyball.rankings_house)
+                if member.chamber == "House"
+                else len(state.moneyball.rankings_senate)
+            )
+            if state.moneyball
+            else 0
+        )
+        raw_badges = compute_power_badges(mb, committee_roles, chamber_size)
+        power_badges_list = [
+            {
+                "label": pb.label,
+                "icon": pb.icon,
+                "explanation": pb.explanation,
+                "css_class": pb.css_class,
+            }
+            for pb in raw_badges
+        ]
+
+    # ── Ranking context (human-readable power position) ──
+    rank_chamber = mb.rank_chamber if mb else None
+    rank_percentile = None
+    if mb and chamber_size > 0:
+        rank_percentile = round((1 - (mb.rank_chamber - 1) / chamber_size) * 100)
+
+    # ── Party abbreviation for compact display ──
+    if "republican" in (member.party or "").lower():
+        party_abbr = "R"
+    elif "democrat" in (member.party or "").lower():
+        party_abbr = "D"
+    elif member.party:
+        party_abbr = member.party[:1]
+    else:
+        party_abbr = ""
+
+    # ── Active bill count ──
+    active_count = 0
+    for bid in member.sponsored_bill_ids or []:
+        b = state.bill_lookup.get(bid)
+        if b and b.last_action:
+            action_lower = b.last_action.lower()
+            if not any(
+                kw in action_lower
+                for kw in (
+                    "public act",
+                    "effective date",
+                    "vetoed",
+                    "tabled",
+                    "postponed indefinitely",
+                    "session sine die",
+                )
+            ):
+                active_count += 1
+
+    return {
+        "name": member.name,
+        "id": member.id,
+        "district": member.district,
+        "party": member.party,
+        "party_abbr": party_abbr,
+        "chamber": member.chamber,
+        "role": member.role,
+        "phone": phone,
+        "email": member.email,
+        "laws_filed": laws_filed,
+        "laws_passed": laws_passed,
+        "passage_rate_pct": passage_rate_pct,
+        "bridge_score": round(mb.bridge_score, 4) if mb else None,
+        "bridge_pct": bridge_pct,
+        "moneyball_score": round(mb.moneyball_score, 2) if mb else None,
+        "moneyball_explanation": MONEYBALL_ONE_LINER,
+        "moneyball": moneyball_dict,
+        "influence_network": influence_dict,
+        "member_url": member.member_url,
+        "why": why,
+        "badges": badges or [],
+        "power_badges": power_badges_list,
+        "script_hint": "",
+        "scorecard": scorecard_dict,
+        "committee_roles": committee_roles,
+        "voting_record": voting_record_dict,
+        "rank_chamber": rank_chamber,
+        "chamber_size": chamber_size,
+        "rank_percentile": rank_percentile,
+        "active_bills": active_count,
+    }
+
+
+# ── Evidence-based script hint builders ──────────────────────────────────────
+
+
+def _stats_sentence(card: dict) -> str:
+    """Build a short stats clause from the card's empirical fields.
+
+    Example: "They've passed 4 of 12 laws (33.3% passage rate) and 25.0% of
+    their bills have cross-party co-sponsors."
+    """
+    parts: list[str] = []
+    if card.get("laws_filed") and card.get("laws_passed") is not None:
+        parts.append(
+            f"they've passed {card['laws_passed']} of {card['laws_filed']} laws "
+            f"({card['passage_rate_pct'] or 0}% passage rate)"
+        )
+    if card.get("bridge_pct") is not None and card["bridge_pct"] > 0:
+        parts.append(f"{card['bridge_pct']}% of their bills have cross-party co-sponsors")
+    if parts:
+        return (
+            parts[0][0].upper()
+            + parts[0][1:]
+            + (" and " + parts[1] if len(parts) > 1 else "")
+            + "."
+        )
+    return ""
+
+
+def _build_script_hint_senator(card: dict, zip_code: str, district: str) -> str:
+    """Evidence-based script hint for Your Senator."""
+    stats = _stats_sentence(card)
+    stats_line = f" {stats}" if stats else ""
+    return (
+        f"This is YOUR state senator. Call their office, say you live in "
+        f"ZIP {zip_code} (District {district}), and tell them you support "
+        f"kei truck legalization in Illinois. Constituent calls are tracked "
+        f"\u2014 yours counts.{stats_line}"
+    )
+
+
+def _build_script_hint_rep(card: dict, zip_code: str, district: str) -> str:
+    """Evidence-based script hint for Your Representative."""
+    stats = _stats_sentence(card)
+    stats_line = f" {stats}" if stats else ""
+    return (
+        f"This is YOUR state representative. They vote on bills in the House "
+        f"before they reach the Senate. Call their office, reference ZIP "
+        f"{zip_code} (District {district}), and ask them to sponsor or support "
+        f"kei truck legislation.{stats_line}"
+    )
+
+
+def _build_script_hint_broker(card: dict, broker_why: str) -> str:
+    """Evidence-based script hint for Power Broker."""
+    # Determine if chosen as Chair or by Moneyball
+    is_chair = "Chair of the" in broker_why
+    stats = _stats_sentence(card)
+
+    if is_chair:
+        lead = (
+            "This legislator chairs the committee that controls whether your bill "
+            "gets a hearing \u2014 they are the institutional gatekeeper."
+        )
+    else:
+        lead = (
+            "This legislator has the highest overall influence score (Moneyball) "
+            "in the Senate outside your district."
+        )
+
+    evidence = f" {stats}" if stats else ""
+    action = (
+        " When you call, reference the bill, mention broad constituent support, "
+        "and ask for their co-sponsorship."
+    )
+    return lead + evidence + action
+
+
+def _build_script_hint_ally(card: dict) -> str:
+    """Evidence-based script hint for Potential Ally."""
+    bridge = card.get("bridge_pct")
+    if bridge and bridge > 0:
+        evidence = (
+            f" They have a {bridge}% cross-party co-sponsorship rate \u2014 "
+            "meaning they regularly work across the aisle."
+        )
+    else:
+        evidence = ""
+    return (
+        "This senator sits physically next to yours in the chamber."
+        + evidence
+        + " Ask your senator to partner with them on kei truck legislation "
+        "\u2014 proximity and bipartisan track record make them a natural ally."
+    )
+
+
+def _build_script_hint_super_ally(card: dict) -> str:
+    """Evidence-based script hint for Super Ally (merged Broker + Ally)."""
+    stats = _stats_sentence(card)
+    evidence = f" {stats}" if stats else ""
+    return (
+        "This legislator is both the most influential senator in the chamber "
+        "AND a physical neighbor of your senator \u2014 a uniquely powerful "
+        "advocacy target." + evidence + " Ask your senator to partner with "
+        "them directly. When you call their office, reference the bill and "
+        "the fact that they sit next to your senator. This is your "
+        "highest-value strategic target."
+    )
+
+
+def _find_member_by_district(chamber: str, district: str) -> Member | None:
+    """Find a member by chamber (case-insensitive) and district number."""
+    chamber_lower = chamber.lower()
+    for m in state.members:
+        if m.chamber.lower() == chamber_lower and m.district == district:
+            return m
+    return None
+
+
+def _find_power_broker(
+    exclude_district: str,
+    *,
+    committee_ids: set[str] | None = None,
+    committee_codes: list[str] | None = None,
+    category_name: str = "",
+) -> tuple[Member | None, str]:
+    """Find the top Senate Power Broker.
+
+    Selection priority:
+    1.  When a policy *committee_codes* filter is active, first look for the
+        **Committee Chair** of the relevant committee(s).  A Chair is the
+        strongest institutional voice on a topic — they control what bills
+        get heard.
+    2.  If no Chair is found (or no committee filter is active), fall back to
+        the Senate member with the **highest Moneyball score**.
+
+    Returns ``(Member | None, why_text)``.
+    """
+    member_lookup = {m.id: m for m in state.members}
+
+    # ── Priority 1: Committee Chair (when a policy category is selected) ──
+    if committee_codes:
+        for code in committee_codes:
+            for cmr in state.committee_rosters.get(code, []):
+                role_lower = cmr.role.lower()
+                # Match "Chairperson", "Chair" but NOT "Vice-Chair*"
+                if "chair" in role_lower and "vice" not in role_lower:
+                    chair_member = member_lookup.get(cmr.member_id)
+                    if (
+                        chair_member
+                        and chair_member.chamber == "Senate"
+                        and chair_member.district != exclude_district
+                    ):
+                        committee_name = ""
+                        cmt = state.committee_lookup.get(code)
+                        if cmt:
+                            committee_name = cmt.name
+                        parts = [f"Chair of the {committee_name or code} committee"]
+                        if category_name:
+                            parts.append(
+                                f"the institutional gatekeeper for {category_name} legislation"
+                            )
+                        mb = (
+                            state.moneyball.profiles.get(cmr.member_id) if state.moneyball else None
+                        )
+                        if mb:
+                            parts.append(
+                                f"Moneyball score: {mb.moneyball_score}, "
+                                f"effectiveness: {mb.effectiveness_rate:.0%}"
+                            )
+                        why = ". ".join(parts) + "."
+                        return chair_member, why
+
+    # ── Priority 2: Highest Moneyball score (fallback) ──
+    if not state.moneyball:
+        return None, ""
+
+    best_profile = None
+    for profile in state.moneyball.profiles.values():
+        if profile.chamber != "Senate":
+            continue
+        if profile.district == exclude_district:
+            continue
+        if committee_ids and profile.member_id not in committee_ids:
+            continue
+        if best_profile is None or profile.moneyball_score > best_profile.moneyball_score:
+            best_profile = profile
+
+    if best_profile is None:
+        return None, ""
+
+    member = member_lookup.get(best_profile.member_id)
+    if member is None:
+        return None, ""
+
+    parts = [
+        f"Highest Moneyball score ({best_profile.moneyball_score}) "
+        f"in the Senate outside your district",
+    ]
+    if category_name:
+        parts.append(f"sits on a {category_name} committee")
+    parts.append(
+        f"effectiveness: {best_profile.effectiveness_rate:.0%}, "
+        f"{best_profile.unique_collaborators} collaborators"
+    )
+    why = ". ".join(parts) + "."
+    return member, why
+
+
+def _find_ally(
+    senator: Member,
+    *,
+    committee_ids: set[str] | None = None,
+    category_name: str = "",
+) -> tuple[Member | None, str]:
+    """Find the best Ally from the senator's seatmates.
+
+    Returns ``(Member | None, why_text)``.
+    """
+    if not senator.seatmate_names:
+        return None, ""
+
+    best_member = None
+    best_bridge = -1.0
+
+    for seatmate_name in senator.seatmate_names:
+        member = state.member_lookup.get(seatmate_name)
+        if member is None:
+            continue
+        if committee_ids and member.id not in committee_ids:
+            continue
+
+        bridge = 0.0
+        if state.moneyball:
+            mb = state.moneyball.profiles.get(member.id)
+            if mb:
+                bridge = mb.bridge_score
+
+        if bridge > best_bridge:
+            best_bridge = bridge
+            best_member = member
+
+    # Fallback: if committee filter excluded everyone, try without it.
+    if best_member is None and committee_ids:
+        return _find_ally(senator, committee_ids=None, category_name="")
+
+    # Fallback: if no one has a bridge score, pick first resolved seatmate.
+    if best_member is None:
+        for seatmate_name in senator.seatmate_names:
+            member = state.member_lookup.get(seatmate_name)
+            if member is not None:
+                best_member = member
+                break
+
+    if best_member is None:
+        return None, ""
+
+    why_parts = ["Sits next to your senator in the chamber"]
+    if category_name and committee_ids and best_member.id in committee_ids:
+        why_parts.append(f"also on a {category_name} committee")
+    if state.moneyball:
+        mb = state.moneyball.profiles.get(best_member.id)
+        if mb and mb.bridge_score > 0:
+            why_parts.append(
+                f"bridge score of {mb.bridge_score:.0%} (cross-party co-sponsorship rate)"
+            )
+    if senator.seatmate_affinity > 0:
+        why_parts.append(f"{senator.seatmate_affinity:.0%} bill overlap with seatmates")
+    why = ". ".join(why_parts) + "."
+    return best_member, why
+
+
+@app.get("/advocacy")
+async def advocacy_index(request: Request):
+    """Render the advocacy search page."""
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "title": "Kei Truck Freedom",
+            "categories": CATEGORY_CHOICES,
+        },
+    )
+
+
+@app.post("/advocacy/search")
+async def advocacy_search(
+    request: Request,
+    zip_code: str = Form(...),
+    category: str = Form(""),
+):
+    """Look up advocacy targets for a given ZIP code and optional policy category.
+
+    Returns up to four cards (or three if Power Broker and Ally are the same
+    person, merged into a single "Super Ally" card):
+
+    1. **Your Senator** — IL Senate member for this ZIP's district.
+    2. **Your Representative** — IL House member for this ZIP's district.
+    3. **Power Broker** — highest Moneyball score in the Senate (different district).
+    4. **Potential Ally** — senator's physical seatmate with highest bridge score.
+
+    When *category* is provided, Power Broker and Ally are filtered to members
+    who sit on a committee in that policy area.
+
+    When the request comes from htmx (``HX-Request`` header), only the
+    results partial is returned.
+    """
+    zip_code = zip_code.strip()
+    category = category.strip()
+    is_htmx = request.headers.get("HX-Request") == "true"
+
+    # ── Lookup ZIP in crosswalk ──
+    district_info = state.zip_to_district.get(zip_code)
+    if district_info is None:
+        error = (
+            f"ZIP code {zip_code!r} not found in Illinois district data. "
+            "Please enter a valid 5-digit Illinois ZIP code."
+        )
+        tpl = "_results_partial.html" if is_htmx else "index.html"
+        return templates.TemplateResponse(
+            tpl,
+            {
+                "request": request,
+                "title": "Kei Truck Freedom",
+                "categories": CATEGORY_CHOICES,
+                "error": error,
+            },
+        )
+
+    senate_district = district_info.il_senate
+    house_district = district_info.il_house
+    warnings: list[str] = []
+
+    # ── Committee filter ──
+    committee_codes = _CATEGORY_COMMITTEES.get(category, [])
+    committee_ids = _committee_member_ids(committee_codes) if committee_codes else None
+    category_label = category if category else ""
+
+    # ── Find Your Senator ──
+    senator_member = (
+        _find_member_by_district("senate", senate_district) if senate_district else None
+    )
+    senator_card = None
+    if senator_member:
+        senator_card = _member_to_card(
+            senator_member,
+            why=f"Represents IL Senate District {senate_district}, which contains ZIP {zip_code}.",
+        )
+        senator_card["script_hint"] = _build_script_hint_senator(
+            senator_card,
+            zip_code,
+            senate_district,
+        )
+    elif senate_district:
+        warnings.append(
+            f"Senate District {senate_district} (for ZIP {zip_code}) — "
+            "senator not in current data (dev/seed mode has limited members)."
+        )
+
+    # ── Find Your Representative ──
+    rep_member = _find_member_by_district("house", house_district) if house_district else None
+    rep_card = None
+    if rep_member:
+        rep_card = _member_to_card(
+            rep_member,
+            why=f"Represents IL House District {house_district}, which contains ZIP {zip_code}.",
+        )
+        rep_card["script_hint"] = _build_script_hint_rep(
+            rep_card,
+            zip_code,
+            house_district,
+        )
+    elif house_district:
+        warnings.append(
+            f"House District {house_district} (for ZIP {zip_code}) — "
+            "representative not in current data (dev/seed mode has limited members)."
+        )
+
+    # ── Find Power Broker ──
+    exclude_dist = senate_district or ""
+    broker_member, broker_why = _find_power_broker(
+        exclude_dist,
+        committee_ids=committee_ids,
+        committee_codes=committee_codes or None,
+        category_name=category_label,
+    )
+
+    # ── Find Potential Ally ──
+    ally_member, ally_why = (
+        _find_ally(
+            senator_member,
+            committee_ids=committee_ids,
+            category_name=category_label,
+        )
+        if senator_member
+        else (None, "")
+    )
+
+    # ── Merge: if broker and ally are the same person → "Super Ally" ──
+    broker_card = None
+    ally_card = None
+    super_ally_card = None
+
+    if broker_member and ally_member and broker_member.id == ally_member.id:
+        # Same person — merge into a Super Ally with both badges.
+        merged_why = (
+            f"This legislator is both the most influential senator in the chamber "
+            f"AND a physical neighbor of your senator — a uniquely powerful advocacy target. "
+            f"{broker_why} {ally_why}"
+        )
+        super_ally_card = _member_to_card(
+            broker_member,
+            why=merged_why,
+            badges=["Power Broker", "Potential Ally"],
+        )
+        super_ally_card["script_hint"] = _build_script_hint_super_ally(super_ally_card)
+    else:
+        if broker_member:
+            broker_card = _member_to_card(broker_member, why=broker_why)
+            broker_card["script_hint"] = _build_script_hint_broker(
+                broker_card,
+                broker_why,
+            )
+        if ally_member:
+            ally_card = _member_to_card(ally_member, why=ally_why)
+            ally_card["script_hint"] = _build_script_hint_ally(ally_card)
+
+    error = "; ".join(warnings) if warnings else None
+
+    member_count = len(state.members)
+    zip_count = len(state.zip_to_district)
+    tpl = "_results_partial.html" if is_htmx else "results.html"
+    return templates.TemplateResponse(
+        tpl,
+        {
+            "request": request,
+            "title": "Kei Truck Freedom",
+            "categories": CATEGORY_CHOICES,
+            "seed_mode": SEED_MODE,
+            "member_count": member_count,
+            "zip_count": zip_count,
+            "zip": zip_code,
+            "category": category,
+            "senate_district": senate_district,
+            "house_district": house_district,
+            "senator": senator_card,
+            "representative": rep_card,
+            "broker": broker_card,
+            "ally": ally_card,
+            "super_ally": super_ally_card,
+            "error": error,
+        },
+    )
 
 
 app.include_router(graphql_app, prefix="/graphql")

@@ -25,12 +25,58 @@ from dataclasses import dataclass, field
 
 from .analytics import (
     _PIPELINE_MAX_DEPTH,
+    BillStatus,
     MemberScorecard,
+    classify_bill_status,
     compute_all_scorecards,
+    is_shell_bill,
     is_substantive,
     pipeline_depth,
 )
-from .models import Bill, Member
+from .models import Bill, CommitteeMemberRole, Member
+
+# ── Role aggregation ─────────────────────────────────────────────────────────
+
+
+def populate_member_roles(
+    members: list[Member],
+    committee_rosters: dict[str, list[CommitteeMemberRole]],
+) -> None:
+    """Aggregate all role titles into each member's ``roles`` list.
+
+    Sources:
+    1. ``member.role`` — the profile-page title (e.g. "Senator", "President
+       of the Senate").
+    2. Committee roster entries — each ``CommitteeMemberRole.role`` where the
+       member appears (e.g. "Chairperson", "Minority Spokesperson").
+
+    Duplicates are removed while preserving order.  The function mutates
+    *members* in place.
+    """
+    # Build member_id -> set of committee roles
+    roster_roles: dict[str, list[str]] = {}
+    for _code, roles in committee_rosters.items():
+        for cmr in roles:
+            if cmr.member_id:
+                roster_roles.setdefault(cmr.member_id, []).append(cmr.role)
+
+    for member in members:
+        seen: set[str] = set()
+        aggregated: list[str] = []
+
+        # Profile role first
+        if member.role and member.role not in seen:
+            seen.add(member.role)
+            aggregated.append(member.role)
+
+        # Committee roles
+        for r in roster_roles.get(member.id, []):
+            if r and r not in seen:
+                seen.add(r)
+                aggregated.append(r)
+
+        member.roles = aggregated
+
 
 # ── Leadership detection ─────────────────────────────────────────────────────
 
@@ -84,6 +130,57 @@ def is_leadership(member: Member) -> bool:
     return False
 
 
+# ── Institutional power scoring ──────────────────────────────────────────────
+
+
+def compute_institutional_weight(member: Member) -> float:
+    """Return an institutional-power bonus (0.0 – 1.0) based on role titles.
+
+    Tiers (highest match wins — no stacking):
+
+    * **1.0** — top chamber leadership: President, Leader, Speaker.
+    * **0.5** — committee leadership: Chair (excluding "Caucus Chair"),
+      Spokesperson.
+    * **0.25** — party management: Whip, Caucus Chair.
+
+    Roles are drawn from ``member.roles`` (aggregated profile + committee
+    roster titles).  If ``member.roles`` is empty, falls back to
+    ``member.role`` for backward compatibility.
+    """
+    roles_to_check = member.roles or ([member.role] if member.role else [])
+
+    tier_1 = False  # President / Leader / Speaker
+    tier_2 = False  # Chair / Spokesperson
+    tier_3 = False  # Whip / Caucus Chair
+
+    for role in roles_to_check:
+        rl = role.lower()
+
+        # Tier 1: top chamber leadership
+        if "president" in rl or "leader" in rl or "speaker" in rl:
+            tier_1 = True
+            break  # Can't get higher — short-circuit
+
+        # Tier 3 check first (Caucus Chair) so we can exclude it from Tier 2
+        if "caucus chair" in rl or "whip" in rl:
+            tier_3 = True
+            continue
+
+        # Tier 2: committee chair or spokesperson (but NOT "Caucus Chair",
+        # which was already captured above)
+        if "chair" in rl or "spokesperson" in rl:
+            tier_2 = True
+            continue
+
+    if tier_1:
+        return 1.0
+    if tier_2:
+        return 0.5
+    if tier_3:
+        return 0.25
+    return 0.0
+
+
 # ── Network centrality ───────────────────────────────────────────────────────
 
 
@@ -133,10 +230,10 @@ def degree_centrality(adjacency: dict[str, set[str]]) -> dict[str, float]:
 def avg_pipeline_depth(bills: list[Bill]) -> float:
     """Return the average pipeline depth across a list of bills.
 
-    Only substantive bills (HB/SB) are considered.  Returns 0.0 if there
-    are no substantive bills.
+    Only substantive, non-shell bills (HB/SB) are considered.  Returns 0.0
+    if there are no qualifying bills.
     """
-    laws = [b for b in bills if is_substantive(b.bill_number)]
+    laws = [b for b in bills if is_substantive(b.bill_number) and not is_shell_bill(b)]
     if not laws:
         return 0.0
     total = sum(pipeline_depth(b.last_action) for b in laws)
@@ -175,6 +272,20 @@ class MoneyballProfile:
     total_primary_bills: int
     total_passed: int
 
+    # ── Influence Network metrics (human-readable power picture) ──
+    collaborator_republicans: int = 0  # unique co-sponsorship peers who are Republican
+    collaborator_democrats: int = 0  # unique co-sponsorship peers who are Democrat
+    collaborator_other: int = 0  # unique co-sponsorship peers of other parties
+    magnet_vs_chamber: float = 0.0  # magnet_score / chamber avg magnet (e.g. 2.1x)
+    cosponsor_passage_rate: float = 0.0  # passage rate of bills this member co-sponsors
+    cosponsor_passage_multiplier: float = 0.0  # cosponsor rate / chamber median (e.g. 1.3x)
+    chamber_median_cosponsor_rate: float = 0.0  # chamber median for transparency
+    passage_rate_vs_caucus: float = 0.0  # member passage rate / caucus avg (e.g. 2.3x)
+    caucus_avg_passage_rate: float = 0.0  # party+chamber avg passage rate for transparency
+
+    # ── Institutional power bonus (0.0 – 1.0) ──
+    institutional_weight: float = 0.0
+
     # ── The composite score ──
     moneyball_score: float = 0.0
 
@@ -192,25 +303,43 @@ class MoneyballWeights:
 
     All weights should sum to 1.0 for interpretability, but the engine
     normalizes them regardless.
+
+    Default allocation (v2 — with institutional power bonus):
+
+    * effectiveness  24%  (was 30%)
+    * pipeline       16%  (was 20%)
+    * magnet         16%  (was 20%)
+    * bridge         12%  (was 15%)
+    * centrality     12%  (was 15%)
+    * institutional  20%  (new)
     """
 
     def __init__(
         self,
-        effectiveness: float = 0.30,
-        pipeline: float = 0.20,
-        magnet: float = 0.20,
-        bridge: float = 0.15,
-        centrality: float = 0.15,
+        effectiveness: float = 0.24,
+        pipeline: float = 0.16,
+        magnet: float = 0.16,
+        bridge: float = 0.12,
+        centrality: float = 0.12,
+        institutional: float = 0.20,
     ) -> None:
         self.effectiveness = effectiveness
         self.pipeline = pipeline
         self.magnet = magnet
         self.bridge = bridge
         self.centrality = centrality
+        self.institutional = institutional
 
     @property
     def total(self) -> float:
-        return self.effectiveness + self.pipeline + self.magnet + self.bridge + self.centrality
+        return (
+            self.effectiveness
+            + self.pipeline
+            + self.magnet
+            + self.bridge
+            + self.centrality
+            + self.institutional
+        )
 
 
 # ── Composite Moneyball Score ────────────────────────────────────────────────
@@ -236,6 +365,7 @@ def _compute_moneyball_score(
     - magnet_normalized: magnet / max_magnet across cohort
     - bridge_score: already 0-1
     - network_centrality: already 0-1
+    - institutional_weight: already 0-1
     """
     w = weights
     total_weight = w.total or 1.0
@@ -246,6 +376,7 @@ def _compute_moneyball_score(
         + w.magnet * _normalize_magnet(profile.magnet_score, max_magnet)
         + w.bridge * profile.bridge_score
         + w.centrality * profile.network_centrality
+        + w.institutional * profile.institutional_weight
     )
     return round((raw / total_weight) * 100, 2)
 
@@ -282,6 +413,114 @@ def _assign_badges(profile: MoneyballProfile) -> list[str]:
         and profile.magnet_score >= 2.0
     ):
         badges.append("Hidden Gem")  # Effective without the leadership title
+
+    return badges
+
+
+# ── Institutional Power Badges ────────────────────────────────────────────────
+
+
+@dataclass
+class PowerBadge:
+    """A visual badge indicating institutional power.
+
+    Rendered prominently at the top of each advocacy card so staff
+    can immediately see who holds formal power.
+    """
+
+    label: str  # e.g. "LEADERSHIP"
+    icon: str  # CSS class suffix — "leadership", "chair", "influence"
+    explanation: str  # human-readable context shown on click/hover
+    css_class: str  # full CSS class — "power-badge-leadership"
+
+
+def compute_power_badges(
+    profile: MoneyballProfile,
+    committee_roles: list[dict],
+    chamber_size: int,
+) -> list[PowerBadge]:
+    """Return institutional power badges for a legislator.
+
+    Three badge types (additive — a member can earn all three):
+
+    1. **LEADERSHIP** — formal chamber or party role (institutional_weight >= 0.25).
+    2. **COMMITTEE CHAIR** — chairs one or more committees (gatekeeper power).
+    3. **TOP 5% INFLUENCE** — rank_chamber in the top 5% of their chamber.
+    """
+    import math
+
+    badges: list[PowerBadge] = []
+
+    # ── 1. LEADERSHIP ──
+    if profile.institutional_weight >= 0.25:
+        role_display = profile.role or "Leadership"
+        if profile.institutional_weight >= 1.0:
+            explanation = (
+                f"Top chamber leader \u2014 {role_display}. "
+                "Controls floor schedule and party strategy."
+            )
+        elif profile.institutional_weight >= 0.5:
+            explanation = (
+                f"Committee leader \u2014 {role_display}. Controls which bills get hearings."
+            )
+        else:
+            explanation = (
+                f"Party management \u2014 {role_display}. Coordinates caucus votes and whip counts."
+            )
+        badges.append(
+            PowerBadge(
+                label="LEADERSHIP",
+                icon="leadership",
+                explanation=explanation,
+                css_class="power-badge-leadership",
+            )
+        )
+
+    # ── 2. COMMITTEE CHAIR ──
+    chaired: list[str] = []
+    for cr in committee_roles:
+        role_lower = cr.get("role", "").lower()
+        if "chair" in role_lower and "vice" not in role_lower:
+            chaired.append(cr.get("name", "Unknown Committee"))
+
+    if chaired:
+        if len(chaired) == 1:
+            explanation = f"Controls which bills get hearings in {chaired[0]}."
+        else:
+            names = ", ".join(chaired)
+            explanation = (
+                f"Chairs {len(chaired)} committees: {names}. "
+                "Controls the hearing schedule for each."
+            )
+        badges.append(
+            PowerBadge(
+                label="COMMITTEE CHAIR",
+                icon="chair",
+                explanation=explanation,
+                css_class="power-badge-chair",
+            )
+        )
+
+    # ── 3. TOP 5% INFLUENCE ──
+    if chamber_size > 0 and profile.rank_chamber > 0:
+        cutoff = max(math.ceil(chamber_size * 0.05), 1)
+        if profile.rank_chamber <= cutoff:
+            chamber_label = "senators" if profile.chamber == "Senate" else "representatives"
+            pct = round((profile.rank_chamber / chamber_size) * 100, 1)
+            explanation = (
+                f"Ranked #{profile.rank_chamber} of {chamber_size} "
+                f"{chamber_label} in overall legislative effectiveness."
+            )
+            # Show "TOP 1%" vs "TOP 5%" based on actual percentile
+            pct_label = f"TOP {max(int(pct), 1)}%" if pct <= 5 else "TOP 5%"
+            badges.append(
+                PowerBadge(
+                    label=pct_label + " INFLUENCE",
+                    icon="influence",
+                    explanation=explanation,
+                    css_class="power-badge-influence",
+                )
+            )
 
     return badges
 
@@ -348,6 +587,7 @@ def compute_moneyball(
 
         depth = avg_pipeline_depth(member.sponsored_bills)
         leadership = is_leadership(member)
+        inst_weight = compute_institutional_weight(member)
 
         profiles[member.id] = MoneyballProfile(
             member_id=member.id,
@@ -372,7 +612,121 @@ def compute_moneyball(
             unique_collaborators=len(adjacency.get(member.id, set())),
             total_primary_bills=sc.primary_bill_count,
             total_passed=sc.passed_count,
+            institutional_weight=inst_weight,
         )
+
+    # ── Step 3b: Influence Network metrics ──
+    # Party breakdown of collaborators
+    for member_id, profile in profiles.items():
+        peers = adjacency.get(member_id, set())
+        rep_count = 0
+        dem_count = 0
+        other_count = 0
+        for peer_id in peers:
+            peer = _member_lookup.get(peer_id)
+            if peer is None:
+                continue
+            party_lower = peer.party.lower()
+            if "republican" in party_lower:
+                rep_count += 1
+            elif "democrat" in party_lower:
+                dem_count += 1
+            else:
+                other_count += 1
+        profile.collaborator_republicans = rep_count
+        profile.collaborator_democrats = dem_count
+        profile.collaborator_other = other_count
+
+    # Chamber average magnet score (for "Nx higher than chamber average")
+    chamber_magnets: dict[str, list[float]] = {}
+    for p in profiles.values():
+        if p.laws_filed > 0:  # only count members who have filed laws
+            chamber_magnets.setdefault(p.chamber, []).append(p.magnet_score)
+    chamber_avg_magnet: dict[str, float] = {}
+    for chamber, magnets in chamber_magnets.items():
+        chamber_avg_magnet[chamber] = sum(magnets) / len(magnets) if magnets else 0.0
+
+    for profile in profiles.values():
+        avg_mag = chamber_avg_magnet.get(profile.chamber, 0.0)
+        if avg_mag > 0 and profile.laws_filed > 0:
+            profile.magnet_vs_chamber = round(profile.magnet_score / avg_mag, 1)
+
+    # Caucus average passage rate (party + chamber) — for "Nx higher than caucus"
+    caucus_rates: dict[str, list[float]] = {}  # "Senate-Democrat" -> [rates]
+    for p in profiles.values():
+        if p.laws_filed > 0:
+            caucus_key = f"{p.chamber}-{p.party}"
+            caucus_rates.setdefault(caucus_key, []).append(p.effectiveness_rate)
+    caucus_avg_passage: dict[str, float] = {}
+    for key, rates in caucus_rates.items():
+        caucus_avg_passage[key] = sum(rates) / len(rates) if rates else 0.0
+
+    for profile in profiles.values():
+        if profile.laws_filed > 0:
+            caucus_key = f"{profile.chamber}-{profile.party}"
+            avg_rate = caucus_avg_passage.get(caucus_key, 0.0)
+            profile.caucus_avg_passage_rate = round(avg_rate, 4)
+            if avg_rate > 0:
+                profile.passage_rate_vs_caucus = round(
+                    profile.effectiveness_rate / avg_rate,
+                    1,
+                )
+
+    # Co-sponsored bill passage rate & peer-normalised baseline
+    # For each member: what % of bills they co-sponsor end up passing?
+    # Baseline: median co-sponsor passage rate across chamber members.
+    # Using chamber-wide bill passage rate would inflate the multiplier
+    # because popular/likely-to-pass bills naturally attract more co-sponsors
+    # (selection bias).  Comparing against the median co-sponsor rate
+    # normalises for this effect and shows genuine "picking winners" ability.
+    member_cosponsor_rates: dict[str, tuple[str, float]] = {}  # member_id -> (chamber, rate)
+    for member in members:
+        profile = profiles.get(member.id)
+        if profile is None:
+            continue
+        cosponsor_bills = [
+            b
+            for b in member.co_sponsor_bills
+            if is_substantive(b.bill_number) and not is_shell_bill(b)
+        ]
+        if cosponsor_bills:
+            cosponsor_passed = sum(
+                1
+                for b in cosponsor_bills
+                if classify_bill_status(b.last_action) == BillStatus.PASSED
+            )
+            rate = cosponsor_passed / len(cosponsor_bills)
+            profile.cosponsor_passage_rate = round(rate, 4)
+            member_cosponsor_rates[member.id] = (member.chamber, rate)
+
+    # Compute median co-sponsor passage rate per chamber
+    chamber_cosponsor_rates: dict[str, list[float]] = {}
+    for _mid, (chamber, rate) in member_cosponsor_rates.items():
+        chamber_cosponsor_rates.setdefault(chamber, []).append(rate)
+
+    chamber_median_cosponsor: dict[str, float] = {}
+    for chamber, rates in chamber_cosponsor_rates.items():
+        sorted_rates = sorted(rates)
+        n = len(sorted_rates)
+        if n == 0:
+            chamber_median_cosponsor[chamber] = 0.0
+        elif n % 2 == 1:
+            chamber_median_cosponsor[chamber] = sorted_rates[n // 2]
+        else:
+            chamber_median_cosponsor[chamber] = (
+                sorted_rates[n // 2 - 1] + sorted_rates[n // 2]
+            ) / 2
+
+    # Compute multiplier vs peer median (not vs raw chamber passage rate)
+    for member_id, (chamber, rate) in member_cosponsor_rates.items():
+        profile = profiles[member_id]
+        median_rate = chamber_median_cosponsor.get(chamber, 0.0)
+        profile.chamber_median_cosponsor_rate = round(median_rate, 4)
+        if median_rate > 0:
+            profile.cosponsor_passage_multiplier = round(
+                rate / median_rate,
+                1,
+            )
 
     # ── Step 4: Compute composite scores ──
     max_magnet = max((p.magnet_score for p in profiles.values()), default=0.0)

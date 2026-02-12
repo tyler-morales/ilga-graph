@@ -1,0 +1,512 @@
+{# Partial template: swapped into #results by htmx. No base.html wrapper. #}
+
+{% if seed_mode is defined and seed_mode %}
+<div class="seed-notice">
+    <strong>Dev/Seed mode.</strong>
+    {% if member_count is defined and member_count < 100 %} Only {{ member_count }} of 177 legislators are loaded. {%
+        endif %} {% if zip_count is defined and zip_count < 100 %} District data uses ~{{ zip_count }} demo ZIPs (not
+        full Census). {% endif %} Some districts may show no results. To test with <strong>full data</strong> (all
+        members + all IL ZIPs), run <code>make run</code> or set <code>ILGA_SEED_MODE=0</code> (after
+        <code>make scrape</code>).
+</div>
+{% endif %}
+
+{% if error %}
+<div class="error-msg">{{ error }}</div>
+{% endif %}
+
+{# ── Power Card macro ─────────────────────────────────────────────────── #}
+{# Redesigned for advocacy professionals: consolidated power narrative,   #}
+{# key signals up front, details expandable below.                        #}
+
+{% macro member_card(member, role_label, role_class) %}
+<div class="card">
+
+    {# ── Badge row: role label + power badges ── #}
+    <div class="card-badge-row">
+        {% if member.badges %}
+            {% for badge in member.badges %}
+            <span class="role-label role-badge">{{ badge }}</span>
+            {% endfor %}
+        {% else %}
+            <span class="role-label {{ role_class }}">{{ role_label }}</span>
+        {% endif %}
+        {% for pb in member.power_badges %}
+        <details class="power-badge-wrapper">
+            <summary class="power-badge {{ pb.css_class }}">
+                <span class="power-badge-icon power-icon-{{ pb.icon }}"></span> {{ pb.label }}
+            </summary>
+            <div class="power-badge-explanation">{{ pb.explanation }}</div>
+        </details>
+        {% endfor %}
+    </div>
+
+    {# ── Name line: "Senator Jane Smith (R-District 47)" ── #}
+    <h3 class="card-name">
+        {{ member.name }}
+        <span class="card-name-meta">({{ member.party_abbr }}-{{ member.chamber }} District {{ member.district }})</span>
+    </h3>
+
+    {# ── Power Context box: the key "why" signals ── #}
+    {% set has_chair = member.committee_roles and member.committee_roles|selectattr('is_leadership')|list|length > 0 %}
+    {% set has_rank = member.rank_chamber is not none and member.chamber_size > 0 %}
+    {% set has_network = member.influence_network and member.influence_network.unique_collaborators > 0 %}
+    {% set has_voting = member.voting_record and member.voting_record.total_votes > 0 %}
+    {% set has_power_context = has_chair or has_rank or has_network or has_voting %}
+
+    {% if has_power_context %}
+    <div class="power-context">
+        <h4 class="power-context-title">Why this person matters</h4>
+        <ul class="power-context-list">
+            {# ── Committee chair positions ── #}
+            {% for cr in member.committee_roles if cr.is_leadership %}
+            <li>
+                <strong class="power-signal">{{ cr.role|upper }}: {{ cr.name }}</strong>
+                {% set role_lower = cr.role|lower %}
+                {% if role_lower == 'chair' or role_lower == 'chairperson' %}
+                <div class="power-sub">Decides which bills get hearings</div>
+                {% elif 'sub-chair' in role_lower and 'vice' not in role_lower %}
+                <div class="power-sub">Leads subcommittee hearings</div>
+                {% elif 'vice' in role_lower %}
+                <div class="power-sub">Runs committee in Chair&rsquo;s absence</div>
+                {% elif 'spokesperson' in role_lower %}
+                <div class="power-sub">Leads opposition party on this committee</div>
+                {% endif %}
+                {% if cr.total_bills > 0 %}
+                <div class="power-sub">Advanced {{ cr.advanced_count }} of {{ cr.total_bills }} bills ({{ cr.advancement_rate_pct }}% success rate) &middot; {{ cr.passed_count }} became law</div>
+                {% endif %}
+            </li>
+            {% endfor %}
+
+            {# ── Ranking ── #}
+            {% if has_rank %}
+            <li>
+                <strong class="power-signal">RANKING:</strong> #{{ member.rank_chamber }} of {{ member.chamber_size }}
+                {% if member.chamber == 'Senate' %}senators{% elif member.chamber == 'House' %}representatives{% else %}members{% endif %}
+                {% if member.rank_percentile is not none and member.rank_percentile >= 90 %}
+                <span class="power-highlight">(Top {{ 100 - member.rank_percentile }}% influence)</span>
+                {% endif %}
+            </li>
+            {% endif %}
+
+            {# ── Network ── #}
+            {% if has_network %}
+            <li>
+                <strong class="power-signal">NETWORK:</strong> Co-sponsors with {{ member.influence_network.unique_collaborators }} legislators
+                {% if member.influence_network.collaborator_republicans > 0 or member.influence_network.collaborator_democrats > 0 %}
+                <div class="power-sub">{{ member.influence_network.collaborator_republicans }} Republican{{ 's' if member.influence_network.collaborator_republicans != 1 else '' }}, {{ member.influence_network.collaborator_democrats }} Democrat{{ 's' if member.influence_network.collaborator_democrats != 1 else '' }}{% if member.influence_network.bipartisan_label %} &mdash; <em>{{ member.influence_network.bipartisan_label }}</em>{% endif %}</div>
+                {% endif %}
+                {% if member.influence_network.magnet_vs_chamber and member.influence_network.magnet_vs_chamber > 1.0 %}
+                <div class="power-sub">Their bills attract {{ member.influence_network.magnet_score }} co-sponsors on average ({{ member.influence_network.magnet_vs_chamber }}x chamber average)</div>
+                {% endif %}
+                {% if member.influence_network.cosponsor_passage_multiplier and member.influence_network.cosponsor_passage_multiplier > 1.0 %}
+                <div class="power-sub">Bills they join pass at {{ member.influence_network.cosponsor_passage_multiplier }}x the typical rate</div>
+                {% endif %}
+            </li>
+            {% endif %}
+
+            {# ── Voting track record ── #}
+            {% if has_voting %}
+            <li>
+                <strong class="power-signal">TRACK RECORD:</strong>
+                {{ member.voting_record.yes_count }} YES / {{ member.voting_record.no_count }} NO across {{ member.voting_record.total_votes }} votes
+                {% if member.voting_record.party_alignment_pct > 0 %}
+                <div class="power-sub">Votes with party {{ member.voting_record.party_alignment_pct }}% of the time{% if member.voting_record.is_persuadable %} &mdash; <em>breaks ranks {{ member.voting_record.party_defection_count }}x (potentially persuadable)</em>{% endif %}</div>
+                {% endif %}
+            </li>
+            {% endif %}
+
+            {# ── Active bills ── #}
+            {% if member.active_bills and member.active_bills > 0 %}
+            <li>
+                <strong class="power-signal">WORKLOAD:</strong> Currently managing {{ member.active_bills }} active bill{{ 's' if member.active_bills != 1 else '' }}
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {# ── Legislative Scorecard (always visible, compact) ── #}
+    {% if member.laws_passed is not none and member.laws_filed is not none %}
+    <div class="compact-scorecard">
+        <ul class="compact-stats">
+            <li><strong>Laws passed:</strong> {{ member.laws_passed }} of {{ member.laws_filed }} filed ({{ member.passage_rate_pct or 0 }}% passage rate)
+                {% if member.influence_network and member.influence_network.passage_rate_vs_caucus > 1.0 %}
+                <span class="caucus-compare">&mdash; {{ member.influence_network.passage_rate_vs_caucus }}x caucus average</span>
+                {% endif %}
+            </li>
+            {% if member.bridge_pct is not none and member.laws_filed and member.laws_filed > 0 %}
+            <li><strong>Cross-party bills:</strong> {{ member.bridge_pct }}% (works across aisle)</li>
+            {% endif %}
+            {% if member.influence_network and member.influence_network.magnet_score > 0 %}
+            <li><strong>Co-sponsor pull:</strong> {{ member.influence_network.magnet_score }} co-sponsors per bill on average
+                {% if member.influence_network.magnet_vs_chamber and member.influence_network.magnet_vs_chamber > 1.0 %}
+                <span class="caucus-compare">({{ member.influence_network.magnet_vs_chamber }}x chamber avg)</span>
+                {% endif %}
+            </li>
+            {% endif %}
+            {% if member.moneyball_score is not none %}
+            <li><strong>Moneyball:</strong> {{ member.moneyball_score }} / 100
+                <span class="metric-help" title="{{ member.moneyball_explanation|e }}">?</span>
+                {% if member.rank_chamber is not none %}
+                <span class="metric-note">(#{{ member.rank_chamber }} in {{ member.chamber|lower }})</span>
+                {% endif %}
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {# ── Contact row ── #}
+    <div class="contact-row">
+        {% if member.phone %}
+        <a href="tel:{{ member.phone }}" class="contact-link contact-phone">{{ member.phone }}</a>
+        {% endif %}
+        {% if member.email %}
+        <a href="mailto:{{ member.email }}" class="contact-link contact-email">Email</a>
+        {% endif %}
+        {% if member.member_url %}
+        <a href="{{ member.member_url }}" class="contact-link contact-profile" target="_blank" rel="noopener">ILGA Profile</a>
+        {% endif %}
+    </div>
+
+    {# ── Why this target + Script hint ── #}
+    {% if member.why %}
+    <div class="why-chosen">
+        <strong>Why this target:</strong> {{ member.why }}
+    </div>
+    {% endif %}
+    {% if member.script_hint %}
+    <div class="script-hint">
+        <strong>Script Hint:</strong> {{ member.script_hint }}
+    </div>
+    {% endif %}
+
+    {# ── Expandable details ── #}
+
+    {# ── Voting Record (collapsible) ── #}
+    {% if member.voting_record and member.voting_record.records %}
+    <details class="card-voting-record">
+        <summary>Voting Record ({{ member.voting_record.total_votes }} vote{{ 's' if member.voting_record.total_votes != 1 else '' }}{% if member.voting_record.total_floor_votes > 0 and member.voting_record.total_committee_votes > 0 %} &mdash; {{ member.voting_record.total_floor_votes }} floor, {{ member.voting_record.total_committee_votes }} committee{% endif %})</summary>
+        <div class="voting-record-body">
+            <div class="vote-list">
+                {% for rec in member.voting_record.records %}
+                <div class="vote-row">
+                    {% if rec.bill_status_url %}
+                    <a class="vote-bill" href="{{ rec.bill_status_url }}" target="_blank" rel="noopener">{{ rec.bill_number }}</a>
+                    {% else %}
+                    <span class="vote-bill">{{ rec.bill_number }}</span>
+                    {% endif %}
+                    <span class="vote-desc">{{ rec.bill_description|truncate(40, True) }}</span>
+                    <span class="vote-indicator vote-{{ rec.vote|lower }}">{{ rec.vote }}</span>
+                    <span class="vote-outcome vote-outcome-{{ rec.bill_status|lower|replace(' ', '-') }}">{{ rec.bill_status }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="vote-summary">
+                <span class="vote-pattern"><strong>Pattern:</strong> {{ member.voting_record.yes_count }} YES / {{ member.voting_record.no_count }} NO
+                    {% if member.voting_record.present_count > 0 %} / {{ member.voting_record.present_count }} Present{% endif %}
+                    {% if member.voting_record.nv_count > 0 %} / {{ member.voting_record.nv_count }} NV{% endif %}
+                    ({{ member.voting_record.yes_rate_pct }}% yes rate)</span>
+                {% if member.voting_record.party_alignment_pct > 0 %}
+                <span class="vote-alignment"><strong>Party alignment:</strong> {{ member.voting_record.party_alignment_pct }}% (votes with {{ member.party }} {{ member.voting_record.party_alignment_pct }}% of the time)</span>
+                {% endif %}
+            </div>
+            {% if member.voting_record.is_persuadable %}
+            <div class="persuadable-callout">
+                Votes against party {{ member.voting_record.party_defection_count }} time{{ 's' if member.voting_record.party_defection_count != 1 else '' }} &mdash; <strong>potentially persuadable</strong>
+            </div>
+            {% endif %}
+        </div>
+    </details>
+    {% endif %}
+
+    {# ── Committee Assignments (collapsible) ── #}
+    {% if member.committee_roles %}
+    <details class="card-committees">
+        <summary>Committee Assignments ({{ member.committee_roles|length }})</summary>
+        <div class="committees-body">
+            {# Leadership positions shown prominently first #}
+            {% for cr in member.committee_roles if cr.is_leadership %}
+            <div class="committee-row committee-leadership">
+                <span class="committee-role-badge badge-{{ cr.role|lower|replace(' ', '-') }}">{{ cr.role }}</span>
+                <strong class="committee-name">{{ cr.name }}</strong>
+                {% if cr.total_bills > 0 %}
+                <div class="committee-stats">
+                    Advanced {{ cr.advanced_count }} of {{ cr.total_bills }} bills ({{ cr.advancement_rate_pct }}%)
+                    &middot; {{ cr.passed_count }} became law
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+            {# Regular memberships listed compactly #}
+            {% set regular = [] %}
+            {% for cr in member.committee_roles if not cr.is_leadership %}
+                {% if regular.append(cr) %}{% endif %}
+            {% endfor %}
+            {% if regular %}
+            <div class="committee-row committee-members">
+                <span class="committee-role-badge badge-member">Member</span>
+                <span class="committee-member-list">
+                    {% for cr in regular %}{{ cr.name }}{% if not loop.last %}, {% endif %}{% endfor %}
+                </span>
+            </div>
+            {% endif %}
+        </div>
+    </details>
+    {% endif %}
+
+    {# ── Full Legislative Scorecard (collapsible) ── #}
+    {% if member.scorecard %}
+    <details class="card-scorecard">
+        <summary>Full Legislative Scorecard</summary>
+        <div class="scorecard-body">
+            <table class="scorecard-table">
+                <thead>
+                    <tr>
+                        <th colspan="2" class="scorecard-section-head">Lawmaking (HB/SB)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Laws filed</td>
+                        <td>{{ member.scorecard.laws_filed }}</td>
+                    </tr>
+                    <tr>
+                        <td>Passed</td>
+                        <td>{{ member.scorecard.laws_passed }}</td>
+                    </tr>
+                    <tr>
+                        <td>Pass rate</td>
+                        <td>{{ member.scorecard.law_pass_rate_pct }}%</td>
+                    </tr>
+                    <tr>
+                        <td>Magnet <span class="metric-note">(avg co-sponsors per bill)</span></td>
+                        <td>{{ member.scorecard.magnet_score }}</td>
+                    </tr>
+                    <tr>
+                        <td>Bridge <span class="metric-note">(cross-party co-sponsorship %)</span></td>
+                        <td>{{ member.scorecard.bridge_pct }}%</td>
+                    </tr>
+                </tbody>
+                <thead>
+                    <tr>
+                        <th colspan="2" class="scorecard-section-head">Resolutions (HR/SR/HJR/SJR)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Res. filed</td>
+                        <td>{{ member.scorecard.resolutions_filed }}</td>
+                    </tr>
+                    <tr>
+                        <td>Res. passed</td>
+                        <td>{{ member.scorecard.resolutions_passed }}</td>
+                    </tr>
+                    <tr>
+                        <td>Res. rate</td>
+                        <td>{{ member.scorecard.resolution_pass_rate_pct }}%</td>
+                    </tr>
+                </tbody>
+                <thead>
+                    <tr>
+                        <th colspan="2" class="scorecard-section-head">Overall</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Total bills</td>
+                        <td>{{ member.scorecard.total_bills }}</td>
+                    </tr>
+                    <tr>
+                        <td>Total passed</td>
+                        <td>{{ member.scorecard.total_passed }}</td>
+                    </tr>
+                    <tr>
+                        <td>Overall rate</td>
+                        <td>{{ member.scorecard.overall_pass_rate_pct }}%</td>
+                    </tr>
+                    {% if member.scorecard.vetoed_count %}
+                    <tr>
+                        <td>Vetoed</td>
+                        <td>{{ member.scorecard.vetoed_count }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if member.scorecard.stuck_count %}
+                    <tr>
+                        <td>Stuck</td>
+                        <td>{{ member.scorecard.stuck_count }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if member.scorecard.in_progress_count %}
+                    <tr>
+                        <td>In progress</td>
+                        <td>{{ member.scorecard.in_progress_count }}</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+                {% if member.moneyball_score is not none %}
+                <thead>
+                    <tr>
+                        <th colspan="2" class="scorecard-section-head">Moneyball Composite ({{ member.moneyball_score
+                            }})</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Passage rate <span class="metric-note">(24%)</span></td>
+                        <td>{{ member.moneyball.effectiveness_rate_pct }}%</td>
+                    </tr>
+                    <tr>
+                        <td>Pipeline depth <span class="metric-note">(16%)</span></td>
+                        <td>{{ member.moneyball.pipeline_depth_avg }}</td>
+                    </tr>
+                    <tr>
+                        <td>Co-sponsor pull <span class="metric-note">(16%)</span></td>
+                        <td>{{ member.moneyball.magnet_score }}</td>
+                    </tr>
+                    <tr>
+                        <td>Cross-party rate <span class="metric-note">(12%)</span></td>
+                        <td>{{ member.moneyball.bridge_pct }}%</td>
+                    </tr>
+                    <tr>
+                        <td>Network reach <span class="metric-note">(12%)</span></td>
+                        <td>
+                            {% if member.influence_network and member.influence_network.unique_collaborators > 0 %}
+                            {{ member.influence_network.unique_collaborators }} collaborators
+                            <span class="metric-note">({{ member.moneyball.network_centrality }})</span>
+                            {% else %}
+                            {{ member.moneyball.network_centrality }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Institutional role <span class="metric-note">(20%)</span></td>
+                        <td>{{ member.moneyball.institutional_weight }}</td>
+                    </tr>
+                </tbody>
+                {% endif %}
+            </table>
+        </div>
+    </details>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{# ── Two-column layout when we have cards: aside = How we pick; main = scrollable cards ── #}
+
+{% if senator or representative or broker or ally or super_ally %}
+<div class="results-layout">
+    <aside class="results-aside">
+        <div class="how-it-works">
+            <h3 class="hiw-title">How we pick these targets</h3>
+            <div class="hiw-body">
+                <dl>
+                    <dt>Your Senator &amp; Representative</dt>
+                    <dd>ZIP is matched to IL Senate/House districts via Census (ZCTA). These are your reps.</dd>
+
+                    <dt>Power Broker</dt>
+                    <dd>With a <strong>policy category</strong>: the <strong>committee chair</strong> for that topic.
+                        Otherwise: Senate member (not your district) with the <strong>highest Moneyball score</strong>.
+                    </dd>
+
+                    <dt>Potential Ally</dt>
+                    <dd>Senator who <strong>sits next to yours</strong> and has the <strong>highest cross-party
+                            co-sponsorship rate</strong> among those seatmates.</dd>
+
+                    <dt>Super Ally</dt>
+                    <dd>When Power Broker and Ally are the <strong>same person</strong> &mdash; merged into one card.
+                    </dd>
+                </dl>
+                <details class="hiw-details">
+                    <summary>Moneyball formula</summary>
+                    <table class="formula-table">
+                        <tr>
+                            <th>Factor</th>
+                            <th>Wt</th>
+                            <th>Measures</th>
+                        </tr>
+                        <tr>
+                            <td>Passage rate</td>
+                            <td>24%</td>
+                            <td>Laws passed &divide; filed</td>
+                        </tr>
+                        <tr>
+                            <td>Pipeline depth</td>
+                            <td>16%</td>
+                            <td>How far bills go (0&ndash;6)</td>
+                        </tr>
+                        <tr>
+                            <td>Co-sponsor pull</td>
+                            <td>16%</td>
+                            <td>Avg co-sponsors vs max</td>
+                        </tr>
+                        <tr>
+                            <td>Cross-party rate</td>
+                            <td>12%</td>
+                            <td>Bills with opposite-party co-sponsor</td>
+                        </tr>
+                        <tr>
+                            <td>Network centrality</td>
+                            <td>12%</td>
+                            <td>Unique co-sponsorship peers</td>
+                        </tr>
+                        <tr>
+                            <td>Institutional role</td>
+                            <td>20%</td>
+                            <td>Leadership bonus</td>
+                        </tr>
+                    </table>
+                </details>
+            </div>
+        </div>
+    </aside>
+    <main class="results-main">
+        {% endif %}
+
+        {# ── Your Legislators ── #}
+
+        {% if senator or representative %}
+        <h2>Your Legislators (ZIP {{ zip }})</h2>
+        <p class="section-desc">These are the people who represent you. They work for you and must hear from
+            constituents.</p>
+        {% endif %}
+
+        {% if senator %}
+        {{ member_card(senator, "Your Senator", "role-senator") }}
+        {% endif %}
+
+        {% if representative %}
+        {{ member_card(representative, "Your Representative", "role-rep") }}
+        {% endif %}
+
+        {# ── Strategic Targets ── #}
+
+        {% if super_ally or broker or ally %}
+        <h2>Strategic Targets{% if category %} &mdash; {{ category }}{% endif %}</h2>
+        <p class="section-desc">
+            {% if category %}
+            Filtered to legislators on <strong>{{ category }}</strong> committees.
+            {% else %}
+            These legislators were identified by our analytics engine as high-impact advocacy targets beyond your own
+            district.
+            {% endif %}
+        </p>
+        {% endif %}
+
+        {% if super_ally %}
+        {{ member_card(super_ally, "Super Ally", "role-super-ally") }}
+        {% endif %}
+
+        {% if broker %}
+        {{ member_card(broker, "Power Broker", "role-broker") }}
+        {% endif %}
+
+        {% if ally %}
+        {{ member_card(ally, "Potential Ally", "role-ally") }}
+        {% endif %}
+
+        {% if senator or representative or broker or ally or super_ally %}
+    </main>
+</div>
+{% endif %}

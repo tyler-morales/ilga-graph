@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 
-from .models import Bill, Member, WitnessSlip
+from .models import Bill, Committee, CommitteeMemberRole, Member, WitnessSlip
 
 # ── Status classification ────────────────────────────────────────────────────
 
@@ -168,6 +168,32 @@ def is_substantive(bill_number: str) -> bool:
     return any(upper.startswith(p) for p in _SUBSTANTIVE_PREFIXES)
 
 
+def is_shell_bill(bill: Bill) -> bool:
+    """Return ``True`` if *bill* is a procedural shell / placeholder.
+
+    Shell bills are filed as legislative vehicles and were never intended to
+    pass on their own merits.  They should be excluded from the effectiveness
+    denominator so they don't penalise leadership who file them.
+
+    Detection uses keyword matching on the abbreviated ILGA description:
+
+    - Description contains "Technical" or "Shell" (case-insensitive), **or**
+    - Description ends with "-TECH" (ILGA abbreviation for technical bills,
+      e.g. "LOCAL GOVERNMENT-TECH", "TRANSPORTATION-TECH").
+
+    Note: The ``bill.description`` field from ILGA index pages is always
+    short (≤30 chars).  We do NOT use a length threshold — that would
+    incorrectly mark every bill as a shell.
+    """
+    desc = (bill.description or "").strip()
+    desc_upper = desc.upper()
+    if "TECHNICAL" in desc_upper or "SHELL" in desc_upper:
+        return True
+    if desc_upper.endswith("-TECH"):
+        return True
+    return False
+
+
 # ── Co-sponsor map ───────────────────────────────────────────────────────────
 
 
@@ -233,8 +259,10 @@ def compute_scorecard(member: Member) -> MemberScorecard:
 
     success_rate = counts[BillStatus.PASSED] / total if total > 0 else 0.0
 
-    # Separate substantive laws from resolutions
-    laws = [b for b in bills if is_substantive(b.bill_number)]
+    # Separate substantive laws from resolutions, excluding shell bills
+    # from the effectiveness denominator so procedural placeholders don't
+    # penalise leadership.
+    laws = [b for b in bills if is_substantive(b.bill_number) and not is_shell_bill(b)]
     resolutions = [b for b in bills if not is_substantive(b.bill_number)]
     law_count = len(laws)
 
@@ -301,8 +329,8 @@ def compute_all_scorecards(
 
         success_rate = counts[BillStatus.PASSED] / total if total > 0 else 0.0
 
-        # ── Filter: laws vs resolutions ──
-        laws = [b for b in bills if is_substantive(b.bill_number)]
+        # ── Filter: laws vs resolutions (shell bills excluded from denominator) ──
+        laws = [b for b in bills if is_substantive(b.bill_number) and not is_shell_bill(b)]
         resolutions = [b for b in bills if not is_substantive(b.bill_number)]
         law_count = len(laws)
 
@@ -545,3 +573,244 @@ def compute_advancement_analytics(
         "high_volume_stalled": high_volume_stalled_bills,
         "high_volume_passed": high_volume_passed_bills,
     }
+
+
+# ── Committee-level analytics ─────────────────────────────────────────────────
+
+
+def _normalise_committee_bill_number(bn: str) -> str:
+    """Normalise a bill number from a committee bills page to match cache format.
+
+    Committee pages may list bills without leading zeros (``SB79`` instead of
+    ``SB0079``) and sometimes append amendment suffixes like ``(SCA1)``.  The
+    bill cache always stores 4-digit zero-padded numbers (``SB0079``).
+
+    This function strips the suffix and zero-pads the numeric portion to 4
+    digits so lookups against the bill cache succeed.
+    """
+    # Strip amendment / SCA suffixes: "SB228 (SCA1)" -> "SB228"
+    cleaned = re.sub(r"\s*\(.*\)\s*$", "", bn).strip()
+    m = re.match(r"^([A-Za-z]+)(\d+)$", cleaned)
+    if m:
+        prefix, num = m.group(1), m.group(2)
+        return f"{prefix.upper()}{num.zfill(4)}"
+    return cleaned.upper()
+
+
+@dataclass
+class CommitteeStats:
+    """Aggregate bill-outcome metrics for a single committee."""
+
+    total_bills: int
+    advanced_count: int  # bills that passed out of committee stage
+    passed_count: int  # bills that became law (Public Act / signed)
+    advancement_rate: float  # advanced_count / total_bills
+    pass_rate: float  # passed_count / total_bills
+
+
+def _build_committee_name_index(
+    committees: list[Committee],
+) -> dict[str, str]:
+    """Build a fuzzy committee-name -> code lookup for action_history matching.
+
+    Action history entries use full names like ``"Executive Committee"`` or
+    ``"Judiciary - Civil Committee"`` while our committee data has short names
+    like ``"Executive"`` or ``"Judiciary - Civil"``.  This builds a lookup
+    that handles both forms plus several abbreviation variants.
+    """
+    index: dict[str, str] = {}
+    for c in committees:
+        lower = c.name.lower().strip()
+        index[lower] = c.code
+        # "Executive" -> also match "Executive Committee"
+        index[lower + " committee"] = c.code
+        # "Approp- Health and Human" -> also match "Appropriations- Health..."
+        if lower.startswith("approp-"):
+            expanded = "appropriations-" + lower[len("approp-") :]
+            index[expanded] = c.code
+            index[expanded + " committee"] = c.code
+            # Some action_history uses "Appropriations- " (with space)
+            expanded_sp = "appropriations- " + lower[len("approp- ") :].lstrip()
+            index[expanded_sp] = c.code
+            index[expanded_sp + " committee"] = c.code
+    return index
+
+
+_ASSIGNED_RE = re.compile(r"(?:Assigned to|Referred to)(.+)", re.IGNORECASE)
+
+
+def _build_full_committee_bills(
+    committees: list[Committee],
+    committee_bills: dict[str, list[str]],
+    all_bills: list[Bill],
+) -> dict[str, set[str]]:
+    """Merge committee bills from ILGA page data AND bill action_history.
+
+    The ILGA committee bills page only shows bills **currently pending** in
+    each committee.  Bills that already passed through are no longer listed.
+    To get accurate historical throughput, we also scan every bill's
+    ``action_history`` for "Assigned to"/"Referred to" actions and match the
+    committee name back to a committee code.
+
+    Returns a mapping of committee code -> set of bill_numbers (normalised).
+    """
+    name_index = _build_committee_name_index(committees)
+
+    # Seed with the ILGA page data (normalised)
+    full: dict[str, set[str]] = {}
+    for code, raw_bns in committee_bills.items():
+        seen: set[str] = set()
+        for raw_bn in raw_bns:
+            seen.add(_normalise_committee_bill_number(raw_bn))
+        full[code] = seen
+
+    # Augment with action_history scanning
+    for bill in all_bills:
+        for entry in bill.action_history:
+            m = _ASSIGNED_RE.match(entry.action)
+            if not m:
+                continue
+            cname = m.group(1).strip().lower()
+            # Skip generic routing (Assignments, Rules Committee)
+            if cname in ("assignments", "rules committee"):
+                continue
+            code = name_index.get(cname)
+            if code is not None:
+                full.setdefault(code, set()).add(bill.bill_number)
+
+    return full
+
+
+def compute_committee_stats(
+    committees: list[Committee],
+    committee_bills: dict[str, list[str]],
+    bill_lookup: dict[str, Bill],
+) -> dict[str, CommitteeStats]:
+    """Compute per-committee bill advancement and passage statistics.
+
+    Merges two data sources for comprehensive coverage:
+
+    1. **ILGA committee bills page** — lists bills currently pending in each
+       committee (from ``committee_bills``).
+    2. **Bill action_history** — "Assigned to"/"Referred to" actions across
+       all bills reveal historical committee assignments, including bills
+       that already passed through and are no longer listed on the page.
+
+    For each committee's full bill set, we classify pipeline stage to
+    determine:
+
+    - **advanced_count**: bills that progressed past the committee stage
+      (pipeline depth >= 2, i.e. COMMITTEE_PASSED or beyond).
+    - **passed_count**: bills that became law (status == PASSED).
+
+    Parameters
+    ----------
+    committees:
+        Full list of ``Committee`` objects.
+    committee_bills:
+        Mapping of committee code -> list of bill numbers (raw from scrape).
+    bill_lookup:
+        Mapping of bill leg_id -> ``Bill``.
+
+    Returns
+    -------
+    dict mapping committee code to its :class:`CommitteeStats`.
+    """
+    # Build a bill_number -> Bill index for fast lookup
+    bn_lookup: dict[str, Bill] = {}
+    for bill in bill_lookup.values():
+        bn_lookup[bill.bill_number] = bill
+
+    # Merge ILGA page data + action_history for full coverage
+    full_bills = _build_full_committee_bills(
+        committees,
+        committee_bills,
+        list(bill_lookup.values()),
+    )
+
+    stats: dict[str, CommitteeStats] = {}
+
+    for committee in committees:
+        bill_numbers = full_bills.get(committee.code, set())
+        total = 0
+        advanced = 0
+        passed = 0
+
+        for bn in bill_numbers:
+            bill = bn_lookup.get(bn)
+            if bill is None:
+                continue
+            total += 1
+            stage = classify_pipeline_stage(bill.last_action)
+            if stage.depth >= PipelineStage.COMMITTEE_PASSED.depth:
+                advanced += 1
+            status = classify_bill_status(bill.last_action)
+            if status == BillStatus.PASSED:
+                passed += 1
+
+        stats[committee.code] = CommitteeStats(
+            total_bills=total,
+            advanced_count=advanced,
+            passed_count=passed,
+            advancement_rate=round(advanced / total, 4) if total > 0 else 0.0,
+            pass_rate=round(passed / total, 4) if total > 0 else 0.0,
+        )
+
+    return stats
+
+
+def build_member_committee_roles(
+    committees: list[Committee],
+    committee_rosters: dict[str, list[CommitteeMemberRole]],
+    committee_stats: dict[str, CommitteeStats],
+) -> dict[str, list[dict]]:
+    """Build a reverse index: member_id -> list of committee assignment dicts.
+
+    Each dict contains the committee code, name, role, leadership flag, and
+    bill advancement statistics — ready for template rendering.
+
+    Roles are sorted with leadership positions first:
+    Chair > Vice-Chair > Minority Spokesperson > Member.
+    """
+    _ROLE_SORT_ORDER = {
+        "chair": 0,
+        "vice-chair": 1,
+        "minority spokesperson": 2,
+        "member": 3,
+    }
+
+    member_roles: dict[str, list[dict]] = {}
+    committee_name_lookup = {c.code: c.name for c in committees}
+
+    for code, roster in committee_rosters.items():
+        cname = committee_name_lookup.get(code, code)
+        cstats = committee_stats.get(code)
+
+        for cmr in roster:
+            role_lower = cmr.role.lower()
+            is_leadership = "chair" in role_lower or "spokesperson" in role_lower
+
+            entry = {
+                "code": code,
+                "name": cname,
+                "role": cmr.role,
+                "is_leadership": is_leadership,
+                "total_bills": cstats.total_bills if cstats else 0,
+                "advanced_count": cstats.advanced_count if cstats else 0,
+                "advancement_rate_pct": (round(cstats.advancement_rate * 100) if cstats else 0),
+                "passed_count": cstats.passed_count if cstats else 0,
+                "pass_rate_pct": (round(cstats.pass_rate * 100) if cstats else 0),
+            }
+
+            member_roles.setdefault(cmr.member_id, []).append(entry)
+
+    # Sort each member's committees: leadership first, then alphabetical
+    for mid, roles in member_roles.items():
+        roles.sort(
+            key=lambda r: (
+                _ROLE_SORT_ORDER.get(r["role"].lower(), 99),
+                r["name"],
+            )
+        )
+
+    return member_roles

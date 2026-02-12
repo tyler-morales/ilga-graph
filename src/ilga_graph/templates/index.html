@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} — Find Your Targets{% endblock %}
+
+{% block content %}
+<h1>Kei Truck Freedom</h1>
+<p>Find your Illinois advocacy targets. Enter your ZIP code to identify your
+<strong>Senator</strong> and <strong>Representative</strong>, plus a
+<strong>Power Broker</strong> to pressure and a potential
+<strong>Ally</strong> to recruit.</p>
+
+<div class="search-form">
+    <form action="/advocacy/search" method="post"
+          hx-post="/advocacy/search"
+          hx-target="#results"
+          hx-swap="innerHTML"
+          hx-indicator="#search-spinner">
+        <label for="zip_code">Illinois ZIP Code</label>
+        <input type="text" id="zip_code" name="zip_code"
+               placeholder="e.g. 60614" maxlength="5" required
+               value="{{ zip or '' }}">
+
+        <label for="category" style="margin-top: 10px;">Policy Category <span style="font-weight:normal; color:#888;">(optional)</span></label>
+        <select id="category" name="category">
+            {% for value, label in categories %}
+            <option value="{{ value }}" {% if category is defined and category == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+
+        <div style="margin-top: 10px;">
+            <button type="submit">Find Targets</button>
+            <span id="search-spinner" class="htmx-indicator">Searching&hellip;</span>
+        </div>
+    </form>
+</div>
+
+{% if error %}
+<div class="error-msg">{{ error }}</div>
+{% endif %}
+
+<div id="results">
+{% block results %}{% endblock %}
+</div>
+{% endblock %}
