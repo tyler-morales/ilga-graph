@@ -1,4 +1,4 @@
-{# Voting Coalitions tab partial #}
+{# Voting Coalitions tab partial -- v4 with names, focus areas, signature bills #}
 {% if not groups %}
 <div class="intel-empty">No coalition data available.</div>
 {% else %}
@@ -6,16 +6,26 @@
 <div class="intel-section-header">
     <h2>Voting Coalitions</h2>
     <p>{{ groups|length }} voting blocs discovered via graph analysis of voting patterns and co-sponsorship.
-       Cross-party blocs are highlighted.</p>
+       Each coalition is named by its policy focus, partisan composition, and voting behavior.</p>
 </div>
 
 <div class="coalition-grid">
     {% for g in groups %}
     <div class="coalition-card {% if g.cross_party %}coalition-cross-party{% endif %}">
         <div class="coalition-header">
-            <h3>Coalition {{ g.id + 1 }}</h3>
+            <h3>{{ g.name }}</h3>
             <span class="coalition-size">{{ g.size }} members</span>
         </div>
+
+        {# Policy focus tags #}
+        {% if g.focus_areas %}
+        <div class="coalition-focus-tags">
+            {% for area in g.focus_areas %}
+            <span class="focus-tag">{{ area }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         <div class="coalition-party-bar">
             {% if g.dem > 0 %}
             <div class="party-dem" style="width: {{ (g.dem / g.size * 100)|int }}%"
@@ -26,9 +36,35 @@
                  title="{{ g.rep }} Republicans">R: {{ g.rep }}</div>
             {% endif %}
         </div>
-        {% if g.cross_party %}
-        <div class="coalition-cross-label">Cross-party bloc</div>
+
+        {# Stats row #}
+        <div class="coalition-stats">
+            <span title="How often bloc members agree on the same vote">Cohesion: <strong>{{ "%.0f"|format(g.cohesion * 100) }}%</strong></span>
+            <span title="Percentage of YES votes cast by this coalition">YES rate: <strong>{{ "%.0f"|format(g.yes_rate * 100) }}%</strong></span>
+            {% if g.cross_party %}
+            <span class="coalition-cross-label">Cross-party</span>
+            {% endif %}
+        </div>
+
+        {# Signature bills #}
+        {% if g.signature_bills %}
+        <details class="coalition-members-toggle">
+            <summary>Top bills ({{ g.signature_bills|length }})</summary>
+            <table class="intel-table intel-table-compact">
+                <thead><tr><th>Bill</th><th>Description</th><th>YES</th></tr></thead>
+                <tbody>
+                    {% for b in g.signature_bills %}
+                    <tr>
+                        <td class="bill-num"><strong>{{ b.get('bill_number', '') }}</strong></td>
+                        <td>{{ b.get('description', '')[:60] }}</td>
+                        <td style="text-align:right">{{ b.get('yes_votes', 0) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </details>
         {% endif %}
+
         <details class="coalition-members-toggle">
             <summary>Show members ({{ g.size }})</summary>
             <table class="intel-table intel-table-compact">

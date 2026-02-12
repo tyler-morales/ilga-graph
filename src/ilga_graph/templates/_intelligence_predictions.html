@@ -1,20 +1,25 @@
-{# Bill Predictions tab partial #}
+{# Bill Predictions tab partial -- v4 with pipeline stage + stuck analysis #}
 {% if not predictions %}
 <div class="intel-empty">No bill predictions available.</div>
 {% else %}
 
 <div class="intel-section-header">
     <h2>Bill Outcome Predictions</h2>
-    <p>{{ predictions|length }} bills scored. <strong>Green</strong> = likely to advance. <strong>Red</strong> = likely stuck.
-       Forecasts (label not yet reliable) shown in <em>italics</em>.</p>
+    <p>{{ predictions|length }} bills scored. Shows ML prediction, current pipeline stage,
+       and stuck-bill analysis. Forecasts (label not yet reliable) shown in <em>italics</em>.</p>
 </div>
 
 {# Quick filters #}
 <div class="intel-filters">
-    <label><input type="checkbox" id="filter-forecasts" onchange="filterPredictions()"> Forecasts only (new bills)</label>
+    <label><input type="checkbox" id="filter-forecasts" onchange="filterPredictions()"> Forecasts only</label>
     <label><input type="checkbox" id="filter-advance" onchange="filterPredictions()"> ADVANCE only</label>
     <label><input type="checkbox" id="filter-stuck" onchange="filterPredictions()"> STUCK only</label>
     <label><input type="checkbox" id="filter-high-conf" onchange="filterPredictions()"> High confidence (&ge;80%)</label>
+    <span style="margin-left:12px; color:#888;">|</span>
+    <label><input type="checkbox" id="filter-stagnant" onchange="filterPredictions()"> Stagnant</label>
+    <label><input type="checkbox" id="filter-dead" onchange="filterPredictions()"> Dead</label>
+    <label><input type="checkbox" id="filter-slow" onchange="filterPredictions()"> Slow</label>
+    <label><input type="checkbox" id="filter-new" onchange="filterPredictions()"> New</label>
 </div>
 
 <table class="intel-table" id="predictions-table">
@@ -23,11 +28,12 @@
             <th>Bill</th>
             <th>Description</th>
             <th>Sponsor</th>
-            <th>Chamber</th>
             <th>P(Advance)</th>
             <th>Prediction</th>
             <th>Confidence</th>
-            <th>Actual</th>
+            <th>Pipeline Stage</th>
+            <th>Status</th>
+            <th>Days Idle</th>
         </tr>
     </thead>
     <tbody>
@@ -35,11 +41,12 @@
         <tr class="pred-row {% if not p.label_reliable %}forecast{% endif %}"
             data-outcome="{{ p.predicted_outcome }}"
             data-confidence="{{ p.confidence }}"
-            data-forecast="{{ 'true' if not p.label_reliable else 'false' }}">
+            data-forecast="{{ 'true' if not p.label_reliable else 'false' }}"
+            data-stuck="{{ p.stuck_status|lower }}"
+            data-stage="{{ p.current_stage }}">
             <td class="bill-num"><strong>{{ p.bill_number }}</strong></td>
-            <td class="desc-cell" title="{{ p.description }}">{{ p.description[:80] }}{% if p.description|length > 80 %}&hellip;{% endif %}</td>
+            <td class="desc-cell" title="{{ p.description }}">{{ p.description[:70] }}{% if p.description|length > 70 %}&hellip;{% endif %}</td>
             <td>{{ p.sponsor }}</td>
-            <td>{{ p.chamber_origin }}</td>
             <td>
                 <div class="score-bar-container">
                     <div class="score-bar {% if p.prob_advance >= 0.7 %}score-high{% elif p.prob_advance >= 0.4 %}score-mid{% else %}score-low{% endif %}"
@@ -53,10 +60,41 @@
             </td>
             <td>{{ "%.0f"|format(p.confidence * 100) }}%</td>
             <td>
-                {% if p.label_reliable %}
-                <span class="intel-outcome intel-outcome-{{ p.actual_outcome|lower }}">{{ p.actual_outcome }}</span>
+                {# Pipeline progress bar #}
+                <div class="pipeline-stage-cell">
+                    <div class="pipeline-bar-container">
+                        {% set prog_pct = (p.stage_progress * 100)|int %}
+                        {% if p.current_stage == 'VETOED' %}
+                        <div class="pipeline-bar pipeline-vetoed" style="width: 100%"></div>
+                        {% elif p.current_stage == 'SIGNED' %}
+                        <div class="pipeline-bar pipeline-signed" style="width: 100%"></div>
+                        {% else %}
+                        <div class="pipeline-bar pipeline-active" style="width: {{ prog_pct }}%"></div>
+                        {% endif %}
+                    </div>
+                    <span class="pipeline-label">{{ p.stage_label }}</span>
+                </div>
+            </td>
+            <td>
+                {% if p.stuck_status %}
+                <span class="stuck-badge stuck-{{ p.stuck_status|lower }}" title="{{ p.stuck_reason }}">{{ p.stuck_status }}</span>
+                {% elif p.current_stage == 'SIGNED' %}
+                <span class="stuck-badge stuck-law">LAW</span>
+                {% elif p.current_stage == 'VETOED' %}
+                <span class="stuck-badge stuck-dead">VETOED</span>
+                {% elif p.stage_progress >= 0.55 %}
+                <span class="stuck-badge stuck-advancing">MOVING</span>
                 {% else %}
-                <span class="intel-forecast-label">TBD</span>
+                <span class="stuck-badge stuck-ok">OK</span>
+                {% endif %}
+            </td>
+            <td style="text-align:right">
+                {% if p.days_since_action > 180 %}
+                <span class="days-stale days-critical">{{ p.days_since_action }}d</span>
+                {% elif p.days_since_action > 60 %}
+                <span class="days-stale days-warn">{{ p.days_since_action }}d</span>
+                {% else %}
+                <span class="days-fresh">{{ p.days_since_action }}d</span>
                 {% endif %}
             </td>
         </tr>
@@ -70,12 +108,26 @@ function filterPredictions() {
     const advanceOnly = document.getElementById('filter-advance').checked;
     const stuckOnly = document.getElementById('filter-stuck').checked;
     const highConf = document.getElementById('filter-high-conf').checked;
+    const stagnant = document.getElementById('filter-stagnant').checked;
+    const dead = document.getElementById('filter-dead').checked;
+    const slow = document.getElementById('filter-slow').checked;
+    const newOnly = document.getElementById('filter-new').checked;
+    const hasStuckFilter = stagnant || dead || slow || newOnly;
+
     document.querySelectorAll('#predictions-table .pred-row').forEach(row => {
         let show = true;
         if (forecastOnly && row.dataset.forecast !== 'true') show = false;
         if (advanceOnly && row.dataset.outcome !== 'ADVANCE') show = false;
         if (stuckOnly && row.dataset.outcome !== 'STUCK') show = false;
         if (highConf && parseFloat(row.dataset.confidence) < 0.8) show = false;
+        if (hasStuckFilter) {
+            const ss = row.dataset.stuck;
+            const match = (stagnant && ss === 'stagnant') ||
+                          (dead && ss === 'dead') ||
+                          (slow && ss === 'slow') ||
+                          (newOnly && ss === 'new');
+            if (!match) show = false;
+        }
         row.style.display = show ? '' : 'none';
     });
 }

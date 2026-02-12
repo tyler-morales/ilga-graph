@@ -312,6 +312,18 @@ make ml-predict    # Bill scoring only
 - **Navigation**: Links between `/advocacy` and `/intelligence` dashboards.
 - **Pipeline steps updated** (7 steps): 0=Backtest, 1=Data Pipeline, 2=Entity Resolution, 3=Bill Scoring, 4=Coalitions, 5=Anomaly Detection, 6=Snapshot
 
+### v4: Coalition Naming, Bill Pipeline Stage, Stuck-Bill Analysis
+
+- **Coalition characterization** (`ml/coalitions.py`): After clustering, new `characterize_coalitions()` joins votes → bills → committees to profile each bloc by policy focus. Generates descriptive names from partisan composition + policy areas + voting style + cohesion (e.g., "Consensus Dem-Leaning Education & State Government Bloc", "GOP-Leaning Education & State Government Bloc"). Computes per-coalition: top 3 policy areas, YES rate, cohesion score, and 5 signature bills (highest YES support). Saves `coalition_profiles.json`.
+- **Bill pipeline stage** (`ml/features.py`): New `compute_bill_stage()` walks each bill's action history to determine the highest legislative stage reached (FILED → IN_COMMITTEE → PASSED_COMMITTEE → FLOOR_VOTE → CROSSED_CHAMBERS → PASSED_BOTH → SIGNED, or VETOED). Returns stage name + progress fraction (0.0–1.0).
+- **Stuck-bill analysis** (`ml/features.py`): New `classify_stuck_status()` sub-classifies non-advancing bills into 5 nuanced statuses: DEAD (vetoed/tabled/session-dead), STAGNANT (180+ days inactive), SLOW (60–180 days), PENDING (active within 60 days), NEW (introduced <30 days ago). Each includes a human-readable reason string.
+- **Score columns updated** (`ml/bill_predictor.py`): `score_all_bills()` now replaces `actual_outcome` with `current_stage`, `stage_progress`, `stage_label`, `days_since_action`, `stuck_status`, `stuck_reason`. Uses `last_action_date` from dim_bills for staleness.
+- **ML loader updated** (`ml_loader.py`): `BillScore` dataclass gets 8 new stage/stuck fields. `CoalitionMember` gets `coalition_name` and `coalition_focus`. New `CoalitionProfile` dataclass. `MLData` includes `coalition_profiles` list.
+- **GraphQL API** (`main.py`): `BillPredictionType` gains `currentStage`, `stageProgress`, `stageLabel`, `daysSinceAction`, `stuckStatus`, `stuckReason`. Bill predictions resolver gains `stuckStatus` and `stage` filters. `CoalitionGroupType` gains `name`, `focusAreas`, `yesRate`, `cohesion`, `signatureBills`. New `SignatureBillType`.
+- **Predictions dashboard** (`_intelligence_predictions.html`): Replaced "Actual" column with pipeline progress bar (color-coded by stage), stuck-status badge (color-coded: red=stagnant, orange=slow, yellow=pending, blue=new, gray=dead), and days-idle indicator. Added client-side filters for stuck sub-statuses (Stagnant, Dead, Slow, New).
+- **Coalitions dashboard** (`_intelligence_coalitions.html`): Replaced "Coalition N" labels with generated names. Added policy focus tags, cohesion/YES-rate stats, signature bills table per coalition card.
+- **CSS** (`base.html`): Pipeline progress bars, stuck-status badge colors, days-idle indicators, focus tags, coalition stats.
+
 - **Next (ML backlog)**:
   - Individual vote prediction (recommender system using member embeddings from matrix factorization)
   - "Poison pill" detector (semantic similarity between original and amendment synopses)

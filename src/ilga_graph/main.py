@@ -1223,13 +1223,19 @@ class Query:
         min_confidence: float | None = None,
         reliable_only: bool = False,
         forecasts_only: bool = False,
+        stuck_status: str | None = None,
+        stage: str | None = None,
         sort_by: str = "prob_advance",
         offset: int = 0,
         limit: int = 50,
     ) -> BillPredictionConnection:
         ml = state.ml
         if not ml or not ml.available:
-            empty_page = PageInfo(total_count=0, has_next_page=False, has_previous_page=False)
+            empty_page = PageInfo(
+                total_count=0,
+                has_next_page=False,
+                has_previous_page=False,
+            )
             return BillPredictionConnection(items=[], page_info=empty_page)
 
         results = list(ml.bill_scores)
@@ -1241,6 +1247,10 @@ class Query:
             results = [s for s in results if s.label_reliable]
         if forecasts_only:
             results = [s for s in results if not s.label_reliable]
+        if stuck_status:
+            results = [s for s in results if s.stuck_status == stuck_status.upper()]
+        if stage:
+            results = [s for s in results if s.current_stage == stage.upper()]
 
         if sort_by == "confidence":
             results.sort(key=lambda s: -s.confidence)
@@ -1249,21 +1259,7 @@ class Query:
 
         page, page_info = paginate(results, offset, limit)
         return BillPredictionConnection(
-            items=[
-                BillPredictionType(
-                    bill_number=s.bill_number,
-                    description=s.description,
-                    sponsor=s.sponsor,
-                    prob_advance=round(s.prob_advance, 4),
-                    predicted_outcome=s.predicted_outcome,
-                    actual_outcome=s.actual_outcome,
-                    confidence=round(s.confidence, 4),
-                    label_reliable=s.label_reliable,
-                    chamber_origin=s.chamber_origin,
-                    introduction_date=s.introduction_date,
-                )
-                for s in page
-            ],
+            items=[_bill_score_to_type(s) for s in page],
             page_info=page_info,
         )
 
@@ -1274,18 +1270,7 @@ class Query:
             return None
         for s in ml.bill_scores:
             if s.bill_number == bill_number:
-                return BillPredictionType(
-                    bill_number=s.bill_number,
-                    description=s.description,
-                    sponsor=s.sponsor,
-                    prob_advance=round(s.prob_advance, 4),
-                    predicted_outcome=s.predicted_outcome,
-                    actual_outcome=s.actual_outcome,
-                    confidence=round(s.confidence, 4),
-                    label_reliable=s.label_reliable,
-                    chamber_origin=s.chamber_origin,
-                    introduction_date=s.introduction_date,
-                )
+                return _bill_score_to_type(s)
         return None
 
     @strawberry.field(description="Discovered voting coalitions from the ML pipeline.")
@@ -1296,16 +1281,31 @@ class Query:
         groups: dict[int, list] = {}
         for m in ml.coalitions:
             groups.setdefault(m.coalition_id, []).append(m)
+        # Build profile lookup
+        prof_map = {p.coalition_id: p for p in ml.coalition_profiles}
         result = []
         for cid, members in sorted(groups.items()):
             dem = sum(1 for m in members if m.party == "Democrat")
             rep = sum(1 for m in members if m.party == "Republican")
+            prof = prof_map.get(cid)
             result.append(
                 CoalitionGroupType(
                     coalition_id=cid,
+                    name=prof.name if prof else f"Coalition {cid + 1}",
                     size=len(members),
                     dem_count=dem,
                     rep_count=rep,
+                    focus_areas=prof.focus_areas if prof else [],
+                    yes_rate=round(prof.yes_rate, 3) if prof else 0.0,
+                    cohesion=round(prof.cohesion, 3) if prof else 0.0,
+                    signature_bills=[
+                        SignatureBillType(
+                            bill_number=b.get("bill_number", ""),
+                            description=b.get("description", ""),
+                            yes_votes=b.get("yes_votes", 0),
+                        )
+                        for b in (prof.signature_bills if prof else [])[:5]
+                    ],
                     members=[
                         CoalitionMemberType(
                             name=m.name,
@@ -1427,11 +1427,20 @@ class BillPredictionType:
     sponsor: str
     prob_advance: float
     predicted_outcome: str
-    actual_outcome: str
     confidence: float
     label_reliable: bool
     chamber_origin: str
     introduction_date: str
+    # Pipeline stage (v4)
+    current_stage: str = ""
+    stage_progress: float = 0.0
+    stage_label: str = ""
+    days_since_action: int = 0
+    last_action_text: str = ""
+    last_action_date: str = ""
+    # Stuck analysis (v4)
+    stuck_status: str = ""
+    stuck_reason: str = ""
 
 
 @strawberry.type
@@ -1449,11 +1458,23 @@ class CoalitionMemberType:
 
 
 @strawberry.type
+class SignatureBillType:
+    bill_number: str
+    description: str
+    yes_votes: int
+
+
+@strawberry.type
 class CoalitionGroupType:
     coalition_id: int
+    name: str
     size: int
     dem_count: int
     rep_count: int
+    focus_areas: list[str]
+    yes_rate: float
+    cohesion: float
+    signature_bills: list[SignatureBillType]
     members: list[CoalitionMemberType]
 
 
@@ -1522,6 +1543,32 @@ class AccuracySnapshotType:
     f1_advance: float
     model_version: str
     biggest_misses: list[PredictionMissType]
+
+
+# ── ML Intelligence helpers ──────────────────────────────────────────────
+
+
+def _bill_score_to_type(s) -> BillPredictionType:
+    """Convert a BillScore dataclass to a GraphQL BillPredictionType."""
+    return BillPredictionType(
+        bill_number=s.bill_number,
+        description=s.description,
+        sponsor=s.sponsor,
+        prob_advance=round(s.prob_advance, 4),
+        predicted_outcome=s.predicted_outcome,
+        confidence=round(s.confidence, 4),
+        label_reliable=s.label_reliable,
+        chamber_origin=s.chamber_origin,
+        introduction_date=s.introduction_date,
+        current_stage=s.current_stage,
+        stage_progress=round(s.stage_progress, 2),
+        stage_label=s.stage_label,
+        days_since_action=s.days_since_action,
+        last_action_text=s.last_action_text,
+        last_action_date=s.last_action_date,
+        stuck_status=s.stuck_status,
+        stuck_reason=s.stuck_reason,
+    )
 
 
 from strawberry.extensions import QueryDepthLimiter  # noqa: E402
@@ -2424,18 +2471,27 @@ async def intelligence_coalitions(request: Request):
     for m in ml.coalitions:
         groups.setdefault(m.coalition_id, []).append(m)
 
+    # Build profile lookup
+    prof_map = {p.coalition_id: p for p in ml.coalition_profiles}
+
     coalition_list = []
     for cid, members in sorted(groups.items()):
         dem = sum(1 for m in members if m.party == "Democrat")
         rep = sum(1 for m in members if m.party == "Republican")
         members_sorted = sorted(members, key=lambda m: (m.party, m.name))
+        prof = prof_map.get(cid)
         coalition_list.append(
             {
                 "id": cid,
+                "name": prof.name if prof else f"Coalition {cid + 1}",
                 "size": len(members),
                 "dem": dem,
                 "rep": rep,
                 "cross_party": dem > 0 and rep > 0,
+                "focus_areas": prof.focus_areas if prof else [],
+                "yes_rate": prof.yes_rate if prof else 0.0,
+                "cohesion": prof.cohesion if prof else 0.0,
+                "signature_bills": (prof.signature_bills[:5] if prof else []),
                 "members": members_sorted,
             }
         )

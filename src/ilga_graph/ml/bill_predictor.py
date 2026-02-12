@@ -359,7 +359,18 @@ def score_all_bills(
     *,
     immature_ids: set[str] | None = None,
 ) -> pl.DataFrame:
-    """Score every bill with probability of advancement."""
+    """Score every bill with probability of advancement.
+
+    Also computes pipeline stage, staleness, and stuck sub-status.
+    """
+    from datetime import datetime as _dt
+
+    from .features import (
+        _stage_label,
+        classify_stuck_status,
+        compute_bill_stage,
+    )
+
     y_proba = model.predict_proba(X_all)[:, 1]
     y_pred = model.predict(X_all)
     immature_ids = immature_ids or set()
@@ -369,13 +380,13 @@ def score_all_bills(
             "bill_id": bill_ids_all,
             "prob_advance": [round(float(p), 4) for p in y_proba],
             "predicted_outcome": ["ADVANCE" if p == 1 else "STUCK" for p in y_pred],
-            "actual_outcome": ["ADVANCE" if y == 1 else "STUCK" for y in y_all],
             "confidence": [round(float(max(p, 1 - p)), 4) for p in y_proba],
             "label_reliable": [bid not in immature_ids for bid in bill_ids_all],
         }
     )
 
     df_bills = pl.read_parquet(PROCESSED_DIR / "dim_bills.parquet")
+    df_actions = pl.read_parquet(PROCESSED_DIR / "fact_bill_actions.parquet")
     df_scores = df_scores.join(
         df_bills.select(
             [
@@ -386,10 +397,89 @@ def score_all_bills(
                 "primary_sponsor",
                 "chamber_origin",
                 "introduction_date",
+                "last_action",
+                "last_action_date",
             ]
         ),
         on="bill_id",
         how="left",
+    )
+
+    # Group actions per bill for stage computation
+    bill_action_texts = (
+        df_actions.group_by("bill_id").agg(pl.col("action_text").alias("actions")).to_dicts()
+    )
+    action_map = {row["bill_id"]: row["actions"] for row in bill_action_texts}
+
+    now = _dt.now()
+
+    # Compute stage, stuck status for each bill
+    stages = []
+    stage_progresses = []
+    days_since_actions = []
+    stuck_statuses = []
+    stuck_reasons = []
+    stage_labels = []
+
+    for row in df_scores.to_dicts():
+        bid = row["bill_id"]
+        actions = action_map.get(bid, [])
+
+        # Pipeline stage
+        stage, progress = compute_bill_stage(actions)
+        stages.append(stage)
+        stage_progresses.append(round(progress, 2))
+        stage_labels.append(_stage_label(stage))
+
+        # Days since last action
+        last_date_str = row.get("last_action_date")
+        days_inactive = 0
+        if last_date_str:
+            try:
+                last_dt = _dt.strptime(last_date_str, "%Y-%m-%d")
+                days_inactive = (now - last_dt).days
+            except ValueError:
+                try:
+                    last_dt = _dt.strptime(last_date_str, "%m/%d/%Y")
+                    days_inactive = (now - last_dt).days
+                except ValueError:
+                    pass
+        days_since_actions.append(days_inactive)
+
+        # Days since introduction
+        intro_str = row.get("introduction_date")
+        days_since_intro = 0
+        if intro_str:
+            try:
+                intro_dt = _dt.strptime(intro_str, "%Y-%m-%d")
+                days_since_intro = (now - intro_dt).days
+            except ValueError:
+                pass
+
+        # Stuck sub-status (only for non-advanced bills)
+        predicted = row.get("predicted_outcome", "STUCK")
+        if stage in ("SIGNED", "PASSED_BOTH", "CROSSED_CHAMBERS"):
+            stuck_statuses.append("")
+            stuck_reasons.append("")
+        elif predicted == "STUCK" or progress <= 0.40:
+            ss, sr = classify_stuck_status(stage, days_inactive, days_since_intro, actions)
+            stuck_statuses.append(ss)
+            stuck_reasons.append(sr)
+        else:
+            stuck_statuses.append("")
+            stuck_reasons.append("")
+
+    df_scores = df_scores.with_columns(
+        pl.Series("current_stage", stages, dtype=pl.Utf8),
+        pl.Series("stage_progress", stage_progresses, dtype=pl.Float64),
+        pl.Series("stage_label", stage_labels, dtype=pl.Utf8),
+        pl.Series(
+            "days_since_action",
+            days_since_actions,
+            dtype=pl.Int32,
+        ),
+        pl.Series("stuck_status", stuck_statuses, dtype=pl.Utf8),
+        pl.Series("stuck_reason", stuck_reasons, dtype=pl.Utf8),
     )
 
     df_scores = df_scores.sort("prob_advance", descending=True)
@@ -427,13 +517,16 @@ def display_score_summary(df_scores: pl.DataFrame) -> None:
         f"{len(predicted_advance):,} ({100 * len(predicted_advance) / total:.1f}%)",
     )
 
-    # Accuracy on mature bills only
-    mature_correct = reliable.filter(pl.col("predicted_outcome") == pl.col("actual_outcome"))
-    if len(reliable) > 0:
-        table.add_row(
-            "Accuracy on mature bills",
-            f"{100 * len(mature_correct) / len(reliable):.1f}%",
-        )
+    # Stage distribution on scored bills
+    if "current_stage" in df_scores.columns:
+        signed = len(df_scores.filter(pl.col("current_stage") == "SIGNED"))
+        in_committee = len(df_scores.filter(pl.col("current_stage") == "IN_COMMITTEE"))
+        stagnant = len(df_scores.filter(pl.col("stuck_status") == "STAGNANT"))
+        dead = len(df_scores.filter(pl.col("stuck_status") == "DEAD"))
+        table.add_row("Signed into law", f"{signed:,}")
+        table.add_row("In committee", f"{in_committee:,}")
+        table.add_row("Stagnant (180+ days)", f"{stagnant:,}")
+        table.add_row("Dead (vetoed/tabled)", f"{dead:,}")
 
     console.print(table)
 

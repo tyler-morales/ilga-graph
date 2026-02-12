@@ -80,6 +80,150 @@ def _bill_became_law(actions: list[str]) -> bool:
     return False
 
 
+# ── Bill pipeline stage classification ────────────────────────────────────────
+
+# Ordered from highest to lowest progress so we can find the "best" stage
+_STAGE_DEFINITIONS: list[tuple[str, float, list[str]]] = [
+    ("SIGNED", 1.0, ["Public Act", "Signed by Governor", "Appointment Confirmed"]),
+    ("VETOED", -1.0, ["Vetoed", "Total Veto", "Amendatory Veto", "Item Veto"]),
+    (
+        "PASSED_BOTH",
+        0.85,
+        ["Passed Both Houses", "Adopted Both Houses"],
+    ),
+    (
+        "CROSSED_CHAMBERS",
+        0.70,
+        ["Passed Both Houses", "Adopted Both Houses", "Arrives in"],
+    ),
+    (
+        "FLOOR_VOTE",
+        0.55,
+        [
+            "Third Reading - Passed",
+            "Third Reading",
+            "Second Reading",
+            "Resolution Adopted",
+        ],
+    ),
+    (
+        "PASSED_COMMITTEE",
+        0.40,
+        ["Do Pass", "Reported Out Of Committee"],
+    ),
+    ("IN_COMMITTEE", 0.25, ["Assigned to", "Referred to"]),
+    (
+        "FILED",
+        0.10,
+        ["First Reading", "Filed with"],
+    ),
+]
+
+# Death signals that indicate a bill is truly dead
+_DEATH_TOKENS = [
+    "Vetoed",
+    "Total Veto",
+    "Amendatory Veto",
+    "Item Veto",
+    "Tabled",
+    "Motion to Table",
+    "Postponed",
+    "Rule 19",
+    "sine die",
+    "Session Sine Die",
+]
+
+
+def compute_bill_stage(
+    actions: list[str],
+) -> tuple[str, float]:
+    """Determine the highest legislative stage reached by a bill.
+
+    Returns (stage_name, progress_fraction).
+    Progress is 0.0-1.0, with -1.0 for VETOED (terminal).
+    """
+    best_stage = "FILED"
+    best_progress = 0.10
+
+    for action_text in actions:
+        al = action_text.lower()
+        for stage, progress, tokens in _STAGE_DEFINITIONS:
+            for token in tokens:
+                if token.lower() in al:
+                    if progress > best_progress or (progress < 0 and stage == "VETOED"):
+                        best_stage = stage
+                        best_progress = progress
+                    break
+
+    return best_stage, best_progress
+
+
+def classify_stuck_status(
+    current_stage: str,
+    days_since_action: int,
+    days_since_intro: int,
+    actions: list[str],
+) -> tuple[str, str]:
+    """Classify a stuck bill into a nuanced sub-status.
+
+    Returns (stuck_status, stuck_reason).
+
+    Sub-statuses:
+        DEAD      - Vetoed, tabled, or session-dead
+        STAGNANT  - In committee, no action for 180+ days
+        SLOW      - Some activity, but 60-180 days since last action
+        PENDING   - Last action within 60 days
+        NEW       - Introduced less than 30 days ago
+    """
+    # Check for death signals
+    for action_text in actions:
+        al = action_text.lower()
+        for death_token in _DEATH_TOKENS:
+            if death_token.lower() in al:
+                reason = f"Bill appears dead: '{action_text.strip()[:60]}'"
+                return "DEAD", reason
+
+    if current_stage == "VETOED":
+        return "DEAD", "Vetoed by the Governor"
+
+    if days_since_intro < 30:
+        return "NEW", "Introduced less than 30 days ago -- too early to assess"
+
+    if days_since_action >= 180:
+        months = days_since_action // 30
+        return (
+            "STAGNANT",
+            f"No activity for {months} months (stage: {_stage_label(current_stage)})",
+        )
+
+    if days_since_action >= 60:
+        months = days_since_action // 30
+        return (
+            "SLOW",
+            f"Last action {months} months ago (stage: {_stage_label(current_stage)})",
+        )
+
+    return (
+        "PENDING",
+        f"Active within last 60 days (stage: {_stage_label(current_stage)})",
+    )
+
+
+def _stage_label(stage: str) -> str:
+    """Human-readable stage label."""
+    labels = {
+        "FILED": "Filed",
+        "IN_COMMITTEE": "In Committee",
+        "PASSED_COMMITTEE": "Passed Committee",
+        "FLOOR_VOTE": "Floor Vote",
+        "CROSSED_CHAMBERS": "Crossed Chambers",
+        "PASSED_BOTH": "Passed Both Houses",
+        "SIGNED": "Signed into Law",
+        "VETOED": "Vetoed",
+    }
+    return labels.get(stage, stage)
+
+
 # ── Feature building ─────────────────────────────────────────────────────────
 
 

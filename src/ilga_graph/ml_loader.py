@@ -23,11 +23,20 @@ class BillScore:
     sponsor: str
     prob_advance: float
     predicted_outcome: str
-    actual_outcome: str
     confidence: float
     label_reliable: bool
     chamber_origin: str
     introduction_date: str
+    # Pipeline stage fields (v4)
+    current_stage: str = "FILED"
+    stage_progress: float = 0.1
+    stage_label: str = "Filed"
+    days_since_action: int = 0
+    last_action_text: str = ""
+    last_action_date: str = ""
+    # Stuck analysis fields (v4)
+    stuck_status: str = ""
+    stuck_reason: str = ""
 
 
 @dataclass
@@ -38,6 +47,22 @@ class CoalitionMember:
     chamber: str
     district: str
     coalition_id: int
+    coalition_name: str = ""
+    coalition_focus: str = ""
+
+
+@dataclass
+class CoalitionProfile:
+    coalition_id: int
+    name: str
+    focus_areas: list[str] = field(default_factory=list)
+    size: int = 0
+    dem_count: int = 0
+    rep_count: int = 0
+    yes_rate: float = 0.0
+    cohesion: float = 0.0
+    total_votes: int = 0
+    signature_bills: list[dict] = field(default_factory=list)
 
 
 @dataclass
@@ -77,6 +102,7 @@ class AccuracyRun:
 class MLData:
     bill_scores: list[BillScore] = field(default_factory=list)
     coalitions: list[CoalitionMember] = field(default_factory=list)
+    coalition_profiles: list[CoalitionProfile] = field(default_factory=list)
     anomalies: list[SlipAnomaly] = field(default_factory=list)
     quality: dict = field(default_factory=dict)
     accuracy_history: list[AccuracyRun] = field(default_factory=list)
@@ -116,11 +142,18 @@ def load_ml_data() -> MLData:
                 sponsor=r.get("primary_sponsor", "") or "",
                 prob_advance=r.get("prob_advance", 0.0),
                 predicted_outcome=r.get("predicted_outcome", ""),
-                actual_outcome=r.get("actual_outcome", ""),
                 confidence=r.get("confidence", 0.0),
                 label_reliable=bool(r.get("label_reliable", True)),
                 chamber_origin=r.get("chamber_origin", ""),
                 introduction_date=r.get("introduction_date", ""),
+                current_stage=r.get("current_stage", "FILED"),
+                stage_progress=r.get("stage_progress", 0.1),
+                stage_label=r.get("stage_label", "Filed"),
+                days_since_action=int(r.get("days_since_action", 0)),
+                last_action_text=r.get("last_action", "") or "",
+                last_action_date=r.get("last_action_date", "") or "",
+                stuck_status=r.get("stuck_status", "") or "",
+                stuck_reason=r.get("stuck_reason", "") or "",
             )
             for r in df.to_dicts()
         ]
@@ -141,12 +174,41 @@ def load_ml_data() -> MLData:
                     chamber=r.get("chamber", ""),
                     district=str(r.get("district", "")),
                     coalition_id=int(r.get("coalition_id", -1)),
+                    coalition_name=r.get("coalition_name", "") or "",
+                    coalition_focus=r.get("coalition_focus", "") or "",
                 )
                 for r in df.to_dicts()
             ]
-            LOGGER.info("Loaded %d coalition members", len(data.coalitions))
+            LOGGER.info(
+                "Loaded %d coalition members",
+                len(data.coalitions),
+            )
         except Exception:
             LOGGER.exception("Failed to load coalitions")
+
+    # ── Coalition profiles ────────────────────────────────────────────
+    profiles_path = PROCESSED_DIR / "coalition_profiles.json"
+    if profiles_path.exists():
+        try:
+            with open(profiles_path) as f:
+                raw_profiles = json.load(f)
+            data.coalition_profiles = [
+                CoalitionProfile(
+                    coalition_id=p.get("coalition_id", -1),
+                    name=p.get("name", ""),
+                    focus_areas=p.get("focus_areas", []),
+                    size=p.get("size", 0),
+                    dem_count=p.get("dem_count", 0),
+                    rep_count=p.get("rep_count", 0),
+                    yes_rate=p.get("yes_rate", 0.0),
+                    cohesion=p.get("cohesion", 0.0),
+                    total_votes=p.get("total_votes", 0),
+                    signature_bills=p.get("signature_bills", []),
+                )
+                for p in raw_profiles
+            ]
+        except Exception:
+            LOGGER.exception("Failed to load coalition profiles")
 
     # ── Anomalies ────────────────────────────────────────────────────
     anomalies_path = PROCESSED_DIR / "slip_anomalies.parquet"
