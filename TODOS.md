@@ -6,6 +6,10 @@
 
 ## Current
 
+- **CI: install ML extras so tests can import numpy/polars (2026-02-14):**
+  - GitHub Actions was failing with `ModuleNotFoundError: No module named 'numpy'` (in `test_action_classifier.py` via `ilga_graph.ml.features`) and `No module named 'polars'` (in `test_panel_labels.py`). CI only installed `.[dev]`, so `.[ml]` (polars, scikit-learn/numpy, etc.) was missing.
+  - **Fix:** `.github/workflows/ci.yml` — changed install step to `pip install -e ".[dev,ml]"` so ML-dependent tests run with required deps.
+
 - **Lint fixes (2026-02-14):**
   - `src/ilga_graph/ml/features.py`: Defined missing `ft_tfidf_id_to_idx` in both `build_feature_matrix()` and panel path (same row order as `tfidf_bill_ids`) so full-text TF-IDF lookup is in scope when `_ft_has_features` is true.
   - `src/ilga_graph/ml/member_value.py`: Removed unused `tier_name` assignment in topic-coalition tier loop (F841).
