@@ -97,7 +97,7 @@ def _member_id_from_url(url: str) -> str:
     parsed = urlparse(url)
     query = parse_qs(parsed.query)
     for key in ("MemberID", "memberid", "id"):
-        if key in query and query[key]:
+        if key in query and query[key] and len(query[key]) > 0:
             return query[key][0]
     path_parts = [part for part in parsed.path.split("/") if part]
     return path_parts[-1] if path_parts else url
