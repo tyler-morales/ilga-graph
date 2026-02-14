@@ -144,6 +144,106 @@ FORECAST_DROP_COLUMNS: frozenset[str] = frozenset(
 # Snapshot days used by the Forecast model (Day-0 and Day-30 only).
 FORECAST_SNAPSHOT_DAYS = [0, 30]
 
+# ── Human-readable feature name mapping (for SHAP explanations) ────────────
+FEATURE_NAME_MAPPING: dict[str, str] = {
+    # Sponsor Features
+    "sponsor_party": "Sponsor's Political Party",
+    "sponsor_is_majority": "Sponsored by Majority Party",
+    "sponsor_hist_passage_rate": "Sponsor's Historical Success Rate",
+    "sponsor_bill_count": "Sponsor's Total Active Bills",
+    "sponsor_count": "Number of Co-Sponsors",
+    "sponsor_party_democrat": "Sponsor Is Democrat",
+    "sponsor_party_republican": "Sponsor Is Republican",
+    "has_sponsor_id": "Has Known Sponsor",
+    "sponsor_hist_filed": "Sponsor's Previously Filed Bills",
+    "has_no_sponsor_history": "Sponsor Has No History",
+    # Public Engagement (Witness Slips)
+    "slip_proponent": "Public Proponent Slips",
+    "slip_opponent": "Public Opponent Slips",
+    "slip_ratio": "Ratio of Proponent to Opponent Slips",
+    "slip_unique_orgs": "Number of Engaged Organizations",
+    "slip_total": "Total Witness Slips",
+    "slip_proponent_ratio": "Proponent Slip Ratio",
+    "slip_opponent_ratio": "Opponent Slip Ratio",
+    "slip_written_only": "Written-Only Slips",
+    "slip_written_ratio": "Written Slip Ratio",
+    "slip_org_concentration": "Organization Concentration",
+    "has_no_slip_data": "No Witness Slip Data",
+    # Timing & Momentum
+    "month_intro": "Month Introduced",
+    "intro_month": "Month Introduced",
+    "day_of_year": "Day of the Year",
+    "intro_day_of_year": "Day of the Year",
+    "is_lame_duck": "Introduced During Lame Duck Session",
+    "days_since_intro": "Days Since Introduction",
+    "days_since_last_action": "Days Since Last Movement",
+    "action_count_30d": "Legislative Actions (Last 30 Days)",
+    "action_count_60d": "Legislative Actions (Last 60 Days)",
+    "action_count_90d": "Legislative Actions (Last 90 Days)",
+    "action_velocity_60d": "Action Velocity (60 Days)",
+    "early_action_count": "Initial Momentum (Early Actions)",
+    "early_cosponsor_actions": "Early Co-Sponsor Actions",
+    "early_committee_referrals": "Early Committee Referrals",
+    # Staleness
+    "is_stale_90": "Stale (90+ Days Idle)",
+    "is_stale_180": "Stale (180+ Days Idle)",
+    "has_negative_terminal": "Reached Terminal Negative State",
+    # Chamber / Bill Type
+    "is_senate_origin": "Originated in Senate",
+    "is_house_origin": "Originated in House",
+    "is_resolution": "Is a Resolution",
+    "is_substantive": "Is Substantive Legislation",
+    # Committee
+    "committee_advancement_rate": "Committee Advancement Rate",
+    "committee_pass_rate": "Committee Pass Rate",
+    "committee_bill_volume": "Committee Bill Volume",
+    "is_high_throughput_committee": "High-Throughput Committee",
+    "has_committee_assignment": "Has Committee Assignment",
+    # Rule-derived
+    "missed_committee_deadline": "Missed Committee Deadline",
+    "missed_floor_deadline": "Missed Floor Deadline",
+    "has_favorable_report": "Has Favorable Committee Report",
+    "was_tabled": "Was Tabled",
+    "on_consent_calendar": "On Consent Calendar",
+    "has_bipartisan_sponsors": "Has Bipartisan Sponsors",
+    # Content metadata
+    "full_text_word_count": "Bill Text Word Count",
+    "full_text_log_length": "Bill Text Length (Log)",
+    "full_text_section_count": "Number of Sections",
+    "full_text_citation_count": "Number of Legal Citations",
+    "has_full_text": "Full Text Available",
+    "is_long_bill": "Is a Long Bill",
+    "is_short_bill": "Is a Short Bill",
+}
+
+# Prefixes for one-hot encoded categorical groups that should be
+# summed into a single master feature before SHAP ranking.
+CATEGORICAL_PREFIXES: list[str] = [
+    "sponsor_party_",
+]
+
+
+def humanize_feature_name(raw_name: str) -> str:
+    """Map a raw feature name to a human-readable label.
+
+    Checks ``FEATURE_NAME_MAPPING`` first, then falls back to
+    title-casing with underscores replaced by spaces.  TF-IDF
+    features get a descriptive prefix.
+    """
+    if raw_name in FEATURE_NAME_MAPPING:
+        return FEATURE_NAME_MAPPING[raw_name]
+    if raw_name.startswith("tfidf_"):
+        term = raw_name.removeprefix("tfidf_").replace("_", " ")
+        return f'Synopsis Term: "{term}"'
+    if raw_name.startswith("ft_tfidf_"):
+        term = raw_name.removeprefix("ft_tfidf_").replace("_", " ")
+        return f'Full-Text Term: "{term}"'
+    if raw_name.startswith("sponsor_emb_"):
+        dim = raw_name.removeprefix("sponsor_emb_")
+        return f"Sponsor Network Dimension {dim}"
+    return raw_name.replace("_", " ").title()
+
+
 # ── Stage progress mapping ────────────────────────────────────────────────
 # Maps classifier progress_stage values to numeric progress fractions.
 _STAGE_PROGRESS: dict[str, float] = {
@@ -245,7 +345,9 @@ def compute_bill_stage(
     if outcome["lifecycle_status"] == "VETOED":
         return "VETOED", -1.0
 
-    highest = outcome["highest_stage"]
+    # Use current_stage (rollbacks applied) so we don't show "Governor" for bills
+    # that were re-referred after passing both chambers (e.g. HB3356 Rule 19(b)).
+    highest = outcome.get("current_stage") or outcome["highest_stage"]
     # Map classifier stages to our stage names
     stage_map = {
         "FILED": "FILED",
@@ -1419,6 +1521,84 @@ def build_rule_features(
     return df_bills.select("bill_id").join(df_rule, on="bill_id", how="left").fill_null(0)
 
 
+# ── Graph embedding features (Phase 3: Node2Vec) ─────────────────────────────
+
+# Number of embedding dimensions to expect.  Must match node_embedder output.
+_EMBEDDING_DIMS = 64
+
+
+def build_embedding_features(
+    df_bills: pl.DataFrame,
+) -> pl.DataFrame:
+    """Build sponsor graph-embedding features for each bill.
+
+    Loads the pre-computed Node2Vec embeddings from
+    ``processed/member_embeddings.parquet`` and maps each bill's
+    ``primary_sponsor_id`` to its embedding vector.
+
+    Produces columns ``sponsor_emb_0`` through ``sponsor_emb_{n-1}``.
+    Bills whose sponsor has no embedding get zero vectors.
+
+    These features are safe for both full and forecast modes because
+    embeddings are intrinsic to the legislator's structural position
+    in the co-sponsorship network — they do not leak temporal information.
+    """
+    LOGGER.info("Building sponsor embedding features...")
+
+    emb_path = PROCESSED_DIR / "member_embeddings.parquet"
+    if not emb_path.exists():
+        LOGGER.warning(
+            "member_embeddings.parquet not found — returning zero embedding features. "
+            "Run `make ml-embed` or the full pipeline to generate embeddings."
+        )
+        emb_cols = {f"sponsor_emb_{i}": pl.lit(0.0) for i in range(_EMBEDDING_DIMS)}
+        return df_bills.select("bill_id").with_columns(**emb_cols)
+
+    df_emb = pl.read_parquet(emb_path)
+    dim_cols = sorted(
+        [c for c in df_emb.columns if c.startswith("dim_")],
+        key=lambda c: int(c.split("_")[1]),
+    )
+    n_dims = len(dim_cols)
+
+    if n_dims == 0:
+        LOGGER.warning("Embeddings file has no dim_* columns — returning zeros.")
+        emb_cols = {f"sponsor_emb_{i}": pl.lit(0.0) for i in range(_EMBEDDING_DIMS)}
+        return df_bills.select("bill_id").with_columns(**emb_cols)
+
+    LOGGER.info("Loaded %d-dim embeddings for %d members.", n_dims, len(df_emb))
+
+    # Rename dim_i → sponsor_emb_i and member_id → primary_sponsor_id for join
+    rename_map = {c: f"sponsor_emb_{c.split('_')[1]}" for c in dim_cols}
+    rename_map["member_id"] = "primary_sponsor_id"
+    df_emb_renamed = df_emb.select(["member_id"] + dim_cols).rename(rename_map)
+
+    # Join on primary_sponsor_id
+    df_result = df_bills.select(["bill_id", "primary_sponsor_id"]).join(
+        df_emb_renamed, on="primary_sponsor_id", how="left"
+    )
+
+    # Fill nulls with 0.0 (no embedding = zero vector)
+    emb_feature_cols = [f"sponsor_emb_{i}" for i in range(n_dims)]
+    for col in emb_feature_cols:
+        if col in df_result.columns:
+            df_result = df_result.with_columns(pl.col(col).fill_null(0.0))
+
+    # Drop the join key — only bill_id + embedding cols
+    df_result = df_result.drop("primary_sponsor_id")
+
+    LOGGER.info(
+        "Embedding features: %d bills, %d dims (%d with sponsor match).",
+        len(df_result),
+        n_dims,
+        len(df_result) - df_result.select(pl.col(emb_feature_cols[0]).eq(0.0).sum()).item()
+        if emb_feature_cols
+        else 0,
+    )
+
+    return df_result
+
+
 # ── Assembly: combine all features ───────────────────────────────────────────
 
 
@@ -1480,6 +1660,7 @@ def build_feature_matrix(
     df_content_meta = build_content_metadata_features(df_bills_sub)
     df_temporal = build_temporal_features(df_bills_sub)
     df_committee = build_committee_features(df_bills_sub, df_actions, df_labels)
+    df_embeddings = build_embedding_features(df_bills_sub)
 
     # Merge all tabular features with SEMANTIC imputation.
     #
@@ -1503,6 +1684,7 @@ def build_feature_matrix(
         .join(df_temporal, on="bill_id", how="left")
         .join(df_committee, on="bill_id", how="left")
         .join(df_content_meta, on="bill_id", how="left")
+        .join(df_embeddings, on="bill_id", how="left")
     )
 
     # In full mode, also join slip, action, staleness, and rule features
@@ -1603,6 +1785,11 @@ def build_feature_matrix(
     for col in ratio_cols:
         if col in existing_cols:
             df_feat = df_feat.with_columns(pl.col(col).fill_null(-1.0))
+
+    # Embedding columns — fill nulls with 0.0 (no embedding = zero vector)
+    for col in existing_cols:
+        if col.startswith("sponsor_emb_"):
+            df_feat = df_feat.with_columns(pl.col(col).fill_null(0.0))
 
     # ── Split: mature vs immature ────────────────────────────────────────
     # Mature bills have reliable labels (introduced 120+ days ago).
@@ -1836,6 +2023,11 @@ def _apply_semantic_imputation(
         if col in existing_cols:
             df_feat = df_feat.with_columns(pl.col(col).fill_null(-1.0))
 
+    # Embedding columns — fill nulls with 0.0 (no embedding = zero vector)
+    for col in existing_cols:
+        if col.startswith("sponsor_emb_"):
+            df_feat = df_feat.with_columns(pl.col(col).fill_null(0.0))
+
     return df_feat
 
 
@@ -1975,6 +2167,9 @@ def build_panel_feature_matrix(
         pl.DataFrame() if is_forecast else build_content_metadata_features(df_bills_sub)
     )
 
+    # ── Sponsor embeddings (snapshot-invariant — graph structure is static) ────
+    df_embeddings = build_embedding_features(df_bills_sub)
+
     # ── Build single-row labels for sponsor/committee historical rates ───
     df_labels = build_bill_labels(df_bills_sub, df_actions)
 
@@ -2025,6 +2220,9 @@ def build_panel_feature_matrix(
         )
         if not is_forecast and len(df_content_meta) > 0:
             df_feat_snap = df_feat_snap.join(df_content_meta, on="bill_id", how="left")
+
+        # Sponsor embeddings (snapshot-invariant)
+        df_feat_snap = df_feat_snap.join(df_embeddings, on="bill_id", how="left")
 
         # In full mode, also join slip, action, staleness, and rule features
         if not is_forecast:

@@ -34,6 +34,9 @@ ml = [
     "rich",
     "rapidfuzz",
     "networkx",
+    "node2vec",
+    "shap",
+    "scipy",
 ]
 
 [tool.pytest.ini_options]
@@ -41,6 +44,7 @@ testpaths = ["tests"]
 
 [tool.ruff]
 target-version = "py310"
+# 100 is Ruff's default; keeps lines readable and diff-friendly (change to 120 if you prefer)
 line-length = 100
 
 [tool.ruff.lint]

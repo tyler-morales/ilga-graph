@@ -10,6 +10,39 @@
     "description": "Bicameral machine-readable extraction of 104th IL General Assembly rules (Senate SR-4 + House Rules). Lookup table for action classifier, feature engineering, lifecycle logic, and UI."
   },
 
+  "bill_to_law_process": [
+    {
+      "step": 1,
+      "title": "Introduction of Bill",
+      "body": "A member of the Senate or the House introduces a bill, which is assigned a unique identifying number (e.g., \"H.B. ___\" for House bills and \"S.B. ___\" for Senate bills). If not enacted, it must be reintroduced in the next General Assembly with a new number."
+    },
+    {
+      "step": 2,
+      "title": "Committee Work — Hearings",
+      "body": "The bill goes to the appropriate committee, which holds hearings to gather expert opinions and determine the need for the legislation."
+    },
+    {
+      "step": 3,
+      "title": "Committee Work — Markup, Amendments, Report",
+      "body": "The committee may make amendments to the bill. If approved, a committee report endorsing the bill is issued."
+    },
+    {
+      "step": 4,
+      "title": "Floor Debate",
+      "body": "The bill is debated and can be further amended. The debate transcripts are accessible online for public viewing."
+    },
+    {
+      "step": 5,
+      "title": "Passage and Consideration in Second Chamber",
+      "body": "If the bill passes in the first chamber, it moves to the second chamber for a similar review process. If both chambers approve, it goes to the governor."
+    },
+    {
+      "step": 6,
+      "title": "Gubernatorial Action",
+      "body": "The governor can sign the bill into law, veto it, or take no action (resulting in an automatic law after 60 days). The type of veto can be total or amendatory. Once signed, the bill becomes a Public Act and is assigned a Public Act number."
+    }
+  ],
+
   "stages": {
     "FILED": {
       "senate_rule": "Rule 5-1(d)",

@@ -85,6 +85,15 @@
         </div>
     </div>
 
+    {# ── Prediction Drivers (SHAP) ── #}
+    <div class="bill-prediction-drivers"
+         style="margin-top: 16px; padding: 14px 18px; background: #fafafa; border: 1px solid #e5e5e5; border-radius: 4px;"
+         hx-get="/api/bills/{{ bill.bill_id }}/explanation"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+        <p style="color: #999; font-style: italic; font-size: 0.85em;">Calculating prediction drivers...</p>
+    </div>
+
     {# ── Pipeline progress ── #}
     <div class="bill-pipeline">
         <h2>Pipeline Progress</h2>
@@ -107,6 +116,21 @@
             {% endif %}
         </p>
     </div>
+
+    {# ── How a bill becomes law (from reference model) ── #}
+    {% if bill_to_law_process %}
+    <details class="bill-to-law-process" style="margin-top: 20px; padding: 14px 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px;">
+        <summary style="cursor: pointer; font-weight: 600; color: #334155;">How does a bill become law in Illinois?</summary>
+        <ol class="bill-to-law-steps" style="margin: 14px 0 0 0; padding-left: 1.4em; list-style: decimal;">
+            {% for s in bill_to_law_process %}
+            <li style="margin-bottom: 10px;">
+                <strong>{{ s.title }}</strong>
+                <p style="margin: 4px 0 0 0; font-size: 0.9em; color: #475569; line-height: 1.45;">{{ s.body }}</p>
+            </li>
+            {% endfor %}
+        </ol>
+    </details>
+    {% endif %}
 
     {# ── Sponsor influence ── #}
     {% if sponsor_influence %}
@@ -152,11 +176,11 @@
     </div>
     {% endif %}
 
-    {# ── Action History Timeline ── #}
+    {# ── Action History (timeline + full table; last action date from this list) ── #}
     {% if action_history %}
     <div class="bill-action-history">
         <h2>Action History</h2>
-        <p class="action-history-note">{{ action_history|length }} actions recorded. Each action's meaning and outcome signal are classified automatically.</p>
+        <p class="action-history-note">{{ action_history|length }} actions recorded. <strong>Last action:</strong> {{ bill.last_action_date }} — {{ bill.last_action_text }}. Each action's meaning and outcome signal are classified automatically.</p>
         <div class="action-timeline">
             {% for act in action_history %}
             <div class="action-timeline-item action-signal-{{ act.outcome_signal|replace('_', '-') }}">
@@ -184,6 +208,45 @@
                 </div>
             </div>
             {% endfor %}
+        </div>
+        <h3 style="margin-top: 1.5em; font-size: 1em;">All actions (table)</h3>
+        <div class="bill-actions-table-wrap">
+            <table class="bill-actions-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Chamber</th>
+                        <th>Action</th>
+                        <th>Category</th>
+                        <th>Signal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for act in action_history %}
+                    <tr class="action-signal-{{ act.outcome_signal|replace('_', '-') }}">
+                        <td class="action-date-cell">{{ act.date }}</td>
+                        <td>{% if act.chamber == 'S' %}Senate{% elif act.chamber == 'H' %}House{% else %}{{ act.chamber }}{% endif %}</td>
+                        <td>{{ act.action }}{% if act.rule_reference %} <span class="action-rule-ref" title="{{ act.rule_reference }}">{{ act.rule_reference }}</span>{% endif %}</td>
+                        <td><span class="action-category-badge action-cat-{{ act.action_category }}">{{ act.action_category_label or act.action_category }}</span></td>
+                        <td>
+                            {% if act.outcome_signal and act.outcome_signal != 'neutral' %}
+                            <span class="action-signal-badge signal-{{ act.outcome_signal|replace('_', '-') }}">
+                                {% if act.outcome_signal == 'positive_terminal' %}Law
+                                {% elif act.outcome_signal == 'positive' %}Positive
+                                {% elif act.outcome_signal == 'positive_weak' %}Mild +
+                                {% elif act.outcome_signal == 'negative_weak' %}Mild −
+                                {% elif act.outcome_signal == 'negative' %}Negative
+                                {% elif act.outcome_signal == 'negative_terminal' %}Dead
+                                {% endif %}
+                            </span>
+                            {% else %}
+                            —
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
     {% elif bill.last_action_text %}

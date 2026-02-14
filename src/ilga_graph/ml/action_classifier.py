@@ -323,6 +323,34 @@ def _match_action(text: str) -> ClassifiedAction | None:
     return None
 
 
+# ── Stage rollback detection ─────────────────────────────────────────────────
+# Bills that passed both chambers can be re-referred (e.g. Rule 19(b)) before
+# being sent to the governor. We must use current stage, not highest ever.
+
+
+def _is_stage_rollback(raw_text: str) -> bool:
+    """True if this action sends the bill back to committee after it had advanced.
+
+    E.g. Rule 19(b) / Re-referred to Rules Committee after House concurrence
+    (HB3356): bill passed both chambers but was re-referred and never sent to
+    the governor. We treat this as rolling back to IN_COMMITTEE.
+    """
+    t = raw_text.strip().lower()
+    if t.startswith("rule 19(a)") or t.startswith("rule 19(b)"):
+        return True
+    if t.startswith("rule 3-9(a)") or t.startswith("rule 3-9(b)"):
+        return True
+    if "re-referred to rules committee" in t or "re-referred to rules" in t:
+        return True
+    if "re-referred to assignments" in t:
+        return True
+    return False
+
+
+# Stages that imply the bill has passed both chambers (and could be sent to gov).
+_STAGES_AT_OR_PAST_BOTH = frozenset({"CROSSED_CHAMBERS", "PASSED_BOTH", "GOVERNOR"})
+
+
 # ── Convenience: classify a full action history ──────────────────────────────
 
 
@@ -341,9 +369,16 @@ def bill_outcome_from_actions(
 ) -> dict:
     """Derive bill outcome summary from classified actions.
 
+    Actions are processed in chronological order. The returned stage is the
+    *current* stage: if the bill passed both chambers but was then re-referred
+    (e.g. Rule 19(b) / Re-referred to Rules Committee), current_stage is
+    IN_COMMITTEE, not PASSED_BOTH. This fixes bills like HB3356 that never
+    reached the governor.
+
     Returns a dict with:
         lifecycle_status: OPEN | PASSED | VETOED
-        highest_stage: the highest pipeline stage reached
+        highest_stage: the highest pipeline stage ever reached
+        current_stage: the stage as of the last action (rollbacks applied)
         terminal_action: the terminal action text (if any)
         positive_signals: count of positive outcome signals
         negative_signals: count of negative outcome signals
@@ -352,6 +387,7 @@ def bill_outcome_from_actions(
     """
     lifecycle = "OPEN"
     highest_stage = "FILED"
+    current_stage = "FILED"
     stage_order = [
         "FILED",
         "IN_COMMITTEE",
@@ -380,12 +416,19 @@ def bill_outcome_from_actions(
         elif ca.outcome_signal.startswith("negative"):
             negative += 1
 
-        # Track highest stage
+        # Rollback: re-referred after passing both chambers → current stage back to committee
+        if _is_stage_rollback(ca.raw_text) and current_stage in _STAGES_AT_OR_PAST_BOTH:
+            current_stage = "IN_COMMITTEE"
+
+        # Advance highest and current stage when this action has a progress_stage
         if ca.progress_stage and ca.progress_stage in stage_order:
             idx = stage_order.index(ca.progress_stage)
             cur_idx = stage_order.index(highest_stage)
             if idx > cur_idx:
                 highest_stage = ca.progress_stage
+            cur_idx = stage_order.index(current_stage)
+            if idx > cur_idx:
+                current_stage = ca.progress_stage
 
         # Track terminal outcomes
         if ca.outcome_signal == "positive_terminal":
@@ -408,6 +451,7 @@ def bill_outcome_from_actions(
     return {
         "lifecycle_status": lifecycle,
         "highest_stage": highest_stage,
+        "current_stage": current_stage,
         "terminal_action": terminal_action,
         "positive_signals": positive,
         "negative_signals": negative,

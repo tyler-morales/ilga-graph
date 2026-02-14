@@ -36,8 +36,10 @@ from .etl import (
     load_stale_cache_fallback,
 )
 from .metrics_definitions import MONEYBALL_ONE_LINER
+from .ml.rule_engine import get_bill_to_law_process
 from .models import Bill, Committee, CommitteeMemberRole, Member, VoteEvent, WitnessSlip
 from .moneyball import MoneyballReport, build_cosponsor_edges, compute_power_badges
+from .run_log import append_startup_run, get_log_path, load_recent_runs
 from .schema import (
     BillAdvancementAnalyticsType,
     BillConnection,
@@ -604,6 +606,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     state.member_lookup = {m.name: m for m in state.members}
     state.member_lookup_by_id = {m.id: m for m in state.members}
     state.bill_lookup = _collect_unique_bills_by_number(data.bills_lookup)
+    state.bills_lookup = data.bills_lookup  # leg_id -> Bill (for bill detail action_history)
     state.bills = list(state.bill_lookup.values())
     state.committees = data.committees
     state.committee_lookup = {c.code: c for c in data.committees}
@@ -835,6 +838,24 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         DEV_MODE,
         SEED_MODE,
     )
+    # ── Unified run log (for /logs dashboard and make logs) ──
+    append_startup_run(
+        elapsed_total,
+        elapsed_load,
+        elapsed_analytics,
+        elapsed_seating,
+        elapsed_export,
+        elapsed_votes,
+        elapsed_slips,
+        elapsed_zip,
+        len(state.members),
+        len(state.bills),
+        len(state.vote_events),
+        len(state.witness_slips),
+        len(state.zip_to_district),
+        DEV_MODE,
+        SEED_MODE,
+    )
 
     yield
 
@@ -883,6 +904,18 @@ def _safe_parse_date(date_str: str, param_name: str) -> datetime | None:
     except (ValueError, TypeError):
         LOGGER.warning("Invalid date for %s: %r", param_name, date_str)
         return None
+
+
+def _parse_action_date(date_str: str) -> datetime:
+    """Parse action date (YYYY-MM-DD or M/D/YYYY) for sorting. Unparseable -> datetime.min."""
+    if not date_str:
+        return datetime.min
+    try:
+        if "-" in date_str and len(date_str) == 10:
+            return datetime.strptime(date_str, "%Y-%m-%d")
+        return datetime.strptime(date_str, "%m/%d/%Y")
+    except (ValueError, TypeError):
+        return datetime.min
 
 
 @strawberry.type
@@ -1357,6 +1390,34 @@ class Query:
                 return _bill_score_to_type(s)
         return None
 
+    @strawberry.field(
+        description="SHAP-based explanation for why a bill received its prediction score.",
+    )
+    def prediction_explanation(self, bill_id: str) -> PredictionExplanation | None:
+        ml = state.ml
+        if not ml or not ml.available or ml.explainer is None:
+            return None
+        row_idx = ml._bill_id_to_row.get(bill_id)
+        if row_idx is None:
+            return None
+        try:
+            row = ml.feature_matrix[row_idx]
+            result = ml.explainer.explain_prediction(row, ml.feature_names)
+            return PredictionExplanation(
+                base_value=result["base_value"],
+                top_positive_factors=[
+                    PredictionFactor(**f) for f in result["top_positive_factors"]
+                ],
+                top_negative_factors=[
+                    PredictionFactor(**f) for f in result["top_negative_factors"]
+                ],
+            )
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).exception("SHAP explanation failed for %s", bill_id)
+            return None
+
     @strawberry.field(description="Discovered voting coalitions from the ML pipeline.")
     def voting_coalitions(self) -> list[CoalitionGroupType]:
         ml = state.ml
@@ -1536,6 +1597,27 @@ class BillPredictionType:
 class BillPredictionConnection:
     items: list[BillPredictionType]
     page_info: PageInfo
+
+
+# ── SHAP explanation types (v9) ──────────────────────────────────────────
+
+
+@strawberry.type
+class PredictionFactor:
+    """A single feature's contribution to a bill's prediction."""
+
+    feature: str  # Human-readable name
+    impact: str  # e.g. "+12.4%"
+    raw_impact: float  # Numeric for sorting / styling
+
+
+@strawberry.type
+class PredictionExplanation:
+    """SHAP-based explanation for a single bill prediction."""
+
+    base_value: float
+    top_positive_factors: list[PredictionFactor]
+    top_negative_factors: list[PredictionFactor]
 
 
 @strawberry.type
@@ -1746,6 +1828,36 @@ async def _request_logging_middleware(request: Request, call_next) -> Response: 
 
 
 # ── Health endpoint ──────────────────────────────────────────────────────────
+@app.get("/logs")
+async def logs_dashboard(request: Request):
+    """Unified run log dashboard — scrape, ML, startup. Minimal 2000s-hacker UI."""
+    runs = load_recent_runs(n=100)
+    # Bottleneck summary: avg phase duration per task
+    task_phases: dict[str, dict[str, list[float]]] = {}
+    for r in runs:
+        if r.task not in task_phases:
+            task_phases[r.task] = {}
+        for p in r.phases:
+            name = p.get("name", "?")
+            if name not in task_phases[r.task]:
+                task_phases[r.task][name] = []
+            task_phases[r.task][name].append(p.get("duration_s") or 0)
+    bottleneck: list[tuple[str, list[tuple[str, float]]]] = []
+    for task, phases in task_phases.items():
+        by_name = [(name, sum(durs) / len(durs) if durs else 0) for name, durs in phases.items()]
+        by_name.sort(key=lambda x: x[1], reverse=True)
+        bottleneck.append((task, by_name[:5]))
+    return templates.TemplateResponse(
+        "logs.html",
+        {
+            "request": request,
+            "runs": runs,
+            "bottleneck": bottleneck,
+            "log_path": str(get_log_path()),
+        },
+    )
+
+
 @app.get("/health")
 async def health() -> dict:
     """Service health check with data counts."""
@@ -3377,9 +3489,19 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
                 break
 
     if not bill:
+        try:
+            bill_to_law_process = get_bill_to_law_process()
+        except Exception:
+            bill_to_law_process = []
         return templates.TemplateResponse(
             "intelligence_bill.html",
-            {"request": request, "bill": None, "sponsor_influence": None, "anomaly": None},
+            {
+                "request": request,
+                "bill": None,
+                "sponsor_influence": None,
+                "anomaly": None,
+                "bill_to_law_process": bill_to_law_process,
+            },
         )
 
     # ── Sponsor influence ──
@@ -3456,10 +3578,25 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
 
     bill_ctx = _BillCtx(bill, bill_dict_extra)
 
-    # ── Classified action history ──
+    # ── Classified action history (from live bill cache so last action date is accurate) ──
     action_history = []
-    # Find the actual bill object from state.bills to get action_history
-    bill_obj = state.bills_lookup.get(bill_id) if hasattr(state, "bills_lookup") else None
+    bill_obj = None
+    if hasattr(state, "bills_lookup"):
+        bill_obj = state.bills_lookup.get(bill_id)
+    if bill_obj is None and hasattr(state, "bill_lookup"):
+        bill_obj = state.bill_lookup.get(bill.bill_number)
+    # If still None, the score's bill_id may not match cache keys; pick the bill with this number
+    # that has the latest action so we show the most up-to-date copy from the cache.
+    if bill_obj is None and hasattr(state, "bills_lookup") and state.bills_lookup:
+        candidates = [b for b in state.bills_lookup.values() if b.bill_number == bill.bill_number]
+        if candidates:
+
+            def _latest_action_date(b: Bill) -> datetime:
+                if not b.action_history:
+                    return datetime.min
+                return max(_parse_action_date(ae.date) for ae in b.action_history)
+
+            bill_obj = max(candidates, key=_latest_action_date)
     if bill_obj and bill_obj.action_history:
         for ae in bill_obj.action_history:
             action_history.append(
@@ -3474,6 +3611,21 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
                     "rule_reference": getattr(ae, "rule_reference", "") or "",
                 }
             )
+        # Sort by date ascending so last item is chronologically last
+        action_history.sort(key=lambda a: _parse_action_date(a["date"]))
+        # Override last action and days_since from action history (fixes stale ML dates)
+        last_act = action_history[-1]
+        bill_ctx.last_action_date = last_act["date"]
+        bill_ctx.last_action_text = last_act["action"]
+        last_dt = _parse_action_date(last_act["date"])
+        if last_dt != datetime.min:
+            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            bill_ctx.days_since_action = max(0, (today - last_dt).days)
+
+    try:
+        bill_to_law_process = get_bill_to_law_process()
+    except Exception:
+        bill_to_law_process = []
 
     return templates.TemplateResponse(
         "intelligence_bill.html",
@@ -3483,8 +3635,48 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
             "sponsor_influence": sponsor_influence,
             "anomaly": anomaly,
             "action_history": action_history,
+            "bill_to_law_process": bill_to_law_process,
         },
     )
+
+
+# ── SHAP explanation endpoint (lazy-loaded by HTMX) ─────────────────────
+
+
+@app.get("/api/bills/{bill_id}/explanation")
+async def bill_explanation_fragment(request: Request, bill_id: str):
+    """Return an HTML fragment with SHAP prediction drivers for a bill.
+
+    Designed to be loaded lazily via ``hx-get`` so the main bill page
+    renders instantly and SHAP computation happens in the background.
+    """
+    ml = state.ml
+    if not ml or not ml.available or ml.explainer is None:
+        return templates.TemplateResponse(
+            "_explanation_partial.html",
+            {"request": request, "explanation": None, "reason": "not_available"},
+        )
+
+    row_idx = ml._bill_id_to_row.get(bill_id)
+    if row_idx is None:
+        return templates.TemplateResponse(
+            "_explanation_partial.html",
+            {"request": request, "explanation": None, "reason": "bill_not_found"},
+        )
+
+    try:
+        row = ml.feature_matrix[row_idx]
+        result = ml.explainer.explain_prediction(row, ml.feature_names)
+        return templates.TemplateResponse(
+            "_explanation_partial.html",
+            {"request": request, "explanation": result, "reason": None},
+        )
+    except Exception:
+        LOGGER.exception("SHAP explanation failed for bill %s", bill_id)
+        return templates.TemplateResponse(
+            "_explanation_partial.html",
+            {"request": request, "explanation": None, "reason": "error"},
+        )
 
 
 # ── Legislative Power Map routes ──────────────────────────────────────────

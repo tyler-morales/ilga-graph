@@ -53,6 +53,9 @@ from .features import (
 LOGGER = logging.getLogger(__name__)
 PROCESSED_DIR = Path("processed")
 MODEL_PATH = PROCESSED_DIR / "bill_predictor.pkl"
+RAW_MODEL_PATH = PROCESSED_DIR / "bill_predictor_raw.pkl"
+SHAP_MATRIX_PATH = PROCESSED_DIR / "shap_feature_matrix.npz"
+SHAP_META_PATH = PROCESSED_DIR / "shap_feature_meta.json"
 QUALITY_PATH = PROCESSED_DIR / "model_quality.json"
 
 console = Console()
@@ -476,9 +479,13 @@ def score_all_bills(
         how="left",
     )
 
-    # Group actions per bill for stage computation
+    # Group actions per bill for stage computation (chronological order so
+    # rollbacks like Rule 19(b) after PASSED_BOTH are applied correctly).
     bill_action_texts = (
-        df_actions.group_by("bill_id").agg(pl.col("action_text").alias("actions")).to_dicts()
+        df_actions.sort("date")
+        .group_by("bill_id")
+        .agg(pl.col("action_text").alias("actions"))
+        .to_dicts()
     )
     action_map = {row["bill_id"]: row["actions"] for row in bill_action_texts}
 
@@ -1167,6 +1174,11 @@ def run_auto(*, use_panel: bool | None = None) -> pl.DataFrame:
     else:
         tuned_model = _tune_best_model(best, X_train, y_train)
 
+    # Step 3b: Save raw (uncalibrated) model for SHAP explanations
+    with open(RAW_MODEL_PATH, "wb") as f:
+        pickle.dump(tuned_model, f)
+    LOGGER.info("Raw model saved to %s (for SHAP explainer)", RAW_MODEL_PATH)
+
     # Step 4: Calibrate probabilities
     console.print("[bold]Step 4: Calibrating probabilities (advance)...[/]")
     calibrated = CalibratedClassifierCV(tuned_model, cv=5, method="isotonic")
@@ -1260,6 +1272,28 @@ def run_auto(*, use_panel: bool | None = None) -> pl.DataFrame:
 
     X_all = sparse_vstack(parts)
     y_all = np.concatenate(y_parts)
+
+    # Save feature matrix + metadata for SHAP explanations at runtime
+    # Use the scoring feature names (single-row mode) since that's what
+    # the runtime explainer will use.
+    from scipy import sparse as sp
+
+    _shap_fnames = _fnames if use_panel else feature_names
+    try:
+        sp.save_npz(SHAP_MATRIX_PATH, X_all.tocsr())
+        with open(SHAP_META_PATH, "w") as _meta_f:
+            json.dump(
+                {"bill_ids": ids_parts, "feature_names": list(_shap_fnames)},
+                _meta_f,
+            )
+        LOGGER.info(
+            "SHAP artifacts saved: %s (%d bills x %d features)",
+            SHAP_MATRIX_PATH,
+            X_all.shape[0],
+            X_all.shape[1],
+        )
+    except Exception as _shap_err:
+        LOGGER.warning("Failed to save SHAP artifacts: %s", _shap_err)
 
     df_scores = score_all_bills(
         calibrated,

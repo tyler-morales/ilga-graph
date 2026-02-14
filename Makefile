@@ -1,4 +1,4 @@
-.PHONY: scrape dev serve install test lint lint-fix clean help ml-setup ml-run ml-pipeline ml-resolve ml-predict scrape-fulltext
+.PHONY: scrape dev serve install test lint lint-fix clean help ml-setup ml-run ml-pipeline ml-resolve ml-predict ml-embed scrape-fulltext logs
 
 # ── Virtual environment ─────────────────────────────────────────────────────
 VENV ?= $(or $(wildcard .venv), $(wildcard venv), $(wildcard src/ilga_graph/.venv))
@@ -80,6 +80,9 @@ ml-resolve: ## Entity resolution only (AUTO=1 for no interaction)
 ml-predict: ## Bill outcome prediction only
 	PYTHONPATH=src $(PYTHON) scripts/ml_predict.py
 
+ml-embed: ## Generate Node2Vec graph embeddings (co-sponsorship network)
+	PYTHONPATH=src $(PYTHON) -c "from ilga_graph.ml.node_embedder import run_embedding_pipeline; run_embedding_pipeline()"
+
 scrape-fulltext: ## Scrape full bill text PDFs (incremental, resumable)
 	PYTHONPATH=src $(PYTHON) scripts/scrape_fulltext.py \
 		$(if $(LIMIT),--limit $(LIMIT),--limit 100) \
@@ -90,6 +93,9 @@ scrape-fulltext: ## Scrape full bill text PDFs (incremental, resumable)
 
 # ── Utilities ──────────────────────────────────────────────────────────────────
 
+logs: ## Show unified run log (scrape, ml_run, startup) — terminal dashboard
+	PYTHONPATH=src $(PYTHON) scripts/log_dashboard.py $(if $(N),--tail $(N),--tail 20)
+
 clean: ## Remove cache/, processed/, and generated vault files
 	rm -rf cache/
 	rm -rf processed/*.parquet processed/*.pkl
@@ -97,4 +103,5 @@ clean: ## Remove cache/, processed/, and generated vault files
 	rm -f ILGA_Graph_Vault/*.base
 	rm -f ILGA_Graph_Vault/Moneyball\ Report.md
 	rm -f .startup_timings.csv
+	rm -f .run_log.jsonl
 	@echo "Cleaned. Run 'make scrape' then 'make dev'."

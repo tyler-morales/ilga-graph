@@ -38,6 +38,7 @@ import logging
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 # Ensure the project is importable
@@ -52,6 +53,7 @@ from ilga_graph.etl import (  # noqa: E402
     load_from_cache,
     load_or_scrape_data,
 )
+from ilga_graph.run_log import RunLogger  # noqa: E402
 from ilga_graph.scraper import save_normalized_cache  # noqa: E402
 
 
@@ -148,97 +150,121 @@ def main() -> None:
             shutil.rmtree(cache_dir)
 
     seed_mode = args.export_only
+    meta = {
+        "full": args.full,
+        "skip_votes": args.skip_votes,
+        "export": args.export or args.export_only,
+    }
 
-    if args.export_only:
-        data = load_from_cache(seed_fallback=seed_mode)
-        if data is None:
-            logger.error("No cache found. Run without --export-only to scrape first.")
-            sys.exit(1)
-    else:
-        # ══════════════════════════════════════════════════════════════════
-        # PHASE 1+2: Members + Bill index + Bill details
-        # ══════════════════════════════════════════════════════════════════
-        logger.info("=" * 72)
-        logger.info("  PHASE 1+2: Members + Bills (incremental)")
-        logger.info("=" * 72)
-        data = load_or_scrape_data(
-            limit=args.limit,
-            dev_mode=args.fast,
-            seed_mode=seed_mode,
-            incremental=True,  # always incremental
-            sb_limit=args.sb_limit,
-            hb_limit=args.hb_limit,
-            save_cache=False,
-            force_full_index=args.full,
-        )
-        logger.info(
-            "  %d members, %d committees, %d bills.",
-            len(data.members),
-            len(data.committees),
-            len(data.bills_lookup),
-        )
-        save_normalized_cache(data.members, data.bills_lookup)
-        logger.info("  Saved to cache/.")
+    with RunLogger("scrape", meta=meta) as log:
+        if args.export_only:
+            t0 = time.perf_counter()
+            data = load_from_cache(seed_fallback=seed_mode)
+            if data is None:
+                logger.error("No cache found. Run without --export-only to scrape first.")
+                sys.exit(1)
+            log.phase(
+                "Load cache",
+                duration_s=time.perf_counter() - t0,
+                detail=f"{len(data.members)} members",
+            )
+        else:
+            # ══════════════════════════════════════════════════════════════════
+            # PHASE 1+2: Members + Bill index + Bill details
+            # ══════════════════════════════════════════════════════════════════
+            logger.info("=" * 72)
+            logger.info("  PHASE 1+2: Members + Bills (incremental)")
+            logger.info("=" * 72)
+            t0 = time.perf_counter()
+            data = load_or_scrape_data(
+                limit=args.limit,
+                dev_mode=args.fast,
+                seed_mode=seed_mode,
+                incremental=True,  # always incremental
+                sb_limit=args.sb_limit,
+                hb_limit=args.hb_limit,
+                save_cache=False,
+                force_full_index=args.full,
+            )
+            logger.info(
+                "  %d members, %d committees, %d bills.",
+                len(data.members),
+                len(data.committees),
+                len(data.bills_lookup),
+            )
+            save_normalized_cache(data.members, data.bills_lookup)
+            logger.info("  Saved to cache/.")
+            log.phase(
+                "Members + Bills",
+                duration_s=time.perf_counter() - t0,
+                detail=f"{len(data.members)} members, {len(data.bills_lookup)} bills",
+            )
 
-        # ══════════════════════════════════════════════════════════════════
-        # PHASE 3: Votes + witness slips (incremental)
-        # ══════════════════════════════════════════════════════════════════
-        if not args.skip_votes:
+            # ══════════════════════════════════════════════════════════════════
+            # PHASE 3: Votes + witness slips (incremental)
+            # ══════════════════════════════════════════════════════════════════
+            if not args.skip_votes:
+                logger.info("")
+                logger.info("=" * 72)
+                logger.info("  PHASE 3: Votes + witness slips (incremental)")
+                logger.info("=" * 72)
+
+                vote_cmd = [
+                    sys.executable,
+                    str(ROOT / "scripts" / "scrape_votes.py"),
+                    "--limit",
+                    str(args.vote_limit),
+                    "--workers",
+                    str(args.workers),
+                    "--fast",
+                ]
+                logger.info("  Running: %s", " ".join(vote_cmd))
+                t0 = time.perf_counter()
+                result = subprocess.run(vote_cmd, cwd=str(ROOT))
+                t3 = time.perf_counter() - t0
+                log.phase("Votes + Slips", duration_s=t3, detail=f"exit {result.returncode}")
+                if result.returncode != 0:
+                    logger.warning(
+                        "  Vote/slip scraping exited with code %d (partial data saved).",
+                        result.returncode,
+                    )
+                else:
+                    logger.info("  Vote/slip scraping complete.")
+
+                data = load_from_cache(seed_fallback=False)
+                if data is None:
+                    logger.error("Failed to reload cache after vote scraping.")
+                    sys.exit(1)
+
+        # ══════════════════════════════════════════════════════════════════════
+        # PHASE 4: Analytics + Obsidian export (optional)
+        # ══════════════════════════════════════════════════════════════════════
+        if args.export or args.export_only:
             logger.info("")
             logger.info("=" * 72)
-            logger.info("  PHASE 3: Votes + witness slips (incremental)")
+            logger.info("  PHASE 4: Analytics + Vault export")
             logger.info("=" * 72)
-
-            # Delegate to scrape_votes.py as a subprocess so it gets its
-            # own signal handling, progress tracking, and real-time output.
-            vote_cmd = [
-                sys.executable,
-                str(ROOT / "scripts" / "scrape_votes.py"),
-                "--limit",
-                str(args.vote_limit),
-                "--workers",
-                str(args.workers),
-                "--fast",
-            ]
-            logger.info("  Running: %s", " ".join(vote_cmd))
-            result = subprocess.run(vote_cmd, cwd=str(ROOT))
-            if result.returncode != 0:
-                logger.warning(
-                    "  Vote/slip scraping exited with code %d (partial data saved).",
-                    result.returncode,
-                )
+            t0 = time.perf_counter()
+            cached = load_analytics_cache(CACHE_DIR, MOCK_DEV_DIR, seed_mode)
+            if cached is not None:
+                scorecards, moneyball = cached
+                logger.info("  Using cached analytics.")
             else:
-                logger.info("  Vote/slip scraping complete.")
-
-            # Reload data to pick up the new vote/slip data
-            data = load_from_cache(seed_fallback=False)
-            if data is None:
-                logger.error("Failed to reload cache after vote scraping.")
-                sys.exit(1)
-
-    # ══════════════════════════════════════════════════════════════════════
-    # PHASE 4: Analytics + Obsidian export (optional)
-    # ══════════════════════════════════════════════════════════════════════
-    if args.export or args.export_only:
-        logger.info("")
-        logger.info("=" * 72)
-        logger.info("  PHASE 4: Analytics + Vault export")
-        logger.info("=" * 72)
-        cached = load_analytics_cache(CACHE_DIR, MOCK_DEV_DIR, seed_mode)
-        if cached is not None:
-            scorecards, moneyball = cached
-            logger.info("  Using cached analytics.")
-        else:
-            scorecards, moneyball = compute_analytics(data.members, data.committee_rosters)
-            save_analytics_cache(scorecards, moneyball, CACHE_DIR)
-        logger.info("  Exporting vault...")
-        export_vault(
-            data,
-            scorecards,
-            moneyball,
-            bill_export_limit=args.bill_limit,
-        )
-        logger.info("  Vault exported to ILGA_Graph_Vault/")
+                scorecards, moneyball = compute_analytics(data.members, data.committee_rosters)
+                save_analytics_cache(scorecards, moneyball, CACHE_DIR)
+            logger.info("  Exporting vault...")
+            export_vault(
+                data,
+                scorecards,
+                moneyball,
+                bill_export_limit=args.bill_limit,
+            )
+            logger.info("  Vault exported to ILGA_Graph_Vault/")
+            log.phase(
+                "Analytics + Export",
+                duration_s=time.perf_counter() - t0,
+                detail="vault exported",
+            )
 
     logger.info("")
     logger.info("Done.")

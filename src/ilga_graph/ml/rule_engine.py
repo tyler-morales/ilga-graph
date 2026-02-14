@@ -37,6 +37,17 @@ def load_rules() -> dict:
         return json.load(f)
 
 
+@lru_cache(maxsize=1)
+def get_bill_to_law_process() -> list[dict]:
+    """Return the canonical 6-step \"How a bill becomes law in Illinois\" overview.
+
+    Used by the intelligence bill UI and any other consumers that need
+    the high-level process narrative. Each item has step, title, body.
+    """
+    rules = load_rules()
+    return list(rules.get("bill_to_law_process", []))
+
+
 # ---------------------------------------------------------------------------
 # Committee classification
 # ---------------------------------------------------------------------------

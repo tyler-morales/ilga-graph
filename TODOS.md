@@ -6,8 +6,69 @@
 
 ## Current
 
+- **Bill-to-law process in reference model (2026-02-14):**
+  - **Added:** Canonical "How does a bill become law in Illinois?" 6-step overview into the reference model so the codebase and UI use one source of truth.
+  - **reference/ilga_rules.json:** New top-level key `bill_to_law_process` — array of 6 steps (Introduction of Bill; Committee Work — Hearings; Committee Work — Markup, Amendments, Report; Floor Debate; Passage and Consideration in Second Chamber; Gubernatorial Action). Each step has `step`, `title`, `body`. Aligns with existing `stages` (FILED → SIGNED/VETOED).
+  - **rule_engine.py:** `get_bill_to_law_process()` returns the list from the glossary (cached).
+  - **main.py:** `intelligence_bill_detail` loads and passes `bill_to_law_process` to the template (both found and not-found responses).
+  - **intelligence_bill.html:** Collapsible `<details>` section "How does a bill become law in Illinois?" below Pipeline Progress, rendering the 6 steps from the model.
+
+- **Bill page: accurate last action date + full actions table (2026-02-14):**
+  - **Problem:** Bill SB1531 (and others) showed last action date as June 1, 2025 when the actual last action was Sep 17 — the UI was using the ML score's `last_action_date`, which is frozen at pipeline run time; the cache (`bills.json`) already had the correct later actions in the array.
+  - **Fix:** (1) **state.bills_lookup** — set in lifespan so bill detail can resolve bill by `leg_id` (ML score `bill_id`). (2) **Last action from action_history** — when the bill page has `action_history` from the live cache, we sort actions by date, take the chronologically last one, and set `last_action_date`, `last_action_text`, and `days_since_action` from it (overriding the score). (3) **Fallbacks** — if `bills_lookup.get(bill_id)` misses, try `bill_lookup.get(bill_number)`; then if still None, scan `bills_lookup` for any bill with the same `bill_number` and pick the one with the **latest action date** so we use the most up-to-date copy from the cache. (4) **Full actions table** — added "All actions (table)" with columns Date, Chamber, Action, Category, Signal; Action History section now shows timeline + table and "Last action: &lt;date&gt; — &lt;text&gt;" at the top.
+  - **Files:** `src/ilga_graph/main.py` (`_parse_action_date`, bill detail action_history + override + latest-action fallback), `src/ilga_graph/templates/intelligence_bill.html` (table + last-action note), `src/ilga_graph/templates/base.html` (`.bill-actions-table` CSS).
+
+- **Pipeline stage rollback fix — HB3356 / Rule 19(b) (2026-02-14):**
+  - **Problem:** HB3356 (Hair Braiding Licensure Repeal) passed both House and Senate but was then re-referred to Rules Committee (Rule 19(b)) on 7/01/2025 before concurrence. The tool incorrectly showed "Sent to Governor" because we used the *highest* stage ever reached instead of the *current* stage after the last action.
+  - **Root cause:** `bill_outcome_from_actions()` in `action_classifier.py` only tracked `highest_stage`. When the chronologically last action was "Rule 19(b) / Re-referred to Rules Committee", we never downgraded the stage, so the UI still showed Governor.
+  - **Fix:** (1) **Rollback detection** — `_is_stage_rollback()` treats Rule 19(a)/(b), Rule 3-9(a)/(b), and "Re-referred to Rules Committee/Assignments" as rollbacks. (2) **Current stage** — we now track `current_stage` in addition to `highest_stage`; when a rollback action is seen and current_stage is CROSSED_CHAMBERS/PASSED_BOTH/GOVERNOR, we set current_stage = IN_COMMITTEE. (3) **Stage display** — `compute_bill_stage()` in `features.py` uses `current_stage` (with fallback to `highest_stage` for backward compat). (4) **Chronological order** — `score_all_bills()` in `bill_predictor.py` builds `action_map` from `df_actions.sort("date")` so rollbacks are applied in correct order.
+  - **Files:** `src/ilga_graph/ml/action_classifier.py`, `src/ilga_graph/ml/features.py`, `src/ilga_graph/ml/bill_predictor.py`. **Tests:** `tests/test_action_classifier.py` — HB3356-style action list asserts current_stage is IN_COMMITTEE and compute_bill_stage returns IN_COMMITTEE.
+
+- **SHAP Prediction Explanations — "Why This Score?" (2026-02-14):**
+  - **Problem:** The GradientBoostingClassifier outputs a raw probability, but users have no way to understand *why* a specific bill received its score. Legislators and advocacy teams need actionable insight — which factors are pushing a bill's chances up, and which are dragging them down.
+  - **Solution — SHAP (Shapley Additive exPlanations):** Integrated `shap.TreeExplainer` to compute per-bill feature contributions, converting log-odds SHAP values to probability-space percentage impacts via `scipy.special.expit`.
+  - **Files changed:**
+    - `pyproject.toml`: Added `shap` and `scipy` to `[ml]` dependencies.
+    - `src/ilga_graph/ml/features.py`: Added `FEATURE_NAME_MAPPING` dictionary (40+ raw feature names → human-readable labels), `CATEGORICAL_PREFIXES` list, and `humanize_feature_name()` helper with smart fallbacks for TF-IDF, embedding, and unknown features.
+    - `src/ilga_graph/ml/bill_predictor.py`: In `run_auto()`, saves the raw (pre-calibration) `GradientBoostingClassifier` to `bill_predictor_raw.pkl`, and saves the scoring feature matrix + metadata to `shap_feature_matrix.npz` and `shap_feature_meta.json`.
+    - `src/ilga_graph/ml/explainer.py` **(NEW)**: `SHAPExplainer` class — initialised once at startup with `TreeExplainer`, caches the explainer object. `explain_prediction()` computes SHAP values, converts log-odds → probability impacts, groups one-hot encoded categoricals (`sponsor_party_democrat` + `sponsor_party_republican` → `sponsor_party`), ranks by absolute magnitude, returns top 3 positive and top 3 negative factors with formatted strings.
+    - `src/ilga_graph/ml_loader.py`: `MLData` extended with `explainer`, `feature_matrix`, `feature_bill_ids`, `feature_names`, `_bill_id_to_row`. `load_ml_data()` loads SHAP artifacts and initialises the explainer at startup (graceful degradation if artifacts missing).
+    - `src/ilga_graph/main.py`: Added `PredictionFactor` and `PredictionExplanation` Strawberry GraphQL types. Added `prediction_explanation(bill_id)` resolver to Query. Added `GET /api/bills/{bill_id}/explanation` REST endpoint returning an HTML fragment for HTMX lazy-loading.
+    - `src/ilga_graph/templates/_explanation_partial.html` **(NEW)**: HTMX fragment with green badges (positive factors) and red badges (negative factors), base probability note, and graceful fallback messages.
+    - `src/ilga_graph/templates/intelligence_bill.html`: Added `hx-get` div after the prediction card that lazy-loads the explanation fragment on page load.
+  - **Architecture:** TreeExplainer is initialised once at startup (not per-request). Feature matrix is stored in memory as a sparse matrix. SHAP values are computed on-demand per bill via the `/api/bills/{id}/explanation` endpoint to avoid blocking bulk bill listing. CalibratedClassifierCV is not compatible with TreeExplainer, so the raw model is saved separately.
+  - **Next steps:** Run `make ml-run` to generate SHAP artifacts (`bill_predictor_raw.pkl`, `shap_feature_matrix.npz`, `shap_feature_meta.json`), then `make dev` to verify explanation badges appear on bill detail pages. Consider adding SHAP waterfall/beeswarm charts as a future enhancement.
+
+- **Unified Run Log & Dashboard (2026-02-14):**
+  - **Problem:** Scraping and startup had timing logs (e.g. `.startup_timings.csv`); ML pipeline had none. No single place to see bottlenecks and "how things are looking" across scrape, ml_run, and startup.
+  - **Solution:** Append-only run log (`.run_log.jsonl`) plus terminal and web dashboards.
+  - **`src/ilga_graph/run_log.py`:** `RunLogger` context manager and `append_startup_run()` write one JSONL record per run with task name, start/end, duration, status, and per-phase timings. `load_recent_runs(n, task=?)` for dashboards. Path from `ILGA_RUN_LOG` (default `.run_log.jsonl`).
+  - **Instrumentation:** `scripts/ml_run.py` wraps main in `RunLogger("ml_run")` and logs each step (Backtest, Data Pipeline, Entity Resolution, Graph Embeddings, Bill Scoring, Coalitions, Anomaly Detection, Snapshot). `main.py` lifespan calls `append_startup_run(...)` after existing startup timing CSV. `scripts/scrape.py` wraps in `RunLogger("scrape")` with phases: Members+Bills, Votes+Slips, Analytics+Export (or Load cache + Export for export-only).
+  - **Terminal:** `make logs` (or `make logs N=50`) runs `scripts/log_dashboard.py` — green/amber 2000s-hacker style, last N runs, per-run top phases, and a bottleneck summary (avg phase time per task).
+  - **Web:** `GET /logs` renders `logs.html` — minimal 2000s-hacker UI (dark bg, monospace, green/amber), table of recent runs and a bottleneck table. Link from footer.
+  - **Files:** `.gitignore` and `make clean` now include `.run_log.jsonl`.
+  - **Next:** Optional: add run_log to other scripts (e.g. `ml_pipeline.py`, `scrape_votes.py`) for finer-grained history.
+
+- **Phase 3: Node2Vec Graph Embeddings for Legislator Influence (2026-02-14):**
+  - **Problem:** The current "Moneyball" heuristics treat legislators as independent entities — features like "Party" or "Sponsor Success Rate" miss the relational structure. If a Democrat frequently co-sponsors with three specific Republicans, a tabular model cannot detect this bipartisan bridge. The existing spectral embeddings in `coalitions.py` (32-dim Laplacian eigenvectors) are limited to linear structure.
+  - **Solution — Node2Vec co-sponsorship embeddings:** Model the legislature as a weighted, undirected graph (nodes = legislators, edges = co-sponsorships, weights = frequency). Use Node2Vec (second-order random walks → Word2Vec skip-gram) to generate 64-dimensional dense vector embeddings for each legislator. These embeddings capture the structural position within the co-sponsorship network — legislators who frequently collaborate will have nearby vectors.
+  - **New modules:**
+    - `ml/graph_builder.py`: Builds the weighted co-sponsorship `nx.Graph` from `cache/bills.json`. Filters: only substantive bills (SB/HB), excludes bills with >40 sponsors (ceremonial fluff). All legislators from `dim_members.parquet` added as nodes.
+    - `ml/node_embedder.py`: Node2Vec wrapper. Default hyperparameters: `dimensions=64, walk_length=30, num_walks=200, p=1.0, q=1.0, window=10`. Handles isolated nodes (zero vector). Saves to `processed/member_embeddings.parquet`. All params overridable via `ILGA_N2V_*` env vars.
+  - **Feature integration** (`ml/features.py`):
+    - New `build_embedding_features(df_bills)`: Loads pre-computed embeddings, maps each bill's `primary_sponsor_id` to its 64-dim vector. Produces columns `sponsor_emb_0` through `sponsor_emb_63`. Zero vector for unknown sponsors.
+    - Wired into both `build_feature_matrix()` and `build_panel_feature_matrix()` — included in **both** full and forecast modes (embeddings are legislator-intrinsic, no temporal leakage).
+    - Graceful degradation: if `member_embeddings.parquet` missing, returns zero-filled columns with a warning.
+  - **Coalition upgrade** (`ml/coalitions.py`): `run_coalition_discovery()` now loads pre-computed Node2Vec embeddings for clustering instead of computing spectral embeddings. Falls back to spectral if Node2Vec file not available.
+  - **Pipeline orchestration** (`scripts/ml_run.py`): New Step 3/7 "Graph Embeddings (Node2Vec)" inserted between Entity Resolution and Bill Scoring. Pipeline now has 8 steps (0–7).
+  - **Makefile:** New `make ml-embed` target for standalone embedding generation.
+  - **Dependencies:** Added `node2vec` to `pyproject.toml` `[ml]` extras (pulls in `gensim`).
+  - **Tuning guidance:** `p` controls local vs global exploration — `p<1` favors homophily (local clustering), `q<1` favors structural equivalence. Default `p=1, q=1` is balanced (DeepWalk).
+  - **Next steps:** Run `make ml-run`, compare model accuracy with/without embedding features, tune p/q parameters, consider aggregated co-sponsor embedding (mean of all co-sponsors per bill) as v2 enhancement.
+
 - **Lint fixes before push (2026-02-14):**
   - Resolved 13 ruff errors: E501 line length (wrapped long lines in diagnostics_ml, main, features, rule_engine), F841 unused variables (coalitions.py `topic_results`, features.py `df_bills_sponsors`), E402 imports (moved `typing.Literal` and `action_classifier` to top of features.py; `action_classifier` to top of pipeline.py). `make lint` passes.
+  - **E501 in main.py (bill detail last-action override):** Two more long lines at 3605/3611 — comment shortened; `days_since_action` expression broken out with `today = datetime.now().replace(...)` so line stays ≤100 chars. `make lint-fix` + `ruff format` applied; `make lint` passes.
 
 - **Intelligence: Witness Slips tab (2026-02-13):**
   - New tab on `/intelligence/raw`: **Witness Slips** — demonstrates how organizations and lobbying groups influence bills via witness slip filings.

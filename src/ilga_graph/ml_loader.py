@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import json
 import logging
+import pickle
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 LOGGER = logging.getLogger(__name__)
 PROCESSED_DIR = Path("processed")
@@ -118,6 +120,12 @@ class MLData:
     accuracy_history: list[AccuracyRun] = field(default_factory=list)
     last_run_date: str = ""
     available: bool = False
+    # SHAP explanation support (v9)
+    explainer: Any = None  # SHAPExplainer | None
+    feature_matrix: Any = None  # sparse matrix | None
+    feature_bill_ids: list[str] = field(default_factory=list)
+    feature_names: list[str] = field(default_factory=list)
+    _bill_id_to_row: dict[str, int] = field(default_factory=dict)
 
 
 def load_ml_data() -> MLData:
@@ -287,6 +295,42 @@ def load_ml_data() -> MLData:
             ]
         except Exception:
             LOGGER.exception("Failed to load accuracy history")
+
+    # ── SHAP explainer artifacts ────────────────────────────────────
+    raw_model_path = PROCESSED_DIR / "bill_predictor_raw.pkl"
+    shap_matrix_path = PROCESSED_DIR / "shap_feature_matrix.npz"
+    shap_meta_path = PROCESSED_DIR / "shap_feature_meta.json"
+
+    if raw_model_path.exists() and shap_matrix_path.exists() and shap_meta_path.exists():
+        try:
+            from scipy import sparse as sp
+
+            from .ml.explainer import SHAPExplainer
+
+            with open(raw_model_path, "rb") as f:
+                raw_model = pickle.load(f)
+
+            data.feature_matrix = sp.load_npz(shap_matrix_path)
+
+            with open(shap_meta_path) as f:
+                meta = json.load(f)
+            data.feature_bill_ids = meta.get("bill_ids", [])
+            data.feature_names = meta.get("feature_names", [])
+            data._bill_id_to_row = {bid: idx for idx, bid in enumerate(data.feature_bill_ids)}
+
+            data.explainer = SHAPExplainer(raw_model)
+            LOGGER.info(
+                "SHAP explainer loaded: %d bills, %d features",
+                len(data.feature_bill_ids),
+                len(data.feature_names),
+            )
+        except Exception:
+            LOGGER.exception("Failed to load SHAP explainer (explanations will be unavailable)")
+    else:
+        LOGGER.info(
+            "SHAP artifacts not found -- run 'make ml-run' to generate. "
+            "Prediction explanations will be unavailable."
+        )
 
     # ── Last run date ────────────────────────────────────────────────
     import os
