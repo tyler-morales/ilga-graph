@@ -24,6 +24,8 @@ from pathlib import Path
 
 import polars as pl
 
+from .action_classifier import action_category_for_etl as _classify_action
+
 LOGGER = logging.getLogger(__name__)
 
 # ── Paths ────────────────────────────────────────────────────────────────────
@@ -65,6 +67,9 @@ _DATE_FORMATS = [
 ]
 
 
+_date_parse_failures: set[str] = set()  # track unique failures to avoid log spam
+
+
 def _parse_date_str(s: str) -> str | None:
     """Try multiple date formats, return ISO date string or None."""
     if not s or not s.strip():
@@ -77,33 +82,17 @@ def _parse_date_str(s: str) -> str | None:
             return datetime.strptime(s, fmt).strftime("%Y-%m-%d")
         except ValueError:
             continue
+
+    # Log once per unique unparseable value
+    if s not in _date_parse_failures:
+        _date_parse_failures.add(s)
+        LOGGER.warning("Could not parse date string: %r", s[:60])
     return None
 
 
 # ── Action category mapping ──────────────────────────────────────────────────
-
-_ACTION_CATEGORIES: list[tuple[str, list[str]]] = [
-    ("signed", ["Public Act", "Signed by Governor", "Appointment Confirmed"]),
-    ("crossed", ["Passed Both Houses", "Adopted Both Houses"]),
-    ("chamber_passed", ["Third Reading - Passed", "Resolution Adopted"]),
-    ("second_reading", ["Second Reading", "Third Reading"]),
-    ("committee_passed", ["Do Pass", "Reported Out Of Committee"]),
-    ("committee", ["Assigned to", "Referred to"]),
-    ("vetoed", ["Vetoed", "Total Veto", "Amendatory Veto", "Item Veto"]),
-    ("procedural", ["First Reading", "Filed with", "Rule 3-9", "Rule 19"]),
-    ("amendment", ["Amendment", "Floor Amendment"]),
-    ("cosponsor", ["Co-Sponsor", "Chief Co-Sponsor"]),
-]
-
-
-def _classify_action(action_text: str) -> str:
-    """Map raw action text to a category."""
-    for category, tokens in _ACTION_CATEGORIES:
-        for token in tokens:
-            if token.lower() in action_text.lower():
-                return category
-    return "other"
-
+# Uses the comprehensive action_classifier module which handles ILGA's
+# inconsistent formatting and properly distinguishes bill vs. amendment actions.
 
 # ── 1. dim_members ───────────────────────────────────────────────────────────
 
@@ -210,6 +199,7 @@ def process_bills() -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFr
                 "last_action_date": _parse_date_str(b.get("last_action_date", "")),
                 "sponsor_count": len(sponsor_ids) + len(b.get("house_sponsor_ids", [])),
                 "status_url": b.get("status_url", ""),
+                "full_text": b.get("full_text", ""),
             }
         )
 
@@ -242,7 +232,12 @@ def process_bills() -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFr
             total_nay = len(nay)
 
             # Determine outcome
-            outcome = "passed" if total_yea > total_nay else "lost"
+            if total_yea > total_nay:
+                outcome = "passed"
+            elif total_yea < total_nay:
+                outcome = "lost"
+            else:
+                outcome = "tied"
 
             vote_event_rows.append(
                 {

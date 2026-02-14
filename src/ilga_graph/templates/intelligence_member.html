@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}{{ member.name }} — Influence Profile{% endblock %}
+
+{% block content %}
+<div class="intel-nav">
+    <a href="/intelligence">&larr; Intelligence Overview</a> &middot;
+    <a href="/intelligence/raw">Raw Data Tables</a>
+</div>
+
+<div class="member-profile">
+    {# ── Header ── #}
+    <div class="member-profile-header">
+        <h1>{{ member.name }}</h1>
+        <p class="member-profile-meta">
+            {{ member.party }} &middot; {{ member.chamber }} District {{ member.district }}
+        </p>
+        {% if influence %}
+        <div class="member-influence-bar">
+            <div class="story-score-fill {% if influence.score >= 60 %}score-bar-high{% elif influence.score >= 30 %}score-bar-moderate{% else %}score-bar-low{% endif %}"
+                 style="width: {{ influence.score }}%"></div>
+            <span class="story-score-text">Influence: {{ "%.0f"|format(influence.score) }} / 100</span>
+        </div>
+        <span class="intel-trust-badge intel-trust-{{ influence.label|lower }}">{{ influence.label }} Influence</span>
+        <span class="member-profile-rank">#{{ influence.rank_overall }} overall &middot; #{{ influence.rank_chamber }} in {{ member.chamber }}</span>
+        {% endif %}
+    </div>
+
+    {# ── Narrative summary ── #}
+    {% if narrative %}
+    <div class="member-narrative">
+        <h2>At a Glance</h2>
+        <p>{{ narrative }}</p>
+    </div>
+    {% endif %}
+
+    {# ── Influence Components ── #}
+    {% if influence %}
+    <div class="member-components">
+        <h2>Where Their Influence Comes From</h2>
+        <div class="component-grid">
+            <div class="component-card">
+                <div class="component-value">{{ "%.0f"|format(influence.moneyball_pct) }}%</div>
+                <div class="component-label">Moneyball</div>
+                <div class="component-desc">Bill effectiveness, network size, institutional power</div>
+            </div>
+            <div class="component-card">
+                <div class="component-value">{{ "%.0f"|format(influence.betweenness_pct) }}%</div>
+                <div class="component-label">Bridge Influence</div>
+                <div class="component-desc">Connects different legislative blocs</div>
+            </div>
+            <div class="component-card">
+                <div class="component-value">{{ "%.0f"|format(influence.pivotality_pct) }}%</div>
+                <div class="component-label">Swing Votes</div>
+                <div class="component-desc">
+                    {% if influence.pivotal_winning > 0 %}
+                    Cast {{ influence.pivotal_winning }} pivotal votes on close calls
+                    {% if influence.swing_votes > 0 %}({{ influence.swing_votes }} were margin-of-1 tiebreakers){% endif %}
+                    {% else %}
+                    Vote pivotality on close roll calls
+                    {% endif %}
+                </div>
+            </div>
+            <div class="component-card">
+                <div class="component-value">{{ "%.0f"|format(influence.pull_pct) }}%</div>
+                <div class="component-label">Sponsor Pull</div>
+                <div class="component-desc">
+                    {% if influence.sponsor_lift > 0 %}
+                    Bills they sponsor are {{ "%.0f"|format(influence.sponsor_lift * 100) }}% more likely to advance
+                    {% else %}
+                    ML-predicted effect of sponsorship on bill success
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Influence signals ── #}
+    {% if influence and influence.signals %}
+    <div class="member-signals">
+        <h2>Key Signals</h2>
+        <ul class="signal-list">
+            {% for sig in influence.signals %}
+            <li class="signal-item">{{ sig }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {# ── Moneyball breakdown ── #}
+    {% if moneyball %}
+    <div class="member-moneyball">
+        <h2>Legislative Effectiveness (Moneyball)</h2>
+        <div class="moneyball-grid">
+            <div class="moneyball-stat">
+                <span class="moneyball-value">{{ moneyball.laws_passed }}</span>
+                <span class="moneyball-label">Laws Passed</span>
+            </div>
+            <div class="moneyball-stat">
+                <span class="moneyball-value">{{ "%.0f"|format(moneyball.effectiveness_rate * 100) }}%</span>
+                <span class="moneyball-label">Effectiveness Rate</span>
+            </div>
+            <div class="moneyball-stat">
+                <span class="moneyball-value">{{ "%.1f"|format(moneyball.magnet_score) }}</span>
+                <span class="moneyball-label">Avg Co-sponsors / Law</span>
+            </div>
+            <div class="moneyball-stat">
+                <span class="moneyball-value">{{ "%.0f"|format(moneyball.bridge_score * 100) }}%</span>
+                <span class="moneyball-label">Cross-Party Bills</span>
+            </div>
+            <div class="moneyball-stat">
+                <span class="moneyball-value">{{ moneyball.unique_collaborators }}</span>
+                <span class="moneyball-label">Unique Collaborators</span>
+            </div>
+            <div class="moneyball-stat">
+                <span class="moneyball-value">{{ "%.1f"|format(moneyball.moneyball_score) }}</span>
+                <span class="moneyball-label">Moneyball Score</span>
+            </div>
+        </div>
+        {% if moneyball.badges %}
+        <div class="moneyball-badges">
+            {% for badge in moneyball.badges %}
+            <span class="role-label role-badge">{{ badge }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {# ── Bills sponsored ── #}
+    {% if top_bills %}
+    <div class="member-bills">
+        <h2>Notable Bills</h2>
+        <p class="story-subtitle">Highest probability bills sponsored or co-sponsored by {{ member.name }}.</p>
+        <table class="intel-table">
+            <thead>
+                <tr>
+                    <th>Bill</th>
+                    <th>Description</th>
+                    <th>Predicted Dest.</th>
+                    <th>P(Advance)</th>
+                    <th title="Forecast P(Law) — content + sponsor only">Forecast</th>
+                    <th>Stage</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in top_bills %}
+                <tr>
+                    <td><a href="/intelligence/bill/{{ b.bill_id }}"><strong>{{ b.bill_number }}</strong></a></td>
+                    <td>{{ b.description[:60] }}{% if b.description|length > 60 %}&hellip;{% endif %}</td>
+                    <td><span class="dest-badge dest-{{ (b.predicted_destination or 'Stuck')|lower|replace('→ ', '')|replace(' ', '-') }}">{{ b.predicted_destination or 'Stuck' }}</span></td>
+                    <td>{{ "%.0f"|format(b.prob_advance * 100) }}%</td>
+                    <td>
+                        {% if b.forecast_score > 0 %}
+                        {{ "%.0f"|format(b.forecast_score * 100) }}%
+                        {% if b.forecast_confidence %}<small class="forecast-conf forecast-{{ b.forecast_confidence|lower }}">{{ b.forecast_confidence }}</small>{% endif %}
+                        {% else %}&mdash;{% endif %}
+                    </td>
+                    <td>{{ b.stage_label }}</td>
+                    <td><span class="lifecycle-badge lifecycle-{{ b.lifecycle_status|lower }}">{{ b.lifecycle_status }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {# ── Coalition membership ── #}
+    {% if coalition %}
+    <div class="member-coalition">
+        <h2>Voting Bloc</h2>
+        <p>Member of <strong>{{ coalition.name }}</strong>
+            ({{ coalition.size }} members, {{ "%.0f"|format(coalition.cohesion * 100) }}% cohesion).
+            {% if coalition.focus_areas %}
+            Focus areas: {{ coalition.focus_areas[:3]|join(', ') }}.
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

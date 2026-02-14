@@ -1,20 +1,33 @@
-"""Voting coalition discovery with proper clustering.
+"""Topic-based voting coalition discovery.
 
-Fixes over v1:
-- Uses Agglomerative Clustering instead of DBSCAN (no outliers by design)
-- Automatically finds optimal number of clusters via silhouette analysis
-- Validates clusters against known party structure
-- Builds DISAGREEMENT graph (not just agreement) for richer signal
-- Reports cross-party coalition quality metrics
+Instead of clustering all members on overall voting agreement (which produces
+generic blocs with silhouette ~0.1), this module builds **per-topic coalitions**:
+
+For each policy area (Healthcare, Criminal Justice, Education, etc.):
+  1. Identify bills assigned to that topic's committees
+  2. Find roll-call votes on those bills
+  3. Compute each member's YES rate on that topic
+  4. Segment into Champions / Lean Support / Swing / Lean Oppose / Oppose
+
+This produces actionable output like:
+  "On Healthcare: 85 Champions (72D/13R), 30 Swing (8D/22R), 45 Oppose (1D/44R)"
+
+Also retains the general (cross-topic) agreement clustering as a secondary
+output, but uses k=2 (party-bloc) as the honest baseline since silhouette
+is low.
 
 Outputs:
+    processed/topic_coalitions.json      -- Per-topic member voting profiles
+    processed/coalitions.parquet         -- Member cluster assignments (general)
+    processed/coalition_profiles.json    -- General coalition profiles
     processed/member_embeddings.parquet  -- 32-dim vectors per member
-    processed/coalitions.parquet         -- Member cluster assignments
 """
 
 from __future__ import annotations
 
+import json
 import logging
+from collections import Counter
 from pathlib import Path
 
 import networkx as nx
@@ -31,17 +44,441 @@ PROCESSED_DIR = Path("processed")
 
 console = Console()
 
+# Minimum number of roll-call votes on a topic for a member to be classified
+_MIN_MEMBER_VOTES = 3
+# Minimum number of bills with votes in a topic for the topic to be reported
+_MIN_TOPIC_BILLS = 10
 
-# ── Graph construction ───────────────────────────────────────────────────────
+
+# ── Policy category mapping ───────────────────────────────────────────────────
+
+# Keyword patterns for matching committee NAMES to categories.
+_CATEGORY_NAME_KEYWORDS: dict[str, list[str]] = {
+    "Transportation": ["transport", "vehicle", "roads"],
+    "Agriculture": ["agricultur", "farm", "conservation"],
+    "Commerce": [
+        "commerce",
+        "small business",
+        "business",
+        "consumer protect",
+        "licensed activit",
+        "gaming",
+        "tourism",
+        "trade",
+        "economic opportun",
+    ],
+    "Criminal Justice": [
+        "criminal",
+        "judiciary",
+        "public safety",
+        "restorative justice",
+        "police",
+        "fire committee",
+        "gun violence",
+        "human rights",
+        "immigration",
+    ],
+    "Education": ["education", "school", "early childhood"],
+    "Energy & Environment": [
+        "energy",
+        "environment",
+        "public utilit",
+        "utilities",
+    ],
+    "Healthcare": [
+        "health",
+        "human services",
+        "child welfare",
+        "mental health",
+        "addiction",
+        "medicaid",
+        "prescription drug",
+        "public health",
+        "behavioral",
+        "end of life",
+    ],
+    "Housing": ["housing"],
+    "Insurance & Finance": ["insurance", "financial instit"],
+    "Labor": ["labor", "workforce", "workers", "wage", "personnel"],
+    "Revenue & Pensions": [
+        "revenue",
+        "pension",
+        "appropriat",
+        "tax",
+        "budget",
+    ],
+    "State Government": [
+        "state government",
+        "government admin",
+        "election",
+        "ethics & election",
+        "local government",
+        "cities",
+        "counties",
+        "cybersecur",
+        "data analytics",
+    ],
+}
+
+
+def _extract_committee_name(action_text: str) -> str | None:
+    """Extract committee name from action text like 'Assigned toJudiciary'.
+
+    Handles ILGA format where there is often no space between 'to' and the
+    committee name, and committee name may end with ' Committee'.
+    """
+    import re
+
+    m = re.search(
+        r"(?:(?:Re-)?[Aa]ssigned\s+to|(?:Re-)?[Rr]eferred\s+to)\s*"
+        r"(.+?)(?:\s+Committee)?(?:\s*;.*|$)",
+        action_text,
+    )
+    if m:
+        name = m.group(1).strip().rstrip("-").strip()
+        if name.lower() in (
+            "rules",
+            "assignments",
+            "assignments * reports",
+            "rules * reports",
+            "committee of the whole",
+            "resolutions consent calendar",
+            "executive",
+            "executive appointments",
+        ):
+            return None
+        return name
+    return None
+
+
+def _categorize_committee_name(committee_name: str) -> list[str]:
+    """Map a committee name to policy categories using keyword matching."""
+    cn_lower = committee_name.lower()
+    categories = []
+    for cat, keywords in _CATEGORY_NAME_KEYWORDS.items():
+        for kw in keywords:
+            if kw in cn_lower:
+                categories.append(cat)
+                break
+    return categories
+
+
+# ── Bill → category mapping ──────────────────────────────────────────────────
+
+
+def build_bill_categories() -> dict[str, set[str]]:
+    """Build bill_id → set of policy categories from actions + witness slips.
+
+    Uses 'assignment' actions (not the old broken 'committee' filter) and
+    witness slip hearing_committee fields.
+    """
+    bill_categories: dict[str, set[str]] = {}
+
+    # From bill actions — assignment category has "Assigned to X" text
+    actions_path = PROCESSED_DIR / "fact_bill_actions.parquet"
+    if actions_path.exists():
+        df_actions = pl.read_parquet(actions_path)
+        assignment_actions = df_actions.filter(pl.col("action_category") == "assignment")
+        for row in assignment_actions.to_dicts():
+            bid = row["bill_id"]
+            action = row.get("action_text", "")
+            committee_name = _extract_committee_name(action)
+            if committee_name:
+                cats = _categorize_committee_name(committee_name)
+                for cat in cats:
+                    bill_categories.setdefault(bid, set()).add(cat)
+
+    # From witness slip hearing_committee
+    slips_path = PROCESSED_DIR / "fact_witness_slips.parquet"
+    if slips_path.exists():
+        df_slips = pl.read_parquet(slips_path)
+        if "hearing_committee" in df_slips.columns:
+            for row in df_slips.select(["bill_id", "hearing_committee"]).unique().to_dicts():
+                hc = row.get("hearing_committee", "") or ""
+                if hc:
+                    cats = _categorize_committee_name(hc)
+                    for cat in cats:
+                        bill_categories.setdefault(row["bill_id"], set()).add(cat)
+
+    LOGGER.info("Mapped %d bills to policy categories", len(bill_categories))
+    return bill_categories
+
+
+# ── Topic-based coalitions (NEW — primary output) ────────────────────────────
+
+
+def discover_topic_coalitions() -> list[dict]:
+    """Build per-topic voting coalitions from roll-call vote data.
+
+    For each policy area with enough voted bills:
+      1. Find bills in that category
+      2. Find vote events on those bills
+      3. Compute each member's YES rate on that topic
+      4. Segment into tiers: Champion / Lean Support / Swing / Lean Oppose / Oppose
+      5. Report with party breakdown, key members
+
+    Returns list of topic coalition dicts and saves to
+    processed/topic_coalitions.json.
+    """
+    console.print("\n[bold]Topic-Based Coalition Discovery[/]")
+
+    # Load data
+    casts_path = PROCESSED_DIR / "fact_vote_casts.parquet"
+    if not casts_path.exists():
+        casts_path = PROCESSED_DIR / "fact_vote_casts_raw.parquet"
+    if not casts_path.exists():
+        console.print("[dim]No vote cast data.[/]")
+        return []
+
+    df_casts = pl.read_parquet(casts_path)
+    resolved = df_casts.filter(pl.col("member_id").is_not_null())
+    if "vote_cast" not in resolved.columns:
+        if "cast" in resolved.columns:
+            resolved = resolved.rename({"cast": "vote_cast"})
+        else:
+            return []
+
+    events_path = PROCESSED_DIR / "fact_vote_events.parquet"
+    if not events_path.exists():
+        return []
+    df_events = pl.read_parquet(events_path)
+    df_members = pl.read_parquet(PROCESSED_DIR / "dim_members.parquet")
+
+    member_lookup = {m["member_id"]: m for m in df_members.to_dicts()}
+
+    # Build mappings
+    bill_categories = build_bill_categories()
+    event_to_bill = {
+        r["vote_event_id"]: r["bill_id"]
+        for r in df_events.select(["vote_event_id", "bill_id"]).to_dicts()
+    }
+
+    # Invert: category → set of bill_ids
+    category_bills: dict[str, set[str]] = {}
+    for bid, cats in bill_categories.items():
+        for cat in cats:
+            category_bills.setdefault(cat, set()).add(bid)
+
+    # Find which vote events map to each category
+    category_events: dict[str, set[str]] = {}
+    for eid, bid in event_to_bill.items():
+        for cat in bill_categories.get(bid, set()):
+            category_events.setdefault(cat, set()).add(eid)
+
+    # For each topic, compute per-member voting profiles
+    topic_results = []
+
+    for cat in sorted(_CATEGORY_NAME_KEYWORDS.keys()):
+        cat_event_ids = category_events.get(cat, set())
+        cat_bill_ids = category_bills.get(cat, set())
+        voted_bill_ids = {event_to_bill[eid] for eid in cat_event_ids if eid in event_to_bill}
+
+        if len(voted_bill_ids) < _MIN_TOPIC_BILLS:
+            continue
+
+        # Filter casts to this topic's vote events
+        topic_casts = resolved.filter(pl.col("vote_event_id").is_in(list(cat_event_ids)))
+
+        # Per-member: count YES, NO
+        member_votes: dict[str, dict[str, int]] = {}
+        for row in topic_casts.to_dicts():
+            mid = row.get("member_id", "")
+            cast = row.get("vote_cast", "")
+            if mid and cast in ("Y", "N"):
+                stats = member_votes.setdefault(mid, {"Y": 0, "N": 0})
+                stats[cast] += 1
+
+        # Segment members into tiers based on YES rate
+        tiers: dict[str, list[dict]] = {
+            "Champion": [],
+            "Lean Support": [],
+            "Swing": [],
+            "Lean Oppose": [],
+            "Oppose": [],
+        }
+
+        member_profiles = []
+        for mid, stats in member_votes.items():
+            total = stats["Y"] + stats["N"]
+            if total < _MIN_MEMBER_VOTES:
+                continue
+            yes_rate = stats["Y"] / total
+            m = member_lookup.get(mid, {})
+
+            profile = {
+                "member_id": mid,
+                "name": m.get("name", ""),
+                "party": m.get("party", ""),
+                "chamber": m.get("chamber", ""),
+                "yes_votes": stats["Y"],
+                "no_votes": stats["N"],
+                "total_votes": total,
+                "yes_rate": round(yes_rate, 3),
+            }
+            member_profiles.append(profile)
+
+            if yes_rate >= 0.80:
+                tiers["Champion"].append(profile)
+            elif yes_rate >= 0.65:
+                tiers["Lean Support"].append(profile)
+            elif yes_rate >= 0.45:
+                tiers["Swing"].append(profile)
+            elif yes_rate >= 0.25:
+                tiers["Lean Oppose"].append(profile)
+            else:
+                tiers["Oppose"].append(profile)
+
+        # Build tier summaries
+        tier_summaries = []
+        for tier_name, members in tiers.items():
+            if not members:
+                continue
+            dem = sum(1 for m in members if m["party"] == "Democrat")
+            rep = sum(1 for m in members if m["party"] == "Republican")
+            avg_yes = sum(m["yes_rate"] for m in members) / len(members) if members else 0
+            # Top 5 members by vote count (most active in this topic)
+            top_members = sorted(members, key=lambda m: m["total_votes"], reverse=True)[:5]
+            tier_summaries.append(
+                {
+                    "tier": tier_name,
+                    "count": len(members),
+                    "dem_count": dem,
+                    "rep_count": rep,
+                    "avg_yes_rate": round(avg_yes, 3),
+                    "top_members": [
+                        {
+                            "name": m["name"],
+                            "party": m["party"],
+                            "yes_rate": m["yes_rate"],
+                            "total_votes": m["total_votes"],
+                        }
+                        for m in top_members
+                    ],
+                }
+            )
+
+        topic_result = {
+            "topic": cat,
+            "bills_with_votes": len(voted_bill_ids),
+            "total_bills": len(cat_bill_ids),
+            "members_with_enough_votes": len(member_profiles),
+            "tiers": tier_summaries,
+            "all_member_profiles": member_profiles,
+        }
+        topic_results.append(topic_result)
+
+    # Save
+    with open(PROCESSED_DIR / "topic_coalitions.json", "w") as f:
+        json.dump(topic_results, f, indent=2)
+    LOGGER.info(
+        "Saved %d topic coalition profiles to topic_coalitions.json",
+        len(topic_results),
+    )
+
+    # Display
+    _display_topic_coalitions(topic_results)
+
+    return topic_results
+
+
+def _display_topic_coalitions(topic_results: list[dict]) -> None:
+    """Display topic-based coalition results as rich tables."""
+    if not topic_results:
+        console.print("[dim]No topic coalition data.[/]")
+        return
+
+    # Summary table
+    console.print()
+    summary = Table(
+        title="Topic-Based Voting Coalitions",
+        show_lines=True,
+        title_style="bold cyan",
+    )
+    summary.add_column("Topic", style="bold")
+    summary.add_column("Bills", justify="right")
+    summary.add_column("Members", justify="right")
+    summary.add_column("Champions", justify="right")
+    summary.add_column("Swing", justify="right")
+    summary.add_column("Oppose", justify="right")
+    summary.add_column("Party Split", no_wrap=True)
+
+    for t in topic_results:
+        champ = next((s for s in t["tiers"] if s["tier"] == "Champion"), None)
+        swing = next((s for s in t["tiers"] if s["tier"] == "Swing"), None)
+        oppose = next((s for s in t["tiers"] if s["tier"] == "Oppose"), None)
+
+        champ_str = ""
+        if champ:
+            champ_str = (
+                f"{champ['count']} ([blue]{champ['dem_count']}D[/]/[red]{champ['rep_count']}R[/])"
+            )
+        swing_str = ""
+        if swing:
+            swing_str = (
+                f"{swing['count']} ([blue]{swing['dem_count']}D[/]/[red]{swing['rep_count']}R[/])"
+            )
+        oppose_str = ""
+        if oppose:
+            oppose_str = (
+                f"{oppose['count']} "
+                f"([blue]{oppose['dem_count']}D[/]/"
+                f"[red]{oppose['rep_count']}R[/])"
+            )
+
+        # Overall party split of active voters
+        total_dem = sum(s["dem_count"] for s in t["tiers"])
+        total_rep = sum(s["rep_count"] for s in t["tiers"])
+        party_str = f"[blue]{total_dem}D[/] / [red]{total_rep}R[/]"
+
+        summary.add_row(
+            t["topic"],
+            str(t["bills_with_votes"]),
+            str(t["members_with_enough_votes"]),
+            champ_str,
+            swing_str,
+            oppose_str,
+            party_str,
+        )
+    console.print(summary)
+
+    # Detail tables for topics with interesting swing dynamics
+    for t in topic_results:
+        swing_tiers = [
+            s for s in t["tiers"] if s["tier"] in ("Swing", "Lean Support", "Lean Oppose")
+        ]
+        swing_count = sum(s["count"] for s in swing_tiers)
+        if swing_count < 3:
+            continue
+
+        console.print()
+        detail = Table(
+            title=f"{t['topic']} — Voting Blocs",
+            show_lines=True,
+        )
+        detail.add_column("Tier", style="bold")
+        detail.add_column("Members", justify="right")
+        detail.add_column("Party Mix")
+        detail.add_column("Avg YES Rate", justify="right")
+        detail.add_column("Key Members")
+
+        for tier in t["tiers"]:
+            party = f"[blue]{tier['dem_count']}D[/] / [red]{tier['rep_count']}R[/]"
+            key = ", ".join(f"{m['name']} ({m['yes_rate']:.0%})" for m in tier["top_members"][:3])
+            detail.add_row(
+                tier["tier"],
+                str(tier["count"]),
+                party,
+                f"{tier['avg_yes_rate']:.0%}",
+                key,
+            )
+        console.print(detail)
+
+
+# ── Graph construction (for general clustering) ──────────────────────────────
 
 
 def build_agreement_graph(df_vote_casts: pl.DataFrame) -> nx.Graph:
-    """Build a weighted graph: edge weight = agreement rate between members.
-
-    For each pair of members who voted on at least 10 common events,
-    edge weight = (# same direction votes) / (# common votes).
-    This normalizes for activity level, unlike raw co-vote counts.
-    """
+    """Build a weighted graph: edge weight = agreement rate between members."""
     LOGGER.info("Building agreement-rate graph...")
 
     resolved = df_vote_casts.filter(pl.col("member_id").is_not_null())
@@ -56,17 +493,15 @@ def build_agreement_graph(df_vote_casts: pl.DataFrame) -> nx.Graph:
         pl.col("vote_cast"),
     )
 
-    # Track per-pair: (agree_count, total_count)
     pair_stats: dict[tuple[str, str], list[int]] = {}
 
     for row in events.to_dicts():
         member_ids = row["member_id"]
         casts = row["vote_cast"]
 
-        # Build member -> cast map for this event
         votes = {}
         for mid, cast in zip(member_ids, casts):
-            if cast in ("Y", "N"):  # Only clear Y/N votes
+            if cast in ("Y", "N"):
                 votes[mid] = cast
 
         members = list(votes.keys())
@@ -80,7 +515,6 @@ def build_agreement_graph(df_vote_casts: pl.DataFrame) -> nx.Graph:
                 if votes[a] == votes[b]:
                     pair_stats[key][0] += 1
 
-    # Only add edges for pairs with 10+ common votes
     for (a, b), (agree, total) in pair_stats.items():
         if total >= 10:
             G.add_edge(a, b, weight=agree / total)
@@ -95,8 +529,6 @@ def build_agreement_graph(df_vote_casts: pl.DataFrame) -> nx.Graph:
 
 def add_cosponsor_edges(G: nx.Graph) -> nx.Graph:
     """Add co-sponsorship signal to the agreement graph."""
-    import json
-
     LOGGER.info("Adding co-sponsorship edges...")
 
     bills_path = Path("cache/bills.json")
@@ -106,7 +538,6 @@ def add_cosponsor_edges(G: nx.Graph) -> nx.Graph:
     with open(bills_path) as f:
         bills_raw = json.load(f)
 
-    # Count co-sponsorships per pair
     cosponsor_counts: dict[tuple[str, str], int] = {}
     for b in bills_raw.values():
         all_ids = b.get("sponsor_ids", []) + b.get("house_sponsor_ids", [])
@@ -118,15 +549,13 @@ def add_cosponsor_edges(G: nx.Graph) -> nx.Graph:
                 key = (min(a, b_id), max(a, b_id))
                 cosponsor_counts[key] = cosponsor_counts.get(key, 0) + 1
 
-    # Add as bonus weight (normalized)
     if cosponsor_counts:
         max_count = max(cosponsor_counts.values())
         for (a, b), count in cosponsor_counts.items():
-            bonus = 0.2 * (count / max_count)  # Max 0.2 bonus
+            bonus = 0.2 * (count / max_count)
             if G.has_edge(a, b):
                 G[a][b]["weight"] = min(1.0, G[a][b]["weight"] + bonus)
             elif count >= 3:
-                # Only add new edges for significant co-sponsorship
                 G.add_edge(a, b, weight=0.5 + bonus)
 
     LOGGER.info(
@@ -179,31 +608,30 @@ def compute_embeddings(
     return embeddings, nodes
 
 
-# ── Clustering (Agglomerative -- no outliers) ────────────────────────────────
+# ── Clustering (Agglomerative -- general, secondary) ─────────────────────────
 
 
 def cluster_members(
     embeddings: dict[str, np.ndarray],
     nodes: list[str],
-) -> tuple[dict[str, int], float]:
+) -> tuple[dict[str, int], float, int]:
     """Cluster members using Agglomerative Clustering.
 
-    Tries k=3 through k=10 and picks the k with best silhouette score.
-    Returns ({member_id: cluster_label}, best_silhouette).
+    Tries k=2 through k=8 and picks the k with best silhouette score.
+    Returns ({member_id: cluster_label}, best_silhouette, best_k).
     """
     if not embeddings:
-        return {}, 0.0
+        return {}, 0.0, 0
 
     X = np.array([embeddings[n] for n in nodes])
 
     best_labels = None
     best_score = -1.0
-    best_k = 3
+    best_k = 2
 
-    for k in range(3, min(11, len(nodes))):
+    for k in range(2, min(9, len(nodes))):
         agg = AgglomerativeClustering(n_clusters=k, metric="cosine", linkage="average")
         labels = agg.fit_predict(X)
-
         score = silhouette_score(X, labels, metric="cosine")
         if score > best_score:
             best_score = score
@@ -211,33 +639,25 @@ def cluster_members(
             best_k = k
 
     LOGGER.info(
-        "  Clustering: %d blocs, silhouette=%.3f (best of k=3..10)",
+        "  Clustering: %d blocs, silhouette=%.3f (best of k=2..8)",
         best_k,
         best_score,
     )
 
     clusters = {nodes[i]: int(best_labels[i]) for i in range(len(nodes))}
-    return clusters, best_score
+    return clusters, best_score, best_k
 
 
 # ── Validation ───────────────────────────────────────────────────────────────
 
 
-def validate_coalitions(
-    df: pl.DataFrame,
-) -> dict:
-    """Validate discovered coalitions against known party structure.
-
-    Good coalitions should:
-    - Have at least some cross-party blocs (otherwise just party)
-    - Not be perfectly aligned with party (otherwise useless)
-    """
+def validate_coalitions(df: pl.DataFrame) -> dict:
+    """Validate discovered coalitions against known party structure."""
     results = {}
 
     n_blocs = df["coalition_id"].n_unique()
     results["n_blocs"] = n_blocs
 
-    # Count cross-party blocs (blocs with both D and R)
     cross_party = 0
     pure_d = 0
     pure_r = 0
@@ -261,114 +681,7 @@ def validate_coalitions(
     return results
 
 
-# ── Main pipeline ────────────────────────────────────────────────────────────
-
-
-def run_coalition_discovery() -> pl.DataFrame:
-    """Full automated coalition discovery pipeline."""
-    console.print("\n[bold]Coalition Discovery[/]")
-
-    casts_path = PROCESSED_DIR / "fact_vote_casts.parquet"
-    if not casts_path.exists():
-        casts_path = PROCESSED_DIR / "fact_vote_casts_raw.parquet"
-
-    df_casts = pl.read_parquet(casts_path)
-    df_members = pl.read_parquet(PROCESSED_DIR / "dim_members.parquet")
-
-    # Build agreement graph (normalized, not raw counts)
-    G = build_agreement_graph(df_casts)
-    G = add_cosponsor_edges(G)
-
-    # Embeddings
-    embeddings, nodes = compute_embeddings(G, n_dims=32)
-
-    # Cluster (agglomerative -- every member assigned)
-    clusters, silhouette = cluster_members(embeddings, nodes)
-
-    # Build output DataFrame
-    member_lookup = {m["member_id"]: m for m in df_members.to_dicts()}
-
-    rows = []
-    for mid, cluster_id in clusters.items():
-        m = member_lookup.get(mid, {})
-        emb = embeddings.get(mid, np.zeros(32))
-        rows.append(
-            {
-                "member_id": mid,
-                "name": m.get("name", ""),
-                "party": m.get("party", ""),
-                "chamber": m.get("chamber", ""),
-                "district": m.get("district"),
-                "coalition_id": cluster_id,
-                **{f"emb_{i}": float(emb[i]) for i in range(len(emb))},
-            }
-        )
-
-    df_coalitions = pl.DataFrame(rows)
-
-    df_coalitions.write_parquet(PROCESSED_DIR / "coalitions.parquet")
-    LOGGER.info("Saved coalitions to processed/coalitions.parquet")
-
-    # Save embeddings separately
-    emb_rows = []
-    for mid in nodes:
-        emb = embeddings[mid]
-        emb_rows.append(
-            {
-                "member_id": mid,
-                **{f"dim_{i}": float(emb[i]) for i in range(len(emb))},
-            }
-        )
-    if emb_rows:
-        pl.DataFrame(emb_rows).write_parquet(PROCESSED_DIR / "member_embeddings.parquet")
-
-    # Validate and display
-    validation = validate_coalitions(df_coalitions)
-    display_coalitions(df_coalitions, silhouette, validation)
-
-    # Characterize coalitions (names, policy focus, signature bills)
-    characterize_coalitions(df_coalitions)
-
-    # Re-read updated coalitions with names
-    df_coalitions = pl.read_parquet(PROCESSED_DIR / "coalitions.parquet")
-
-    return df_coalitions
-
-
-# ── Policy category mapping (mirrors main.py) ────────────────────────────────
-
-_CATEGORY_COMMITTEES: dict[str, list[str]] = {
-    "Transportation": ["STRN"],
-    "Agriculture": ["SAGR"],
-    "Commerce": ["SCOM", "SBTE"],
-    "Criminal Justice": ["SCRL", "SHRJ"],
-    "Education": ["SESE", "SCHE"],
-    "Energy & Environment": ["SENE", "SNVR"],
-    "Healthcare": ["SBMH", "SCHW", "SHUM"],
-    "Housing": ["SHOU"],
-    "Insurance & Finance": ["SINS", "SFIC"],
-    "Labor": ["SLAB"],
-    "Revenue & Pensions": ["SREV", "SPEN"],
-    "State Government": ["SGOA", "SHEE", "SEXC"],
-}
-
-# Reverse: committee code -> category name
-_COMMITTEE_TO_CATEGORY: dict[str, str] = {}
-for _cat, _codes in _CATEGORY_COMMITTEES.items():
-    for _code in _codes:
-        _COMMITTEE_TO_CATEGORY[_code] = _cat
-
-
-def _extract_committee_code(action_text: str) -> str | None:
-    """Try to extract a committee code from an action like 'Assigned to Judiciary'."""
-    import re
-
-    m = re.search(
-        r"(?:Assigned to|Referred to)\s+(.+?)(?:\s*-|$)",
-        action_text,
-        re.IGNORECASE,
-    )
-    return m.group(1).strip() if m else None
+# ── General coalition characterization ───────────────────────────────────────
 
 
 def characterize_coalitions(
@@ -376,17 +689,10 @@ def characterize_coalitions(
 ) -> list[dict]:
     """Analyze what each coalition votes on and generate descriptive names.
 
-    Joins coalition members -> vote casts -> vote events -> bills -> actions
-    to identify policy focus areas for each bloc.
-
-    Returns a list of coalition profile dicts and saves to
-    processed/coalition_profiles.json.
+    Uses FIXED category mapping (action_category == 'assignment', not 'committee').
     """
-    import json
+    console.print("\n[bold]Characterizing General Coalitions...[/]")
 
-    console.print("\n[bold]Characterizing Coalitions...[/]")
-
-    # Load needed data
     casts_path = PROCESSED_DIR / "fact_vote_casts.parquet"
     if not casts_path.exists():
         casts_path = PROCESSED_DIR / "fact_vote_casts_raw.parquet"
@@ -399,52 +705,16 @@ def characterize_coalitions(
         return []
 
     df_events = pl.read_parquet(events_path)
-    df_actions = pl.read_parquet(PROCESSED_DIR / "fact_bill_actions.parquet")
     df_bills = pl.read_parquet(PROCESSED_DIR / "dim_bills.parquet")
 
-    # Build bill -> categories from committee assignment actions
-    bill_categories: dict[str, list[str]] = {}
-    committee_actions = df_actions.filter(pl.col("action_category") == "committee")
-    for row in committee_actions.to_dicts():
-        bid = row["bill_id"]
-        action = row.get("action_text", "")
-        # Try to match committee name to category
-        for cat, codes in _CATEGORY_COMMITTEES.items():
-            for code in codes:
-                if code.upper() in action.upper():
-                    bill_categories.setdefault(bid, []).append(cat)
-        # Also try matching committee name text
-        committee_name = _extract_committee_code(action)
-        if committee_name:
-            cn_lower = committee_name.lower()
-            for cat in _CATEGORY_COMMITTEES:
-                if cat.lower() in cn_lower:
-                    bill_categories.setdefault(bid, []).append(cat)
+    # Build bill categories using the shared helper (FIXED filter)
+    bill_categories = build_bill_categories()
 
-    # Also use witness slip hearing_committee
-    slips_path = PROCESSED_DIR / "fact_witness_slips.parquet"
-    if slips_path.exists():
-        df_slips = pl.read_parquet(slips_path)
-        if "hearing_committee" in df_slips.columns:
-            for row in df_slips.select(["bill_id", "hearing_committee"]).unique().to_dicts():
-                hc = row.get("hearing_committee", "") or ""
-                if hc:
-                    hc_lower = hc.lower()
-                    for cat in _CATEGORY_COMMITTEES:
-                        if cat.lower() in hc_lower:
-                            bill_categories.setdefault(row["bill_id"], []).append(cat)
-
-    # Deduplicate per bill
-    for bid in bill_categories:
-        bill_categories[bid] = list(set(bill_categories[bid]))
-
-    # Build vote_event -> bill mapping
     event_to_bill = {
         r["vote_event_id"]: r["bill_id"]
         for r in df_events.select(["vote_event_id", "bill_id"]).to_dicts()
     }
 
-    # Build bill descriptions for signature bills
     bill_desc = {
         r["bill_id"]: {
             "bill_number": r.get("bill_number_raw", ""),
@@ -453,17 +723,11 @@ def characterize_coalitions(
         for r in df_bills.to_dicts()
     }
 
-    # Per-coalition analysis
-    # Track: category votes (YES), total YES/NO, per-bill YES counts
-    from collections import Counter
-
     profiles = []
     unique_cids = sorted(df_coalitions["coalition_id"].unique().to_list())
 
-    # Pre-compute: resolved casts with coalition info
     resolved = df_casts.filter(pl.col("member_id").is_not_null())
     if "vote_cast" not in resolved.columns:
-        # Fallback for raw casts
         if "cast" in resolved.columns:
             resolved = resolved.rename({"cast": "vote_cast"})
         else:
@@ -472,12 +736,11 @@ def characterize_coalitions(
     for cid in unique_cids:
         bloc = df_coalitions.filter(pl.col("coalition_id") == cid)
         member_ids = set(bloc["member_id"].to_list())
-
-        # Get all votes by this coalition's members
         bloc_casts = resolved.filter(pl.col("member_id").is_in(list(member_ids)))
 
-        # Category vote counts (YES votes on bills in each category)
-        cat_counts: Counter = Counter()
+        # Count categories from YES votes (relative to bloc, not absolute)
+        cat_yes: Counter = Counter()
+        cat_total: Counter = Counter()
         bill_yes_counts: Counter = Counter()
         total_yes = 0
         total_no = 0
@@ -489,31 +752,38 @@ def characterize_coalitions(
             if not bid:
                 continue
 
+            cats = bill_categories.get(bid, set())
             if cast == "Y":
                 total_yes += 1
                 bill_yes_counts[bid] += 1
-                cats = bill_categories.get(bid, [])
                 for cat in cats:
-                    cat_counts[cat] += 1
+                    cat_yes[cat] += 1
+                    cat_total[cat] += 1
             elif cast == "N":
                 total_no += 1
+                for cat in cats:
+                    cat_total[cat] += 1
 
-        # Top 3 categories
-        top_cats = [c for c, _ in cat_counts.most_common(5)][:3]
+        # Top categories by YES rate difference (not raw count)
+        # This differentiates: a bloc that votes YES 95% on Healthcare
+        # from one that votes YES 60% — even if both have lots of votes.
+        cat_yes_rates = {}
+        for cat in cat_total:
+            if cat_total[cat] >= 20:
+                cat_yes_rates[cat] = cat_yes[cat] / cat_total[cat]
 
-        # Party composition
+        # Sort by YES rate descending — the categories they SUPPORT most
+        top_cats = sorted(cat_yes_rates, key=lambda c: cat_yes_rates[c], reverse=True)[:3]
+
         dem = len(bloc.filter(pl.col("party") == "Democrat"))
         rep = len(bloc.filter(pl.col("party") == "Republican"))
         size = len(bloc)
 
-        # YES rate
         total_votes = total_yes + total_no
         yes_rate = total_yes / total_votes if total_votes > 0 else 0.5
 
-        # Cohesion: how often do bloc members agree on the same vote?
         cohesion = _compute_cohesion(bloc_casts, member_ids, event_to_bill)
 
-        # Signature bills: highest YES rate among members
         top_bills = bill_yes_counts.most_common(5)
         sig_bills = []
         for bid, count in top_bills:
@@ -526,13 +796,13 @@ def characterize_coalitions(
                 }
             )
 
-        # Generate name
         name = _generate_coalition_name(cid, top_cats, dem, rep, size, yes_rate, cohesion)
 
         profile = {
             "coalition_id": cid,
             "name": name,
             "focus_areas": top_cats,
+            "focus_yes_rates": {c: round(cat_yes_rates.get(c, 0), 3) for c in top_cats},
             "size": size,
             "dem_count": dem,
             "rep_count": rep,
@@ -543,7 +813,9 @@ def characterize_coalitions(
         }
         profiles.append(profile)
 
-    # Save profiles
+    # Deduplicate names
+    profiles = _deduplicate_coalition_names(profiles)
+
     with open(PROCESSED_DIR / "coalition_profiles.json", "w") as f:
         json.dump(profiles, f, indent=2)
     LOGGER.info("Saved %d coalition profiles", len(profiles))
@@ -564,9 +836,7 @@ def characterize_coalitions(
     )
     df_coalitions.write_parquet(PROCESSED_DIR / "coalitions.parquet")
 
-    # Display
     _display_coalition_profiles(profiles)
-
     return profiles
 
 
@@ -576,8 +846,6 @@ def _compute_cohesion(
     event_to_bill: dict,
 ) -> float:
     """Compute cohesion: fraction of votes where bloc majority agrees."""
-    from collections import Counter
-
     event_votes: dict[str, Counter] = {}
     for row in bloc_casts.to_dicts():
         eid = row.get("vote_event_id", "")
@@ -608,7 +876,6 @@ def _generate_coalition_name(
     cohesion: float,
 ) -> str:
     """Generate a descriptive coalition name from its profile."""
-    # Partisan descriptor
     if dem > 0 and rep > 0:
         ratio = min(dem, rep) / max(dem, rep)
         if ratio > 0.3:
@@ -624,7 +891,6 @@ def _generate_coalition_name(
     else:
         partisan = "Mixed"
 
-    # Voting style
     if yes_rate > 0.85:
         style = "Consensus"
     elif yes_rate < 0.55:
@@ -632,7 +898,6 @@ def _generate_coalition_name(
     else:
         style = ""
 
-    # Policy focus
     if top_cats:
         focus = top_cats[0]
         if len(top_cats) >= 2:
@@ -640,7 +905,6 @@ def _generate_coalition_name(
     else:
         focus = "General"
 
-    # Cohesion descriptor
     if cohesion > 0.9:
         cohesion_tag = "Bloc"
     elif cohesion > 0.75:
@@ -648,7 +912,6 @@ def _generate_coalition_name(
     else:
         cohesion_tag = "Caucus"
 
-    # Compose name
     parts = []
     if style:
         parts.append(style)
@@ -660,23 +923,52 @@ def _generate_coalition_name(
     return " ".join(parts)
 
 
+def _deduplicate_coalition_names(profiles: list[dict]) -> list[dict]:
+    """Ensure every coalition has a unique name."""
+    name_counts: Counter = Counter()
+    for p in profiles:
+        name_counts[p["name"]] += 1
+
+    for p in profiles:
+        if name_counts[p["name"]] <= 1:
+            continue
+        suffix = f" — {p['size']} members ({p['dem_count']}D/{p['rep_count']}R)"
+        p["name"] = p["name"] + suffix
+
+    name_counts2: Counter = Counter()
+    for p in profiles:
+        name_counts2[p["name"]] += 1
+    for p in profiles:
+        if name_counts2[p["name"]] > 1:
+            p["name"] = f"{p['name']} #{p['coalition_id'] + 1}"
+
+    return profiles
+
+
 def _display_coalition_profiles(profiles: list[dict]) -> None:
     """Show coalition profiles with names and focus areas."""
     console.print()
     table = Table(
-        title="Coalition Profiles",
+        title="General Voting Coalitions (secondary — see Topic Coalitions above)",
         show_lines=True,
     )
     table.add_column("Name", style="bold")
     table.add_column("Size", justify="right")
     table.add_column("Party Mix")
-    table.add_column("Focus Areas")
+    table.add_column("Focus Areas (by YES rate)")
     table.add_column("YES Rate", justify="right")
     table.add_column("Cohesion", justify="right")
 
     for p in profiles:
         party = f"[blue]{p['dem_count']}D[/] / [red]{p['rep_count']}R[/]"
-        focus = ", ".join(p["focus_areas"]) or "General"
+        focus_parts = []
+        for cat in p.get("focus_areas", []):
+            yr = p.get("focus_yes_rates", {}).get(cat)
+            if yr is not None:
+                focus_parts.append(f"{cat} ({yr:.0%})")
+            else:
+                focus_parts.append(cat)
+        focus = ", ".join(focus_parts) or "General"
         table.add_row(
             p["name"],
             str(p["size"]),
@@ -698,24 +990,33 @@ def display_coalitions(
         console.print("[dim]No coalition data.[/]")
         return
 
-    # Quality summary
     console.print()
-    quality = Table(title="Coalition Quality", show_lines=True)
+    quality = Table(title="General Coalition Quality", show_lines=True)
     quality.add_column("Metric", style="bold")
     quality.add_column("Value", justify="right")
     quality.add_row("Blocs discovered", str(validation["n_blocs"]))
     quality.add_row("Silhouette score", f"{silhouette:.3f}")
+
+    # Interpret silhouette for the user
+    if silhouette < 0.25:
+        quality.add_row(
+            "Interpretation",
+            "[yellow]Weak structure — blocs overlap significantly[/]",
+        )
+    elif silhouette < 0.50:
+        quality.add_row(
+            "Interpretation",
+            "Moderate structure — some real groupings",
+        )
+    else:
+        quality.add_row(
+            "Interpretation",
+            "[green]Strong structure — well-separated blocs[/]",
+        )
+
     quality.add_row(
         "Cross-party blocs",
         f"{validation['cross_party_blocs']} ({validation['cross_party_pct']}%)",
-    )
-    quality.add_row(
-        "Pure Democrat blocs",
-        str(validation["pure_democrat_blocs"]),
-    )
-    quality.add_row(
-        "Pure Republican blocs",
-        str(validation["pure_republican_blocs"]),
     )
     quality.add_row(
         "Members classified",
@@ -723,10 +1024,9 @@ def display_coalitions(
     )
     console.print(quality)
 
-    # Bloc details
     console.print()
     table = Table(
-        title="Discovered Voting Coalitions",
+        title="General Voting Clusters",
         show_lines=True,
     )
     table.add_column("Bloc", style="bold", justify="center")
@@ -752,3 +1052,77 @@ def display_coalitions(
         table.add_row(str(cid), str(len(bloc)), party_str, chamber_str, sample)
 
     console.print(table)
+
+
+# ── Main pipeline ────────────────────────────────────────────────────────────
+
+
+def run_coalition_discovery() -> pl.DataFrame:
+    """Full automated coalition discovery pipeline.
+
+    1. Topic-based coalitions (PRIMARY) — per-topic voting blocs
+    2. General agreement clustering (SECONDARY) — overall voting similarity
+    """
+    console.print("\n[bold]Coalition Discovery[/]")
+
+    casts_path = PROCESSED_DIR / "fact_vote_casts.parquet"
+    if not casts_path.exists():
+        casts_path = PROCESSED_DIR / "fact_vote_casts_raw.parquet"
+
+    df_casts = pl.read_parquet(casts_path)
+    df_members = pl.read_parquet(PROCESSED_DIR / "dim_members.parquet")
+
+    # ── Step 1: Topic-based coalitions (PRIMARY) ──
+    discover_topic_coalitions()
+
+    # ── Step 2: General agreement clustering (SECONDARY) ──
+    console.print("\n[bold]General Agreement Clustering[/] [dim](secondary)[/]")
+
+    G = build_agreement_graph(df_casts)
+    G = add_cosponsor_edges(G)
+    embeddings, nodes = compute_embeddings(G, n_dims=32)
+    clusters, silhouette, best_k = cluster_members(embeddings, nodes)
+
+    member_lookup = {m["member_id"]: m for m in df_members.to_dicts()}
+
+    rows = []
+    for mid, cluster_id in clusters.items():
+        m = member_lookup.get(mid, {})
+        emb = embeddings.get(mid, np.zeros(32))
+        rows.append(
+            {
+                "member_id": mid,
+                "name": m.get("name", ""),
+                "party": m.get("party", ""),
+                "chamber": m.get("chamber", ""),
+                "district": m.get("district"),
+                "coalition_id": cluster_id,
+                **{f"emb_{i}": float(emb[i]) for i in range(len(emb))},
+            }
+        )
+
+    df_coalitions = pl.DataFrame(rows)
+    df_coalitions.write_parquet(PROCESSED_DIR / "coalitions.parquet")
+    LOGGER.info("Saved coalitions to processed/coalitions.parquet")
+
+    # Save embeddings
+    emb_rows = []
+    for mid in nodes:
+        emb = embeddings[mid]
+        emb_rows.append(
+            {
+                "member_id": mid,
+                **{f"dim_{i}": float(emb[i]) for i in range(len(emb))},
+            }
+        )
+    if emb_rows:
+        pl.DataFrame(emb_rows).write_parquet(PROCESSED_DIR / "member_embeddings.parquet")
+
+    validation = validate_coalitions(df_coalitions)
+    display_coalitions(df_coalitions, silhouette, validation)
+
+    # Characterize general coalitions with FIXED category mapping
+    characterize_coalitions(df_coalitions)
+
+    df_coalitions = pl.read_parquet(PROCESSED_DIR / "coalitions.parquet")
+    return df_coalitions

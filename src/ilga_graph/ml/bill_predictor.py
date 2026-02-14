@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import pickle
 from pathlib import Path
 
@@ -43,7 +44,11 @@ from sklearn.model_selection import (
     cross_val_score,
 )
 
-from .features import build_feature_matrix
+from .features import (
+    FORECAST_DROP_COLUMNS,
+    build_feature_matrix,
+    build_panel_feature_matrix,
+)
 
 LOGGER = logging.getLogger(__name__)
 PROCESSED_DIR = Path("processed")
@@ -185,14 +190,14 @@ def _tune_best_model(
     name = best_result["name"]
     console.print(f"\n[bold]Tuning {name} hyperparameters...[/]")
 
-    # Define parameter spaces per model type
+    # Define parameter spaces per model type (kept small so tuning finishes in ~5–10 min)
     param_spaces = {
         "GradientBoosting": {
-            "n_estimators": [100, 200, 300, 500],
-            "max_depth": [3, 5, 7, 9],
-            "learning_rate": [0.01, 0.05, 0.1, 0.2],
-            "subsample": [0.7, 0.8, 0.9, 1.0],
-            "min_samples_leaf": [5, 10, 20],
+            "n_estimators": [100, 200, 300],
+            "max_depth": [3, 5, 7],
+            "learning_rate": [0.05, 0.1, 0.2],
+            "subsample": [0.8, 1.0],
+            "min_samples_leaf": [5, 10],
         },
         "RandomForest": {
             "n_estimators": [100, 200, 300, 500],
@@ -222,12 +227,12 @@ def _tune_best_model(
     search = RandomizedSearchCV(
         best_result["model"],
         param_space,
-        n_iter=40,
+        n_iter=20,
         cv=cv,
         scoring="roc_auc",
         random_state=42,
         n_jobs=-1,
-        verbose=0,
+        verbose=2,
     )
 
     # Compute sample weights
@@ -351,6 +356,47 @@ def display_top_features(
 # ── Scoring ──────────────────────────────────────────────────────────────────
 
 
+def _compute_predicted_destination(
+    prob_advance: float,
+    prob_law: float,
+    lifecycle: str,
+    current_stage: str,
+) -> str:
+    """Derive a human-readable predicted destination for a bill.
+
+    For terminal bills, returns the actual outcome.
+    For open bills, combines P(advance) and P(law) into a destination:
+        → Law        P(law) >= 0.5 OR already at PASSED_BOTH/GOVERNOR with P(law) >= 0.3
+        → Governor   Already past both chambers, likely to reach governor
+        → Floor      P(advance) >= 0.5 but P(law) < 0.5
+        Stuck        P(advance) < 0.5
+    """
+    if lifecycle == "PASSED":
+        return "Became Law"
+    if lifecycle == "VETOED":
+        return "Vetoed"
+
+    # Open bills — use model probabilities + current stage
+    high_stages = ("PASSED_BOTH", "GOVERNOR", "SIGNED")
+    floor_stages = ("FLOOR_VOTE", "CROSSED_CHAMBERS")
+
+    # Already very far along — lower threshold for "→ Law"
+    if current_stage in high_stages and prob_law >= 0.3:
+        return "→ Law"
+
+    if prob_law >= 0.5:
+        return "→ Law"
+
+    # Already past committee or on the floor
+    if current_stage in floor_stages and prob_advance >= 0.5:
+        return "→ Passed"
+
+    if prob_advance >= 0.5:
+        return "→ Floor"
+
+    return "Stuck"
+
+
 def score_all_bills(
     model,
     X_all: np.ndarray,
@@ -358,14 +404,27 @@ def score_all_bills(
     y_all: np.ndarray,
     *,
     immature_ids: set[str] | None = None,
+    law_model=None,
+    forecast_scores: dict[str, float] | None = None,
+    forecast_confidences: dict[str, str] | None = None,
 ) -> pl.DataFrame:
-    """Score every bill with probability of advancement.
+    """Score every bill with probability of advancement and law.
 
-    Also computes pipeline stage, staleness, and stuck sub-status.
+    Also computes pipeline stage, staleness, stuck sub-status,
+    and predicted destination (→ Law, → Floor, Stuck, etc.).
+
+    Parameters
+    ----------
+    forecast_scores:
+        Optional ``{bill_id: P(law)}`` from the Forecast model.
+        Merged into the output as ``forecast_score`` column.
+    forecast_confidences:
+        Optional ``{bill_id: "Low"|"Medium"|"High"}`` confidence labels.
     """
     from datetime import datetime as _dt
 
     from .features import (
+        _bill_lifecycle_status,
         _stage_label,
         classify_stuck_status,
         compute_bill_stage,
@@ -375,12 +434,24 @@ def score_all_bills(
     y_pred = model.predict(X_all)
     immature_ids = immature_ids or set()
 
+    # Law model probabilities (P(becomes law))
+    if law_model is not None and hasattr(law_model, "predict_proba"):
+        y_proba_law = law_model.predict_proba(X_all)[:, 1]
+    else:
+        # Fallback: estimate from advance probability (less accurate)
+        y_proba_law = y_proba * 0.3  # rough heuristic
+        LOGGER.warning("No law model available — using heuristic P(law) = P(advance) * 0.3")
+
+    # Cap confidence at 99% for robustness (avoid false certainty)
+    CONFIDENCE_CAP = 0.99
+
     df_scores = pl.DataFrame(
         {
             "bill_id": bill_ids_all,
             "prob_advance": [round(float(p), 4) for p in y_proba],
+            "prob_law": [round(float(p), 4) for p in y_proba_law],
             "predicted_outcome": ["ADVANCE" if p == 1 else "STUCK" for p in y_pred],
-            "confidence": [round(float(max(p, 1 - p)), 4) for p in y_proba],
+            "confidence": [round(float(min(max(p, 1 - p), CONFIDENCE_CAP)), 4) for p in y_proba],
             "label_reliable": [bid not in immature_ids for bid in bill_ids_all],
         }
     )
@@ -413,13 +484,33 @@ def score_all_bills(
 
     now = _dt.now()
 
-    # Compute stage, stuck status for each bill
+    # Compute stage, stuck status, lifecycle for each bill
     stages = []
     stage_progresses = []
     days_since_actions = []
     stuck_statuses = []
     stuck_reasons = []
     stage_labels = []
+    lifecycle_statuses = []
+    # Override lists — we'll replace predictions for terminal bills
+    override_outcomes = []
+    override_proba = []
+    override_proba_law = []
+    override_confidence = []
+    predicted_destinations = []
+    rule_contexts = []  # Rule citation for current stage / next step
+
+    # Try to load rule engine for stage context
+    try:
+        from ilga_graph.ml.rule_engine import (
+            get_rule_tooltip,
+            votes_required_for_override,
+            votes_required_for_passage,
+        )
+
+        _has_rule_engine = True
+    except Exception:
+        _has_rule_engine = False
 
     for row in df_scores.to_dicts():
         bid = row["bill_id"]
@@ -430,6 +521,10 @@ def score_all_bills(
         stages.append(stage)
         stage_progresses.append(round(progress, 2))
         stage_labels.append(_stage_label(stage))
+
+        # Lifecycle status (OPEN / PASSED / VETOED); VETOED = governor veto only
+        lifecycle = _bill_lifecycle_status(actions)
+        lifecycle_statuses.append(lifecycle)
 
         # Days since last action
         last_date_str = row.get("last_action_date")
@@ -443,7 +538,7 @@ def score_all_bills(
                     last_dt = _dt.strptime(last_date_str, "%m/%d/%Y")
                     days_inactive = (now - last_dt).days
                 except ValueError:
-                    pass
+                    LOGGER.debug("Unparseable last_action_date: %r for %s", last_date_str, bid)
         days_since_actions.append(days_inactive)
 
         # Days since introduction
@@ -454,11 +549,56 @@ def score_all_bills(
                 intro_dt = _dt.strptime(intro_str, "%Y-%m-%d")
                 days_since_intro = (now - intro_dt).days
             except ValueError:
-                pass
+                LOGGER.debug("Unparseable introduction_date: %r for %s", intro_str, bid)
+
+        # ── Override predictions for terminal bills ──
+        # Vetoed/tabled/dead bills should show STUCK, not ADVANCE.
+        # Passed/signed bills should show ADVANCE with 100% confidence.
+        if lifecycle == "PASSED":
+            override_outcomes.append("ADVANCE")
+            override_proba.append(1.0)
+            override_proba_law.append(1.0)
+            override_confidence.append(1.0)
+        elif lifecycle in ("VETOED", "DEAD"):
+            override_outcomes.append("STUCK")
+            override_proba.append(0.0)
+            override_proba_law.append(0.0)
+            override_confidence.append(1.0)
+        else:
+            # OPEN — keep the model's prediction
+            override_outcomes.append(row["predicted_outcome"])
+            override_proba.append(row["prob_advance"])
+            override_proba_law.append(row["prob_law"])
+            override_confidence.append(row["confidence"])
+
+        # Compute predicted destination
+        dest = _compute_predicted_destination(
+            override_proba[-1],
+            override_proba_law[-1],
+            lifecycle,
+            stage,
+        )
+        predicted_destinations.append(dest)
+
+        # Rule context: cite the rule governing the current stage and next step
+        if _has_rule_engine:
+            rule_tip = get_rule_tooltip(stage) or ""
+            # Detect origin chamber from bill_id prefix
+            _chamber = "house" if str(bid).upper().startswith("HB") else "senate"
+            if stage == "FLOOR_VOTE":
+                rule_tip += f" Needs {votes_required_for_passage(_chamber)} votes for passage."
+            elif stage == "VETOED":
+                rule_tip += f" Override requires {votes_required_for_override(_chamber)} votes."
+            rule_contexts.append(rule_tip)
+        else:
+            rule_contexts.append("")
 
         # Stuck sub-status (only for non-advanced bills)
-        predicted = row.get("predicted_outcome", "STUCK")
-        if stage in ("SIGNED", "PASSED_BOTH", "CROSSED_CHAMBERS"):
+        predicted = override_outcomes[-1]
+        if lifecycle == "PASSED":
+            stuck_statuses.append("")
+            stuck_reasons.append("")
+        elif stage in ("SIGNED", "PASSED_BOTH", "CROSSED_CHAMBERS"):
             stuck_statuses.append("")
             stuck_reasons.append("")
         elif predicted == "STUCK" or progress <= 0.40:
@@ -480,6 +620,30 @@ def score_all_bills(
         ),
         pl.Series("stuck_status", stuck_statuses, dtype=pl.Utf8),
         pl.Series("stuck_reason", stuck_reasons, dtype=pl.Utf8),
+        pl.Series("lifecycle_status", lifecycle_statuses, dtype=pl.Utf8),
+        # Apply overrides for terminal bills
+        pl.Series("predicted_outcome", override_outcomes, dtype=pl.Utf8),
+        pl.Series("prob_advance", override_proba, dtype=pl.Float64),
+        pl.Series("prob_law", override_proba_law, dtype=pl.Float64),
+        pl.Series("confidence", override_confidence, dtype=pl.Float64),
+        pl.Series("predicted_destination", predicted_destinations, dtype=pl.Utf8),
+        pl.Series("rule_context", rule_contexts, dtype=pl.Utf8),
+    )
+
+    # ── Forecast model columns ──────────────────────────────────────────
+    forecast_scores = forecast_scores or {}
+    forecast_confidences = forecast_confidences or {}
+    df_scores = df_scores.with_columns(
+        pl.Series(
+            "forecast_score",
+            [forecast_scores.get(bid, 0.0) for bid in df_scores["bill_id"].to_list()],
+            dtype=pl.Float64,
+        ),
+        pl.Series(
+            "forecast_confidence",
+            [forecast_confidences.get(bid, "") for bid in df_scores["bill_id"].to_list()],
+            dtype=pl.Utf8,
+        ),
     )
 
     df_scores = df_scores.sort("prob_advance", descending=True)
@@ -563,8 +727,15 @@ def save_quality_report(
     model,
     n_mature: int,
     n_immature: int,
+    *,
+    panel_mode: bool = False,
 ) -> dict:
     """Save a human-readable quality report."""
+    split_desc = (
+        "70/30 time-based on panel rows (snapshot_date order)"
+        if panel_mode
+        else "70/30 time-based on mature bills"
+    )
     report = {
         "model_selected": best_name,
         "why": (f"Best cross-validated ROC-AUC across 5 folds out of {len(comparison)} candidates"),
@@ -581,10 +752,11 @@ def save_quality_report(
             k: round(v, 4) if isinstance(v, float) else v for k, v in test_metrics.items()
         },
         "data_split": {
-            "mature_bills": n_mature,
+            "training_rows": n_mature,
             "immature_bills": n_immature,
             "maturity_threshold_days": 120,
-            "train_test_split": "70/30 time-based on mature bills",
+            "train_test_split": split_desc,
+            "panel_mode": panel_mode,
         },
         "trust_assessment": _trust_assessment(test_metrics),
     }
@@ -690,12 +862,38 @@ def display_quality_summary(report: dict) -> None:
     console.print(table)
 
 
-# ── Main pipeline ────────────────────────────────────────────────────────────
+# ── Forecast model ("Truth" model — intrinsic features only) ────────────────
 
 
-def run_auto() -> pl.DataFrame:
-    """Fully automated: compare models, tune, evaluate, score all bills."""
-    console.print("\n[bold]Step 1: Building features...[/]")
+LAW_MODEL_PATH = PROCESSED_DIR / "bill_law_predictor.pkl"
+FORECAST_MODEL_PATH = PROCESSED_DIR / "forecast_predictor.pkl"
+FORECAST_QUALITY_PATH = PROCESSED_DIR / "forecast_quality.json"
+
+
+def _forecast_confidence_label(prob: float) -> str:
+    """Convert a raw probability into a human-readable confidence label."""
+    if prob >= 0.6:
+        return "High"
+    elif prob >= 0.35:
+        return "Medium"
+    return "Low"
+
+
+def run_forecast_model() -> tuple[dict[str, float], dict[str, str]]:
+    """Train and score the Forecast ("Truth") model.
+
+    Uses only intrinsic/Day-0 features (no staleness, slips, action
+    counts, or rule-derived features) to predict P(becomes law).
+
+    Returns:
+        (forecast_scores, forecast_confidences)
+        Both are ``{bill_id: value}`` dicts that get merged into
+        ``bill_scores.parquet`` by the caller.
+    """
+    console.print("\n[bold cyan]── Forecast Model (intrinsic features only) ──[/]")
+
+    # ── Step F1: Build panel feature matrix in forecast mode ──────────
+    console.print("[bold]F1: Building forecast features (panel, Day-0 + Day-30)...[/]")
     (
         X_train,
         X_test,
@@ -703,15 +901,255 @@ def run_auto() -> pl.DataFrame:
         y_test,
         ids_train,
         ids_test,
-        X_immature,
-        y_immature,
-        ids_immature,
-        vectorizer,
+        _X_imm,
+        _y_imm,
+        _ids_imm,
+        _vectorizer,
         feature_names,
-    ) = build_feature_matrix()
+        y_train_law,
+        y_test_law,
+        _y_imm_law,
+    ) = build_panel_feature_matrix(mode="forecast")
+
+    # Use target_law as the label (not target_advanced) — the Forecast
+    # model predicts "will this bill become law?"
+    y_train_target = y_train_law
+    y_test_target = y_test_law
+
+    pos_train = int(y_train_target.sum())
+    neg_train = len(y_train_target) - pos_train
+    console.print(
+        f"  Train: {len(y_train_target):,} rows "
+        f"({pos_train} law / {neg_train} not, {100 * pos_train / max(len(y_train_target), 1):.1f}%)"
+    )
+    console.print(f"  Test:  {len(y_test_target):,} rows")
+    console.print(f"  Features: {len(feature_names)} (no staleness/slips/actions)")
+
+    if pos_train < 10:
+        LOGGER.warning(
+            "Very few positive law examples (%d) for Forecast model — results may be unreliable.",
+            pos_train,
+        )
+
+    # ── Step F2: Train GradientBoosting with richer hyperparams ──────
+    console.print("[bold]F2: Training Forecast GradientBoosting...[/]")
+    base_model = GradientBoostingClassifier(
+        n_estimators=300,
+        max_depth=6,
+        learning_rate=0.08,
+        subsample=0.85,
+        min_samples_leaf=8,
+        random_state=42,
+    )
+
+    # Sample weights for class imbalance
+    if pos_train > 0 and neg_train > 0:
+        sw = np.where(
+            y_train_target == 1,
+            len(y_train_target) / (2 * pos_train),
+            len(y_train_target) / (2 * neg_train),
+        )
+    else:
+        sw = None
+
+    try:
+        base_model.fit(X_train, y_train_target, sample_weight=sw)
+    except TypeError:
+        base_model.fit(X_train, y_train_target)
+
+    # ── Step F3: Calibrate probabilities ─────────────────────────────
+    console.print("[bold]F3: Calibrating forecast probabilities...[/]")
+    n_splits = min(5, pos_train) if pos_train >= 2 else 2
+    if n_splits >= 2:
+        calibrated = CalibratedClassifierCV(base_model, cv=n_splits, method="isotonic")
+        calibrated.fit(X_train, y_train_target)
+    else:
+        calibrated = base_model
+
+    # ── Step F4: Evaluate on test set ────────────────────────────────
+    console.print("[bold]F4: Evaluating forecast model...[/]")
+    test_metrics = evaluate_model(calibrated, X_test, y_test_target)
+    display_metrics(
+        test_metrics,
+        title="Forecast Model Test Evaluation (P(law), intrinsic features)",
+    )
+    display_top_features(base_model, feature_names)
+
+    # ── Step F5: Save model + quality report ─────────────────────────
+    with open(FORECAST_MODEL_PATH, "wb") as f:
+        pickle.dump(calibrated, f)
+    LOGGER.info("Forecast model saved to %s", FORECAST_MODEL_PATH)
+
+    # Quality report
+    forecast_report = {
+        "model": "GradientBoosting (Forecast)",
+        "target": "P(becomes law) — intrinsic features only",
+        "features_excluded": sorted(FORECAST_DROP_COLUMNS),
+        "test_set_metrics": {
+            k: round(v, 4) if isinstance(v, float) else v for k, v in test_metrics.items()
+        },
+        "trust_assessment": _trust_assessment(test_metrics),
+    }
+    if hasattr(base_model, "feature_importances_"):
+        importances = base_model.feature_importances_
+        top_idx = np.argsort(importances)[::-1][:20]
+        forecast_report["top_features"] = [
+            {
+                "name": (feature_names[i] if i < len(feature_names) else f"feature_{i}"),
+                "importance": round(float(importances[i]), 4),
+            }
+            for i in top_idx
+        ]
+    with open(FORECAST_QUALITY_PATH, "w") as f:
+        json.dump(forecast_report, f, indent=2)
+    LOGGER.info("Forecast quality report saved to %s", FORECAST_QUALITY_PATH)
+
+    # ── Step F6: Score ALL bills with forecast model ─────────────────
+    console.print("[bold]F6: Scoring all bills with Forecast model...[/]")
+    (
+        X_score_train,
+        X_score_test,
+        _yt,
+        _ytt,
+        ids_score_train,
+        ids_score_test,
+        X_score_imm,
+        _yi,
+        ids_score_imm,
+        _vec2,
+        _fn2,
+        _yl1,
+        _yl2,
+        _yl3,
+    ) = build_feature_matrix(mode="forecast")
+
+    # Combine all splits into one scoring set
+    parts = [X_score_train, X_score_test]
+    ids_parts = ids_score_train + ids_score_test
+    if X_score_imm is not None and X_score_imm.shape[0] > 0:
+        parts.append(X_score_imm)
+        ids_parts += ids_score_imm
+
+    X_all = sparse_vstack(parts)
+    forecast_proba = calibrated.predict_proba(X_all)[:, 1]
+
+    forecast_scores: dict[str, float] = {}
+    forecast_confidences: dict[str, str] = {}
+    for bid, prob in zip(ids_parts, forecast_proba):
+        p = round(float(prob), 4)
+        forecast_scores[bid] = p
+        forecast_confidences[bid] = _forecast_confidence_label(p)
+
+    console.print(
+        f"  Scored {len(forecast_scores):,} bills "
+        f"(mean forecast P(law)={np.mean(forecast_proba):.3f})"
+    )
+
+    return forecast_scores, forecast_confidences
+
+
+# ── Main pipeline ────────────────────────────────────────────────────────────
+
+
+def _train_law_model(
+    X_train: np.ndarray,
+    y_train_law: np.ndarray,
+) -> object:
+    """Train a calibrated model for P(becomes law).
+
+    Uses GradientBoosting directly (skip full comparison since the advance
+    model already validated algorithm choice) with calibration.
+    """
+    pos = int(y_train_law.sum())
+    neg = len(y_train_law) - pos
+    LOGGER.info(
+        "Law model training set: %d became law / %d did not (%.1f%%)",
+        pos,
+        neg,
+        100 * pos / max(len(y_train_law), 1),
+    )
+
+    if pos < 10:
+        LOGGER.warning("Very few positive law examples (%d) — law model may be unreliable", pos)
+
+    base = GradientBoostingClassifier(
+        n_estimators=200,
+        max_depth=5,
+        learning_rate=0.1,
+        subsample=0.8,
+        min_samples_leaf=10,
+        random_state=42,
+    )
+
+    # Calibrate for reliable probabilities
+    n_splits = min(5, pos) if pos >= 2 else 2
+    if n_splits < 2:
+        # Not enough positives to calibrate — just fit directly
+        base.fit(X_train, y_train_law)
+        return base
+
+    calibrated = CalibratedClassifierCV(base, cv=n_splits, method="isotonic")
+    calibrated.fit(X_train, y_train_law)
+    return calibrated
+
+
+def run_auto(*, use_panel: bool | None = None) -> pl.DataFrame:
+    """Fully automated: compare models, tune, evaluate, score all bills.
+
+    Parameters
+    ----------
+    use_panel:
+        If True, use the time-sliced panel dataset for training (multiple
+        rows per bill at different snapshot dates → larger training set).
+        If None, reads the ``ILGA_ML_PANEL`` environment variable
+        (``"1"`` = panel mode, anything else = standard single-row mode).
+    """
+
+    if use_panel is None:
+        # Panel mode is the default — uses time-sliced snapshots for a
+        # richer training set.  Set ILGA_ML_PANEL=0 to revert to the
+        # legacy single-row-per-bill training mode.
+        use_panel = os.getenv("ILGA_ML_PANEL", "1").strip() != "0"
+
+    if use_panel:
+        console.print("\n[bold]Step 1: Building features (PANEL mode — time-sliced dataset)...[/]")
+        (
+            X_train,
+            X_test,
+            y_train,
+            y_test,
+            ids_train,
+            ids_test,
+            X_immature,
+            y_immature,
+            ids_immature,
+            vectorizer,
+            feature_names,
+            y_train_law,
+            y_test_law,
+            y_immature_law,
+        ) = build_panel_feature_matrix()
+    else:
+        console.print("\n[bold]Step 1: Building features...[/]")
+        (
+            X_train,
+            X_test,
+            y_train,
+            y_test,
+            ids_train,
+            ids_test,
+            X_immature,
+            y_immature,
+            ids_immature,
+            vectorizer,
+            feature_names,
+            y_train_law,
+            y_test_law,
+            y_immature_law,
+        ) = build_feature_matrix()
 
     # Step 2: Compare models with cross-validation
-    console.print("[bold]Step 2: Comparing models...[/]")
+    console.print("[bold]Step 2: Comparing models (advance)...[/]")
     comparison = _compare_models(X_train, y_train, n_folds=5)
 
     best = comparison[0]
@@ -720,17 +1158,22 @@ def run_auto() -> pl.DataFrame:
         f"(CV AUC: {best['mean_auc']:.4f} +/- {best['std_auc']:.4f})"
     )
 
-    # Step 3: Tune hyperparameters of best model
-    console.print("[bold]Step 3: Tuning hyperparameters...[/]")
-    tuned_model = _tune_best_model(best, X_train, y_train)
+    # Step 3: Tune hyperparameters of best model (or skip if ILGA_ML_SKIP_TUNE=1)
+    console.print("[bold]Step 3: Tuning hyperparameters (advance)...[/]")
+    if os.environ.get("ILGA_ML_SKIP_TUNE") == "1":
+        console.print("  [dim]Skipping (ILGA_ML_SKIP_TUNE=1); fitting best model on full train.[/]")
+        tuned_model = best["model"]
+        tuned_model.fit(X_train, y_train)
+    else:
+        tuned_model = _tune_best_model(best, X_train, y_train)
 
     # Step 4: Calibrate probabilities
-    console.print("[bold]Step 4: Calibrating probabilities...[/]")
+    console.print("[bold]Step 4: Calibrating probabilities (advance)...[/]")
     calibrated = CalibratedClassifierCV(tuned_model, cv=5, method="isotonic")
     calibrated.fit(X_train, y_train)
 
     # Step 5: Evaluate on held-out test set
-    console.print("[bold]Step 5: Evaluating on held-out test...[/]")
+    console.print("[bold]Step 5: Evaluating advance model on held-out test...[/]")
     test_metrics = evaluate_model(calibrated, X_test, y_test)
     display_metrics(
         test_metrics,
@@ -740,20 +1183,80 @@ def run_auto() -> pl.DataFrame:
     # Show feature importances from the uncalibrated model
     display_top_features(tuned_model, feature_names)
 
-    # Save model
+    # Save advance model
     with open(MODEL_PATH, "wb") as f:
         pickle.dump(calibrated, f)
-    LOGGER.info("Model saved to %s", MODEL_PATH)
+    LOGGER.info("Advance model saved to %s", MODEL_PATH)
+
+    # Step 5b: Train law prediction model (P(becomes law))
+    console.print("\n[bold]Step 5b: Training law prediction model...[/]")
+    law_model = _train_law_model(X_train, y_train_law)
+    with open(LAW_MODEL_PATH, "wb") as f:
+        pickle.dump(law_model, f)
+    LOGGER.info("Law model saved to %s", LAW_MODEL_PATH)
+
+    # Evaluate law model on test set
+    if hasattr(law_model, "predict_proba"):
+        law_test_proba = law_model.predict_proba(X_test)[:, 1]
+        try:
+            law_auc = roc_auc_score(y_test_law, law_test_proba)
+            console.print(f"  Law model test ROC-AUC: [bold]{law_auc:.4f}[/]")
+        except ValueError:
+            console.print("  Law model test ROC-AUC: N/A (single class in test)")
+
+    # Step 5c: Train Forecast model (intrinsic features only)
+    console.print("\n[bold]Step 5c: Training Forecast model (intrinsic features)...[/]")
+    forecast_scores_map: dict[str, float] = {}
+    forecast_conf_map: dict[str, str] = {}
+    try:
+        forecast_scores_map, forecast_conf_map = run_forecast_model()
+    except Exception as e:
+        LOGGER.warning("Forecast model training failed: %s", e)
+        console.print(f"  [yellow]Forecast model skipped: {e}[/]")
 
     # Step 6: Score ALL bills
+    # In panel mode, training used time-sliced rows (panel_ids like
+    # "155711_d30") but scoring still needs one row per bill with
+    # features "as of now".  We always build the single-row feature
+    # matrix for scoring so bill_scores.parquet has one row per bill.
     console.print("\n[bold]Step 6: Scoring all bills...[/]")
-    parts = [X_train, X_test]
-    ids_parts = ids_train + ids_test
-    y_parts = [y_train, y_test]
-    if X_immature is not None and X_immature.shape[0] > 0:
-        parts.append(X_immature)
-        ids_parts += ids_immature
-        y_parts.append(y_immature)
+
+    if use_panel:
+        console.print("  (Panel mode: building single-row features for scoring)")
+        (
+            X_score_train,
+            X_score_test,
+            y_score_train,
+            y_score_test,
+            ids_score_train,
+            ids_score_test,
+            X_score_imm,
+            y_score_imm,
+            ids_score_imm,
+            _vec,
+            _fnames,
+            _y_law_train,
+            _y_law_test,
+            _y_law_imm,
+        ) = build_feature_matrix()
+
+        parts = [X_score_train, X_score_test]
+        ids_parts = ids_score_train + ids_score_test
+        y_parts = [y_score_train, y_score_test]
+        if X_score_imm is not None and X_score_imm.shape[0] > 0:
+            parts.append(X_score_imm)
+            ids_parts += ids_score_imm
+            y_parts.append(y_score_imm)
+        immature_ids_set = set(ids_score_imm)
+    else:
+        parts = [X_train, X_test]
+        ids_parts = ids_train + ids_test
+        y_parts = [y_train, y_test]
+        if X_immature is not None and X_immature.shape[0] > 0:
+            parts.append(X_immature)
+            ids_parts += ids_immature
+            y_parts.append(y_immature)
+        immature_ids_set = set(ids_immature)
 
     X_all = sparse_vstack(parts)
     y_all = np.concatenate(y_parts)
@@ -763,22 +1266,41 @@ def run_auto() -> pl.DataFrame:
         X_all,
         ids_parts,
         y_all,
-        immature_ids=set(ids_immature),
+        immature_ids=immature_ids_set,
+        law_model=law_model,
+        forecast_scores=forecast_scores_map,
+        forecast_confidences=forecast_conf_map,
     )
     display_score_summary(df_scores)
 
     # Step 7: Quality report
-    n_mature = len(ids_train) + len(ids_test)
-    n_immature = len(ids_immature)
+    n_train_rows = len(ids_train)
+    n_test_rows = len(ids_test)
+    n_immature = len(ids_immature) if not use_panel else 0
     report = save_quality_report(
         comparison,
         best["name"],
         test_metrics,
         feature_names,
         tuned_model,
-        n_mature,
+        n_train_rows + n_test_rows,
         n_immature,
+        panel_mode=use_panel,
     )
     display_quality_summary(report)
+
+    # Step 8: Generate/refresh gold labels for validation
+    console.print("\n[bold]Step 8: Generating gold label set...[/]")
+    try:
+        from .gold_labels import generate_gold_labels
+
+        gold = generate_gold_labels(target_size=400, balance_ratio=0.5)
+        if gold:
+            console.print(
+                f"  Gold set: {gold['total_labels']} labels "
+                f"({gold['positive_count']} advanced, {gold['negative_count']} stuck)"
+            )
+    except Exception as e:
+        LOGGER.warning("Gold label generation failed: %s", e)
 
     return df_scores

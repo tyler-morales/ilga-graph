@@ -184,7 +184,7 @@ def compute_institutional_weight(member: Member) -> float:
 # ── Network centrality ───────────────────────────────────────────────────────
 
 
-def _build_cosponsor_edges(
+def build_cosponsor_edges(
     members: list[Member],
 ) -> dict[str, set[str]]:
     """Build an undirected co-sponsorship adjacency map: member_id -> {peer_ids}.
@@ -222,6 +222,34 @@ def degree_centrality(adjacency: dict[str, set[str]]) -> dict[str, float]:
         return {mid: 0.0 for mid in adjacency}
     max_degree = n - 1
     return {mid: len(peers) / max_degree for mid, peers in adjacency.items()}
+
+
+def betweenness_centrality(adjacency: dict[str, set[str]]) -> dict[str, float]:
+    """Compute normalized betweenness centrality for each node.
+
+    Betweenness centrality measures how often a node lies on shortest paths
+    between other nodes.  High betweenness = "bridge" or "connector" who
+    links different groups.  This is the key signal for *structural*
+    influence: legislators who broker relationships between blocs.
+
+    Uses networkx for the computation; normalizes to 0-1.
+    Returns 0.0 for all nodes if the graph has fewer than 3 nodes.
+    """
+    import networkx as nx
+
+    if len(adjacency) < 3:
+        return {mid: 0.0 for mid in adjacency}
+
+    G = nx.Graph()
+    for mid, peers in adjacency.items():
+        for peer in peers:
+            G.add_edge(mid, peer)
+
+    # normalized=True divides by (n-1)(n-2)/2 so values are 0-1
+    bc = nx.betweenness_centrality(G, normalized=True)
+
+    # Ensure every member from adjacency is represented (even isolates)
+    return {mid: round(bc.get(mid, 0.0), 6) for mid in adjacency}
 
 
 # ── Pipeline depth ───────────────────────────────────────────────────────────
@@ -268,6 +296,7 @@ class MoneyballProfile:
     pipeline_depth_avg: float  # avg progression (0-6) of primary HB/SB
     pipeline_depth_normalized: float  # pipeline_depth_avg / 6
     network_centrality: float  # degree centrality in co-sponsorship graph
+    betweenness: float  # betweenness centrality — bridge/connector influence
     unique_collaborators: int  # number of unique co-sponsorship peers
     total_primary_bills: int
     total_passed: int
@@ -398,6 +427,8 @@ def _assign_badges(profile: MoneyballProfile) -> list[str]:
         badges.append("Pipeline Driver")  # Bills go far even if not all pass
     if profile.network_centrality >= 0.5:
         badges.append("Network Hub")  # Highly connected legislator
+    if profile.betweenness >= 0.02:
+        badges.append("Bridge Connector")  # Key broker between legislative groups
     if profile.unique_collaborators >= 20:
         badges.append("Wide Tent")  # Works with many different legislators
     if (
@@ -575,8 +606,9 @@ def compute_moneyball(
     _member_lookup = {m.id: m for m in members}
 
     # ── Step 2: Co-sponsorship network ──
-    adjacency = _build_cosponsor_edges(members)
+    adjacency = build_cosponsor_edges(members)
     centralities = degree_centrality(adjacency)
+    betweenness_scores = betweenness_centrality(adjacency)
 
     # ── Step 3: Build raw profiles ──
     profiles: dict[str, MoneyballProfile] = {}
@@ -609,6 +641,7 @@ def compute_moneyball(
             if _PIPELINE_MAX_DEPTH > 0
             else 0.0,
             network_centrality=round(centralities.get(member.id, 0.0), 4),
+            betweenness=round(betweenness_scores.get(member.id, 0.0), 6),
             unique_collaborators=len(adjacency.get(member.id, set())),
             total_primary_bills=sc.primary_bill_count,
             total_passed=sc.passed_count,

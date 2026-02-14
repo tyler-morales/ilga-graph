@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}{{ bill.bill_number }} — Bill Intelligence{% endblock %}
+
+{% block content %}
+<div class="intel-nav">
+    <a href="/intelligence">&larr; Intelligence Overview</a> &middot;
+    <a href="/intelligence/raw">Raw Data Tables</a>
+</div>
+
+<div class="bill-profile">
+    {# ── Header ── #}
+    <div class="bill-profile-header">
+        <h1>{{ bill.bill_number }}</h1>
+        <p class="bill-profile-desc">{{ bill.description }}</p>
+        <div class="bill-profile-meta">
+            <span>Sponsor: <strong>
+                {% if bill.sponsor_id %}
+                <a href="/intelligence/member/{{ bill.sponsor_id }}">{{ bill.sponsor }}</a>
+                {% else %}
+                {{ bill.sponsor }}
+                {% endif %}
+            </strong></span>
+            <span>Chamber: {{ bill.chamber_origin }}</span>
+            <span>Introduced: {{ bill.introduction_date or 'Unknown' }}</span>
+        </div>
+    </div>
+
+    {# ── Prediction card ── #}
+    <div class="bill-prediction-card">
+        <div class="bill-prediction-main">
+            {% if bill.lifecycle_status == 'PASSED' %}
+            <div class="bill-prediction-outcome outcome-passed">PASSED INTO LAW</div>
+            {% elif bill.lifecycle_status == 'VETOED' %}
+            <div class="bill-prediction-outcome outcome-vetoed">VETOED</div>
+            {% else %}
+            <div class="bill-prediction-outcome">
+                <span class="dest-badge dest-{{ bill.predicted_destination|lower|replace('→ ', '')|replace(' ', '-') }}">
+                    {{ bill.predicted_destination }}
+                </span>
+            </div>
+            <div class="bill-prediction-prob" style="margin-top: 8px;">
+                <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                    <div>
+                        <small style="color: #666;">P(Advance past committee)</small>
+                        <div class="score-bar-container" style="width: 180px;">
+                            <div class="score-bar {% if bill.prob_advance >= 0.7 %}score-high{% elif bill.prob_advance >= 0.4 %}score-mid{% else %}score-low{% endif %}"
+                                 style="width: {{ (bill.prob_advance * 100)|int }}%">
+                            </div>
+                            <span class="score-text">{{ "%.1f"|format(bill.prob_advance * 100) }}%</span>
+                        </div>
+                    </div>
+                    <div>
+                        <small style="color: #666;">P(Becomes law)</small>
+                        <div class="score-bar-container" style="width: 180px;">
+                            <div class="score-bar {% if bill.prob_law >= 0.5 %}score-high{% elif bill.prob_law >= 0.2 %}score-mid{% else %}score-low{% endif %}"
+                                 style="width: {{ (bill.prob_law * 100)|int }}%">
+                            </div>
+                            <span class="score-text">{{ "%.1f"|format(bill.prob_law * 100) }}%</span>
+                        </div>
+                    </div>
+                    {% if bill.forecast_score > 0 %}
+                    <div>
+                        <small style="color: #666;" title="Based on bill content and sponsor only — ignores current delay">Forecast P(Law)</small>
+                        <div class="score-bar-container" style="width: 180px;">
+                            <div class="score-bar {% if bill.forecast_score >= 0.5 %}score-high{% elif bill.forecast_score >= 0.2 %}score-mid{% else %}score-low{% endif %}"
+                                 style="width: {{ (bill.forecast_score * 100)|int }}%">
+                            </div>
+                            <span class="score-text">{{ "%.1f"|format(bill.forecast_score * 100) }}%</span>
+                        </div>
+                        {% if bill.forecast_confidence %}
+                        <small class="forecast-conf forecast-{{ bill.forecast_confidence|lower }}">{{ bill.forecast_confidence }}</small>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="bill-prediction-confidence" style="margin-top: 6px;">
+                Confidence: {{ "%.0f"|format(bill.confidence * 100) }}%
+                {% if not bill.label_reliable %}
+                <span class="bill-forecast-tag">FORECAST</span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ── Pipeline progress ── #}
+    <div class="bill-pipeline">
+        <h2>Pipeline Progress</h2>
+        <div class="bill-pipeline-visual">
+            {% set stages = ['Filed', 'In Committee', 'Passed Committee', 'Floor Vote', 'Crossed Chambers', 'Passed Both', 'Signed'] %}
+            {% for s in stages %}
+            <div class="pipeline-step {% if bill.stage_label == s %}pipeline-step-current{% elif bill.stage_label in stages and stages.index(s) < stages.index(bill.stage_label) %}pipeline-step-done{% endif %}">
+                <div class="pipeline-step-dot"></div>
+                <span class="pipeline-step-label">{{ s }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        <p class="bill-pipeline-status" {% if bill.rule_context %}title="{{ bill.rule_context }}"{% endif %}>
+            Current stage: <strong>{{ bill.stage_label }}</strong>
+            {% if bill.days_since_action > 0 %}
+            &middot; Last action {{ bill.days_since_action }} days ago
+            {% endif %}
+            {% if bill.stuck_status %}
+            &middot; <span class="stuck-badge stuck-{{ bill.stuck_status|lower }}">{{ bill.stuck_status }}</span>
+            {% endif %}
+        </p>
+    </div>
+
+    {# ── Sponsor influence ── #}
+    {% if sponsor_influence %}
+    <div class="bill-sponsor-context">
+        <h2>Sponsor Context</h2>
+        <div class="sponsor-context-card">
+            <a href="/intelligence/member/{{ sponsor_influence.member_id }}">
+                <strong>{{ bill.sponsor }}</strong>
+            </a>
+            <span class="intel-trust-badge intel-trust-{{ sponsor_influence.label|lower }}">
+                {{ sponsor_influence.label }} Influence (#{{ sponsor_influence.rank }})
+            </span>
+            {% if sponsor_influence.signals %}
+            <div class="story-card-signals">
+                {% for sig in sponsor_influence.signals[:3] %}
+                <span class="influence-signal-tag">{{ sig }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if sponsor_influence.sponsor_lift > 0 %}
+            <p class="sponsor-lift-note">
+                Bills sponsored by {{ bill.sponsor }} advance {{ "%.0f"|format(sponsor_influence.sponsor_lift * 100) }}% more often than the chamber average.
+            </p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Witness slip summary ── #}
+    {% if anomaly %}
+    <div class="bill-slips">
+        <h2>Public Engagement</h2>
+        <div class="bill-slip-stats">
+            <span><strong>{{ anomaly.total_slips }}</strong> witness slips filed</span>
+            <span>{{ anomaly.n_proponent }} proponents / {{ anomaly.n_opponent }} opponents</span>
+            <span>{{ anomaly.unique_orgs }} organizations</span>
+        </div>
+        {% if anomaly.is_anomaly %}
+        <div class="bill-anomaly-alert">
+            <strong>Anomaly Detected:</strong> {{ anomaly.anomaly_reason }}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {# ── Action History Timeline ── #}
+    {% if action_history %}
+    <div class="bill-action-history">
+        <h2>Action History</h2>
+        <p class="action-history-note">{{ action_history|length }} actions recorded. Each action's meaning and outcome signal are classified automatically.</p>
+        <div class="action-timeline">
+            {% for act in action_history %}
+            <div class="action-timeline-item action-signal-{{ act.outcome_signal|replace('_', '-') }}">
+                <div class="action-timeline-dot"></div>
+                <div class="action-timeline-content">
+                    <div class="action-timeline-header">
+                        <span class="action-date">{{ act.date }}</span>
+                        <span class="action-category-badge action-cat-{{ act.action_category }}">{{ act.action_category_label or act.action_category }}</span>
+                        {% if act.outcome_signal and act.outcome_signal != 'neutral' %}
+                        <span class="action-signal-badge signal-{{ act.outcome_signal|replace('_', '-') }}">
+                            {% if act.outcome_signal == 'positive_terminal' %}Law
+                            {% elif act.outcome_signal == 'positive' %}Positive
+                            {% elif act.outcome_signal == 'positive_weak' %}Mild +
+                            {% elif act.outcome_signal == 'negative_weak' %}Mild −
+                            {% elif act.outcome_signal == 'negative' %}Negative
+                            {% elif act.outcome_signal == 'negative_terminal' %}Dead
+                            {% endif %}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="action-text">{{ act.action }}{% if act.rule_reference %} <span class="action-rule-ref" title="{{ act.rule_reference }}">{{ act.rule_reference }}</span>{% endif %}</div>
+                    {% if act.meaning %}
+                    <div class="action-meaning">{{ act.meaning }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% elif bill.last_action_text %}
+    <div class="bill-last-action">
+        <h2>Last Action</h2>
+        <p><strong>{{ bill.last_action_date or '' }}</strong>: {{ bill.last_action_text }}</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

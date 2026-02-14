@@ -23,6 +23,7 @@ from urllib3.util.retry import Retry
 
 from ..config import BASE_URL, CACHE_DIR, GA_ID, MOCK_DEV_DIR, SESSION_ID
 from ..models import ActionEntry, Bill, VoteEvent, WitnessSlip
+from ..normalize import normalize_chamber, normalize_date, validate_bill_cache
 
 LOGGER = logging.getLogger(__name__)
 
@@ -648,8 +649,8 @@ def _parse_last_action(soup: BeautifulSoup) -> tuple[str, str, str]:
     bold_text = bold_span.get_text(strip=True)
     # Parse "7/28/2025 - Senate:" or "7/28/2025 -\nSenate:"
     parts = re.split(r"\s*-\s*", bold_text, maxsplit=1)
-    date_str = parts[0].strip() if parts else ""
-    chamber = parts[1].rstrip(":").strip() if len(parts) > 1 else ""
+    date_str = normalize_date(parts[0].strip()) if parts else ""
+    chamber = normalize_chamber(parts[1].rstrip(":").strip()) if len(parts) > 1 else ""
 
     # Action text is everything after the bold span
     action_text = item.get_text(strip=True)
@@ -732,8 +733,8 @@ def _parse_action_history(soup: BeautifulSoup) -> list[ActionEntry]:
         cells = row.find_all("td")
         if len(cells) < 3:
             continue
-        date = cells[0].get_text(strip=True)
-        chamber = cells[1].get_text(strip=True)
+        date = normalize_date(cells[0].get_text(strip=True))
+        chamber = normalize_chamber(cells[1].get_text(strip=True))
         action = cells[2].get_text(strip=True)
         if date:
             entries.append(ActionEntry(date=date, chamber=chamber, action=action))
@@ -893,6 +894,7 @@ def scrape_all_bills(
                     if old:
                         bill.vote_events = old.vote_events
                         bill.witness_slips = old.witness_slips
+                        bill.full_text = old.full_text
                     bills[bill.leg_id] = bill
                     rate = completed / elapsed if elapsed > 0 else 0
                     eta = (total - completed) / rate if rate > 0 else 0
@@ -943,12 +945,34 @@ def _bill_to_dict(bill: Bill) -> dict:
 
 def _bill_from_dict(d: dict) -> Bill:
     """Deserialize a Bill from a cache dict."""
+    # Lazy import to avoid circular dependency at module load
+    try:
+        from ..ml.action_classifier import classify_action
+
+        _classify = classify_action
+    except Exception:
+        _classify = None
+
     action_history = []
     for a in d.get("action_history", []):
         if isinstance(a, dict) and "date" in a and "chamber" in a and "action" in a:
-            action_history.append(
-                ActionEntry(date=a["date"], chamber=a["chamber"], action=a["action"])
+            action_text = a["action"]
+            entry = ActionEntry(
+                date=normalize_date(a["date"]),
+                chamber=normalize_chamber(a["chamber"]),
+                action=action_text,
             )
+            # Classify if classifier is available
+            if _classify is not None:
+                try:
+                    ca = _classify(action_text)
+                    entry.action_category = ca.category_id
+                    entry.action_category_label = ca.category_label
+                    entry.outcome_signal = ca.outcome_signal
+                    entry.meaning = ca.meaning
+                except Exception:
+                    pass
+            action_history.append(entry)
 
     vote_events = []
     for v in d.get("vote_events", []):
@@ -956,9 +980,9 @@ def _bill_from_dict(d: dict) -> Bill:
             vote_events.append(
                 VoteEvent(
                     bill_number=v.get("bill_number", ""),
-                    date=v.get("date", ""),
+                    date=normalize_date(v.get("date", "")),
                     description=v.get("description", ""),
-                    chamber=v.get("chamber", ""),
+                    chamber=normalize_chamber(v.get("chamber", "")),
                     yea_votes=v.get("yea_votes", []),
                     nay_votes=v.get("nay_votes", []),
                     present_votes=v.get("present_votes", []),
@@ -978,7 +1002,7 @@ def _bill_from_dict(d: dict) -> Bill:
                     representing=ws.get("representing", ""),
                     position=ws.get("position", ""),
                     hearing_committee=ws.get("hearing_committee", ""),
-                    hearing_date=ws.get("hearing_date", ""),
+                    hearing_date=normalize_date(ws.get("hearing_date", "")),
                     testimony_type=ws.get("testimony_type", "Record of Appearance Only"),
                     bill_number=ws.get("bill_number", ""),
                 )
@@ -988,9 +1012,9 @@ def _bill_from_dict(d: dict) -> Bill:
         bill_number=d["bill_number"],
         leg_id=d["leg_id"],
         description=d["description"],
-        chamber=d["chamber"],
+        chamber=normalize_chamber(d["chamber"]),
         last_action=d.get("last_action", ""),
-        last_action_date=d.get("last_action_date", ""),
+        last_action_date=normalize_date(d.get("last_action_date", "")),
         primary_sponsor=d.get("primary_sponsor", ""),
         synopsis=d.get("synopsis", ""),
         status_url=d.get("status_url", ""),
@@ -999,6 +1023,7 @@ def _bill_from_dict(d: dict) -> Bill:
         action_history=action_history,
         vote_events=vote_events,
         witness_slips=witness_slips,
+        full_text=d.get("full_text", ""),
     )
 
 
@@ -1029,6 +1054,9 @@ def load_bill_cache(*, seed_fallback: bool = False) -> dict[str, Bill] | None:
 
     with open(path, encoding="utf-8") as f:
         raw = json.load(f)
+
+    # Validate cache schema before loading
+    validate_bill_cache(raw)
 
     bills = {lid: _bill_from_dict(d) for lid, d in raw.items()}
     LOGGER.info("Loaded %d bills from cache (%s).", len(bills), path)
@@ -1223,12 +1251,20 @@ def incremental_bill_scrape(
         for lid, bill in existing.items():
             if bill.last_action_date:
                 try:
-                    parsed = datetime.strptime(bill.last_action_date, "%m/%d/%Y")
+                    # Dates are normalized to ISO YYYY-MM-DD on load
+                    parsed = datetime.strptime(bill.last_action_date, "%Y-%m-%d")
                     age_days = (cutoff - parsed).days
                     if age_days <= rescrape_recent_days:
                         rescrape_ids.add(lid)
                 except ValueError:
-                    pass
+                    # Fallback for old cache with MM/DD/YYYY format
+                    try:
+                        parsed = datetime.strptime(bill.last_action_date, "%m/%d/%Y")
+                        age_days = (cutoff - parsed).days
+                        if age_days <= rescrape_recent_days:
+                            rescrape_ids.add(lid)
+                    except ValueError:
+                        pass
         if rescrape_ids:
             LOGGER.info(
                 "Re-scrape: %d bills with activity in last %d days.",
@@ -1305,6 +1341,7 @@ def incremental_bill_scrape(
                     if old:
                         bill.vote_events = old.vote_events
                         bill.witness_slips = old.witness_slips
+                        bill.full_text = old.full_text
                     existing[bill.leg_id] = bill
             except Exception:
                 LOGGER.exception("Error scraping %s", entry.bill_number)

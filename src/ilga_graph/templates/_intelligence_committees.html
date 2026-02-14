@@ -1,0 +1,195 @@
+{# Committee Power Dashboard tab — loaded via HTMX into #intel-content #}
+
+{% if not committees %}
+<p class="intel-empty-tab">No committee data available. Committee stats are computed at startup from scraped committee rosters and bill action history.</p>
+{% else %}
+
+<div class="intel-section">
+    <h2>Committee Power Dashboard</h2>
+    <p class="intel-subtitle">
+        Every bill passes through committees first. These stats show which committees <strong>advance</strong> bills
+        (passed out of committee) and which produce <strong>laws</strong> (signed by the governor).
+        Passage rates are computed from all bills assigned to each committee — not just currently pending ones.
+        <strong>Rules * Reports</strong> and <strong>Assignments * Reports</strong> are routing committees (bills are sent there after passing a substantive committee); advancement/law rates are shown as — because they don't "pass" bills in the same sense.
+    </p>
+
+    <div class="intel-filters" style="margin-bottom: 1em;">
+        <button class="intel-filter-btn active" onclick="filterCommittees('all', this)">All ({{ committees|length }})</button>
+        <button class="intel-filter-btn" onclick="filterCommittees('senate', this)">Senate</button>
+        <button class="intel-filter-btn" onclick="filterCommittees('house', this)">House</button>
+        <button class="intel-filter-btn" onclick="filterCommittees('active', this)">Active (10+ bills)</button>
+        <button class="intel-filter-btn" onclick="filterCommittees('high-pass', this)">High Passage (&ge;30%)</button>
+    </div>
+
+    <div style="margin-bottom: 0.5em; color: #666; font-size: 0.85em;">
+        Showing <strong id="committees-visible-count">{{ committees|length }}</strong> of {{ committees|length }} committees
+    </div>
+
+    <table class="intel-table" id="committees-table">
+        <thead>
+            <tr>
+                <th class="sortable" onclick="sortCommitteeTable(0, 'string')">Committee <span class="sort-arrow"></span></th>
+                <th class="sortable" onclick="sortCommitteeTable(1, 'string')">Chamber <span class="sort-arrow"></span></th>
+                <th class="sortable" onclick="sortCommitteeTable(2, 'number')">Bills <span class="sort-arrow"></span></th>
+                <th class="sortable" onclick="sortCommitteeTable(3, 'number')">Advanced <span class="sort-arrow"></span></th>
+                <th class="sortable" onclick="sortCommitteeTable(4, 'number')">Advancement Rate <span class="sort-arrow"></span></th>
+                <th class="sortable" onclick="sortCommitteeTable(5, 'number')">Became Law <span class="sort-arrow"></span></th>
+                <th class="sortable" onclick="sortCommitteeTable(6, 'number')">Law Rate <span class="sort-arrow"></span></th>
+                <th>Chair</th>
+                <th class="sortable" onclick="sortCommitteeTable(8, 'number')">Members <span class="sort-arrow"></span></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in committees %}
+            <tr class="committee-row"
+                data-chamber="{{ c.chamber|lower }}"
+                data-bills="{{ c.total_bills }}"
+                data-advancement="{{ c.advancement_rate }}"
+                data-procedural="{{ '1' if c.is_procedural else '0' }}">
+                <td><strong>{{ c.name }}</strong>{% if c.is_procedural %} <span class="committee-routing-tag" title="Routing committee: bills are referred here after passing a substantive committee">(routing)</span>{% endif %}</td>
+                <td>{{ c.chamber }}</td>
+                <td data-sort-value="{{ c.total_bills }}">{{ c.total_bills }}</td>
+                <td data-sort-value="{{ c.advanced_count }}">{{ c.advanced_count }}</td>
+                <td data-sort-value="{{ c.advancement_rate }}">
+                    {% if c.is_procedural %}
+                    <span style="color: #888;" title="Advancement rate not meaningful for routing committees">—</span>
+                    {% elif c.total_bills > 0 %}
+                    <div class="score-bar-container" style="width: 60px; display: inline-block;">
+                        <div class="score-bar {% if c.advancement_rate >= 0.5 %}score-bar-high{% elif c.advancement_rate >= 0.2 %}score-bar-moderate{% else %}score-bar-low{% endif %}"
+                             style="width: {{ [1, (c.advancement_rate * 100)|round|int]|max }}%;"></div>
+                    </div>
+                    {% if c.advancement_rate > 0 and c.advancement_rate < 0.01 %}&lt;1%{% else %}{{ "%.0f"|format(c.advancement_rate * 100) }}%{% endif %}
+                    {% else %}<span style="color: #aaa;">—</span>{% endif %}
+                </td>
+                <td data-sort-value="{{ c.passed_count }}">{{ c.passed_count }}</td>
+                <td data-sort-value="{{ c.pass_rate }}">
+                    {% if c.is_procedural %}
+                    <span style="color: #888;" title="Law rate not meaningful for routing committees">—</span>
+                    {% elif c.total_bills > 0 %}
+                    {% if c.pass_rate > 0 and c.pass_rate < 0.01 %}&lt;1%{% else %}{{ "%.0f"|format(c.pass_rate * 100) }}%{% endif %}
+                    {% else %}<span style="color: #aaa;">—</span>{% endif %}
+                </td>
+                <td>
+                    {% if c.chair %}
+                    <a href="/intelligence/member/{{ c.chair_id }}" style="text-decoration: none; color: #1a5276;">{{ c.chair }}</a>
+                    {% else %}<span style="color: #aaa;">—</span>{% endif %}
+                </td>
+                <td data-sort-value="{{ c.member_count }}">{{ c.member_count }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# ── Top committees by category ──────────────────────────────────────────── #}
+{% if top_by_volume or top_by_passage %}
+<div class="intel-section" style="margin-top: 2em;">
+    <h2>Committee Insights</h2>
+
+    <div class="committee-insights-grid">
+        {% if top_by_volume %}
+        <div class="committee-insight-card">
+            <h3>Busiest Committees</h3>
+            <p class="intel-subtitle">Most bills assigned</p>
+            <ol class="committee-insight-list">
+                {% for c in top_by_volume %}
+                <li>
+                    <strong>{{ c.name }}</strong>
+                    <span class="committee-insight-stat">{{ c.total_bills }} bills</span>
+                    <span class="committee-insight-detail">{{ c.advanced_count }} advanced &middot; {{ c.passed_count }} became law</span>
+                </li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+
+        {% if top_by_passage %}
+        <div class="committee-insight-card">
+            <h3>Highest Passage Rates</h3>
+            <p class="intel-subtitle">Among committees with 10+ bills</p>
+            <ol class="committee-insight-list">
+                {% for c in top_by_passage %}
+                <li>
+                    <strong>{{ c.name }}</strong>
+                    <span class="committee-insight-stat">{{ "%.0f"|format(c.advancement_rate * 100) }}% advancement</span>
+                    <span class="committee-insight-detail">{{ c.advanced_count }} of {{ c.total_bills }} bills &middot; {{ c.passed_count }} became law</span>
+                </li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+
+        {% if top_law_factories %}
+        <div class="committee-insight-card">
+            <h3>Law Factories</h3>
+            <p class="intel-subtitle">Most bills that became law</p>
+            <ol class="committee-insight-list">
+                {% for c in top_law_factories %}
+                <li>
+                    <strong>{{ c.name }}</strong>
+                    <span class="committee-insight-stat">{{ c.passed_count }} laws</span>
+                    <span class="committee-insight-detail">{{ "%.0f"|format(c.pass_rate * 100) }}% of {{ c.total_bills }} bills</span>
+                </li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<script>
+function filterCommittees(mode, btn) {
+    document.querySelectorAll('.intel-filter-btn').forEach(function(b) { b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    var rows = document.querySelectorAll('#committees-table .committee-row');
+    var visible = 0;
+    for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var show = true;
+        if (mode === 'senate') show = row.dataset.chamber === 'senate';
+        else if (mode === 'house') show = row.dataset.chamber === 'house';
+        else if (mode === 'active') show = parseInt(row.dataset.bills) >= 10;
+        else if (mode === 'high-pass') show = row.dataset.procedural !== '1' && parseFloat(row.dataset.advancement) >= 0.3 && parseInt(row.dataset.bills) >= 10;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+    }
+    var el = document.getElementById('committees-visible-count');
+    if (el) el.textContent = visible;
+}
+
+var _commSortCol = -1, _commSortAsc = true;
+function sortCommitteeTable(colIdx, dataType) {
+    var table = document.getElementById('committees-table');
+    if (!table) return;
+    var tbody = table.querySelector('tbody');
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr.committee-row'));
+    var headers = table.querySelectorAll('thead th');
+    if (_commSortCol === colIdx) _commSortAsc = !_commSortAsc;
+    else { _commSortAsc = dataType === 'number' ? false : true; _commSortCol = colIdx; }
+    for (var h = 0; h < headers.length; h++) {
+        var arrow = headers[h].querySelector('.sort-arrow');
+        if (arrow) arrow.textContent = '';
+    }
+    var activeArrow = headers[colIdx] && headers[colIdx].querySelector('.sort-arrow');
+    if (activeArrow) activeArrow.textContent = _commSortAsc ? ' \u25B2' : ' \u25BC';
+    rows.sort(function(a, b) {
+        var cellA = a.children[colIdx], cellB = b.children[colIdx];
+        var valA, valB;
+        if (dataType === 'number') {
+            valA = parseFloat(cellA.getAttribute('data-sort-value') || cellA.textContent.replace(/[^0-9.\-]/g, '') || '0');
+            valB = parseFloat(cellB.getAttribute('data-sort-value') || cellB.textContent.replace(/[^0-9.\-]/g, '') || '0');
+            if (isNaN(valA)) valA = 0; if (isNaN(valB)) valB = 0;
+        } else {
+            valA = (cellA.getAttribute('data-sort-value') || cellA.textContent).trim().toLowerCase();
+            valB = (cellB.getAttribute('data-sort-value') || cellB.textContent).trim().toLowerCase();
+        }
+        if (valA < valB) return _commSortAsc ? -1 : 1;
+        if (valA > valB) return _commSortAsc ? 1 : -1;
+        return 0;
+    });
+    for (var r = 0; r < rows.length; r++) tbody.appendChild(rows[r]);
+}
+</script>
+
+{% endif %}

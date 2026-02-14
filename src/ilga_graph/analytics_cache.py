@@ -180,6 +180,7 @@ def _profile_to_dict(p: MoneyballProfile) -> dict:
         "pipeline_depth_avg": p.pipeline_depth_avg,
         "pipeline_depth_normalized": p.pipeline_depth_normalized,
         "network_centrality": p.network_centrality,
+        "betweenness": p.betweenness,
         "unique_collaborators": p.unique_collaborators,
         "collaborator_republicans": p.collaborator_republicans,
         "collaborator_democrats": p.collaborator_democrats,

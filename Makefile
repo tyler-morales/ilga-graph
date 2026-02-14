@@ -1,4 +1,4 @@
-.PHONY: scrape dev serve install test lint lint-fix clean help ml-setup ml-run ml-pipeline ml-resolve ml-predict
+.PHONY: scrape dev serve install test lint lint-fix clean help ml-setup ml-run ml-pipeline ml-resolve ml-predict scrape-fulltext
 
 # ── Virtual environment ─────────────────────────────────────────────────────
 VENV ?= $(or $(wildcard .venv), $(wildcard venv), $(wildcard src/ilga_graph/.venv))
@@ -68,7 +68,7 @@ lint-fix: ## Auto-fix lint and format
 ml-setup: ## Install ML dependencies
 	$(BIN)pip install -e ".[ml]"
 
-ml-run: ## Run full ML pipeline (no interaction -- scores, coalitions, anomalies)
+ml-run: ## Run full ML pipeline (no interaction -- scores, coalitions, anomalies). Use ILGA_ML_SKIP_TUNE=1 to skip hyperparameter tuning (faster).
 	PYTHONPATH=src $(PYTHON) scripts/ml_run.py
 
 ml-pipeline: ## Run data pipeline only: cache/*.json -> processed/*.parquet
@@ -79,6 +79,14 @@ ml-resolve: ## Entity resolution only (AUTO=1 for no interaction)
 
 ml-predict: ## Bill outcome prediction only
 	PYTHONPATH=src $(PYTHON) scripts/ml_predict.py
+
+scrape-fulltext: ## Scrape full bill text PDFs (incremental, resumable)
+	PYTHONPATH=src $(PYTHON) scripts/scrape_fulltext.py \
+		$(if $(LIMIT),--limit $(LIMIT),--limit 100) \
+		$(if $(WORKERS),--workers $(WORKERS)) \
+		$(if $(FAST),--fast) \
+		$(if $(DELAY),--delay $(DELAY)) \
+		$(if $(SAVE_INTERVAL),--save-interval $(SAVE_INTERVAL))
 
 # ── Utilities ──────────────────────────────────────────────────────────────────
 

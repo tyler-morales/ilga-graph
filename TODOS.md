@@ -1,10 +1,292 @@
 # TODOS
 
-**State of the system:** Modularity Roadmap Steps 1–5 complete. ETL lives in `etl.py`; API can start without scrapers when `ILGA_LOAD_ONLY=1`. Scorecards and Moneyball are cached to `cache/` and reused when member data is unchanged. GraphQL resolvers use request-scoped batch loaders (scorecard, moneyball profile, bill, member). `ILGA_PROFILE=dev|prod`; config; seating; SSR advocacy at `/advocacy`; Moneyball v2 (shell bill filter, institutional bonus, chair-first Power Broker). **Unified GraphQL `search` query** — free-text search across members, bills, and committees with relevance scoring, entity-type filtering, and pagination (`search.py`). **Committee Power Dashboard** — each advocacy card now shows committee assignments with leadership roles, power explanations, and per-committee bill advancement stats. **Institutional Power Badges** — visual hierarchy badges (LEADERSHIP, COMMITTEE CHAIR, TOP 5% INFLUENCE) at the top of each advocacy card with click-to-expand explanations. **Power Card Redesign** — advocacy cards restructured into a consolidated "Power Card" layout matching advocacy professional needs: badge row, inline name with party/district, "Why this person matters" power context box, compact scorecard with caucus comparison, contact row (phone/email/ILGA profile), and expandable detail sections.
+**State of the system:** Modularity Roadmap Steps 1–5 complete. ETL lives in `etl.py`; API can start without scrapers when `ILGA_LOAD_ONLY=1`. Scorecards and Moneyball are cached to `cache/` and reused when member data is unchanged. GraphQL resolvers use request-scoped batch loaders (scorecard, moneyball profile, bill, member). `ILGA_PROFILE=dev|prod`; config; seating; SSR advocacy at `/advocacy`; Moneyball v2 (shell bill filter, institutional bonus, chair-first Power Broker). **Unified GraphQL `search` query** — free-text search across members, bills, and committees with relevance scoring, entity-type filtering, and pagination (`search.py`). **Committee Power Dashboard** — each advocacy card now shows committee assignments with leadership roles, power explanations, and per-committee bill advancement stats. **Institutional Power Badges** — visual hierarchy badges (LEADERSHIP, COMMITTEE CHAIR, TOP 5% INFLUENCE) at the top of each advocacy card with click-to-expand explanations. **Power Card Redesign** — advocacy cards restructured into a consolidated "Power Card" layout matching advocacy professional needs: badge row, inline name with party/district, "Why this person matters" power context box, compact scorecard with caucus comparison, contact row (phone/email/ILGA profile), and expandable detail sections. **True Influence Engine** — new `influence.py` module with unified influence scoring: betweenness centrality (bridge influence), vote pivotality (swing voter power), sponsor pull (ML-predicted bill success), and InfluenceScore (0–100 composite). Intelligence dashboard Influence tab. GraphQL `influence_leaderboard` query. Coalition influence enrichment (top influencer + bridge member per bloc). **Prediction table v5** — fixed critical bugs: vetoed/dead bills no longer predicted as ADVANCE; added lifecycle status (OPEN/PASSED/VETOED/DEAD) with visual distinction; staleness features for the model; sortable table columns. **ML Pipeline Bug Audit** — fixed TF-IDF zero-vector fallback, KeyError guards, dynamic majority party computation, sponsor rate null guard, vote tie handling, anomaly NaN guard, defensive date-parse logging. **Intelligence Story Redesign** — new narrative-driven `/intelligence` executive summary (Bills to Watch, Power Movers, Coalition Landscape, Anomaly Alerts), deep-dive pages at `/intelligence/member/:id` and `/intelligence/bill/:id`, raw data tables moved to `/intelligence/raw`. **Legislative Power Map** — interactive D3.js force-directed graph visualization at `/explore` showing all 180 legislators as connected nodes: sized by influence, colored by party, linked by co-sponsorship. Topic filter narrows to relevant committees; ZIP input highlights your legislators; click-to-open detail panel shows stats and influence signals.
 
 ---
 
 ## Current
+
+- **Lint fixes before push (2026-02-14):**
+  - Resolved 13 ruff errors: E501 line length (wrapped long lines in diagnostics_ml, main, features, rule_engine), F841 unused variables (coalitions.py `topic_results`, features.py `df_bills_sponsors`), E402 imports (moved `typing.Literal` and `action_classifier` to top of features.py; `action_classifier` to top of pipeline.py). `make lint` passes.
+
+- **Intelligence: Witness Slips tab (2026-02-13):**
+  - New tab on `/intelligence/raw`: **Witness Slips** — demonstrates how organizations and lobbying groups influence bills via witness slip filings.
+  - **Data:** `state.witness_slips_lookup` (per-bill slips), optional `state.ml.anomalies` for flagged bills. Route: `GET /intelligence/witness-slips`; partial: `_intelligence_witness_slips.html`.
+  - **Content:** (1) Top organizations by total slip filings across all bills. (2) Bills by witness slip volume: bill, description, total / pro / opp / no pos, controversy %, flagged (suspicious coordination), top 5 orgs per bill with pro/opp breakdown. Filters: flagged only, search by bill/description/org.
+  - **Organization name normalization:** `_canonical_organization_name()` maps duplicate/semantic variants to two canonical labels: **"No organization"** (NA, None, N/A, Not applicable, etc.) and **"Individual"** (Self, self, Myself, On behalf of self, Individual, Citizen, Family, Personal, Retired, etc.). Used when building top organizations (global and per-bill) so the Witness Slips tab shows consolidated counts.
+  - **Future:** Slip–vote alignment (do members vote with/against slip majority?) can be added as a separate section or tab.
+
+- **ML pipeline diagnostics (2026-02-13):**
+  - Lightweight check of ML data in/out and model artifacts (no full `make ml-run`). Script: `scripts/diagnostics_ml.py` — run with `PYTHONPATH=src python scripts/diagnostics_ml.py`.
+  - **Data inputs:** cache/bills.json (433 MB), members.json; processed dim_bills (11,722 rows), dim_members (180), fact_bill_actions (103,332), fact_witness_slips (394,203), vote facts present.
+  - **ML outputs:** bill_scores.parquet (9,676 rows) with `forecast_score`, `forecast_confidence`, `prob_advance`, `prob_law`; Status, Law, and Forecast predictor PKLs load and expose `predict_proba`; model_quality.json (Status AUC 0.9966), forecast_quality.json present.
+  - **API loader:** `load_ml_data()` returns `available=True`, 9,676 bill scores; `BillScore` has forecast fields. Feature imports (`build_feature_matrix`, `build_panel_feature_matrix`, `FeatureMode`, `FORECAST_DROP_COLUMNS`) OK.
+  - **Tests:** All 277 tests pass (including test_panel_labels, test_moneyball). Full suite ~1.8s.
+  - **Forecast audit + fix (see next bullet):** Audit found full-text leakage; fix applied, Forecast re-run (AUC now 0.945). ~~`forecast_quality.json` previously showed test ROC-AUC 1.0~~. ( “enrolled”/leakage — now fixed.)
+
+- **Forecast model anti-leakage fix (2026-02-13):**
+  - **Audit:** Forecast test AUC 1.0 was from label leakage: full-text TF-IDF included "enrolled"/"lrb104" from current bill text. Same bill could appear in train and test.
+  - **Fix:** (1) Exclude full-text TF-IDF and full-text content metadata in Forecast mode (`FORECAST_DROP_COLUMNS` + skip in build_feature_matrix/build_panel_feature_matrix). (2) Train/test split by bill_id (70/30).
+  - **Results:** Test ROC-AUC **0.945**; top features sponsor_count (67.7%), sponsor_bill_count, has_sponsor_id, tfidf_tax. `forecast_predictor.pkl` and `forecast_quality.json` updated. Run `make ml-run` to refresh `bill_scores.parquet`.
+
+- **Phase 1: The "Truth" Upgrade — Anti-Leakage Forecast Model (2026-02-13):**
+  - **Problem:** The current Status model achieves AUC 0.995, but `days_since_last_action` accounts for 58.9% of feature importance — it is essentially detecting dead bills, not predicting outcomes. A bill with no action in 180 days is definitionally "stuck" and the model learns that tautology. This provides zero utility for "this bill was just filed — will it pass?"
+  - **Solution — Dual-model architecture:** Deployed a secondary **Forecast** model alongside the existing **Status** model:
+    - **Status model** (unchanged): Uses all features including staleness, slips, action counts. Answers "Is this bill likely dead right now?"
+    - **Forecast model** (new): Uses only intrinsic/Day-0 features — sponsor metrics (party, tenure, historical passage rate), bill text (TF-IDF), committee assignment, calendar features, and content metadata. Strictly excludes `days_since_last_action`, all action counts, witness slips, staleness flags, and rule-derived features. Answers "How likely is this bill to become law based on its content and sponsor?"
+  - **Feature engineering refactor** (`ml/features.py`):
+    - New `FeatureMode = Literal["full", "forecast"]` type and `FORECAST_DROP_COLUMNS` frozenset (31 columns excluded in forecast mode).
+    - `build_feature_matrix(mode="full"|"forecast")` and `build_panel_feature_matrix(mode=...)` skip building slip/staleness/action/rule feature tables entirely in forecast mode.
+    - `FORECAST_SNAPSHOT_DAYS = [0, 30]` — forecast panel trains at Day 0 (introduction) and Day 30 only.
+  - **Forecast training pipeline** (`ml/bill_predictor.py`):
+    - `run_forecast_model()` builds panel features with `mode="forecast"`, `snapshot_days=[0, 30]`, trains GradientBoosting (n=300, depth=6), calibrates with `CalibratedClassifierCV`, saves to `processed/forecast_predictor.pkl` + `processed/forecast_quality.json`.
+    - Target: `target_law_after` (P(becomes law)) not `target_advanced_after`.
+    - Scoring: builds single-row `mode="forecast"` matrix for all bills, produces `forecast_score` and `forecast_confidence` ("Low"/"Medium"/"High") per bill.
+    - Integrated into `run_auto()` as Step 5c — runs automatically on every `make ml-run`.
+  - **Data layer** (`ml_loader.py`): `BillScore` extended with `forecast_score: float` and `forecast_confidence: str`. Backward-compatible (defaults to 0.0/"" if columns missing).
+  - **GraphQL API** (`main.py`): `BillPredictionType` extended with `forecast_score` and `forecast_confidence` fields. `_bill_score_to_type()` populates them. All template context dicts (intelligence summary, bill detail, member detail) include forecast data.
+  - **UI** (templates): Predictions table has new "Forecast" column with score bar and confidence label (High/Medium/Low). Bill detail page shows Forecast P(Law) alongside Status P(Advance) and P(Law). Member detail bill table includes Forecast column. Intelligence summary bill-to-watch cards show forecast score. CSS classes `.forecast-conf`, `.forecast-high`, `.forecast-medium`, `.forecast-low` for visual distinction.
+  - **Expected metrics:** Status model unchanged (AUC ~0.99). Forecast model target AUC 0.70–0.75 — this is expected and desirable. Top features should be `sponsor_hist_passage_rate`, `committee_id`, TF-IDF terms, not time-based. The Forecast model trades raw accuracy for genuine predictive power on active bills.
+  - **Risk mitigation:** `CalibratedClassifierCV` ensures "30% forecast" means ~30% of such bills historically became law. Pipeline gracefully degrades if forecast model fails — defaults to 0.0/"".
+  - **Next steps:** Run `make ml-run`, compare Forecast top features vs Status top features, verify no staleness/activity features in Forecast model. Consider adding "First 48h slips" as a future Forecast feature.
+
+- **ILGA Rules Reference System — Bicameral v2 (2026-02-13):**
+  - **Problem:** Action classification, pipeline stages, lifecycle logic, and feature engineering all used hardcoded strings and ad-hoc definitions. No grounding in the actual legislative rules that govern how bills move. The initial implementation only covered Senate rules; House rules (Rules Committee, Rule 19, different vote thresholds) were missing.
+  - **Solution — Bicameral rule glossary + rule engine:** Extracted both the 104th GA Senate Rules (SR-4) and House Rules into a unified machine-readable glossary at `reference/ilga_rules.json` (v2.0.0). The glossary uses `senate_rule` / `house_rule` fields throughout instead of a single `rule` field. Key sections:
+    - `stages`: 10 pipeline stages with bicameral rule citations (e.g. FILED → Senate Rule 5-1(d) / House Rule 37(d)).
+    - `committees.procedural`: Senate Assignments (Rule 3-5/3-7/3-8) + House Rules Committee (Rule 15/18) + Executive + Executive Appointments.
+    - `committees.senate_standing`: 29 Senate committees (Rule 3-4).
+    - `committees.house_standing`: 46 House committees (Rule 11) — full enumeration.
+    - `actions`: All 16 action categories with dual-chamber rule refs (e.g. committee_action → Senate Rule 3-11 / House Rule 22).
+    - `outcomes`: Bicameral report types, tabling (Senate Rule 7-10 / House Rule 60), discharge (Senate 36 votes / House 60 votes).
+    - `vote_thresholds`: Senate (59 members: 30/36/40) and House (118 members: 60/71/79) side-by-side.
+    - `deadlines`: Senate (Rule 2-10/3-9) and House (Rule 9/19) schedules. Includes actual 2025 House deadlines.
+  - **`ml/rule_engine.py` updated (bicameral):** Functions are now chamber-aware:
+    - `get_stage_rule(stage, chamber=None)` — returns senate, house, or both rule citations.
+    - `votes_required_for_passage(chamber)` — Senate 30, House 60.
+    - `votes_required_for_override(chamber)` — Senate 36, House 71.
+    - New: `votes_required_for_discharge(chamber)` — Senate 36, House 60.
+    - New: `chamber_member_count(chamber)` — Senate 59, House 118.
+    - Tooltip map updated with bicameral citations (e.g. "Override requires 3/5 (Senate 36, House 71)").
+  - **`action_types.json` updated:** All 16 category `rule_reference` fields now cite both chambers (e.g. "Senate Rule 3-11; House Rule 22"). ~15 individual action patterns updated similarly.
+  - **`bill_predictor.py` updated:** `rule_context` now uses chamber-aware vote counts — detects origin chamber from bill_id prefix (HB→house, SB→senate) for correct vote threshold display.
+  - **Sources:** Senate Rules: `reference/104th_Senate_Rules.pdf`, House Rules: `reference/104th_House_Rules.pdf`.
+  - **Prior implementation details** (still apply): `ClassifiedAction.rule_reference`, `build_rule_features()` (6 binary features), `BillScore.rule_context`, `ActionEntry.rule_reference`, template rule tooltips.
+
+- **Full Bill Text Scraper + ML Feature Scaffold (2026-02-13):**
+  - **Problem:** ML text features used only the short "Synopsis As Introduced" (typically 1-2 sentences) via TF-IDF. The model had almost no signal from the actual *content* of the bill — topics, length, complexity, citations to existing law.
+  - **Solution — PDF-based full text scraping:** ILGA's FullText tab does NOT render large bills inline (shows "too large for display"). The only reliable method is downloading the PDF link always present on the FullText tab page and extracting text with `pdfplumber`.
+  - **New scraper module** (`scrapers/full_text.py`): `_full_text_tab_url()` converts BillStatus URL to FullText tab URL (same pattern as witness_slips/votes). `_parse_pdf_link()` finds the "Open PDF" button. `_extract_text_from_pdf()` uses pdfplumber. `_clean_bill_text()` strips page headers, line numbers, normalises unicode. `scrape_bill_full_text()` orchestrates per-bill: fetch tab page → find PDF link → download (10MB size guard) → extract → clean. Returns cleaned text or `None` / `"[SKIPPED: PDF too large]"`.
+  - **Resumable CLI** (`scripts/scrape_fulltext.py`): Modeled after `scrape_votes.py`. Progress file at `cache/fulltext_progress.json` tracks `scraped_bill_numbers`, `checked_no_pdf`, `skipped_too_large`. Batch saves every 25 bills (atomic write). SIGINT handler for clean Ctrl+C. Only SB/HB (skips resolutions). Flags: `--limit`, `--workers`, `--fast`, `--reset`, `--verify`, `--save-interval`. Real-time progress with word count and ETA.
+  - **Model field** (`models.py`): Added `full_text: str = ""` to `Bill` dataclass.
+  - **Serialization** (`scrapers/bills.py`): `_bill_from_dict()` reads `full_text`. `_bill_to_dict()` already includes it via `asdict()`. Full text preserved on re-scrape (carried forward like `vote_events`/`witness_slips`).
+  - **Pipeline** (`ml/pipeline.py`): `process_bills()` now includes `full_text` in `dim_bills.parquet`.
+  - **Length variance strategy** (bills range from <1 page to 500+ pages):
+    - *Scraping:* Store full text with NO truncation. 10MB PDF size guard skips extreme outliers.
+    - *Feature building:* Truncate to first 5000 words (~10-15 pages). `sublinear_tf=True` (log term frequency dampens long-bill dominance). `norm='l2'` (unit-length normalisation). Higher `min_df=5` / lower `max_df=0.7` vs synopsis.
+    - *Length as explicit features:* `full_text_word_count`, `full_text_log_length` (log1p), `is_long_bill` (>10K words), `is_short_bill` (<500 words), `full_text_section_count`, `full_text_citation_count` (ILCS refs), `has_full_text` (binary).
+  - **ML features** (`ml/features.py`): `build_full_text_features()` — separate TF-IDF on full text (1000 features, 5000-token truncation). `build_content_metadata_features()` — 7 numeric features. Both wired into `build_feature_matrix()` as third sparse block: `hstack([synopsis_tfidf, fulltext_tfidf, tabular])`. All return zeros gracefully when no full text exists — pipeline still runs without scraped text.
+  - **Makefile:** `make scrape-fulltext` (default 100 bills), `make scrape-fulltext LIMIT=0` (all), `make scrape-fulltext FAST=1`.
+  - **Speed optimisation v2 (2026-02-13):**
+    - **Direct PDF URL prediction:** New `_predict_pdf_url()` in `scrapers/full_text.py` constructs the PDF URL directly from the bill number using the pattern `/legislation/{GA}/PDF/{GA}00{DocType}{Num}lv.pdf`, bypassing the FullText tab HTML fetch. Cuts HTTP requests from 2 per bill to 1 for most bills. Falls back to the original HTML flow on 404. Config constant `GA_NUMBER = GA_ID + 86` in `config.py`.
+    - **Post-download delay removed:** The `time.sleep(request_delay)` after PDF download was eliminated (the function returns immediately; next request comes from a different thread).
+    - **Refactored `scrape_bill_full_text()`:** New `bill_number` parameter enables the fast path. Extracted `_download_pdf()` (size guard + error handling) and `_extract_and_clean()` helpers to share between fast path and fallback.
+    - **`--delay` CLI argument:** Exact delay control in `scripts/scrape_fulltext.py` (overrides `--fast` and default). `--delay 0` eliminates all inter-request delay. Makefile supports `DELAY=` variable.
+    - **Save interval raised to 100:** Default save-every-N went from 25 to 100. The 150MB `bills.json` serialization was causing massive ETA spikes every 25 bills. Makefile supports `SAVE_INTERVAL=` variable.
+    - **Expected improvement:** ~50-60% faster per bill (0.5-0.8s vs 1.2-1.8s), ETA from ~500 min to ~200-250 min with 15 workers.
+    - **Usage:** `make scrape-fulltext LIMIT=0 WORKERS=15 DELAY=0` for maximum speed.
+  - **Next steps:** Run `make scrape-fulltext LIMIT=0 WORKERS=15 DELAY=0` for all remaining SB/HB bills. Run `make ml-run` to evaluate model improvement. Tune `max_features`, `max_tokens`, TF-IDF params based on results.
+
+- **Panel (Time-Slice) ML Dataset Expansion (2026-02-13):**
+  - **Problem:** Training set was limited to ~one row per mature bill (120+ days old). Newer/"immature" bills contributed zero training signal, and even mature bills were only seen at their final state — never at intermediate stages.
+  - **Solution — panel dataset (`ILGA_ML_PANEL=1`):** Instead of one row per bill, creates **multiple rows per bill** at snapshot dates (30, 60, 90 days after introduction). For each snapshot row: **features** use only data up to the snapshot date (no future leakage); **label** = "did this bill advance AFTER this snapshot?" Only included when we have observed long enough after the snapshot (90 days by default).
+  - **New constants** (`features.py`): `SNAPSHOT_DAYS_AFTER_INTRO = [30, 60, 90]`, `OBSERVATION_DAYS_AFTER_SNAPSHOT = 90`.
+  - **New function** `build_panel_labels(df_bills, df_actions)`: For each bill × snapshot day, splits actions into before/after the snapshot, assigns post-snapshot advance/law labels. Only creates rows where `snapshot_date + observation_days <= today`.
+  - **Time-sliced feature builders**: `build_staleness_features`, `build_action_features`, `build_slip_features`, `build_sponsor_features`, and `build_committee_features` all accept optional `as_of_date` parameter. When set, they filter data to on-or-before that date and compute staleness/history relative to it instead of "now". TF-IDF and temporal features are snapshot-invariant (bill text and intro date don't change).
+  - **New function** `build_panel_feature_matrix()`: Orchestrates the panel build — creates panel labels, iterates unique snapshot dates, builds features for each snapshot batch, concatenates into a single panel DataFrame. Returns the same tuple shape as `build_feature_matrix()` for drop-in compatibility with `run_auto()`.
+  - **Integration** (`bill_predictor.py`): `run_auto(use_panel=None)` reads `ILGA_ML_PANEL` env var. When `"1"`, uses panel dataset for training/eval, then builds single-row features for scoring (so `bill_scores.parquet` always has one row per bill). Quality report records `panel_mode: true`.
+  - **Activation:** Panel is the **default** for `make ml-run`. To revert to the legacy single-row training, set `ILGA_ML_PANEL=0 make ml-run`.
+  - **Expected outcome:** 2-3x more training rows from the same bills (same bill at "in committee" at day 30, "passed committee" at day 60, etc.), capturing stage-transition patterns. Inference output unchanged — one row per bill.
+
+- **Unified Panel + Full-Text Feature Paths (2026-02-13):**
+  - **Problem:** `build_panel_feature_matrix()` was missing full-text TF-IDF and content-metadata features that `build_feature_matrix()` (used for scoring) included. This caused a feature-dimension mismatch at scoring time (sklearn `ValueError`), and meant the panel-trained model never learned from full-text signals.
+  - **Fix (`features.py`):**
+    - Added `build_full_text_features(df_bills_sub, max_features=1000)` and `build_content_metadata_features(df_bills_sub)` to `build_panel_feature_matrix()`, built once outside the snapshot loop (bill text is snapshot-invariant).
+    - Joined `df_content_meta` into each snapshot's `df_feat_snap` so 7 content-metadata columns (`full_text_word_count`, `full_text_log_length`, `full_text_section_count`, `full_text_citation_count`, `has_full_text`, `is_long_bill`, `is_short_bill`) are present in panel training.
+    - Updated panel `_to_sparse()` to hstack full-text TF-IDF alongside synopsis TF-IDF + tabular, matching the single-row path.
+    - Updated panel `feature_names` to include `ft_tfidf_*` prefixed names.
+    - Added `"full_text"` to `_NON_FEATURE_COLS` to exclude the raw text string from tabular features in both paths.
+  - **Result:** Panel training and single-row scoring now produce identically-shaped feature matrices. No more dimension mismatch. Model learns from full-text signals when full text has been scraped. All 277 tests pass.
+
+- **Committee Intelligence Tab + ML Committee Features (2026-02-13):**
+  - **New Committees tab** (`/intelligence/committees`, `_intelligence_committees.html`): Added a "Committees" tab to the intelligence raw data dashboard showing every committee with sortable columns: name, chamber, total bills, advanced count, advancement rate (with visual bar), became law count, law rate, chair (linked to member detail), and member count. Client-side filters: All, Senate, House, Active (10+ bills), High Passage (>=30%). Sortable by any column. Shows visible/total count.
+  - **Committee Insights section**: Below the table, three insight cards: Busiest Committees (top 10 by bill volume), Highest Passage Rates (top 10 among committees with 10+ bills), and Law Factories (top 10 by bills that became law). Each card shows the committee name, key stat, and detail line.
+  - **Summary card**: Added "Committees" summary card to the intelligence/raw overview showing total committee count and number of active committees (10+ bills).
+  - **New ML feature: `build_committee_features()`** (`features.py`): Extracts each bill's first substantive committee assignment from action history ("Assigned to"/"Referred to" actions, skipping procedural committees like Assignments, Rules, Executive). Computes 5 new features per bill:
+    - `committee_advancement_rate`: Historical advancement rate of the bill's committee (only using bills introduced *before* this one — leakage-safe).
+    - `committee_pass_rate`: Historical law rate of the committee (same leakage guard).
+    - `committee_bill_volume`: How many bills the committee has handled historically.
+    - `is_high_throughput_committee`: Binary flag for committees with >=30% advancement rate.
+    - `has_committee_assignment`: Binary flag for whether the bill has a non-procedural committee assignment.
+  - **Integrated into `build_feature_matrix()`**: Committee features are joined alongside sponsor, text, slip, temporal, action, and staleness features. Committee rates use -1 sentinel for missing data (consistent with other ratio columns). Binary flags added to the imputation lists.
+  - **Tab button**: Added to `intelligence.html` between Influence and Model Quality tabs. Uses same HTMX pattern (`hx-get="/intelligence/committees"` → `#intel-content`).
+  - **CSS** (`base.html`): Added `.committee-insights-grid`, `.committee-insight-card`, `.committee-insight-list`, `.committee-insight-stat`, `.committee-insight-detail` styles.
+  - **Route** (`main.py`): New `GET /intelligence/committees` handler. Builds template-friendly dicts from `state.committees`, `state.committee_stats`, and `state.committee_rosters`. Computes chamber from code prefix, finds chair from roster, sorts by total bills. Generates three insight lists (top by volume, top by passage, law factories).
+  - **Committee dashboard accuracy (2026-02-13):** Rules * Reports and Assignments * Reports showed 5k+ bills with 0 advanced — correct in our pipeline (we count "advanced" when last_action is Do Pass/Reported Out; bills in Rules have last_action "Referred to Rules") but misleading because those are **routing committees** (bills go there after passing a substantive committee). Changes: (1) **Procedural flag** (`main.py`): `_PROCEDURAL_COMMITTEE_NAMES` set; each committee dict gets `is_procedural`. (2) **Template** (`_intelligence_committees.html`): Procedural committees show "—" for advancement and law rate with "(routing)" tag and subtitle note. (3) **Insight cards**: Top by passage and Law Factories exclude procedural so they don't dominate. (4) **Percentage display**: Rates in (0, 1%) now show "<1%" instead of "0%" (fixes e.g. Assignments * Reports 5/3563 ≈ 0.14%). (5) **High Passage filter**: Excludes procedural rows. (6) **CSS** (`.committee-routing-tag` in `base.html`).
+
+- **Data Quality Audit & Remediation (2026-02-13):**
+  - **CRITICAL FIX: `total_action_count` data leakage removed** (`features.py`): The single most important feature (68.4% importance, CV AUC 0.999) was circular — bills that advance accumulate more actions by construction. Replaced with time-capped action counts (`action_count_30d`, `action_count_60d`, `action_count_90d`) and normalized velocity (`action_velocity_60d`). Expect model metrics to drop to realistic levels (80-90% AUC).
+  - **Semantic imputation** (`features.py`): Replaced blanket `.fill_null(0)` with context-aware fills: counts → 0, ratios → -1 sentinel (distinct from "zero rate"), binary flags → 0. Added `has_no_slip_data` and `has_no_sponsor_history` indicator columns so the model can learn from missingness.
+  - **Date normalization** (`normalize.py`, `scrapers/bills.py`, `scraper.py`): New `normalize_date()` converts all dates to ISO `YYYY-MM-DD` at scrape time and cache load time. Handles MM/DD/YYYY, "May 31, 2025", and "2025-05-31 17:00" formats. Applied to: `last_action_date`, action history dates, vote event dates, witness slip hearing dates.
+  - **Chamber normalization** (`normalize.py`, `scrapers/bills.py`, `scraper.py`): New `normalize_chamber()` converts "Senate"/"House" to "S"/"H" consistently. Applied at scrape time and cache load time across all data models.
+  - **Gold label expansion** (`ml/gold_labels.py`): Replaced the old 9-entry all-negative gold set with a proper 400-bill stratified sample (balanced ADVANCE/STUCK, proportional chamber/type). Auto-generated from action classifier labels with metadata (bill_number, sponsor, dates). Wired into `run_auto()` Step 8.
+  - **Cache schema validation** (`normalize.py`, `scrapers/bills.py`, `scraper.py`): Added `validate_bill_dict()`, `validate_member_dict()`, `validate_bill_cache()` that check required fields (bill_number, leg_id, chamber) are present and non-null on every cache load. Warns on missing/empty recommended fields.
+  - **Backtester label stability** (`ml/backtester.py`): New `LabelChurn` dataclass tracks how many bill labels changed between pipeline runs (STUCK→ADVANCE, ADVANCE→STUCK). Labels are now snapshotted alongside predictions. Backtest output reports churn rate, explaining the 75%-99% accuracy oscillation.
+  - **Anomaly detection ground truth** (`processed/anomaly_labels_gold.json`, `ml/anomaly_detection.py`): Created 23 labeled examples (13 suspicious, 10 genuine). New `_tune_contamination_with_gold()` tests contamination 0.02-0.20 and picks the value maximizing F1 on gold labels. Replaces the hardcoded 8% contamination.
+
+- **Influence Engine Fix + Low-Confidence UX + Leakage Documentation:**
+  - **Influence engine bug fix** (`main.py`): `state.member_lookup` was keyed by member **name** but `compute_influence_scores()` looked up by **member_id** — every lookup failed, so `state.influence` was always `{}`. All influence scores were 0; graph, leaderboard, Power Movers, and coalition enrichment fell back to Moneyball. **Fix:** Added `state.member_lookup_by_id = {m.id: m for m in state.members}` and passed it into `compute_influence_scores()`. Also fixed Power Movers (executive summary) and intelligence member detail route to use the id-keyed lookup.
+  - **Low-confidence indicator** (`_intelligence_predictions.html`, `intelligence.html`, `base.html`): Predictions with confidence <70% now show an amber left border, "Uncertain" label next to the confidence %, and a new "Low confidence (<70%)" filter checkbox. Accuracy history shows the 50–70% bucket is only ~56–76% accurate, so this visual cue prevents users from over-relying on uncertain predictions.
+  - **Leakage documentation** (`features.py`): Added docstring note on `total_action_count` explaining it is outcome-correlated (~0.65 importance) but not strict leakage due to the time-based train/test split. Noted `build_action_features` as the conservative alternative (first 30 days only).
+
+- **Jinja2 Template Syntax Fix (`intelligence_bill.html` line 64):**
+  - **Bug:** `/intelligence/bill/:id` returned 500 Internal Server Error for every bill detail page.
+  - **Root cause:** Line 64 used a Python-style ternary expression (`stages.index(s) < stages.index(bill.stage_label) if bill.stage_label in stages else false`) inside a `{% elif %}` block. Jinja2 doesn't support `X if condition else Y` ternary syntax in that position — it parsed the second `if` as a new statement and threw `TemplateSyntaxError: expected token 'end of statement block', got 'if'`.
+  - **Fix:** Replaced with proper Jinja2 `and` operator: `{% elif bill.stage_label in stages and stages.index(s) < stages.index(bill.stage_label) %}`. Semantically identical — when `bill.stage_label` is not in `stages`, the short-circuit `and` prevents the `stages.index()` call.
+  - **Verified:** `/intelligence/bill/155711` now returns 200 OK. All other intelligence endpoints unaffected.
+
+- **Coalition Focus Area Bug Fix (`coalitions.py` — category matching overhaul):**
+  - **Root cause:** All 10 coalitions were showing identical focus areas ("Education & State Government"). Three compounding bugs:
+    1. **Missing space in action text:** ILGA actions use `"Assigned toTransportation"` (no space), but the regex expected `\s+` after "to", so it matched almost nothing.
+    2. **Wrong-direction substring match:** The check `if cat.lower() in cn_lower` looked for the full category name in the committee name. Compound names like "Revenue & Pensions" never appeared as substrings of "Revenue", "Criminal Justice" never appeared in "Criminal Law", etc. Only short names like "Education" and "State Government" matched.
+    3. **Senate-only committee codes:** `_CATEGORY_COMMITTEES` only had Senate committee codes (S-prefix). All House committees were unrepresented.
+    4. **"Executive" catch-all:** The Senate/House "Executive" committee is a procedural catch-all (2,875 actions alone), not a policy indicator. Mapping it to "State Government" drowned out actual policy signals.
+  - **Fix — `_extract_committee_name()`:** Rewrote regex to handle `\s*` (optional space) after "to". Added "Executive" and "Executive Appointments" to procedural filter list (alongside Rules, Assignments, etc.).
+  - **Fix — `_CATEGORY_COMMITTEES`:** Expanded from 13 Senate-only codes to 70+ codes covering both Senate and House committees.
+  - **Fix — `_CATEGORY_NAME_KEYWORDS`:** New keyword-based matching system. Each category has a list of substring keywords (e.g., Criminal Justice: "criminal", "judiciary", "public safety", "restorative justice", "gun violence"). Replaces broken full-name substring check.
+  - **Fix — `_categorize_committee_name()`:** New function that uses keyword matching instead of direct category name comparison. Handles House committee names like "Judiciary - Criminal", "Revenue & Finance", "Labor & Commerce", etc.
+  - **Result:** Category distribution now balanced — Revenue & Pensions (1,047), Criminal Justice (672), Healthcare (625), Education (478), State Government (379), Energy & Environment (268), Commerce (224), Labor (181), Insurance & Finance (176), Transportation (173), Agriculture (89), Housing (26). Coalition names are properly differentiated.
+  - **Future enhancement:** Could use TF-IDF-like relative weighting (coalition category share vs. overall average) to further differentiate coalitions that vote on the same broad topics but with different emphasis.
+
+- **Topic-Based Coalition Redesign (`coalitions.py` — complete rewrite):**
+  - **Root cause of duplicate/useless coalitions:** THREE compounding issues:
+    1. **Broken category filter:** Code filtered `action_category == "committee"` but the data uses `"assignment"` (from the action classifier update). Zero bills got categorized.
+    2. **Silhouette score 0.115:** General (all-votes) clustering was finding noise, not structure.
+    3. **Same categories for every bloc:** All blocs vote on the same bills (Criminal Justice/Healthcare dominate), so counting YES votes per category doesn't differentiate.
+  - **New approach — per-topic voting coalitions (PRIMARY output):**
+    - For each of 12 policy areas: find bills in that topic, find roll-call votes, compute per-member YES rate, segment into tiers: Champion (>=80%), Lean Support (65-80%), Swing (45-65%), Lean Oppose (25-45%), Oppose (<25%).
+    - Results show clearly differentiated blocs per topic. E.g., Energy & Environment: 120 Champions (117D/3R), 30 Swing (0D/30R), 18 Lean Oppose (0D/18R). Labor: 125 Champions, 23 Lean Oppose, 4 Oppose. Housing: 122 Champions, 32 Lean Oppose, 9 Oppose.
+    - Saved to `processed/topic_coalitions.json` — all member profiles per topic with YES/NO counts, rates, tier assignments.
+  - **General clustering retained as SECONDARY:** Still runs (k=2..8), but honestly reports "Weak structure" when silhouette < 0.25. Now uses YES rate per category (not raw count) for focus areas.
+  - **Category mapping fix:** New `build_bill_categories()` uses `action_category == "assignment"` (correct filter). Maps 3,110 bills. 12 topics with enough data.
+
+- **Legislative Power Map (`/explore`) — Interactive Graph Visualization:**
+  - **New route: `GET /explore`** — full-viewport D3.js v7 force-directed graph of legislators.
+  - **New API: `GET /api/graph?topic=X&zip=Y&focus=relevant|all`** — JSON endpoint returning nodes, edges, your_legislators, topic_committees, meta. **Focus:** `focus=relevant` (default) — when a **topic is selected**, returns only members on that topic's committees + your legislators; when **no topic**, returns top 50 by influence + your legislators. `focus=all` returns all 180. Topic filter (12 categories) and ZIP lookup supported.
+  - **`moneyball.py`:** Renamed `_build_cosponsor_edges()` to `build_cosponsor_edges()` (public). Now called during startup and stored on `AppState.cosponsor_adjacency` for the graph API.
+  - **`main.py` (AppState):** Added `cosponsor_adjacency: dict[str, set[str]]` field. Step 2a in lifespan computes adjacency from member co-sponsorship data (180 nodes, ~15k raw edges).
+  - **`main.py` (graph API):** Smart edge pruning: important members (topic-relevant, user's legislators, top 20 by influence) keep all edges; others capped at 8 edges per node. When focus=relevant, edges filtered to only those between included nodes.
+  - **`templates/explore.html`:** Full D3 visualization with:
+    - **Force layout:** `forceLink` (co-sponsorship), `forceCharge` (repulsion), `forceCollide` (overlap prevention), `forceY` (influence hierarchy — high influence at top), `forceX` (gentle party clustering — D left, R right).
+    - **Node appearance:** Circle size = influence score with **power scale** (exponent 1.8, range 2–34px) so high-influence members are visually dominant; color = party (blue D, red R, gray other); stroke = gold ring for user's legislators, blue ring for topic-relevant members.
+    - **Show control:** "Relevant only" (default) vs "All 180 legislators" dropdown; status bar shows "(relevant only)" when applicable.
+    - **Interactions:** Zoom/pan (d3.zoom), drag nodes (d3.drag), hover tooltip (name, role, influence, laws passed), click detail panel.
+    - **Topic filter:** Dropdown of 12 policy categories. Re-queries API, dims non-relevant members to 12% opacity, preserves committee connections.
+    - **ZIP input:** Highlights user's senator and representative with gold border + always-visible labels.
+    - **Detail panel:** Right-side panel on click showing influence score bar, key stats (laws passed, cross-party rate, Moneyball), committee memberships with leadership roles, influence signals.
+    - **Legend:** Party colors, size scale, "your legislator" indicator.
+    - **Labels:** Top 15 by influence + user's legislators + topic committee chairs always labeled; others on hover.
+  - **Navigation:** `/explore` linked from advocacy index, intelligence dashboard, and base footer. Cross-links between all three views.
+  - **Auth:** `/explore` and `/api/graph` exempt from API key middleware (public-facing).
+  - **Bug fix (committee filter):** When a topic/committee is selected with "Relevant only", the graph now returns only members on that topic's committees + your legislators. Previously it also included the global top 50 by influence, so unrelated nodes appeared. (`main.py` graph API: when `focus=relevant` and `topic_member_ids` non-empty, relevant set is topic_member_ids | your_legislator_ids only.)
+
+- **Predicted Destination & Law Model (v6 — "advance to where?"):**
+  - **Problem:** The Prediction column showed only "ADVANCE" or "STUCK" — too vague. Bills that advance past committee vs. become law are very different outcomes for advocacy.
+  - **Second ML model:** Trained a separate GradientBoosting model on `target_law` labels (P(becomes law)) alongside the existing advance model. Same feature matrix, different target. Law model evaluated with its own ROC-AUC on the held-out test set.
+  - **Predicted destination logic (`_compute_predicted_destination()`):** Combines P(advance), P(law), lifecycle status, and current stage into a human-readable destination:
+    - **→ Law** — P(law) >= 0.5, or bill already at PASSED_BOTH/GOVERNOR with P(law) >= 0.3
+    - **→ Passed** — Already at FLOOR_VOTE/CROSSED_CHAMBERS with P(advance) >= 0.5
+    - **→ Floor** — P(advance) >= 0.5 but P(law) < 0.5
+    - **Stuck** — P(advance) < 0.5
+    - **Became Law** / **Vetoed** — Terminal bills show actual outcome
+  - **Confidence cap:** Capped at 99% (`CONFIDENCE_CAP = 0.99`) to avoid false certainty from rounding.
+  - **New parquet columns:** `prob_law`, `predicted_destination` added to `bill_scores.parquet`.
+  - **Data model:** `BillScore` in `ml_loader.py` gains `prob_law: float` and `predicted_destination: str`.
+  - **GraphQL:** `BillPredictionType` now exposes `prob_law` and `predicted_destination`.
+  - **Prediction table (`_intelligence_predictions.html`):** New "P(Law)" column with score bar. "Prediction" column replaced with "Predicted Dest." showing color-coded destination badges (green → Law, yellow → Floor, blue → Passed, red Stuck, dark green Became Law, gray Vetoed). Filters updated: "Destination" group (→ Law, → Floor, Stuck) replaces old "ADVANCE only"/"STUCK only" checkboxes.
+  - **Bill detail page (`intelligence_bill.html`):** Prediction card shows destination badge + both probability bars (P(Advance) and P(Becomes Law)) side by side.
+  - **Member detail page (`intelligence_member.html`):** Top bills table gains "Predicted Dest." column with destination badges.
+  - **Executive summary (`intelligence_summary.html`):** Bills to Watch cards show destination badges instead of ADVANCE/STUCK tags.
+  - **Raw data overview (`intelligence.html`):** Summary card shows destination-based counts (N → Law, N → Floor, N Stuck) instead of advance/stuck counts.
+  - **CSS (`base.html`):** 7 destination badge styles: `.dest-law` (green), `.dest-floor` (amber), `.dest-passed` (blue), `.dest-governor` (teal), `.dest-stuck` (red), `.dest-became-law` (solid green), `.dest-vetoed` (gray).
+  - **Saved models:** `processed/bill_predictor.pkl` (advance) + `processed/bill_law_predictor.pkl` (law).
+
+- **Structured Action Classification System (`action_types.json`, `action_classifier.py`):**
+  - **New reference file:** `src/ilga_graph/ml/action_types.json` — comprehensive reference of every IL legislative action type, organized into 16 categories: Introduction & Filing, Committee Assignment, Committee Action, Deadlines & Re-referrals, Floor Process, Floor Vote, Cross-Chamber, Concurrence, Governor Action, Veto Override Process, Enacted Into Law, Co-Sponsorship, Amendment Actions, Resolution Process, Executive Appointments, Procedural. Each action has a pattern, match type, human-readable meaning, and outcome signal (positive_terminal, positive, positive_weak, neutral, negative_weak, negative, negative_terminal).
+  - **New classifier module:** `src/ilga_graph/ml/action_classifier.py` — classifies raw ILGA action text into structured `ClassifiedAction` objects with: `category_id`, `category_label`, `outcome_signal`, `meaning`, `is_bill_action` (vs amendment), `progress_stage`. Handles ILGA's inconsistent formatting (missing spaces, vote tallies, amendment prefixes). 99.3% coverage across 103,332 actions.
+  - **Pipeline update:** `pipeline.py` now imports `action_category_for_etl` from the classifier instead of the old naive `_classify_action()` with substring matching. New categories in parquet: introduction (20.5%), cosponsor (19.2%), assignment (18.5%), floor_process (11.5%), deadline (7.7%), amendment (7.6%), committee_action (4.5%), cross_chamber (2.5%), floor_vote (2.1%), enacted (1.2%), governor (0.9%), concurrence (0.9%), appointment (0.8%), procedural (0.7%), resolution (0.6%), veto_process (0.01%).
+  - **Features refactored:** `features.py` now delegates all action classification to the `action_classifier` module: `_bill_has_negative_terminal()` checks for `negative_terminal` signals, `_bill_advanced()` checks for positive signals in key categories, `_bill_lifecycle_status()` uses `bill_outcome_from_actions()`, `compute_bill_stage()` uses classifier's `progress_stage` mapping. All old token lists (`_ADVANCED_TOKENS`, `_SIGNED_TOKENS`, `_AMENDMENT_PREFIXES`, `_STAGE_DEFINITIONS`) replaced by the classifier.
+  - **Data model:** `ActionEntry` in `models.py` gains 4 new fields: `action_category`, `action_category_label`, `outcome_signal`, `meaning`. Populated at cache-load time in both `scrapers/bills.py` and `scraper.py`.
+  - **GraphQL API:** `ActionEntryType` now exposes `action_category`, `action_category_label`, `outcome_signal`, `meaning`. New `actionTypesReference` query returns the full action types reference (categories with action patterns, meanings, signals) for any frontend to consume.
+  - **Bill detail page:** `intelligence_bill.html` now shows a full action history timeline with color-coded dots (green=positive, red=negative, gray=neutral), category badges, outcome signal badges, and human-readable meaning for each action. Replaces the old single "Last Action" line.
+  - **CSS:** Extensive timeline styling in `base.html` — `.action-timeline-*`, 16 category-specific badge colors (`.action-cat-*`), outcome signal badges (`.signal-*`), timeline dot colors by signal.
+
+- **ML Pipeline Bug Audit (Phase A) + Intelligence Story Redesign (Phase B):**
+  - **Bug fix: TF-IDF zero-vector fallback** (`features.py`): `_to_sparse()` was using `tfidf_id_to_idx.get(bid, 0)` which silently reused bill #0's TF-IDF features for any missing bill. Now uses a pre-computed zero vector so missing bills get no text signal instead of wrong text signal.
+  - **Bug fix: KeyError guards** (`features.py`): `member["party"]` and `member["sponsored_bill_count"]` replaced with `.get()` to handle incomplete member dicts.
+  - **Bug fix: Dynamic majority party** (`features.py`): `is_majority = is_democrat` was hardcoded for IL 104th GA. Now computed dynamically from member data party counts.
+  - **Bug fix: Sponsor rate null guard** (`features.py`): `sponsor_filed` counter was incrementing for bills with unknown `target_advanced` labels (from left join), inflating the denominator. Now only counts bills with known labels.
+  - **Bug fix: Vote tie handling** (`pipeline.py`): `"passed" if total_yea > total_nay else "lost"` classified ties as "lost". Now handles three outcomes: "passed", "lost", "tied".
+  - **Bug fix: Anomaly NaN guard** (`anomaly_detection.py`): Added `fill_nan(0).fill_null(0)` before `to_numpy()` and explicit empty-matrix guard.
+  - **Defensive logging** (`pipeline.py`, `bill_predictor.py`, `features.py`): Silent date-parsing failures now log warnings/debug messages with the unparseable value and bill ID, tracked with deduplication to avoid log spam.
+  - **Intelligence Story Redesign:**
+    - **Executive summary** (`intelligence_summary.html`, `/intelligence`): New narrative-driven landing page replacing the old tabbed data dump. Sections: Model Confidence banner (trust level, ROC-AUC, accuracy %), Bills to Watch (open bills with interesting ML signals — high confidence, surprises, and warnings), Power Movers (top 8 influencers as clickable cards), Coalition Landscape (voting blocs with party bars, cohesion, focus areas, top influencer), Anomaly Alert (top 5 flagged bills).
+    - **Member deep-dive** (`intelligence_member.html`, `/intelligence/member/:id`): Full influence profile for one legislator. Sections: influence score bar + rank, narrative summary (auto-generated prose), influence component breakdown (4 cards: Moneyball, Bridge, Swing Votes, Sponsor Pull with contextual descriptions), key signals list, Moneyball effectiveness stats (laws passed, effectiveness rate, magnet score, bridge score, collaborators), notable bills table (top 10 by P(advance)), coalition membership.
+    - **Bill deep-dive** (`intelligence_bill.html`, `/intelligence/bill/:id`): Full prediction context for one bill. Sections: prediction card (shows actual outcome for terminal bills, model prediction for open bills), visual pipeline progress (7-stage stepper with current stage highlighted), sponsor context card (linked to member profile, influence badge, sponsor lift), public engagement (witness slip counts, anomaly alert if flagged), last action.
+    - **Raw data tables** (`intelligence.html` moved to `/intelligence/raw`): Original tabbed interface preserved for power users/debugging. Header updated with back-link to narrative summary.
+    - **CSS** (`base.html`): Full styling for story pages — confidence banner, story card grid, bill/member profile layouts, pipeline stepper visualization, coalition bars, anomaly rows, component cards, signal lists.
+    - **Navigation**: `/intelligence` → executive summary, `/intelligence/raw` → data tables, `/intelligence/member/:id` → member profile, `/intelligence/bill/:id` → bill profile. Cross-links between all views (bills link to sponsors, sponsors link to bills, summary cards link to detail pages).
+
+- **Prediction Table v5 — Critical Fixes (`features.py`, `bill_predictor.py`, `ml_loader.py`, template):**
+  - **Bug fix: Vetoed bills labeled ADVANCE** (`features.py`): `_bill_advanced()` was returning `True` for vetoed bills because they had "Passed Both Houses" actions before the veto. Added `_bill_has_negative_terminal()` check — any bill with a veto, tabling, or sine die action is now classified as NOT advanced. Added `_NEGATIVE_TERMINAL_TOKENS` list (Vetoed, Total Veto, Amendatory Veto, Item Veto, Tabled, Motion to Table - Lost, Rule 19, Session Sine Die).
+  - **Bug fix: Prediction override for terminal bills** (`bill_predictor.py`): In `score_all_bills()`, after the model scores each bill, we now check the bill's lifecycle status. Passed/signed bills are forced to ADVANCE with 100% confidence. Vetoed/dead bills are forced to STUCK with 0% prob_advance and 100% confidence. Only OPEN bills keep the model's prediction. This prevents absurd situations like vetoed bills showing "ADVANCE 98%".
+  - **Lifecycle semantics fix (OPEN | PASSED | VETOED only)** (`features.py`, `bill_predictor.py`, `ml_loader.py`, templates): Lifecycle is now **OPEN | PASSED | VETOED** only. **VETOED** means the governor actually vetoed the bill (confirmed terminal). Everything else — including tabled, postponed, Rule 19 re-referrals, sine die references — is **OPEN**. Status "DEAD" in `classify_stuck_status()` only triggers on actual governor vetoes (via `_bill_has_negative_terminal()`), not procedural actions. This fixes bugs like HB2432 showing Lifecycle/Status VETOED while Pipeline Stage was "In Committee".
+  - **CRITICAL FIX: False-positive token matching** (`features.py`): The previous substring matching (`"Rule 19" in action_text.lower()`) produced **thousands of false positives**:
+    - **"Rule 19"** matched 3,116 actions — ALL were procedural re-referrals (`Rule 19(a) / Re-referred to Rules Committee`), zero actual deaths.
+    - **"Tabled"** matched 215 actions — almost all were amendments being tabled (`House Floor Amendment No. 1 Tabled`), not bills.
+    - **"Postponed"** matched 265 actions — all routine committee postponements (`Postponed -Transportation`).
+    - **"sine die"** / **"Session Sine Die"** matched 199 actions — all references to the previous 103rd GA session (`Due to Sine Die of the 103rd General Assembly`), not the current bill dying.
+    - Only **6 actual veto actions** exist across all 11,722 bills (2 "Governor Vetoed" + 4 "Total Veto" variants).
+    - **Fix:** New `_is_bill_action()` function filters out amendment/sub-item actions (prefixes like "House Floor Amendment", "Senate Committee Amendment", etc.). New precise veto matching: only "governor vetoed", "total veto stands", "amendatory veto" (not override/motion), "item veto" (not override/motion). Removed `_NEGATIVE_TERMINAL_TOKENS` tuple, `_VETO_TOKENS` list, and `_SESSION_END_TOKENS` list — all replaced by precise matching logic. `classify_stuck_status()` now delegates to `_bill_has_negative_terminal()` for DEAD classification instead of maintaining its own token list.
+    - **Result:** 10,974 OPEN (93.6%), 745 PASSED (6.4%), 3 VETOED (0.03%) — correct distribution. Previously thousands of bills were misclassified as dead/vetoed.
+  - **New: Bill lifecycle status** (`features.py`): `_bill_lifecycle_status()` classifies into three states: PASSED (signed/public act), DEAD (vetoed only), OPEN (everything else, including tabled/sine die). Added `lifecycle_status` column to `bill_scores.parquet`, `BillScore` dataclass in `ml_loader.py`.
+  - **New: Staleness features** (`features.py`): Added `build_staleness_features()` producing 7 new features: `days_since_last_action`, `days_since_intro`, `action_velocity` (actions/day), `is_stale_90`, `is_stale_180`, `total_action_count`, `has_negative_terminal`. These let the model learn that idle bills (200+ days) are unlikely to advance. Integrated into `build_feature_matrix()`.
+  - **Template: Lifecycle column + filters** (`_intelligence_predictions.html`): New "Lifecycle" column with color-coded badges (OPEN=blue, PASSED=green, VETOED=red, DEAD=gray). Closed bills get muted row opacity. New lifecycle filter checkboxes (Open, Passed, Vetoed, Dead). For terminal bills, P(Advance) shows "Passed" or "Failed" instead of a percentage, Prediction shows actual outcome (PASSED/VETOED/DEAD) not model output, and Confidence shows "—" instead of a percentage.
+  - **Filter bar + grouped checkboxes** (`_intelligence_predictions.html`, `intelligence.html`, `base.html`): Search bar filters by bill number, description, and sponsor (name) as you type. Quick filters kept as checkboxes but grouped into three sections: **Prediction** (Forecasts only, ADVANCE only, STUCK only, High confidence ≥80%), **Lifecycle** (Open, Passed, Vetoed, Dead), **Status** (Stagnant, Slow, New). CSS: `.intel-filter-bar`, `.intel-filter-search`, `.intel-filters-grouped`, `.intel-filter-group`, `.intel-filter-group-label`. Search and filter logic live in the parent page (`intelligence.html`) and the search input is bound on `htmx:afterSettle` so filtering works when the Predictions tab is loaded via HTMX (scripts in swapped content are not executed by default).
+  - **Sortable table** (`_intelligence_predictions.html`): All column headers are now clickable to sort. Supports both string and numeric sorting with ascending/descending toggle. Arrow indicators show current sort direction.
+  - **CSS** (`base.html`): Added `.lifecycle-badge` with `.lifecycle-open/passed/vetoed/dead` color variants, `.closed-bill` muted row opacity, `.intel-outcome-vetoed` badge style, `.confidence-actual` for dashed placeholder on terminal bills, `.sortable` header hover/cursor styles, `.sort-arrow` indicator.
+
+- **True Influence Engine (`influence.py` + Moneyball upgrades):**
+  - **Betweenness centrality** (`moneyball.py`): Added `betweenness_centrality()` function using networkx. Computes normalized betweenness for every member in the co-sponsorship graph — measures how often a legislator lies on shortest paths between others (bridge/connector influence). Added `betweenness` field to `MoneyballProfile`. New "Bridge Connector" badge for betweenness ≥ 0.02. Updated `analytics_cache.py` serialization, `schema.py` GraphQL type, and `exporter.py` Obsidian rendering.
+  - **Vote pivotality** (`influence.py`): `compute_vote_pivotality()` — for each close roll call (margin ≤ 5), scores members who voted with the winning side as "pivotal." Tracks `close_votes_total`, `pivotal_winning`, `pivotal_rate`, `swing_votes` (margin-of-1 true tiebreakers), `floor_pivotal` vs `committee_pivotal`. Returns `MemberPivotality` per legislator.
+  - **Sponsor pull** (`influence.py`): `compute_sponsor_pull()` — uses ML bill scores (`prob_advance`) to measure whether a member's sponsorship/co-sponsorship is associated with higher success. Computes `sponsor_lift` (primary sponsor avg vs chamber avg) and `cosponsor_lift` (co-sponsor avg vs chamber avg). Blended `pull_score` weights primary 2× since it's a stronger signal.
+  - **Unified InfluenceScore** (`influence.py`): `compute_influence_scores()` — blends four signals into a single 0–100 composite:
+    - **Moneyball** (40%): outcome effectiveness, network, institutional power.
+    - **Betweenness** (20%): structural bridge influence between blocs.
+    - **Pivotality** (20%): swing vote power on close calls.
+    - **Sponsor Pull** (20%): ML-predicted bill success association.
+    - Produces `InfluenceProfile` with rank_overall, rank_chamber, influence_label (High/Moderate/Low), and human-readable `influence_signals` (e.g. "Bridges legislative blocs", "Cast deciding vote 3x").
+  - **Coalition influence enrichment** (`influence.py`): `enrich_coalitions_with_influence()` — for each voting bloc, identifies top influencer (highest influence score) and bridge member (highest betweenness). Reports avg influence, max influence, and high-influence member count per bloc.
+  - **App startup Step 8** (`main.py`): After ML load, computes pivotality (8a), sponsor pull (8b), influence scores (8c), coalition influence (8d). All stored on `AppState`.
+  - **Intelligence dashboard** (`/intelligence/influence`): New "Influence" tab with:
+    - Leaderboard table: rank, name, chamber, party, influence score bar, label, component breakdowns (Moneyball%, Betweenness%, Pivotality%, Pull%), human-readable signals.
+    - Client-side filters: All, High Only, Senate, House.
+    - Coalition Influence section: cards per bloc showing top influencer, bridge member, avg influence.
+  - **GraphQL**: New `influence_leaderboard(chamber, limit)` query returns `InfluenceProfileType` list. `InfluenceProfileType` type with all component scores, pivotality details, sponsor lift. Added `influence` field to `MemberType.from_model()`.
+  - **Advocacy cards**: `_build_influence_dict()` helper adds influence data to each card dict (score, label, signals, component breakdowns, pivotality details, sponsor lift).
+  - **CSS** (`base.html`): Influence score bars (high=green, moderate=gold, low=red), `.influence-signal-tag`, `.intel-coalition-grid`, `.intel-coalition-card`, `.intel-trust-high` / `.intel-trust-low` label styles.
+
+
 
 - **Power Card Redesign (advocacy card layout overhaul):**
   - **Card layout restructured** to match advocacy professional mockup. Old layout had data scattered across separate expandable sections. New layout consolidates the key "power signals" into a single up-front narrative box.
@@ -72,6 +354,17 @@
   - Future: fuzzy matching (Levenshtein), search indexing at startup, vote events and witness slips as searchable entities, autocomplete endpoint.
 
 ## Done (this session)
+
+- **Full-text feature caps for reasonable ML runtime (`ml/features.py`):**
+  - **Problem:** Full-text TF-IDF used 1000 features and 5000 words per bill, contributing to large feature matrices and long Step 2/3 runs (model comparison and hyperparameter tuning).
+  - **Solution:** Configurable upper limits (env-overridable) so we keep full-text signal without massive size:
+    - **FULLTEXT_MAX_FEATURES** default **400** (was 1000). Set `ILGA_ML_FULLTEXT_MAX_FEATURES` to override (e.g. `800` for more signal, `200` for faster runs).
+    - **FULLTEXT_MAX_TOKENS** default **2000** (was 5000). Set `ILGA_ML_FULLTEXT_MAX_TOKENS` to override (words per bill used for TF-IDF; lower = faster, higher = more content).
+  - `build_full_text_features()` now uses these when `max_features`/`max_tokens` are None. Both `build_feature_matrix()` and `build_panel_feature_matrix()` call it without hardcoded values, so the caps apply everywhere. Log line shows "max N features, M tokens/bill" so you can confirm limits in use.
+
+- **ML Step 3 (hyperparameter tuning) no longer stalls for 30+ min (`bill_predictor.py`):**
+  - **Problem:** Step 3 "Tuning GradientBoosting hyperparameters" ran 40 × 5-fold = 200 fits with a large param grid; each GradientBoosting fit on ~14k rows can take 10–30+ seconds, so the step appeared stuck for 30+ minutes with no progress output.
+  - **Changes:** (1) Reduced `n_iter` from 40 to 20. (2) Trimmed GradientBoosting param grid (fewer `n_estimators`/`max_depth`/`learning_rate`/`subsample`/`min_samples_leaf` options) so tuning finishes in ~5–10 min. (3) Set `verbose=2` on `RandomizedSearchCV` so sklearn prints progress (e.g. "Fitting 5 folds for each of 20 candidates..."). (4) Added `ILGA_ML_SKIP_TUNE=1` to skip tuning entirely and fit the best model once on full training data for fast iteration — use `ILGA_ML_SKIP_TUNE=1 make ml-run`.
 
 - **Smart tiered index scanning (`scrapers/bills.py`):**
   - **Problem:** Every `make scrape` walked all 125 ILGA index pages (~30 min) even when nothing changed. Wasteful for daily runs.
@@ -208,6 +501,15 @@
 
 ## Next (when you're ready)
 
+- **Power Map enhancements:**
+  - Weighted edges (shared bill count) for better pruning and edge thickness visualization.
+  - ~~Fix influence engine~~ — **DONE:** `compute_influence_scores()` now receives `member_lookup_by_id` (id-keyed) instead of the name-keyed `member_lookup`. Influence scores, leaderboard, Power Movers, and graph node sizing all use real influence data now.
+  - House committee mapping in `_CATEGORY_COMMITTEES` (currently Senate only).
+  - Free-text topic search (type "kei truck" → match bills → find which committees they're assigned to → highlight those members).
+  - Mobile/responsive: detail panel as bottom sheet on small screens.
+  - Path visualization: when topic + ZIP are both set, draw dotted paths from user's legislators to committee chairs.
+  - Time-based animation: show how co-sponsorship network evolves over the legislative session.
+
 - **Run full pipeline** (PRIORITY): Pipeline is fixed and unified with smart tiered scanning.
   - `make scrape` — Daily run (~2 min if <24h since last scan, auto-decides tier).
   - `make scrape FULL=1` — Force full index walk (all 125 pages, ~30 min). Use weekly or after major ILGA updates.
@@ -325,11 +627,18 @@ make ml-predict    # Bill scoring only
 - **CSS** (`base.html`): Pipeline progress bars, stuck-status badge colors, days-idle indicators, focus tags, coalition stats.
 
 - **Next (ML backlog)**:
+  - **DONE: True Influence Engine** — betweenness centrality, vote pivotality, sponsor pull, unified InfluenceScore (0–100). Dashboard tab, GraphQL query, coalition enrichment.
+  - **DONE: Prediction Table v5** — fixed vetoed-as-ADVANCE bug, lifecycle status (OPEN/PASSED/VETOED/DEAD), staleness features (7 new model inputs), prediction override for terminal bills, sortable columns.
+  - **DONE: ML Pipeline Bug Audit** — TF-IDF zero-vector fallback, KeyError guards, dynamic majority party, sponsor rate null guard, vote ties, anomaly NaN guard, defensive date-parse logging.
+  - **DONE: Intelligence Story Redesign** — narrative executive summary at `/intelligence`, member deep-dive at `/intelligence/member/:id`, bill deep-dive at `/intelligence/bill/:id`, raw tables at `/intelligence/raw`.
   - Individual vote prediction (recommender system using member embeddings from matrix factorization)
   - "Poison pill" detector (semantic similarity between original and amendment synopses)
   - Committee assignment prediction (multi-class text classifier)
   - Accuracy trend visualization (sparklines or mini chart in accuracy tab)
   - Per-bill prediction history (track how confidence changes over time)
+  - Influence trend tracking (snapshot influence scores per run, like backtest does for predictions)
+  - **Gold labels (`processed/bill_labels_gold.json`):** Maps bill `leg_id` → 0 (stuck) or 1 (advanced). Human-corrected outcomes for bills the model gets wrong. Possible uses: (1) **Eval only** — report accuracy on gold set in `model_quality.json` without changing training; (2) **Override training** — use gold labels for those bills in the target vector so the model learns from corrections; (3) **Both**. Currently 9 entries, all label 0. Add or edit entries as you find model mistakes. Not yet wired into the pipeline — implement when ready.
+  - **Low-confidence UX:** Predictions table now marks rows with confidence <70% as "Uncertain" (amber border + label). Filter checkbox added. Future: expose calibration curve in accuracy tab; per-bill confidence trend over pipeline runs.
 
 ---
 

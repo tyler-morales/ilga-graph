@@ -53,6 +53,17 @@ class PredictionMiss:
 
 
 @dataclass
+class LabelChurn:
+    """Tracks how many bill labels changed between runs."""
+
+    total_compared: int
+    labels_changed: int
+    churn_rate: float  # labels_changed / total_compared
+    stuck_to_advance: int  # Bills that went from STUCK -> ADVANCE
+    advance_to_stuck: int  # Bills that went from ADVANCE -> STUCK (rare, but veto)
+
+
+@dataclass
 class BacktestResult:
     run_date: str
     snapshot_date: str
@@ -66,6 +77,7 @@ class BacktestResult:
     confidence_buckets: list[ConfidenceBucket] = field(default_factory=list)
     biggest_misses: list[PredictionMiss] = field(default_factory=list)
     model_version: str = ""
+    label_churn: LabelChurn | None = None
 
 
 def _load_history() -> list[dict]:
@@ -85,23 +97,62 @@ def _save_history(runs: list[dict]) -> None:
 
 
 def snapshot_current_predictions() -> None:
-    """Copy current bill_scores.parquet to history/ with timestamp."""
+    """Copy current bill_scores.parquet and labels to history/ with timestamp.
+
+    Snapshots both predictions and the labels used at this point in time,
+    so the backtester can compare labels-at-prediction-time vs labels-now
+    to compute label churn.
+    """
     if not SCORES_FILE.exists():
         return
 
     HISTORY_DIR.mkdir(parents=True, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+
+    # Snapshot predictions
     dest = HISTORY_DIR / f"{timestamp}_scores.parquet"
     shutil.copy2(SCORES_FILE, dest)
     LOGGER.info("Snapshot saved: %s", dest)
+
+    # Snapshot current labels alongside predictions
+    _snapshot_labels(timestamp)
 
     # Prune old snapshots
     snapshots = sorted(HISTORY_DIR.glob("*_scores.parquet"))
     if len(snapshots) > MAX_SNAPSHOTS:
         for old in snapshots[: len(snapshots) - MAX_SNAPSHOTS]:
             old.unlink()
+            # Also prune corresponding label snapshot
+            label_file = HISTORY_DIR / old.name.replace("_scores.parquet", "_labels.json")
+            if label_file.exists():
+                label_file.unlink()
             LOGGER.info("Pruned old snapshot: %s", old.name)
+
+
+def _snapshot_labels(timestamp: str) -> None:
+    """Save current bill labels to history/ for churn tracking."""
+    actions_path = PROCESSED_DIR / "fact_bill_actions.parquet"
+    bills_path = PROCESSED_DIR / "dim_bills.parquet"
+
+    if not actions_path.exists() or not bills_path.exists():
+        return
+
+    from .features import build_bill_labels
+
+    df_bills = pl.read_parquet(bills_path)
+    df_actions = pl.read_parquet(actions_path)
+    df_labels = build_bill_labels(
+        df_bills.filter(pl.col("bill_type").is_in(["SB", "HB"])),
+        df_actions,
+    )
+
+    labels = {row["bill_id"]: row["target_advanced"] for row in df_labels.to_dicts()}
+
+    label_path = HISTORY_DIR / f"{timestamp}_labels.json"
+    with open(label_path, "w") as f:
+        json.dump(labels, f)
+    LOGGER.info("Label snapshot saved: %s (%d bills)", label_path, len(labels))
 
 
 def _find_latest_snapshot() -> Path | None:
@@ -110,6 +161,62 @@ def _find_latest_snapshot() -> Path | None:
         return None
     snapshots = sorted(HISTORY_DIR.glob("*_scores.parquet"))
     return snapshots[-1] if snapshots else None
+
+
+def _find_label_snapshot_for(scores_path: Path) -> dict[str, int] | None:
+    """Find the label snapshot that corresponds to a scores snapshot.
+
+    Labels are saved as ``{timestamp}_labels.json`` alongside predictions.
+    """
+    label_path = scores_path.parent / scores_path.name.replace("_scores.parquet", "_labels.json")
+    if not label_path.exists():
+        return None
+
+    with open(label_path) as f:
+        return json.load(f)
+
+
+def _compute_label_churn(
+    old_labels: dict[str, int],
+    current_labels: dict[str, int],
+) -> LabelChurn:
+    """Compare labels from prediction time vs current labels.
+
+    This explains the accuracy oscillation: if many bills flip from
+    STUCK to ADVANCE (or vice versa) between runs, accuracy will swing
+    because the "ground truth" shifted under the predictions.
+    """
+    common_ids = set(old_labels.keys()) & set(current_labels.keys())
+    if not common_ids:
+        return LabelChurn(
+            total_compared=0,
+            labels_changed=0,
+            churn_rate=0.0,
+            stuck_to_advance=0,
+            advance_to_stuck=0,
+        )
+
+    changed = 0
+    stuck_to_advance = 0
+    advance_to_stuck = 0
+
+    for bid in common_ids:
+        old_val = old_labels[bid]
+        new_val = current_labels[bid]
+        if old_val != new_val:
+            changed += 1
+            if old_val == 0 and new_val == 1:
+                stuck_to_advance += 1
+            elif old_val == 1 and new_val == 0:
+                advance_to_stuck += 1
+
+    return LabelChurn(
+        total_compared=len(common_ids),
+        labels_changed=changed,
+        churn_rate=round(changed / len(common_ids), 4) if common_ids else 0.0,
+        stuck_to_advance=stuck_to_advance,
+        advance_to_stuck=advance_to_stuck,
+    )
 
 
 def backtest_previous_run() -> BacktestResult | None:
@@ -251,6 +358,24 @@ def backtest_previous_run() -> BacktestResult | None:
             q = json.load(f)
             model_version = q.get("model_selected", "")
 
+    # ── Label churn detection ──────────────────────────────────────────
+    # Compare labels from when predictions were made vs current labels
+    # to explain accuracy oscillation.
+    label_churn = None
+    old_labels = _find_label_snapshot_for(snapshot_path)
+    if old_labels is not None:
+        label_churn = _compute_label_churn(old_labels, current_labels)
+        if label_churn.labels_changed > 0:
+            LOGGER.info(
+                "Label churn: %d of %d bills changed labels (%.1f%%) "
+                "— %d STUCK→ADVANCE, %d ADVANCE→STUCK",
+                label_churn.labels_changed,
+                label_churn.total_compared,
+                label_churn.churn_rate * 100,
+                label_churn.stuck_to_advance,
+                label_churn.advance_to_stuck,
+            )
+
     result = BacktestResult(
         run_date=now,
         snapshot_date=snapshot_name.split("_")[0],
@@ -264,6 +389,7 @@ def backtest_previous_run() -> BacktestResult | None:
         confidence_buckets=confidence_buckets,
         biggest_misses=biggest_misses,
         model_version=model_version,
+        label_churn=label_churn,
     )
 
     # Save to history
@@ -306,6 +432,27 @@ def _display_backtest(result: BacktestResult) -> None:
         "Days since prediction",
         str(result.days_elapsed),
     )
+
+    # Label churn (explains accuracy oscillation)
+    if result.label_churn is not None:
+        lc = result.label_churn
+        table.add_row("", "")
+        table.add_row("[yellow]Label Stability[/]", "")
+        table.add_row(
+            "  Labels changed since prediction",
+            f"{lc.labels_changed} of {lc.total_compared} ({lc.churn_rate:.1%})",
+        )
+        if lc.stuck_to_advance > 0:
+            table.add_row(
+                "  STUCK → ADVANCE",
+                f"{lc.stuck_to_advance} (bills advanced since prediction)",
+            )
+        if lc.advance_to_stuck > 0:
+            table.add_row(
+                "  ADVANCE → STUCK",
+                f"{lc.advance_to_stuck} (labels corrected or vetoed)",
+            )
+
     console.print(table)
 
     # Confidence calibration

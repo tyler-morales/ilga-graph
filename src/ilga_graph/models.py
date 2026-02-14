@@ -23,6 +23,12 @@ class ActionEntry:
     date: str  # e.g. "1/13/2025"
     chamber: str  # e.g. "Senate" or "House"
     action: str  # e.g. "First Reading"
+    # Structured classification (populated at load time)
+    action_category: str = ""  # e.g. "introduction", "committee_action", "governor"
+    action_category_label: str = ""  # e.g. "Introduction & Filing", "Governor Action"
+    outcome_signal: str = ""  # e.g. "positive", "negative_terminal", "neutral"
+    meaning: str = ""  # Human-readable explanation of what this action means
+    rule_reference: str = ""  # Senate Rule citation, e.g. "Rule 3-11"
 
 
 @dataclass
@@ -43,6 +49,8 @@ class Bill:
     # Per-bill vote events and witness slips (populated during scrape or cache load)
     vote_events: list[VoteEvent] = field(default_factory=list)
     witness_slips: list[WitnessSlip] = field(default_factory=list)
+    # Full bill text (as introduced), scraped from FullText tab PDF
+    full_text: str = ""
 
 
 @dataclass

@@ -131,6 +131,113 @@ def _classify_anomaly_reason(row: dict) -> str:
     return "; ".join(reasons) if reasons else "unusual pattern"
 
 
+def _load_anomaly_gold_labels() -> dict[str, int]:
+    """Load gold anomaly labels from processed/anomaly_labels_gold.json.
+
+    Returns {bill_number: label} where 1 = suspicious, 0 = genuine.
+    """
+    gold_path = PROCESSED_DIR / "anomaly_labels_gold.json"
+    if not gold_path.exists():
+        return {}
+
+    import json
+
+    with open(gold_path) as f:
+        data = json.load(f)
+
+    labels = {}
+    for bill_num, entry in data.get("labels", {}).items():
+        if bill_num.startswith("_comment"):
+            continue
+        if isinstance(entry, dict):
+            labels[bill_num] = entry.get("label", 0)
+        else:
+            labels[bill_num] = int(entry)
+
+    return labels
+
+
+def _tune_contamination_with_gold(
+    X_scaled: np.ndarray,
+    bill_numbers: list[str],
+    gold_labels: dict[str, int],
+) -> float:
+    """Tune Isolation Forest contamination using gold labels.
+
+    Tests contamination values from 0.02 to 0.20 and picks the one
+    that maximizes F1 score against gold-labeled bills.
+
+    Returns the best contamination value, or 0.08 as default.
+    """
+    # Map bill_numbers to gold labels
+    gold_indices = []
+    gold_y = []
+    for i, bn in enumerate(bill_numbers):
+        if bn in gold_labels:
+            gold_indices.append(i)
+            gold_y.append(gold_labels[bn])
+
+    if len(gold_y) < 5:
+        LOGGER.info(
+            "Too few gold labels (%d) for contamination tuning; using default 0.08", len(gold_y)
+        )
+        return 0.08
+
+    gold_y_arr = np.array(gold_y)
+    LOGGER.info(
+        "Tuning contamination with %d gold labels (%d suspicious, %d genuine)",
+        len(gold_y),
+        gold_y_arr.sum(),
+        len(gold_y) - gold_y_arr.sum(),
+    )
+
+    best_f1 = 0.0
+    best_contamination = 0.08
+
+    for contamination in [0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.15, 0.20]:
+        iso = IsolationForest(
+            contamination=contamination,
+            random_state=42,
+            n_estimators=300,
+        )
+        iso.fit(X_scaled)
+        preds = iso.predict(X_scaled)
+
+        # Get predictions for gold-labeled bills
+        gold_preds = np.array([1 if preds[i] == -1 else 0 for i in gold_indices])
+
+        # Compute F1
+        tp = ((gold_preds == 1) & (gold_y_arr == 1)).sum()
+        fp = ((gold_preds == 1) & (gold_y_arr == 0)).sum()
+        fn = ((gold_preds == 0) & (gold_y_arr == 1)).sum()
+
+        precision = tp / max(tp + fp, 1)
+        recall = tp / max(tp + fn, 1)
+        f1 = 2 * precision * recall / max(precision + recall, 1e-8)
+
+        LOGGER.debug(
+            "contamination=%.2f: P=%.2f R=%.2f F1=%.3f (tp=%d fp=%d fn=%d)",
+            contamination,
+            precision,
+            recall,
+            f1,
+            tp,
+            fp,
+            fn,
+        )
+
+        if f1 > best_f1:
+            best_f1 = f1
+            best_contamination = contamination
+
+    LOGGER.info(
+        "Best contamination: %.2f (F1=%.3f on gold labels)",
+        best_contamination,
+        best_f1,
+    )
+    return best_contamination
+
+
 def run_anomaly_detection() -> pl.DataFrame:
     """Full anomaly detection pipeline."""
     console.print("\n[bold]Witness Slip Anomaly Detection[/]")
@@ -160,13 +267,44 @@ def run_anomaly_detection() -> pl.DataFrame:
         "log_total",  # Size as context, not primary signal
     ]
 
-    X = df_features.select(feature_cols).to_numpy().astype(np.float64)
+    X = df_features.select(feature_cols).fill_nan(0).fill_null(0).to_numpy().astype(np.float64)
+
+    # Guard: if all rows were filtered out, nothing to do
+    if X.shape[0] == 0:
+        LOGGER.warning("No bills with enough slips for anomaly detection.")
+        return pl.DataFrame()
 
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
+    # ── Gold-label-based contamination tuning ─────────────────────────
+    # If gold labels exist, tune contamination to maximize F1 on known
+    # astroturfing vs genuine engagement cases. Otherwise use default.
+    gold_labels = _load_anomaly_gold_labels()
+    bill_numbers = df_features["bill_id"].to_list()
+
+    # We need bill_number_raw for gold label matching; join if available
+    df_bills = pl.read_parquet(PROCESSED_DIR / "dim_bills.parquet")
+    bn_map = dict(
+        zip(
+            df_bills["bill_id"].to_list(),
+            df_bills["bill_number_raw"].to_list(),
+        )
+    )
+    bill_number_raws = [bn_map.get(bid, "") for bid in bill_numbers]
+
+    if gold_labels:
+        contamination = _tune_contamination_with_gold(
+            X_scaled,
+            bill_number_raws,
+            gold_labels,
+        )
+        console.print(f"  Contamination tuned to {contamination:.0%} using gold labels")
+    else:
+        contamination = 0.08
+
     iso = IsolationForest(
-        contamination=0.08,  # 8% -- more conservative
+        contamination=contamination,
         random_state=42,
         n_estimators=300,
     )

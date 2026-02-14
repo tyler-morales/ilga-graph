@@ -1072,6 +1072,124 @@
             background: #68a;
         }
 
+        /* ── Influence score bars ── */
+        .score-bar-high { background: #2d8659; }
+        .score-bar-moderate { background: #c09020; }
+        .score-bar-low { background: #b04040; }
+
+        .influence-signal-tag {
+            display: inline-block;
+            font-size: 0.7em;
+            padding: 1px 5px;
+            margin: 1px 2px;
+            background: #e8f0fe;
+            color: #1a4d8f;
+            border-radius: 3px;
+            border: 1px solid #b0c4de;
+        }
+
+        .intel-coalition-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1em;
+        }
+
+        .intel-coalition-card {
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            padding: 1em;
+            background: #fafafa;
+        }
+
+        .intel-coalition-card h3 {
+            margin: 0 0 0.5em 0;
+            font-size: 1em;
+        }
+
+        .intel-coalition-stats {
+            font-size: 0.85em;
+            color: #555;
+            margin-bottom: 0.5em;
+        }
+
+        .intel-coalition-stats span {
+            margin-right: 1em;
+        }
+
+        .intel-coalition-leader,
+        .intel-coalition-bridge {
+            font-size: 0.85em;
+            margin: 0.3em 0;
+        }
+
+        .intel-note {
+            color: #888;
+            font-size: 0.85em;
+        }
+
+        /* ── Committee insights grid ── */
+        .committee-insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1em;
+        }
+
+        .committee-insight-card {
+            border: 1px solid #d5d5d5;
+            border-radius: 6px;
+            padding: 1em;
+            background: #fafafa;
+        }
+
+        .committee-insight-card h3 {
+            margin: 0 0 0.2em 0;
+            font-size: 1em;
+            color: #1a5276;
+        }
+
+        .committee-insight-list {
+            margin: 0.5em 0 0;
+            padding-left: 1.5em;
+        }
+
+        .committee-insight-list li {
+            margin-bottom: 0.5em;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+
+        .committee-insight-stat {
+            display: inline-block;
+            margin-left: 0.3em;
+            font-weight: 600;
+            color: #2d8659;
+        }
+
+        .committee-insight-detail {
+            display: block;
+            font-size: 0.82em;
+            color: #777;
+        }
+
+        .committee-routing-tag {
+            font-weight: normal;
+            font-size: 0.85em;
+            color: #888;
+        }
+
+        /* ── Influence labels (High/Moderate/Low) on trust-badge ── */
+        .intel-trust-high {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .intel-trust-low {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
         /* ── Outcome badges ── */
         .intel-outcome {
             display: inline-block;
@@ -1092,6 +1210,59 @@
             background: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
+        }
+
+        /* ── Destination badges (v6: predicted destination) ── */
+        .dest-badge {
+            display: inline-block;
+            font-size: 0.78em;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 3px;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+        }
+
+        .dest-law {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #a3d9a5;
+        }
+
+        .dest-floor {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .dest-passed {
+            background: #cce5ff;
+            color: #004085;
+            border: 1px solid #99caff;
+        }
+
+        .dest-governor {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #b8daff;
+        }
+
+        .dest-stuck {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .dest-became-law {
+            background: #28a745;
+            color: #fff;
+            border: 1px solid #1e7e34;
+        }
+
+        .dest-vetoed {
+            background: #6c757d;
+            color: #fff;
+            border: 1px solid #545b62;
         }
 
         .intel-forecast-label {
@@ -1140,6 +1311,62 @@
 
         .intel-filters input[type="checkbox"] {
             margin-right: 4px;
+        }
+
+        /* ── ML table filter bar (unified search + keywords) ── */
+        .intel-filter-bar {
+            margin: 8px 0 12px;
+            padding: 10px 12px;
+            background: #fafafa;
+            border: 1px solid #ddd;
+            font-size: 0.9em;
+        }
+
+        .intel-filter-search {
+            display: block;
+            width: 100%;
+            max-width: 560px;
+            padding: 8px 12px;
+            font-size: 1em;
+            border: 1px solid #999;
+            background: #fff;
+        }
+
+        .intel-filter-search:focus {
+            outline: 1px solid #0645ad;
+            outline-offset: 0;
+        }
+
+        .intel-filter-hint {
+            display: block;
+            margin-top: 6px;
+            color: #666;
+            font-size: 0.85em;
+        }
+
+        .intel-filters-grouped {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px 24px;
+            align-items: baseline;
+        }
+
+        .intel-filter-group {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px 12px;
+        }
+
+        .intel-filter-group-label {
+            font-weight: bold;
+            color: #444;
+            margin-right: 4px;
+            font-size: 0.9em;
+        }
+
+        .intel-filter-group label {
+            margin-right: 0;
         }
 
         /* ── Trust badges ── */
@@ -1419,6 +1646,119 @@
             color: #888;
         }
 
+        /* ── Lifecycle badges ── */
+        .lifecycle-badge {
+            display: inline-block;
+            font-size: 0.72em;
+            padding: 2px 7px;
+            border-radius: 3px;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            white-space: nowrap;
+        }
+
+        .lifecycle-open {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .lifecycle-passed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .lifecycle-vetoed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .lifecycle-dead {
+            background: #e2e3e5;
+            color: #555;
+        }
+
+        /* Closed bills get a subtle muted row style */
+        .closed-bill {
+            opacity: 0.75;
+        }
+
+        /* Vetoed outcome badge */
+        .intel-outcome-vetoed {
+            background: #f8d7da;
+            color: #721c24;
+            display: inline-block;
+            font-size: 0.78em;
+            padding: 2px 7px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        .confidence-actual {
+            color: #aaa;
+            font-style: italic;
+        }
+
+        /* Low-confidence rows: subtle amber left border */
+        .low-confidence {
+            border-left: 3px solid #e0a800;
+            background: #fffcf0;
+        }
+
+        /* Low-confidence label in confidence cell */
+        .confidence-low {
+            color: #856404;
+        }
+        .confidence-low-label {
+            display: inline-block;
+            background: #fff3cd;
+            color: #856404;
+            font-size: 0.72em;
+            font-weight: 600;
+            padding: 1px 5px;
+            border-radius: 3px;
+            margin-left: 3px;
+            vertical-align: middle;
+        }
+
+        /* ── Forecast confidence labels ── */
+        .forecast-conf {
+            display: inline-block;
+            font-size: 0.72em;
+            font-weight: 600;
+            padding: 1px 5px;
+            border-radius: 3px;
+            margin-top: 2px;
+            vertical-align: middle;
+        }
+        .forecast-high {
+            background: #d4edda;
+            color: #155724;
+        }
+        .forecast-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .forecast-low {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* ── Sortable table headers ── */
+        .sortable {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+
+        .sortable:hover {
+            background: #e8e8e8;
+        }
+
+        .sort-arrow {
+            font-size: 0.7em;
+            color: #555;
+        }
+
         /* ── Days idle indicators ── */
         .days-critical {
             color: #c00;
@@ -1470,6 +1810,756 @@
         .coalition-stats strong {
             color: #333;
         }
+
+        /* ══════════════════════════════════════════════════════════════
+           Intelligence Story Pages
+           ══════════════════════════════════════════════════════════════ */
+
+        /* ── Confidence banner ── */
+        .intel-confidence-banner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px 14px;
+            background: #f4f7fa;
+            border: 1px solid #d0d8e0;
+            border-radius: 6px;
+            margin-bottom: 1.5em;
+            font-size: 0.88em;
+        }
+
+        .intel-confidence-left, .intel-confidence-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .intel-confidence-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .intel-confidence-detail {
+            color: #666;
+        }
+
+        /* ── Story sections ── */
+        .story-section {
+            margin-bottom: 2em;
+        }
+
+        .story-section h2 {
+            margin: 0 0 0.3em 0;
+            font-size: 1.2em;
+            color: #222;
+        }
+
+        .story-subtitle {
+            color: #666;
+            font-size: 0.88em;
+            margin: 0 0 1em 0;
+        }
+
+        .intel-empty-inline {
+            color: #888;
+            font-style: italic;
+            padding: 1em 0;
+        }
+
+        /* ── Story card grid ── */
+        .story-card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1em;
+        }
+
+        .story-card {
+            display: block;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 1em;
+            background: #fafafa;
+            text-decoration: none;
+            color: inherit;
+            transition: box-shadow 0.15s, border-color 0.15s;
+        }
+
+        .story-card:hover {
+            border-color: #aaa;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .story-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5em;
+        }
+
+        .story-card-tag {
+            display: inline-block;
+            font-size: 0.72em;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 3px;
+            letter-spacing: 0.03em;
+        }
+
+        .tag-advance {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .tag-stuck {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .story-card-confidence {
+            font-size: 0.85em;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .story-card-rank {
+            font-weight: 700;
+            font-size: 1.1em;
+            color: #333;
+        }
+
+        .story-card-title {
+            margin: 0 0 0.3em 0;
+            font-size: 1em;
+        }
+
+        .story-card-desc {
+            font-size: 0.85em;
+            color: #555;
+            margin: 0 0 0.5em 0;
+            line-height: 1.3;
+        }
+
+        .story-card-meta {
+            font-size: 0.8em;
+            color: #777;
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .story-card-stage {
+            font-weight: 600;
+        }
+
+        .story-card-why {
+            margin-top: 0.5em;
+            font-size: 0.78em;
+            color: #1a4d8f;
+            background: #e8f0fe;
+            padding: 4px 8px;
+            border-radius: 3px;
+            border-left: 3px solid #4285f4;
+        }
+
+        .story-card-score-bar {
+            position: relative;
+            height: 20px;
+            background: #e8e8e8;
+            border-radius: 3px;
+            margin: 0.5em 0;
+            overflow: hidden;
+        }
+
+        .story-score-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+
+        .story-score-text {
+            position: absolute;
+            right: 6px;
+            top: 1px;
+            font-size: 0.75em;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .story-card-signals {
+            margin-top: 0.4em;
+        }
+
+        /* ── Coalition summary cards ── */
+        .story-coalition-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1em;
+        }
+
+        .story-coalition-card {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 1em;
+            background: #fafafa;
+        }
+
+        .story-coalition-card h3 {
+            margin: 0 0 0.4em 0;
+            font-size: 0.95em;
+        }
+
+        .story-coalition-bar {
+            display: flex;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.5em;
+        }
+
+        .coalition-dem-bar {
+            background: #4285f4;
+        }
+
+        .coalition-rep-bar {
+            background: #ea4335;
+        }
+
+        .story-coalition-stats {
+            font-size: 0.8em;
+            color: #666;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 0.3em;
+        }
+
+        .story-coalition-focus {
+            margin-top: 0.3em;
+        }
+
+        .story-coalition-leader {
+            font-size: 0.82em;
+            color: #444;
+            margin-top: 0.3em;
+        }
+
+        /* ── Anomaly list ── */
+        .story-anomaly-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5em;
+        }
+
+        .story-anomaly-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 12px;
+            border: 1px solid #e8e0d0;
+            border-radius: 4px;
+            background: #fffbf5;
+            font-size: 0.85em;
+            flex-wrap: wrap;
+        }
+
+        .story-anomaly-desc {
+            color: #555;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .story-anomaly-reason {
+            color: #a65700;
+            font-size: 0.9em;
+        }
+
+        .story-anomaly-slips {
+            font-weight: 600;
+            color: #888;
+            white-space: nowrap;
+        }
+
+        /* ── Story footer ── */
+        .story-footer {
+            margin-top: 2em;
+            padding-top: 1em;
+            border-top: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85em;
+        }
+
+        .story-footer-link {
+            font-weight: 600;
+        }
+
+        .story-footer-detail {
+            color: #888;
+        }
+
+        /* ── Member profile page ── */
+        .member-profile {
+            max-width: 800px;
+        }
+
+        .member-profile-header h1 {
+            margin: 0 0 0.2em 0;
+        }
+
+        .member-profile-meta {
+            color: #555;
+            margin: 0 0 0.5em 0;
+        }
+
+        .member-influence-bar {
+            position: relative;
+            height: 24px;
+            background: #e8e8e8;
+            border-radius: 4px;
+            margin: 0.5em 0;
+            max-width: 300px;
+            overflow: hidden;
+        }
+
+        .member-profile-rank {
+            font-size: 0.85em;
+            color: #666;
+            margin-left: 8px;
+        }
+
+        .member-narrative {
+            margin: 1.5em 0;
+            padding: 1em;
+            background: #f4f7fa;
+            border-left: 4px solid #4285f4;
+            border-radius: 4px;
+        }
+
+        .member-narrative h2 {
+            margin: 0 0 0.3em 0;
+            font-size: 1em;
+        }
+
+        .member-narrative p {
+            margin: 0;
+            font-size: 0.92em;
+            line-height: 1.5;
+            color: #333;
+        }
+
+        .component-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1em;
+            margin-top: 0.5em;
+        }
+
+        .component-card {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 0.8em;
+            background: #fafafa;
+            text-align: center;
+        }
+
+        .component-value {
+            font-size: 1.4em;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .component-label {
+            font-weight: 600;
+            font-size: 0.82em;
+            color: #555;
+            margin: 0.2em 0;
+        }
+
+        .component-desc {
+            font-size: 0.75em;
+            color: #888;
+            line-height: 1.3;
+        }
+
+        .member-components, .member-signals, .member-moneyball,
+        .member-bills, .member-coalition {
+            margin: 1.5em 0;
+        }
+
+        .signal-list {
+            list-style: none;
+            padding: 0;
+            margin: 0.5em 0;
+        }
+
+        .signal-item {
+            padding: 4px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.88em;
+            color: #333;
+        }
+
+        .signal-item::before {
+            content: "\2022 ";
+            color: #4285f4;
+            font-weight: bold;
+        }
+
+        .moneyball-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 0.8em;
+            margin-top: 0.5em;
+        }
+
+        .moneyball-stat {
+            text-align: center;
+            padding: 0.6em;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+
+        .moneyball-value {
+            display: block;
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .moneyball-label {
+            display: block;
+            font-size: 0.75em;
+            color: #777;
+            margin-top: 0.2em;
+        }
+
+        .moneyball-badges {
+            margin-top: 0.5em;
+        }
+
+        /* ── Bill profile page ── */
+        .bill-profile {
+            max-width: 800px;
+        }
+
+        .bill-profile-header h1 {
+            margin: 0 0 0.2em 0;
+        }
+
+        .bill-profile-desc {
+            color: #333;
+            font-size: 0.95em;
+            margin: 0 0 0.5em 0;
+        }
+
+        .bill-profile-meta {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: 0.85em;
+            color: #555;
+            margin-bottom: 1em;
+        }
+
+        .bill-prediction-card {
+            padding: 1em;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #f9f9f9;
+            margin-bottom: 1.5em;
+        }
+
+        .bill-prediction-outcome {
+            font-size: 1.2em;
+            font-weight: 700;
+            margin-bottom: 0.5em;
+        }
+
+        .outcome-advance, .outcome-passed {
+            color: #155724;
+        }
+
+        .outcome-stuck, .outcome-dead {
+            color: #721c24;
+        }
+
+        .outcome-vetoed {
+            color: #856404;
+        }
+
+        .bill-prediction-prob {
+            margin: 0.5em 0;
+        }
+
+        .bill-prediction-confidence {
+            font-size: 0.88em;
+            color: #555;
+        }
+
+        .bill-forecast-tag {
+            display: inline-block;
+            background: #fff3cd;
+            color: #856404;
+            font-size: 0.75em;
+            padding: 1px 6px;
+            border-radius: 3px;
+            margin-left: 6px;
+            font-weight: 600;
+        }
+
+        .bill-pipeline {
+            margin: 1.5em 0;
+        }
+
+        .bill-pipeline-visual {
+            display: flex;
+            gap: 0;
+            margin: 0.5em 0;
+            overflow-x: auto;
+        }
+
+        .pipeline-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            min-width: 80px;
+            position: relative;
+        }
+
+        .pipeline-step::after {
+            content: "";
+            position: absolute;
+            top: 10px;
+            right: 0;
+            width: 50%;
+            height: 2px;
+            background: #ddd;
+        }
+
+        .pipeline-step::before {
+            content: "";
+            position: absolute;
+            top: 10px;
+            left: 0;
+            width: 50%;
+            height: 2px;
+            background: #ddd;
+        }
+
+        .pipeline-step:first-child::before { display: none; }
+        .pipeline-step:last-child::after { display: none; }
+
+        .pipeline-step-done::before,
+        .pipeline-step-done::after {
+            background: #2d8659;
+        }
+
+        .pipeline-step-current::before {
+            background: #2d8659;
+        }
+
+        .pipeline-step-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ddd;
+            border: 2px solid #ddd;
+            z-index: 1;
+            margin-bottom: 4px;
+        }
+
+        .pipeline-step-done .pipeline-step-dot {
+            background: #2d8659;
+            border-color: #2d8659;
+        }
+
+        .pipeline-step-current .pipeline-step-dot {
+            background: #fff;
+            border-color: #4285f4;
+            box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.3);
+        }
+
+        .pipeline-step-label {
+            font-size: 0.68em;
+            color: #888;
+            text-align: center;
+        }
+
+        .pipeline-step-current .pipeline-step-label {
+            color: #4285f4;
+            font-weight: 600;
+        }
+
+        .pipeline-step-done .pipeline-step-label {
+            color: #2d8659;
+        }
+
+        .bill-pipeline-status {
+            font-size: 0.88em;
+            color: #555;
+        }
+
+        .bill-sponsor-context, .bill-slips, .bill-last-action, .bill-action-history {
+            margin: 1.5em 0;
+        }
+
+        /* ── Action History Timeline ── */
+        .action-history-note {
+            color: #666;
+            font-size: 0.88em;
+            margin-bottom: 1em;
+        }
+
+        .action-timeline {
+            border-left: 3px solid #e0e0e0;
+            margin-left: 12px;
+            padding-left: 0;
+        }
+
+        .action-timeline-item {
+            position: relative;
+            padding: 8px 0 8px 24px;
+            border-bottom: 1px solid #f5f5f5;
+        }
+
+        .action-timeline-item:last-child {
+            border-bottom: none;
+        }
+
+        .action-timeline-dot {
+            position: absolute;
+            left: -8px;
+            top: 14px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ccc;
+            border: 2px solid #fff;
+        }
+
+        .action-signal-positive-terminal .action-timeline-dot { background: #28a745; }
+        .action-signal-positive .action-timeline-dot { background: #28a745; }
+        .action-signal-positive-weak .action-timeline-dot { background: #8bc34a; }
+        .action-signal-negative-terminal .action-timeline-dot { background: #dc3545; }
+        .action-signal-negative .action-timeline-dot { background: #dc3545; }
+        .action-signal-negative-weak .action-timeline-dot { background: #ff9800; }
+        .action-signal-neutral .action-timeline-dot { background: #aaa; }
+
+        .action-timeline-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 2px;
+        }
+
+        .action-date {
+            font-size: 0.82em;
+            color: #888;
+            min-width: 80px;
+        }
+
+        .action-category-badge {
+            font-size: 0.72em;
+            padding: 1px 6px;
+            border-radius: 3px;
+            background: #e8e8e8;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .action-cat-introduction { background: #e3f2fd; color: #1565c0; }
+        .action-cat-assignment { background: #e8eaf6; color: #283593; }
+        .action-cat-committee_action { background: #e0f7fa; color: #00695c; }
+        .action-cat-floor_process { background: #fff3e0; color: #e65100; }
+        .action-cat-floor_vote { background: #fce4ec; color: #c62828; }
+        .action-cat-cross_chamber { background: #f3e5f5; color: #6a1b9a; }
+        .action-cat-concurrence { background: #ede7f6; color: #4527a0; }
+        .action-cat-governor { background: #fff8e1; color: #f57f17; }
+        .action-cat-enacted { background: #e8f5e9; color: #2e7d32; }
+        .action-cat-veto_process { background: #ffebee; color: #b71c1c; }
+        .action-cat-deadline { background: #fbe9e7; color: #bf360c; }
+        .action-cat-cosponsor { background: #f1f8e9; color: #558b2f; }
+        .action-cat-amendment { background: #eceff1; color: #546e7a; }
+        .action-cat-procedural { background: #f5f5f5; color: #616161; }
+        .action-cat-resolution { background: #e0f2f1; color: #004d40; }
+        .action-cat-appointment { background: #fafafa; color: #757575; }
+
+        .action-signal-badge {
+            font-size: 0.7em;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        .signal-positive-terminal { background: #c8e6c9; color: #1b5e20; }
+        .signal-positive { background: #c8e6c9; color: #2e7d32; }
+        .signal-positive-weak { background: #dcedc8; color: #558b2f; }
+        .signal-negative-terminal { background: #ffcdd2; color: #b71c1c; }
+        .signal-negative { background: #ffcdd2; color: #c62828; }
+        .signal-negative-weak { background: #ffe0b2; color: #e65100; }
+
+        .action-text {
+            font-size: 0.92em;
+            color: #333;
+            word-break: break-word;
+        }
+
+        .action-rule-ref {
+            font-size: 0.72em;
+            padding: 1px 4px;
+            border-radius: 3px;
+            background: #e3f2fd;
+            color: #1565c0;
+            font-family: monospace;
+            cursor: help;
+            white-space: nowrap;
+            margin-left: 4px;
+        }
+
+        .action-meaning {
+            font-size: 0.82em;
+            color: #777;
+            margin-top: 2px;
+            font-style: italic;
+        }
+
+        .sponsor-context-card {
+            padding: 0.8em;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fafafa;
+        }
+
+        .sponsor-lift-note {
+            font-size: 0.85em;
+            color: #155724;
+            margin-top: 0.5em;
+        }
+
+        .bill-slip-stats {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: 0.88em;
+            color: #555;
+            margin-bottom: 0.5em;
+        }
+
+        .bill-anomaly-alert {
+            margin-top: 0.5em;
+            padding: 8px 12px;
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: #856404;
+        }
     </style>
     <script src="https://unpkg.com/htmx.org@2.0.4"
         integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
@@ -1480,7 +2570,10 @@
     <div class="container">
         {% block content %}{% endblock %}
         <div class="footer">
-            Kei Truck Advocacy Portal &mdash; ILGA Graph PoC
+            <a href="/explore">Power Map</a> &middot;
+            <a href="/advocacy">Advocacy</a> &middot;
+            <a href="/intelligence">Intelligence</a>
+            &mdash; ILGA Graph PoC
         </div>
     </div>
 </body>

@@ -1,0 +1,902 @@
+{
+  "_meta": {
+    "description": "Comprehensive Illinois General Assembly bill action type reference. Derived from analysis of 103,332 actions across 11,722 bills (104th GA).",
+    "version": "1.0.0",
+    "last_updated": "2026-02-12"
+  },
+  "categories": [
+    {
+      "id": "introduction",
+      "label": "Introduction & Filing",
+      "description": "Bill submitted and formally introduced into the legislative record.",
+      "outcome_signal": "neutral",
+      "progress_stage": "FILED",
+      "rule_reference": "Senate Rule 5-1(d); House Rule 37(d)",
+      "actions": [
+        {
+          "pattern": "Prefiled with Clerk",
+          "match_type": "startswith",
+          "meaning": "Bill submitted before the legislative session officially begins. No impact on outcome yet.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Filed with the Clerk",
+          "match_type": "startswith",
+          "meaning": "Bill officially submitted to the House Clerk during the session.",
+          "outcome_signal": "neutral",
+          "rule_reference": "House Rule 6(b)"
+        },
+        {
+          "pattern": "Filed with Secretary",
+          "match_type": "startswith",
+          "meaning": "Bill officially submitted to the Senate Secretary during the session.",
+          "outcome_signal": "neutral",
+          "rule_reference": "Rule 2-7(b)"
+        },
+        {
+          "pattern": "First Reading",
+          "match_type": "exact",
+          "meaning": "Formal introduction — title read into the official record. Required procedural step; bill now exists in the system.",
+          "outcome_signal": "neutral",
+          "rule_reference": "Senate Rule 5-1(d)/5-2; House Rule 37(d)/38"
+        },
+        {
+          "pattern": "Read in Full a First Time",
+          "match_type": "exact",
+          "meaning": "Full text of the bill (usually a resolution) read aloud for the first time.",
+          "outcome_signal": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "assignment",
+      "label": "Committee Assignment",
+      "description": "Bill sent to a substantive committee for review. Bills must be assigned before they can advance.",
+      "outcome_signal": "neutral",
+      "progress_stage": "IN_COMMITTEE",
+      "rule_reference": "Senate Rule 3-8; House Rule 18",
+      "actions": [
+        {
+          "pattern": "Referred to",
+          "match_type": "startswith",
+          "meaning": "Sent to a committee (usually Rules in the House, Assignments in the Senate). The gatekeeping step — Rules/Assignments decides which substantive committee hears the bill.",
+          "outcome_signal": "neutral",
+          "rule_reference": "Senate Rule 3-8(a); House Rule 18(a)"
+        },
+        {
+          "pattern": "Assigned to",
+          "match_type": "startswith",
+          "meaning": "Sent to a substantive committee (e.g., Transportation, Revenue). This is where the bill gets a real hearing and evaluation.",
+          "outcome_signal": "neutral",
+          "rule_reference": "Senate Rule 3-8(a); House Rule 18(b)"
+        },
+        {
+          "pattern": "Assignments Refers to",
+          "match_type": "startswith",
+          "meaning": "Senate Assignments Committee forwards the bill to a substantive committee.",
+          "outcome_signal": "neutral",
+          "rule_reference": "Rule 3-7, Rule 3-8(a)"
+        },
+        {
+          "pattern": "Re-assigned to",
+          "match_type": "startswith",
+          "meaning": "Bill moved from one substantive committee to another. Can indicate strategic maneuvering or jurisdictional correction.",
+          "outcome_signal": "neutral",
+          "rule_reference": "Senate Rule 3-8(d); House Rule 18(f)"
+        },
+        {
+          "pattern": "Approved for Consideration",
+          "match_type": "startswith",
+          "meaning": "Senate Assignments Committee approves the bill for committee consideration — a positive gate.",
+          "outcome_signal": "positive",
+          "rule_reference": "Rule 3-8(b)"
+        },
+        {
+          "pattern": "To ",
+          "match_type": "startswith_subcommittee",
+          "meaning": "Referred to a subcommittee for more focused review (e.g., 'To Tax Policy: Other Taxes Subcommittee').",
+          "outcome_signal": "neutral",
+          "rule_reference": "Rule 3-3(b)"
+        },
+        {
+          "pattern": "Reported Back To",
+          "match_type": "startswith",
+          "meaning": "Subcommittee sends the bill back to the parent committee after review.",
+          "outcome_signal": "neutral",
+          "rule_reference": "Rule 3-10"
+        }
+      ]
+    },
+    {
+      "id": "committee_action",
+      "label": "Committee Action",
+      "description": "Committee votes or acts on the bill. This is the first major hurdle — most bills die in committee.",
+      "outcome_signal": "mixed",
+      "progress_stage": "PASSED_COMMITTEE",
+      "rule_reference": "Senate Rule 3-11; House Rule 22",
+      "actions": [
+        {
+          "pattern": "Do Pass / Short Debate",
+          "match_type": "startswith",
+          "meaning": "Committee recommends passage and places it on the Short Debate calendar (limited floor discussion time). Strong positive signal — committee believes bill has broad support.",
+          "outcome_signal": "positive",
+          "rule_reference": "Senate Rule 3-11(a)(1); House Rule 22(a)(1), 52(b)"
+        },
+        {
+          "pattern": "Do Pass / Standard Debate",
+          "match_type": "startswith",
+          "meaning": "Committee recommends passage on the Standard Debate calendar (full floor discussion). Positive signal — bill expected to have substantive floor debate.",
+          "outcome_signal": "positive",
+          "rule_reference": "Senate Rule 3-11(a)(1); House Rule 22(a)(1), 52(a)(2)"
+        },
+        {
+          "pattern": "Do Pass",
+          "match_type": "startswith",
+          "meaning": "Committee recommends passage. The most important positive gate — majority of bills never get here.",
+          "outcome_signal": "positive",
+          "rule_reference": "Rule 3-11(a)(1), Rule 3-12(a)"
+        },
+        {
+          "pattern": "Recommends Do Pass",
+          "match_type": "startswith",
+          "meaning": "Committee formally recommends the bill for passage.",
+          "outcome_signal": "positive",
+          "rule_reference": "Rule 3-11(a)(1)"
+        },
+        {
+          "pattern": "Recommends Do Consent",
+          "match_type": "startswith",
+          "meaning": "Committee recommends passage via Consent Calendar — indicating the bill is non-controversial and expected to pass unanimously.",
+          "outcome_signal": "positive",
+          "rule_reference": "Rule 3-11(a)"
+        },
+        {
+          "pattern": "Do Consent Passed",
+          "match_type": "startswith",
+          "meaning": "Bill passed via Consent Calendar (non-controversial, usually unanimous). Strong positive signal.",
+          "outcome_signal": "positive"
+        },
+        {
+          "pattern": "Do Not Pass",
+          "match_type": "startswith",
+          "meaning": "Committee recommends AGAINST passage. Rarely used in IL — bills are more commonly just never called for a vote.",
+          "outcome_signal": "negative",
+          "rule_reference": "Rule 3-11(a)(2), Rule 3-12(a)"
+        },
+        {
+          "pattern": "Postponed -",
+          "match_type": "startswith",
+          "meaning": "Committee hearing postponed. Routine procedural action — does NOT mean the bill is dead. Sponsor may be gathering votes or negotiating amendments.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Waive Posting Notice",
+          "match_type": "exact",
+          "meaning": "Committee waives the normal 6-day advance posting requirement. Often signals urgency or leadership priority.",
+          "outcome_signal": "positive",
+          "rule_reference": "Senate Rule 3-11(e)(1); House Rule 21(e)"
+        }
+      ]
+    },
+    {
+      "id": "deadline",
+      "label": "Deadlines & Re-referrals",
+      "description": "Deadline-related actions. In IL, bills that miss deadlines are re-referred to Rules/Assignments — not killed, but significantly slowed.",
+      "outcome_signal": "mixed",
+      "progress_stage": null,
+      "rule_reference": "Senate Rule 2-10/3-9; House Rule 9/19",
+      "actions": [
+        {
+          "pattern": "Rule 19(a)",
+          "match_type": "startswith",
+          "meaning": "MISSED COMMITTEE DEADLINE — bill did not get a committee vote before the deadline and is re-referred to Rules/Assignments. The bill is NOT dead but faces an uphill battle to be reassigned. Most bills that hit Rule 19(a) do not advance.",
+          "outcome_signal": "negative_weak",
+          "rule_reference": "House Rule 19(a); Senate analog: Rule 3-9(a)"
+        },
+        {
+          "pattern": "Rule 19(b)",
+          "match_type": "startswith",
+          "meaning": "MISSED FLOOR DEADLINE — bill passed committee but did not get a floor vote (2nd/3rd Reading) before the deadline. Re-referred to Rules. Bill had momentum but stalled.",
+          "outcome_signal": "negative_weak",
+          "rule_reference": "House Rule 19(b); Senate analog: Rule 3-9(a)"
+        },
+        {
+          "pattern": "Rule 19(c)",
+          "match_type": "amendment_only",
+          "meaning": "Amendment missed its deadline. Only applies to amendments, not the bill itself.",
+          "outcome_signal": "neutral",
+          "rule_reference": "House Rule 19(c)"
+        },
+        {
+          "pattern": "Rule 2-10 Committee Deadline",
+          "match_type": "startswith",
+          "meaning": "Senate committee deadline set or extended. Procedural — establishes when the bill must be voted out of committee.",
+          "outcome_signal": "neutral",
+          "rule_reference": "Rule 2-10(a)(3-4)"
+        },
+        {
+          "pattern": "Rule 2-10 Third Reading Deadline",
+          "match_type": "startswith",
+          "meaning": "Senate Third Reading (floor vote) deadline set or extended.",
+          "outcome_signal": "neutral",
+          "rule_reference": "Rule 2-10(a)(5-6)"
+        },
+        {
+          "pattern": "Rule 2-10 Committee/3rd Reading Deadline",
+          "match_type": "startswith",
+          "meaning": "Combined committee and floor deadline set for Senate bill.",
+          "outcome_signal": "neutral",
+          "rule_reference": "Rule 2-10(a)"
+        },
+        {
+          "pattern": "Third Reading Deadline Extended",
+          "match_type": "startswith",
+          "meaning": "Floor vote deadline extended. Mildly positive — leadership granted more time, suggesting the bill has support but needs more negotiation.",
+          "outcome_signal": "positive_weak",
+          "rule_reference": "Rule 2-10(d)"
+        },
+        {
+          "pattern": "Committee/Final Action Deadline Extended",
+          "match_type": "startswith",
+          "meaning": "Committee or final action deadline extended.",
+          "outcome_signal": "positive_weak",
+          "rule_reference": "Rule 2-10(d)"
+        },
+        {
+          "pattern": "Third Reading/Final Action Deadline Extended",
+          "match_type": "startswith",
+          "meaning": "Floor vote and final action deadline extended.",
+          "outcome_signal": "positive_weak",
+          "rule_reference": "Rule 2-10(d)"
+        },
+        {
+          "pattern": "Rule 3-9(a)",
+          "match_type": "startswith",
+          "meaning": "Senate procedural rule — bill re-referred to Assignments for missing Rule 2-10 deadline. Bill is NOT dead but faces uphill battle.",
+          "outcome_signal": "negative_weak",
+          "rule_reference": "Rule 3-9(a)"
+        },
+        {
+          "pattern": "Pursuant to Senate Rule 3-9(b)",
+          "match_type": "startswith",
+          "meaning": "Senate procedural re-referral to Assignments — 31 consecutive days without session.",
+          "outcome_signal": "negative_weak",
+          "rule_reference": "Rule 3-9(b)"
+        }
+      ]
+    },
+    {
+      "id": "floor_process",
+      "label": "Floor Process",
+      "description": "Actions related to floor debate and voting stages (Second Reading, Third Reading).",
+      "outcome_signal": "positive",
+      "progress_stage": "FLOOR_VOTE",
+      "rule_reference": "Senate Rule 4-4(7-8)/5-2; House Rule 31(8-9)/38/52",
+      "actions": [
+        {
+          "pattern": "Second Reading - Short Debate",
+          "match_type": "exact",
+          "meaning": "Bill reaches the floor amendment stage on Short Debate calendar. Major milestone — bill has passed committee and is on the floor.",
+          "outcome_signal": "positive",
+          "rule_reference": "Senate Rule 3-12(a)/5-4(a); House Rule 24(a)/40(b)/52(a)(1)"
+        },
+        {
+          "pattern": "Second Reading",
+          "match_type": "exact",
+          "meaning": "Bill reaches the floor amendment stage. Floor amendments can be offered here.",
+          "outcome_signal": "positive",
+          "rule_reference": "Senate Rule 3-12(a)/5-4(a); House Rule 24(a)/40(b)"
+        },
+        {
+          "pattern": "Held on Calendar Order of Second Reading",
+          "match_type": "startswith",
+          "meaning": "Bill was ready for Second Reading but was paused/held by the sponsor. Usually indicates the sponsor is still negotiating amendments or gathering votes. NOT a negative signal — the sponsor controls the pace.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Placed on Calendar 2nd Reading",
+          "match_type": "startswith",
+          "meaning": "Bill placed on the Second Reading calendar. Positive — bill is queued for floor action.",
+          "outcome_signal": "positive"
+        },
+        {
+          "pattern": "Placed on Calendar Order of 2nd Reading",
+          "match_type": "startswith",
+          "meaning": "Bill placed on the order of Second Reading.",
+          "outcome_signal": "positive",
+          "rule_reference": "Rule 3-12(a), Rule 4-4(7)"
+        },
+        {
+          "pattern": "Third Reading",
+          "match_type": "exact",
+          "meaning": "Bill reaches final debate and vote stage. This is the last step before the floor vote.",
+          "outcome_signal": "positive",
+          "rule_reference": "Rule 5-2, Rule 4-4(8)"
+        },
+        {
+          "pattern": "Placed on Calendar Order of 3rd Reading",
+          "match_type": "startswith",
+          "meaning": "Bill placed on the Third Reading calendar — queued for final vote.",
+          "outcome_signal": "positive",
+          "rule_reference": "Rule 4-4(8)"
+        },
+        {
+          "pattern": "Recalled to Second Reading",
+          "match_type": "startswith",
+          "meaning": "Bill pulled back from Third Reading to Second Reading, usually to adopt a floor amendment. Common and not negative — sponsors often recall bills to incorporate negotiated changes.",
+          "outcome_signal": "neutral",
+          "rule_reference": "Rule 5-4(a)"
+        },
+        {
+          "pattern": "Chair Rules placed on Standard debate",
+          "match_type": "startswith",
+          "meaning": "Rules Committee chair moves bill from Short Debate to Standard Debate, indicating it needs more floor discussion time.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "3/5 Vote Required",
+          "match_type": "exact",
+          "meaning": "Bill requires a supermajority (3/5) to pass. Higher bar — typically for appropriations, preemption, or immediate effective dates.",
+          "outcome_signal": "neutral",
+          "rule_reference": "Senate Rule 7-19(a); House Rule 69"
+        }
+      ]
+    },
+    {
+      "id": "floor_vote",
+      "label": "Floor Vote",
+      "description": "Chamber votes on the bill. Passing here means the bill has cleared one chamber.",
+      "outcome_signal": "positive",
+      "progress_stage": "CHAMBER_PASSED",
+      "rule_reference": "Senate Rule 5-1(f)/7-1/7-2; House Rule 37(f)/49/50",
+      "actions": [
+        {
+          "pattern": "Third Reading - Passed",
+          "match_type": "startswith",
+          "meaning": "Bill PASSED a floor vote on Third Reading. Major milestone — bill has cleared one chamber.",
+          "outcome_signal": "positive",
+          "rule_reference": "Rule 5-1(f)"
+        },
+        {
+          "pattern": "Third Reading - Short Debate - Passed",
+          "match_type": "startswith",
+          "meaning": "Bill PASSED on Short Debate Third Reading. Bill cleared the chamber.",
+          "outcome_signal": "positive"
+        },
+        {
+          "pattern": "Third Reading - Lost",
+          "match_type": "startswith",
+          "meaning": "Bill FAILED a floor vote. Rare — sponsors usually don't call a vote unless they have the votes. Very negative signal.",
+          "outcome_signal": "negative",
+          "rule_reference": "Rule 5-1(f)"
+        },
+        {
+          "pattern": "Third Reading - Short Debate - Lost",
+          "match_type": "startswith",
+          "meaning": "Bill FAILED a floor vote on Short Debate. Negative — bill rejected by the chamber.",
+          "outcome_signal": "negative"
+        },
+        {
+          "pattern": "Resolution Adopted",
+          "match_type": "exact",
+          "meaning": "Resolution passed by the chamber.",
+          "outcome_signal": "positive"
+        },
+        {
+          "pattern": "Adopted",
+          "match_type": "exact",
+          "meaning": "Bill or resolution adopted by the chamber.",
+          "outcome_signal": "positive"
+        }
+      ]
+    },
+    {
+      "id": "cross_chamber",
+      "label": "Cross-Chamber",
+      "description": "Bill moves between chambers (House <-> Senate). Indicates the bill passed its origin chamber.",
+      "outcome_signal": "positive",
+      "progress_stage": "CROSSED_CHAMBERS",
+      "rule_reference": "Senate Rule 5-1(d)/4-4(9-11); House Rule 37(d)/31(10-12)",
+      "actions": [
+        {
+          "pattern": "Arrive in Senate",
+          "match_type": "startswith",
+          "meaning": "House bill arrives in the Senate after passing the House.",
+          "outcome_signal": "positive"
+        },
+        {
+          "pattern": "Arrived in House",
+          "match_type": "startswith",
+          "meaning": "Senate bill arrives in the House after passing the Senate.",
+          "outcome_signal": "positive"
+        },
+        {
+          "pattern": "Arrives in",
+          "match_type": "startswith",
+          "meaning": "Bill crosses to the other chamber after passing its origin chamber.",
+          "outcome_signal": "positive"
+        },
+        {
+          "pattern": "Received by",
+          "match_type": "startswith",
+          "meaning": "Second chamber formally receives the bill and assigns a chamber sponsor.",
+          "outcome_signal": "positive"
+        },
+        {
+          "pattern": "Chief House Sponsor",
+          "match_type": "startswith",
+          "meaning": "House sponsor assigned for a Senate bill — bill is being actively managed in the second chamber.",
+          "outcome_signal": "positive"
+        },
+        {
+          "pattern": "Chief Senate Sponsor",
+          "match_type": "startswith",
+          "meaning": "Senate sponsor assigned for a House bill.",
+          "outcome_signal": "positive"
+        },
+        {
+          "pattern": "Alternate Chief Sponsor",
+          "match_type": "startswith",
+          "meaning": "Alternate chief sponsor designated.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Chief Sponsor Changed to",
+          "match_type": "startswith",
+          "meaning": "Chief sponsor changed — may indicate leadership taking ownership or a strategic handoff.",
+          "outcome_signal": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "concurrence",
+      "label": "Concurrence",
+      "description": "When one chamber amends a bill from the other chamber, the origin chamber must concur (agree) with the changes.",
+      "outcome_signal": "positive",
+      "progress_stage": "PASSED_BOTH",
+      "rule_reference": "Senate Rule 8-1/Article VIII; House Rule 72/Article VIII",
+      "actions": [
+        {
+          "pattern": "Passed Both Houses",
+          "match_type": "exact",
+          "meaning": "Bill PASSED BOTH CHAMBERS. Major milestone — bill goes to the Governor next.",
+          "outcome_signal": "positive",
+          "rule_reference": "Rule 8-1, Rule 8-4"
+        },
+        {
+          "pattern": "Adopted Both Houses",
+          "match_type": "exact",
+          "meaning": "Resolution adopted by both chambers.",
+          "outcome_signal": "positive"
+        },
+        {
+          "pattern": "House Concurs",
+          "match_type": "startswith",
+          "meaning": "House agrees with Senate amendments to the bill.",
+          "outcome_signal": "positive"
+        },
+        {
+          "pattern": "Senate Concurs",
+          "match_type": "startswith",
+          "meaning": "Senate agrees with House amendments to the bill.",
+          "outcome_signal": "positive"
+        },
+        {
+          "pattern": "Secretary's Desk - Concurrence",
+          "match_type": "startswith",
+          "meaning": "Bill placed on Secretary's Desk awaiting Senate concurrence vote on House amendments.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Placed on Calendar Order of Concurrence",
+          "match_type": "startswith",
+          "meaning": "Concurrence vote scheduled on the calendar.",
+          "outcome_signal": "positive_weak"
+        },
+        {
+          "pattern": "Motion to Concur",
+          "match_type": "contains",
+          "meaning": "Motion filed to agree with the other chamber's amendments.",
+          "outcome_signal": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "governor",
+      "label": "Governor Action",
+      "description": "Governor signs, vetoes, or takes other action on the bill.",
+      "outcome_signal": "mixed",
+      "progress_stage": "GOVERNOR",
+      "rule_reference": "Senate Article IX/Rules 9-1 to 9-6; House Article IX/Rules 77-82",
+      "actions": [
+        {
+          "pattern": "Sent to the Governor",
+          "match_type": "exact",
+          "meaning": "Bill transmitted to the Governor for signature. Strong positive — bill has passed both chambers.",
+          "outcome_signal": "positive"
+        },
+        {
+          "pattern": "Governor Approved",
+          "match_type": "exact",
+          "meaning": "GOVERNOR SIGNED THE BILL. Bill is now law (pending effective date).",
+          "outcome_signal": "positive"
+        },
+        {
+          "pattern": "Governor Certifies Changes",
+          "match_type": "exact",
+          "meaning": "Governor certifies changes made under an amendatory veto.",
+          "outcome_signal": "positive"
+        },
+        {
+          "pattern": "Governor Vetoed",
+          "match_type": "exact",
+          "meaning": "GOVERNOR VETOED THE BILL. Bill is dead unless the legislature overrides (requires 3/5 vote in both chambers).",
+          "outcome_signal": "negative_terminal",
+          "rule_reference": "Rule 9-1, Rule 9-4(a)"
+        },
+        {
+          "pattern": "Governor Amendatory Veto",
+          "match_type": "exact",
+          "meaning": "Governor returns the bill with specific recommended changes. Legislature can accept the changes, override, or let the bill die.",
+          "outcome_signal": "negative",
+          "rule_reference": "Rule 9-2, Rule 9-4(d)"
+        },
+        {
+          "pattern": "Governor Item/Reduction Veto",
+          "match_type": "startswith",
+          "meaning": "Governor vetoes or reduces specific line items in an appropriations bill. Only applies to budget bills.",
+          "outcome_signal": "negative",
+          "rule_reference": "Rule 9-4(b-c)"
+        }
+      ]
+    },
+    {
+      "id": "veto_process",
+      "label": "Veto Override Process",
+      "description": "Legislative response to a governor's veto.",
+      "outcome_signal": "mixed",
+      "progress_stage": null,
+      "rule_reference": "Senate Article IX/Rules 9-3 to 9-6; House Article IX/Rules 79-82",
+      "actions": [
+        {
+          "pattern": "Placed Calendar Total Veto",
+          "match_type": "startswith",
+          "meaning": "Legislature schedules consideration of overriding a total veto.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Placed on Calendar Total Veto",
+          "match_type": "startswith",
+          "meaning": "Legislature schedules consideration of overriding a total veto.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Placed on Calendar Amendatory Veto",
+          "match_type": "startswith",
+          "meaning": "Legislature schedules consideration of an amendatory veto — will vote to accept changes or override.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Placed on Calendar Reduction Veto",
+          "match_type": "startswith",
+          "meaning": "Legislature schedules consideration of a reduction/item veto.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Total Veto Stands",
+          "match_type": "startswith",
+          "meaning": "Legislature FAILED to override the veto, or took no action. BILL IS DEAD.",
+          "outcome_signal": "negative_terminal",
+          "rule_reference": "Rule 9-6"
+        },
+        {
+          "pattern": "Item/Reduction Veto Stands",
+          "match_type": "startswith",
+          "meaning": "Legislature did not override the item/reduction veto. Those provisions are dead.",
+          "outcome_signal": "negative_terminal"
+        },
+        {
+          "pattern": "Amendatory Veto Motion",
+          "match_type": "startswith",
+          "meaning": "Motion filed regarding an amendatory veto (accept changes, override, etc.).",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Veto Override Motion",
+          "match_type": "startswith",
+          "meaning": "Motion filed to override the governor's veto.",
+          "outcome_signal": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "enacted",
+      "label": "Enacted Into Law",
+      "description": "Bill becomes law.",
+      "outcome_signal": "positive",
+      "progress_stage": "SIGNED",
+      "rule_reference": "Article IX",
+      "actions": [
+        {
+          "pattern": "Public Act",
+          "match_type": "startswith",
+          "meaning": "Bill signed into law — assigned a Public Act number (e.g., PA 104-0032).",
+          "outcome_signal": "positive_terminal"
+        },
+        {
+          "pattern": "Effective Date",
+          "match_type": "startswith",
+          "meaning": "Law's effective date announced. Most IL laws take effect January 1 of the next year unless otherwise specified.",
+          "outcome_signal": "positive_terminal"
+        },
+        {
+          "pattern": "Appointment Confirmed",
+          "match_type": "exact",
+          "meaning": "Executive appointment confirmed by the Senate. The appointment equivalent of a bill becoming law.",
+          "outcome_signal": "positive_terminal"
+        }
+      ]
+    },
+    {
+      "id": "cosponsor",
+      "label": "Co-Sponsorship",
+      "description": "Members adding or removing their co-sponsorship of the bill. More co-sponsors generally signals broader support.",
+      "outcome_signal": "neutral",
+      "progress_stage": null,
+      "rule_reference": "Senate Rule 5-1(a); House Rule 37(a)",
+      "actions": [
+        {
+          "pattern": "Added Co-Sponsor",
+          "match_type": "startswith",
+          "meaning": "A legislator adds their name as co-sponsor, signaling public support for the bill.",
+          "outcome_signal": "positive_weak"
+        },
+        {
+          "pattern": "Added as Co-Sponsor",
+          "match_type": "startswith",
+          "meaning": "A legislator added as co-sponsor.",
+          "outcome_signal": "positive_weak"
+        },
+        {
+          "pattern": "Added as Alternate Co-Sponsor",
+          "match_type": "startswith",
+          "meaning": "Alternate co-sponsor added.",
+          "outcome_signal": "positive_weak"
+        },
+        {
+          "pattern": "Added as Alternate Chief Co-Sponsor",
+          "match_type": "startswith",
+          "meaning": "Alternate chief co-sponsor added.",
+          "outcome_signal": "positive_weak"
+        },
+        {
+          "pattern": "Added Alternate Co-Sponsor",
+          "match_type": "startswith",
+          "meaning": "Alternate co-sponsor added in the second chamber.",
+          "outcome_signal": "positive_weak"
+        },
+        {
+          "pattern": "Added Alternate Chief Co-Sponsor",
+          "match_type": "startswith",
+          "meaning": "Alternate chief co-sponsor added.",
+          "outcome_signal": "positive_weak"
+        },
+        {
+          "pattern": "Added as Chief Co-Sponsor",
+          "match_type": "startswith",
+          "meaning": "A legislator takes on the chief co-sponsor role, a stronger commitment than regular co-sponsorship.",
+          "outcome_signal": "positive_weak"
+        },
+        {
+          "pattern": "Added Chief Co-Sponsor",
+          "match_type": "startswith",
+          "meaning": "Chief co-sponsor added.",
+          "outcome_signal": "positive_weak"
+        },
+        {
+          "pattern": "Co-Sponsor All",
+          "match_type": "startswith",
+          "meaning": "Entire chamber added as co-sponsors — typically for ceremonial or consensus resolutions.",
+          "outcome_signal": "positive"
+        },
+        {
+          "pattern": "Removed Co-Sponsor",
+          "match_type": "startswith",
+          "meaning": "Co-sponsor removed their support. Mildly negative — someone withdrew.",
+          "outcome_signal": "negative_weak"
+        },
+        {
+          "pattern": "Remove Co-Sponsor",
+          "match_type": "startswith",
+          "meaning": "Co-sponsor removed.",
+          "outcome_signal": "negative_weak"
+        }
+      ]
+    },
+    {
+      "id": "amendment",
+      "label": "Amendment Actions",
+      "description": "Actions on amendments to the bill. Amendments modify bill text and go through their own mini-process (filed, referred, adopted/tabled).",
+      "outcome_signal": "neutral",
+      "progress_stage": null,
+      "rule_reference": "Senate Rule 5-4/3-8(b-c); House Rule 40/18(e)",
+      "actions": [
+        {
+          "pattern": "House Committee Amendment",
+          "match_type": "startswith_prefix",
+          "meaning": "Action on a House committee amendment — amendment is being processed.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "House Floor Amendment",
+          "match_type": "startswith_prefix",
+          "meaning": "Action on a House floor amendment — amendment is being processed during Second Reading.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Senate Committee Amendment",
+          "match_type": "startswith_prefix",
+          "meaning": "Action on a Senate committee amendment.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Senate Floor Amendment",
+          "match_type": "startswith_prefix",
+          "meaning": "Action on a Senate floor amendment.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Conference Committee Report",
+          "match_type": "startswith_prefix",
+          "meaning": "Conference committee report action — chambers negotiating differences.",
+          "outcome_signal": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "resolution",
+      "label": "Resolution Process",
+      "description": "Actions specific to resolutions (HR, SR, HJR, SJR). Resolutions follow a simplified process.",
+      "outcome_signal": "neutral",
+      "progress_stage": null,
+      "rule_reference": "Senate Rule 6-1; House Rule 45/16",
+      "actions": [
+        {
+          "pattern": "Referred to Resolutions Consent Calendar",
+          "match_type": "exact",
+          "meaning": "Resolution placed on consent calendar — expected to pass without debate.",
+          "outcome_signal": "positive",
+          "rule_reference": "Rule 6-1(c)"
+        },
+        {
+          "pattern": "Referred to Congratulatory Consent Calendar",
+          "match_type": "exact",
+          "meaning": "Congratulatory resolution placed on consent calendar — ceremonial, will pass easily.",
+          "outcome_signal": "positive",
+          "rule_reference": "Rule 6-1(d), Rule 3-6(a)"
+        },
+        {
+          "pattern": "Placed on Calendar Agreed Resolutions",
+          "match_type": "startswith",
+          "meaning": "Resolution placed on agreed resolutions calendar — non-controversial batch passage.",
+          "outcome_signal": "positive"
+        },
+        {
+          "pattern": "Placed on Calendar Order of Resolutions",
+          "match_type": "startswith",
+          "meaning": "Resolution queued for consideration.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Placed on Calendar Order of Secretary's Desk Resolutions",
+          "match_type": "startswith",
+          "meaning": "Resolution placed on Secretary's Desk for Senate consideration.",
+          "outcome_signal": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "appointment",
+      "label": "Executive Appointments",
+      "description": "Actions related to gubernatorial appointments that require Senate confirmation.",
+      "outcome_signal": "neutral",
+      "progress_stage": null,
+      "rule_reference": "Rule 10-1, Rule 10-2",
+      "actions": [
+        {
+          "pattern": "** Appointment Message Carried Over",
+          "match_type": "startswith",
+          "meaning": "Appointment carried over from previous General Assembly — not yet acted on.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Appointment Message Tabled Pursuant",
+          "match_type": "startswith",
+          "meaning": "Appointment message superseded by a newer appointment message.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Pursuant to Senate Rule 10-1(c)",
+          "match_type": "startswith",
+          "meaning": "Multiple appointment messages compiled for a batch vote.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Motion Filed Appointment",
+          "match_type": "startswith",
+          "meaning": "Motion filed to act on appointment messages.",
+          "outcome_signal": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "procedural",
+      "label": "Procedural",
+      "description": "Procedural motions and administrative actions that don't directly advance or block the bill.",
+      "outcome_signal": "neutral",
+      "progress_stage": null,
+      "rule_reference": "Senate Rule 4-4/7-4; House Rule 31/54",
+      "actions": [
+        {
+          "pattern": "Motion Prevailed",
+          "match_type": "exact",
+          "meaning": "A procedural motion passed.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Motion to Suspend",
+          "match_type": "startswith",
+          "meaning": "Motion to suspend a rule (e.g., Rule 21 posting requirement). Often signals urgency.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Prevailed to Suspend",
+          "match_type": "startswith",
+          "meaning": "Rule suspension motion passed. The rule is temporarily set aside for this bill.",
+          "outcome_signal": "positive_weak"
+        },
+        {
+          "pattern": "Motion to Reconsider",
+          "match_type": "startswith",
+          "meaning": "Motion to reconsider a previous vote. Can be used to revive a failed vote or to lock in a successful one.",
+          "outcome_signal": "neutral",
+          "rule_reference": "Senate Rule 7-15; House Rule 65"
+        },
+        {
+          "pattern": "Placed on Calendar Order of First Reading",
+          "match_type": "startswith",
+          "meaning": "Bill queued for First Reading in the second chamber.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Withdrawn Pursuant",
+          "match_type": "startswith",
+          "meaning": "Bill or appointment withdrawn per rule. For appointments, usually means the appointment was superseded.",
+          "outcome_signal": "neutral"
+        },
+        {
+          "pattern": "Tabled",
+          "match_type": "exact_bill_only",
+          "meaning": "Bill tabled — temporarily set aside. In IL, tabling is less final than in Congress; bills can be brought back (Rule 7-11). But it's a negative signal when the bill itself (not an amendment) is tabled.",
+          "outcome_signal": "negative_weak",
+          "rule_reference": "Senate Rule 7-10/7-11; House Rule 60/61"
+        },
+        {
+          "pattern": "Due to Sine Die",
+          "match_type": "contains",
+          "meaning": "Reference to the previous General Assembly's adjournment sine die. Appointments from the prior GA are noted as carried over.",
+          "outcome_signal": "neutral"
+        }
+      ]
+    }
+  ],
+  "outcome_signal_definitions": {
+    "positive_terminal": "Bill has become law or confirmed. Final positive outcome.",
+    "positive": "Bill is making meaningful forward progress.",
+    "positive_weak": "Mildly positive — incremental signal, not decisive.",
+    "neutral": "Procedural or administrative — no bearing on outcome.",
+    "negative_weak": "Mildly negative — bill faces obstacles but is not dead.",
+    "negative": "Significant setback — bill failed a vote or was rejected.",
+    "negative_terminal": "Bill is dead — governor vetoed and override failed."
+  }
+}

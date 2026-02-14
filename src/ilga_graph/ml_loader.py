@@ -37,6 +37,16 @@ class BillScore:
     # Stuck analysis fields (v4)
     stuck_status: str = ""
     stuck_reason: str = ""
+    # Lifecycle status (v5): OPEN / PASSED / VETOED (governor veto only)
+    lifecycle_status: str = "OPEN"
+    # Law prediction (v6): P(becomes law) + predicted destination
+    prob_law: float = 0.0
+    predicted_destination: str = "Stuck"
+    # Rule context (v7): Senate Rule citation for current stage / next step
+    rule_context: str = ""
+    # Forecast model (v8): intrinsic-only P(law) — "Truth" model
+    forecast_score: float = 0.0
+    forecast_confidence: str = ""  # "Low" | "Medium" | "High"
 
 
 @dataclass
@@ -154,6 +164,12 @@ def load_ml_data() -> MLData:
                 last_action_date=r.get("last_action_date", "") or "",
                 stuck_status=r.get("stuck_status", "") or "",
                 stuck_reason=r.get("stuck_reason", "") or "",
+                lifecycle_status=r.get("lifecycle_status", "OPEN") or "OPEN",
+                prob_law=r.get("prob_law", 0.0) or 0.0,
+                predicted_destination=r.get("predicted_destination", "Stuck") or "Stuck",
+                rule_context=r.get("rule_context", "") or "",
+                forecast_score=r.get("forecast_score", 0.0) or 0.0,
+                forecast_confidence=r.get("forecast_confidence", "") or "",
             )
             for r in df.to_dicts()
         ]

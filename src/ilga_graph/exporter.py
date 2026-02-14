@@ -242,6 +242,7 @@ class ObsidianExporter:
                 f"moneyball_score: {mb.moneyball_score}\n"
                 f"pipeline_depth: {mb.pipeline_depth_avg}\n"
                 f"network_centrality: {mb.network_centrality}\n"
+                f"betweenness: {mb.betweenness}\n"
                 f"unique_collaborators: {mb.unique_collaborators}\n"
                 f"is_leadership: {str(mb.is_leadership).lower()}\n"
                 f"rank_overall: {mb.rank_overall}\n"
@@ -671,6 +672,7 @@ class ObsidianExporter:
             f"| Leadership | {'Yes' if mb.is_leadership else 'No'} |\n"
             f"| Pipeline Depth | {mb.pipeline_depth_avg:.1f} / 6.0 {depth_bar} |\n"
             f"| Network Centrality | {mb.network_centrality:.2%} |\n"
+            f"| Betweenness (Bridge) | {mb.betweenness:.4f} |\n"
             f"| Unique Collaborators | {mb.unique_collaborators} |\n"
             f"| Badges | {badge_line} |\n\n"
         )
