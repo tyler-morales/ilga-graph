@@ -9,8 +9,9 @@ Single command, no interaction. Produces enriched analytical data:
     3. Graph embeddings (Node2Vec on co-sponsorship network)
     4. Bill outcome scoring (every bill gets a probability)
     5. Coalition discovery (voting blocs via Node2Vec embeddings)
-    6. Anomaly detection (astroturfing signals in witness slips)
-    7. Snapshot predictions (for next run's backtest)
+    6. Member value model (undervalued/overvalued + recruitment)
+    7. Anomaly detection (astroturfing signals in witness slips)
+    8. Snapshot predictions (for next run's backtest)
 
 Usage:
     python scripts/ml_run.py          # Full pipeline
@@ -52,7 +53,7 @@ def main() -> None:
         )
 
         # ── Step 0: Backtest previous predictions ─────────────────────────
-        console.print("\n[bold cyan]== Step 0/7: Backtest Previous Predictions ==[/]")
+        console.print("\n[bold cyan]== Step 0/8: Backtest Previous Predictions ==[/]")
         t0 = time.perf_counter()
 
         backtest_result = None
@@ -69,7 +70,7 @@ def main() -> None:
         log.phase("Backtest", duration_s=t_backtest, detail=backtest_desc)
 
         # ── Step 1: Data Pipeline ────────────────────────────────────────
-        console.print("\n[bold cyan]== Step 1/7: Data Pipeline ==[/]")
+        console.print("\n[bold cyan]== Step 1/8: Data Pipeline ==[/]")
         t0 = time.perf_counter()
 
         from ilga_graph.ml.pipeline import run_pipeline
@@ -83,7 +84,7 @@ def main() -> None:
         )
 
         # ── Step 2: Entity Resolution ────────────────────────────────────
-        console.print("\n[bold cyan]== Step 2/7: Entity Resolution ==[/]")
+        console.print("\n[bold cyan]== Step 2/8: Entity Resolution ==[/]")
         t0 = time.perf_counter()
 
         import polars as pl
@@ -100,7 +101,7 @@ def main() -> None:
         log.phase("Entity Resolution", duration_s=t_resolve, detail=res_detail)
 
         # ── Step 3: Graph Embeddings (Node2Vec) ──────────────────────────
-        console.print("\n[bold cyan]== Step 3/7: Graph Embeddings (Node2Vec) ==[/]")
+        console.print("\n[bold cyan]== Step 3/8: Graph Embeddings (Node2Vec) ==[/]")
         t0 = time.perf_counter()
 
         from ilga_graph.ml.node_embedder import run_embedding_pipeline
@@ -114,7 +115,7 @@ def main() -> None:
         )
 
         # ── Step 4: Bill Outcome Scoring ─────────────────────────────────
-        console.print("\n[bold cyan]== Step 4/7: Bill Outcome Prediction ==[/]")
+        console.print("\n[bold cyan]== Step 4/8: Bill Outcome Prediction ==[/]")
         t0 = time.perf_counter()
 
         from ilga_graph.ml.bill_predictor import run_auto
@@ -124,7 +125,7 @@ def main() -> None:
         log.phase("Bill Scoring", duration_s=t_predict, detail=f"{len(df_scores):,} bills")
 
         # ── Step 5: Coalition Discovery ──────────────────────────────────
-        console.print("\n[bold cyan]== Step 5/7: Coalition Discovery ==[/]")
+        console.print("\n[bold cyan]== Step 5/8: Coalition Discovery ==[/]")
         t0 = time.perf_counter()
 
         from ilga_graph.ml.coalitions import run_coalition_discovery
@@ -137,8 +138,37 @@ def main() -> None:
             detail=f"{len(df_coalitions)} members" if len(df_coalitions) > 0 else "skipped",
         )
 
-        # ── Step 6: Anomaly Detection ────────────────────────────────────
-        console.print("\n[bold cyan]== Step 6/7: Anomaly Detection ==[/]")
+        # ── Step 6: Member Value Model ────────────────────────────────────
+        console.print("\n[bold cyan]== Step 6/8: Member Value Model ==[/]")
+        t0 = time.perf_counter()
+
+        member_value_detail = "skipped"
+        try:
+            from ilga_graph.ml.member_value import run_member_value_pipeline
+
+            mv_report, mv_topics = run_member_value_pipeline()
+            if mv_report.n_members > 0:
+                n_under = sum(
+                    1 for p in mv_report.profiles.values() if p.value_label == "Undervalued"
+                )
+                member_value_detail = (
+                    f"{mv_report.n_members} members, "
+                    f"{n_under} undervalued, "
+                    f"R²={mv_report.model_r2:.3f}"
+                )
+            else:
+                member_value_detail = "skipped (no data)"
+        except Exception as e:
+            console.print(f"[dim]Member value model skipped: {e}[/]")
+        t_member_value = time.perf_counter() - t0
+        log.phase(
+            "Member Value",
+            duration_s=t_member_value,
+            detail=member_value_detail,
+        )
+
+        # ── Step 7: Anomaly Detection ────────────────────────────────────
+        console.print("\n[bold cyan]== Step 7/8: Anomaly Detection ==[/]")
         t0 = time.perf_counter()
 
         from ilga_graph.ml.anomaly_detection import run_anomaly_detection
@@ -154,8 +184,8 @@ def main() -> None:
             detail=f"{anomaly_count} flagged" if len(df_anomalies) > 0 else "skipped",
         )
 
-        # ── Step 7: Snapshot predictions for next backtest ───────────────
-        console.print("\n[bold cyan]== Step 7/7: Snapshot Predictions ==[/]")
+        # ── Step 8: Snapshot predictions for next backtest ───────────────
+        console.print("\n[bold cyan]== Step 8/8: Snapshot Predictions ==[/]")
         t0 = time.perf_counter()
 
         from ilga_graph.ml.backtester import snapshot_current_predictions
@@ -215,6 +245,11 @@ def main() -> None:
         "Coalitions",
         (f"{len(df_coalitions)} members clustered" if len(df_coalitions) > 0 else "skipped"),
         f"{t_coalitions:.1f}s",
+    )
+    summary.add_row(
+        "Member Value",
+        member_value_detail,
+        f"{t_member_value:.1f}s",
     )
     anomaly_count = len(df_anomalies.filter(pl.col("is_anomaly"))) if len(df_anomalies) > 0 else 0
     summary.add_row(

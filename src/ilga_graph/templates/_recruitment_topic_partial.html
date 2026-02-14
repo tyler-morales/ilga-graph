@@ -1,0 +1,72 @@
+{# HTMX partial: per-topic recruitment rankings #}
+
+{% if not rankings %}
+<p class="intel-empty-tab">No recruitment data available for {{ topic }}.</p>
+{% else %}
+
+<h3>{{ topic }} &mdash; Top Recruitment Targets</h3>
+<p class="intel-subtitle" style="margin-bottom: 1em;">
+    Ranked by composite: Affinity (35%) + Predicted Effectiveness (30%) + Persuadability (20%) + Network Reach (15%).
+    <strong>Swing</strong> and <strong>Lean Support</strong> members with high predicted effectiveness rank highest.
+</p>
+
+<table class="intel-table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Party</th>
+            <th>Chamber</th>
+            <th>Score</th>
+            <th>Tier</th>
+            <th title="Topic YES rate">Affinity</th>
+            <th title="ML-predicted effectiveness (normalized)">Eff.</th>
+            <th title="Persuadability (Swing=100%, Champion=20%)">Persu.</th>
+            <th title="Betweenness centrality (normalized)">Network</th>
+            <th>Value</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in rankings %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td><a href="/intelligence/member/{{ r.member_id }}"><strong>{{ r.member_name }}</strong></a></td>
+            <td>{{ r.party }}</td>
+            <td>{{ r.chamber }}</td>
+            <td>
+                <div class="score-bar-container" style="width: 60px; display: inline-block;">
+                    <div class="score-bar {% if r.recruitment_score >= 0.6 %}score-bar-high{% elif r.recruitment_score >= 0.4 %}score-bar-moderate{% else %}score-bar-low{% endif %}"
+                         style="width: {{ (r.recruitment_score * 100)|int }}%;"></div>
+                </div>
+                <strong>{{ "%.2f"|format(r.recruitment_score) }}</strong>
+            </td>
+            <td>
+                <span class="tier-badge tier-{{ r.coalition_tier|lower|replace(' ', '-') }}">{{ r.coalition_tier }}</span>
+            </td>
+            <td>{{ "%.0f"|format(r.affinity_score * 100) }}%</td>
+            <td>{{ "%.0f"|format(r.effectiveness_score * 100) }}%</td>
+            <td>{{ "%.0f"|format(r.persuadability_score * 100) }}%</td>
+            <td>{{ "%.0f"|format(r.network_reach * 100) }}%</td>
+            <td>
+                <span class="value-badge value-{{ r.value_label|lower|replace(' ', '-') }}">{{ r.value_label }}</span>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<style>
+    .tier-badge {
+        display: inline-block;
+        font-size: 0.7em;
+        font-weight: bold;
+        padding: 2px 6px;
+        border-radius: 3px;
+    }
+    .tier-champion { background: #d4edda; color: #155724; border: 1px solid #28a745; }
+    .tier-lean-support { background: #e8f4fd; color: #1a5276; border: 1px solid #3498db; }
+    .tier-swing { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
+    .tier-lean-oppose { background: #fde8e8; color: #721c24; border: 1px solid #e74c3c; }
+    .tier-oppose { background: #f5c6cb; color: #721c24; border: 1px solid #c0392b; }
+</style>
+{% endif %}

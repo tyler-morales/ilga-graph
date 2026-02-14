@@ -41,11 +41,18 @@ class SHAPExplainer:
 
         self._model = raw_model
         self._explainer = shap.TreeExplainer(raw_model)
-        self._expected_value = float(
-            self._explainer.expected_value
-            if np.isscalar(self._explainer.expected_value)
-            else self._explainer.expected_value[1]
-        )
+        # expected_value can be: a Python scalar, a 1-element numpy array
+        # (binary GBM produces a single log-odds margin), or a 2-element
+        # array (per-class).  Extract the class-1 value in all cases.
+        ev = self._explainer.expected_value
+        if np.isscalar(ev):
+            self._expected_value = float(ev)
+        elif hasattr(ev, "__len__") and len(ev) > 1:
+            # Per-class array: take class 1
+            self._expected_value = float(ev[1])
+        else:
+            # 1-element array or 0-d array
+            self._expected_value = float(np.asarray(ev).item())
         LOGGER.info(
             "SHAPExplainer initialised (base log-odds=%.4f, base prob=%.2f%%)",
             self._expected_value,
@@ -76,19 +83,18 @@ class SHAPExplainer:
         dict with keys ``base_value``, ``top_positive_factors``,
         ``top_negative_factors``.
         """
-        # Ensure 2-D for the explainer
+        # Convert to dense float64 2-D array — SHAP's TreeExplainer
+        # calls np.isnan() which requires a numeric dtype, but the
+        # sparse feature matrix can be dtype('O') when TF-IDF and
+        # tabular columns are hstacked with mixed types.
         from scipy import sparse as sp
 
         if sp.issparse(bill_features):
-            if bill_features.ndim == 1 or (
-                hasattr(bill_features, "shape") and len(bill_features.shape) == 1
-            ):
-                bill_features = bill_features.reshape(1, -1)
-            row = bill_features
+            row = np.asarray(bill_features.todense(), dtype=np.float64)
         else:
-            row = np.asarray(bill_features)
-            if row.ndim == 1:
-                row = row.reshape(1, -1)
+            row = np.asarray(bill_features, dtype=np.float64)
+        if row.ndim == 1:
+            row = row.reshape(1, -1)
 
         # Raw SHAP values (log-odds space)
         shap_values = self._explainer.shap_values(row)
@@ -132,6 +138,7 @@ class SHAPExplainer:
                         "feature": human,
                         "impact": f"{sign}{pct:.1f}%",
                         "raw_impact": round(impact, 6),
+                        "raw_feature": raw_name,
                     }
                 )
             return results

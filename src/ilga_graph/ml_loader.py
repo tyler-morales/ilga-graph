@@ -111,6 +111,23 @@ class AccuracyRun:
 
 
 @dataclass
+class MemberValueScore:
+    """Loaded member value profile for API/template use."""
+
+    member_id: str
+    member_name: str
+    party: str
+    chamber: str
+    predicted_effectiveness: float = 0.0
+    actual_effectiveness: float = 0.0
+    value_residual: float = 0.0
+    value_percentile: int = 50
+    value_label: str = "Fairly Valued"
+    moneyball_score: float = 0.0
+    top_recruitment_topics: list[str] = field(default_factory=list)
+
+
+@dataclass
 class MLData:
     bill_scores: list[BillScore] = field(default_factory=list)
     coalitions: list[CoalitionMember] = field(default_factory=list)
@@ -126,6 +143,10 @@ class MLData:
     feature_bill_ids: list[str] = field(default_factory=list)
     feature_names: list[str] = field(default_factory=list)
     _bill_id_to_row: dict[str, int] = field(default_factory=dict)
+    # Member value model (v10)
+    member_value_scores: dict[str, MemberValueScore] = field(default_factory=dict)
+    topic_recruitment: dict[str, list[dict]] = field(default_factory=dict)
+    member_value_meta: dict = field(default_factory=dict)
 
 
 def load_ml_data() -> MLData:
@@ -331,6 +352,57 @@ def load_ml_data() -> MLData:
             "SHAP artifacts not found -- run 'make ml-run' to generate. "
             "Prediction explanations will be unavailable."
         )
+
+    # ── Member value scores ──────────────────────────────────────────
+    value_path = PROCESSED_DIR / "member_value_scores.parquet"
+    if value_path.exists():
+        try:
+            df = pl.read_parquet(value_path)
+            for r in df.to_dicts():
+                mid = r.get("member_id", "")
+                topics_raw = r.get("top_recruitment_topics", "")
+                topics = (
+                    [t.strip() for t in topics_raw.split(",") if t.strip()] if topics_raw else []
+                )
+                data.member_value_scores[mid] = MemberValueScore(
+                    member_id=mid,
+                    member_name=r.get("member_name", ""),
+                    party=r.get("party", ""),
+                    chamber=r.get("chamber", ""),
+                    predicted_effectiveness=r.get("predicted_effectiveness", 0.0),
+                    actual_effectiveness=r.get("actual_effectiveness", 0.0),
+                    value_residual=r.get("value_residual", 0.0),
+                    value_percentile=int(r.get("value_percentile", 50)),
+                    value_label=r.get("value_label", "Fairly Valued"),
+                    moneyball_score=r.get("moneyball_score", 0.0),
+                    top_recruitment_topics=topics,
+                )
+            LOGGER.info(
+                "Loaded %d member value scores",
+                len(data.member_value_scores),
+            )
+        except Exception:
+            LOGGER.exception("Failed to load member value scores")
+
+    # ── Topic recruitment rankings ────────────────────────────────────
+    recruit_path = PROCESSED_DIR / "member_recruitment.json"
+    if recruit_path.exists():
+        try:
+            with open(recruit_path) as f:
+                recruit_raw = json.load(f)
+            data.member_value_meta = {
+                "model_r2": recruit_raw.get("model_r2", 0.0),
+                "model_mae": recruit_raw.get("model_mae", 0.0),
+                "n_members": recruit_raw.get("n_members", 0),
+                "n_features": recruit_raw.get("n_features", 0),
+            }
+            data.topic_recruitment = recruit_raw.get("topics", {})
+            LOGGER.info(
+                "Loaded recruitment rankings for %d topics",
+                len(data.topic_recruitment),
+            )
+        except Exception:
+            LOGGER.exception("Failed to load recruitment rankings")
 
     # ── Last run date ────────────────────────────────────────────────
     import os

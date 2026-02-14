@@ -6,6 +6,55 @@
 
 ## Current
 
+- **Lint fixes (2026-02-14):**
+  - `src/ilga_graph/ml/features.py`: Defined missing `ft_tfidf_id_to_idx` in both `build_feature_matrix()` and panel path (same row order as `tfidf_bill_ids`) so full-text TF-IDF lookup is in scope when `_ft_has_features` is true.
+  - `src/ilga_graph/ml/member_value.py`: Removed unused `tier_name` assignment in topic-coalition tier loop (F841).
+
+- **Member Value Model — Undervalued/Overvalued Detection + Issue Recruiter (2026-02-14):**
+  - **Problem:** Moneyball (0-100) and Influence (0-100) scores are handcrafted weighted composites. They identify who IS effective, but not who COULD BE effective. Advocacy teams need to know: "Which legislators have the structural position and topic alignment to move the needle on my issue, but aren't on anyone's radar?"
+  - **Solution — ML-based value model:** Train a Ridge Regression model (with Leave-One-Out CV for robustness on N~180) to predict legislative effectiveness from structural features, then compare predicted vs. actual to surface undervalued members. Combine with topic coalition data for issue-specific recruitment rankings.
+  - **New module — `src/ilga_graph/ml/member_value.py`:**
+    - `MemberValueProfile` dataclass: predicted_effectiveness, actual_effectiveness, value_residual, value_percentile, value_label (Undervalued/Fairly Valued/Overvalued), top_recruitment_topics.
+    - `TopicRecruitmentScore` dataclass: per-member-per-topic composite of affinity (35%), predicted effectiveness (30%), persuadability (20%), network reach (15%).
+    - `build_member_feature_matrix()`: Assembles features from Node2Vec embeddings (PCA-reduced to 8 dims), Moneyball network metrics (centrality, betweenness, collaborators), demographics (party, chamber, career tenure), institutional role (leadership, committee chair), topic YES rates. ~33 features for 180 members.
+    - `train_value_model()`: Ridge regression with LOO-CV. Clips predictions to [0,1]. Reports R-squared and MAE.
+    - `compute_value_scores()`: Orchestrator — builds features, trains model, computes residuals, assigns labels via percentile thresholds.
+    - `compute_recruitment_rankings()`: Per-topic scoring. Swing-tier members with high predicted effectiveness rank highest — they're the "gettable and capable" targets.
+    - `run_member_value_pipeline()`: Single entry point for the ML pipeline step.
+  - **Pipeline integration — `scripts/ml_run.py`:**
+    - New Step 6 (after Coalition Discovery, before Anomaly Detection). Pipeline is now 9 steps (0-8).
+    - Loads Moneyball from `cache/moneyball.json`, embeddings, dim_members, topic_coalitions.
+    - Saves `processed/member_value_scores.parquet` and `processed/member_recruitment.json`.
+  - **ML Loader — `src/ilga_graph/ml_loader.py`:**
+    - New `MemberValueScore` dataclass. `MLData` extended with `member_value_scores`, `topic_recruitment`, `member_value_meta`.
+    - Loaded at startup alongside other ML artifacts.
+  - **API routes — `src/ilga_graph/main.py`:**
+    - `GET /intelligence/recruitment` — full recruitment page with value leaderboard + topic selector.
+    - `GET /intelligence/recruitment/{topic}` — HTMX partial with per-topic ranked member list.
+    - Extended `GET /intelligence/member/{member_id}` — "Value Assessment" card with predicted vs actual effectiveness, residual, value label, and top recruitment topics.
+  - **Templates:**
+    - `intelligence_recruitment.html` (NEW): Value leaderboard table (filterable by value label/chamber), topic selector with HTMX-loaded per-topic results.
+    - `_recruitment_topic_partial.html` (NEW): Per-topic table with recruitment score breakdown (affinity, effectiveness, persuadability, network), coalition tier badge, value label.
+    - `intelligence_member.html`: New "Value Assessment" section between Moneyball and Notable Bills.
+    - `intelligence_summary.html`: Added "Issue Recruiter" nav link.
+    - `base.html`: Added value badge CSS (.value-undervalued, .value-fairly-valued, .value-overvalued).
+  - **Design decisions:**
+    - Ridge Regression over GradientBoosting: N=180 would overfit with tree ensembles. Ridge + LOO-CV provides robust estimates.
+    - PCA on embeddings: Reduces 64-dim Node2Vec to 8 components before combining with ~25 tabular features. Prevents curse of dimensionality.
+    - Persuadability weighting: Swing=1.0, Lean Support=0.7, Lean Oppose=0.5, Champion=0.2, Oppose=0.1. Champions rank low because they're already on your side.
+    - Target variable is effectiveness_rate (laws_passed/laws_filed) from Moneyball — the ground truth outcome.
+  - **Next steps:** Run `make ml-run` to generate value scores and recruitment rankings. Future phases: Member-Bill Recommender (collaborative filtering), cross-session prediction, vote prediction.
+
+- **Full-text leakage fix — advance model (2026-02-14):**
+  - **Problem:** The advance model's top feature importance was dominated by `ft_tfidf_*` features — specifically session-year proxies like "2025" and post-hoc bill-text artifacts ("enrolled", LRB numbers). These leaked outcome information: a bill whose full text says "enrolled" has obviously already passed. The Forecast model already excluded full-text, but the advance model still used it, getting ~50% of its feature importance from full-text TF-IDF.
+  - **Fix:** Excluded full-text TF-IDF and full-text-derived content metadata from **all** model modes (advance + forecast), not just forecast.
+  - **Changes:**
+    - `src/ilga_graph/ml/features.py`: New constant `FULLTEXT_DROP_COLUMNS` (7 content-metadata columns). Applied unconditionally in both `build_feature_matrix()` and `build_panel_feature_matrix()`. Full-text TF-IDF matrix is now always zero-width (`csr_matrix((n, 0))`), so `ft_tfidf_*` features are never generated.
+    - `build_full_text_features()` still exists (no dead code removed) but is never called during matrix construction.
+    - Full-text PDFs remain in `cache/bills.json` for search, display, and future non-ML use.
+  - **Impact:** After re-running `make ml-run`, the advance model will rely on genuine predictive features (sponsor history, committee dynamics, slip patterns, temporal signals, graph embeddings) instead of text artifacts. SHAP explanations will become more meaningful.
+  - **Next step:** Run `make ml-run` to retrain with the corrected feature set.
+
 - **Bill-to-law process in reference model (2026-02-14):**
   - **Added:** Canonical "How does a bill become law in Illinois?" 6-step overview into the reference model so the codebase and UI use one source of truth.
   - **reference/ilga_rules.json:** New top-level key `bill_to_law_process` — array of 6 steps (Introduction of Bill; Committee Work — Hearings; Committee Work — Markup, Amendments, Report; Floor Debate; Passage and Consideration in Second Chamber; Gubernatorial Action). Each step has `step`, `title`, `body`. Aligns with existing `stages` (FILED → SIGNED/VETOED).

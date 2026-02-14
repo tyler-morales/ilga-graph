@@ -5,6 +5,7 @@
 {% block content %}
 <div class="intel-nav">
     <a href="/intelligence">&larr; Intelligence Overview</a> &middot;
+    <a href="/intelligence/recruitment">Issue Recruiter</a> &middot;
     <a href="/intelligence/raw">Raw Data Tables</a>
 </div>
 
@@ -122,6 +123,52 @@
         <div class="moneyball-badges">
             {% for badge in moneyball.badges %}
             <span class="role-label role-badge">{{ badge }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {# ── Value Assessment ── #}
+    {% if value %}
+    <div class="member-value-assessment">
+        <h2>Value Assessment</h2>
+        <p class="story-subtitle">
+            ML model predicts legislative effectiveness from network position, demographics, and topic profile,
+            then compares to actual performance.
+            <a href="/intelligence/recruitment">View full recruitment rankings &rarr;</a>
+        </p>
+        <div class="moneyball-grid">
+            <div class="moneyball-stat">
+                <span class="moneyball-value">{{ "%.0f"|format(value.predicted_effectiveness * 100) }}%</span>
+                <span class="moneyball-label">Predicted Effectiveness</span>
+            </div>
+            <div class="moneyball-stat">
+                <span class="moneyball-value">{{ "%.0f"|format(value.actual_effectiveness * 100) }}%</span>
+                <span class="moneyball-label">Actual Effectiveness</span>
+            </div>
+            <div class="moneyball-stat">
+                <span class="moneyball-value">
+                    {% if value.value_residual > 0 %}
+                    <span style="color: #2d8659;">+{{ "%.0f"|format(value.value_residual * 100) }}%</span>
+                    {% elif value.value_residual < 0 %}
+                    <span style="color: #b04040;">{{ "%.0f"|format(value.value_residual * 100) }}%</span>
+                    {% else %}0%{% endif %}
+                </span>
+                <span class="moneyball-label">Residual</span>
+            </div>
+            <div class="moneyball-stat">
+                <span class="moneyball-value">
+                    <span class="value-badge value-{{ value.value_label|lower|replace(' ', '-') }}">{{ value.value_label }}</span>
+                </span>
+                <span class="moneyball-label">Value Pctl: {{ value.value_percentile }}</span>
+            </div>
+        </div>
+        {% if value.top_recruitment_topics %}
+        <div style="margin-top: 0.8em;">
+            <strong>Best topics to recruit for:</strong>
+            {% for t in value.top_recruitment_topics %}
+            <span class="influence-signal-tag">{{ t }}</span>
             {% endfor %}
         </div>
         {% endif %}

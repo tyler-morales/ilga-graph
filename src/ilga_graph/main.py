@@ -6,6 +6,7 @@ import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
+from typing import Any
 
 import strawberry
 from fastapi import FastAPI, Form, Request, Response
@@ -3047,6 +3048,98 @@ async def intelligence_influence(request: Request):
     )
 
 
+@app.get("/intelligence/recruitment")
+async def intelligence_recruitment(request: Request):
+    """Topic-specific recruitment recommendations."""
+    ml = state.ml
+    topics: list[dict] = []
+    meta: dict = {}
+    value_scores: list[dict] = []
+
+    if ml and ml.topic_recruitment:
+        meta = ml.member_value_meta or {}
+        for topic_name in sorted(ml.topic_recruitment.keys()):
+            rankings = ml.topic_recruitment[topic_name]
+            topics.append(
+                {
+                    "name": topic_name,
+                    "slug": (topic_name.lower().replace(" ", "-").replace("&", "and")),
+                    "count": len(rankings),
+                }
+            )
+
+    if ml and ml.member_value_scores:
+        sorted_scores = sorted(
+            ml.member_value_scores.values(),
+            key=lambda s: -s.value_residual,
+        )
+        for s in sorted_scores:
+            value_scores.append(
+                {
+                    "member_id": s.member_id,
+                    "member_name": s.member_name,
+                    "party": s.party,
+                    "chamber": s.chamber,
+                    "predicted_effectiveness": s.predicted_effectiveness,
+                    "actual_effectiveness": s.actual_effectiveness,
+                    "value_residual": s.value_residual,
+                    "value_percentile": s.value_percentile,
+                    "value_label": s.value_label,
+                    "moneyball_score": s.moneyball_score,
+                    "top_recruitment_topics": s.top_recruitment_topics,
+                }
+            )
+
+    return templates.TemplateResponse(
+        "intelligence_recruitment.html",
+        {
+            "request": request,
+            "topics": topics,
+            "meta": meta,
+            "value_scores": value_scores,
+        },
+    )
+
+
+@app.get("/intelligence/recruitment/{topic}")
+async def intelligence_recruitment_topic(
+    request: Request,
+    topic: str,
+):
+    """HTMX partial: per-topic recruitment rankings."""
+    ml = state.ml
+    if not ml or not ml.topic_recruitment:
+        return templates.TemplateResponse(
+            "_recruitment_topic_partial.html",
+            {"request": request, "topic": topic, "rankings": []},
+        )
+
+    rankings_raw = ml.topic_recruitment.get(topic, [])
+    rankings = []
+    for r in rankings_raw[:30]:  # top 30
+        rankings.append(
+            {
+                "member_id": r.get("member_id", ""),
+                "member_name": r.get("member_name", ""),
+                "party": r.get("party", ""),
+                "chamber": r.get("chamber", ""),
+                "recruitment_score": r.get("recruitment_score", 0),
+                "affinity_score": r.get("affinity_score", 0),
+                "effectiveness_score": r.get("effectiveness_score", 0),
+                "persuadability_score": r.get("persuadability_score", 0),
+                "network_reach": r.get("network_reach", 0),
+                "coalition_tier": r.get("coalition_tier", ""),
+                "value_label": r.get("value_label", ""),
+                "yes_rate": r.get("yes_rate", 0),
+            }
+        )
+
+    return templates.TemplateResponse(
+        "_recruitment_topic_partial.html",
+        {"request": request, "topic": topic, "rankings": rankings},
+    )
+
+
 # Procedural/routing committees: bills are assigned here after passing substantive
 # committees (e.g. "Referred to Rules * Reports"). "Advanced" in our pipeline
 # means last_action = Do Pass/Reported Out, so these show 0% and are misleading.
@@ -3352,6 +3445,7 @@ async def intelligence_member_detail(request: Request, member_id: str):
                 "narrative": None,
                 "top_bills": [],
                 "coalition": None,
+                "value": None,
             },
         )
 
@@ -3456,12 +3550,26 @@ async def intelligence_member_detail(request: Request, member_id: str):
                 prof = prof_map.get(cm.coalition_id)
                 coalition_members = [m for m in ml.coalitions if m.coalition_id == cm.coalition_id]
                 coalition = {
-                    "name": prof.name if prof else f"Coalition {cm.coalition_id + 1}",
+                    "name": (prof.name if prof else f"Coalition {cm.coalition_id + 1}"),
                     "size": len(coalition_members),
                     "cohesion": prof.cohesion if prof else 0,
                     "focus_areas": prof.focus_areas if prof else [],
                 }
                 break
+
+    # ── Member value assessment ──
+    value_dict = None
+    if ml and ml.member_value_scores:
+        vs = ml.member_value_scores.get(member_id)
+        if vs:
+            value_dict = {
+                "predicted_effectiveness": vs.predicted_effectiveness,
+                "actual_effectiveness": vs.actual_effectiveness,
+                "value_residual": vs.value_residual,
+                "value_percentile": vs.value_percentile,
+                "value_label": vs.value_label,
+                "top_recruitment_topics": vs.top_recruitment_topics,
+            }
 
     return templates.TemplateResponse(
         "intelligence_member.html",
@@ -3473,6 +3581,7 @@ async def intelligence_member_detail(request: Request, member_id: str):
             "narrative": narrative,
             "top_bills": top_bills,
             "coalition": coalition,
+            "value": value_dict,
         },
     )
 
@@ -3643,6 +3752,70 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
 # ── SHAP explanation endpoint (lazy-loaded by HTMX) ─────────────────────
 
 
+def _enrich_explanation_factors(
+    result: dict,
+    bill_id: str,
+    bill: Bill | None,
+    score: Any | None,
+) -> None:
+    """Add concrete bill/score details to explanation factors (e.g. co-sponsor count and names)."""
+    member_by_id = getattr(state, "member_lookup_by_id", None) or {}
+
+    def detail_for(raw_feature: str) -> str | None:
+        if raw_feature == "sponsor_count" and bill and bill.sponsor_ids:
+            # sponsor_ids includes primary; co-sponsors are the rest
+            n = max(0, len(bill.sponsor_ids) - 1)
+            if n == 0:
+                return "0 co-sponsors"
+            names = []
+            for mid in bill.sponsor_ids[1:][:8]:  # skip primary, cap at 8
+                m = member_by_id.get(mid)
+                names.append(m.name if m else f"ID {mid}")
+            if n > len(names):
+                return f"{n} co-sponsors: " + ", ".join(names) + f", and {n - len(names)} more"
+            return f"{n} co-sponsors: " + ", ".join(names)
+
+        if raw_feature == "days_since_last_action" and score is not None:
+            d = getattr(score, "days_since_action", None)
+            if d is not None:
+                return f"{int(d)} days since last movement"
+            if getattr(score, "last_action_text", None):
+                return (score.last_action_text or "")[:50]
+
+        if raw_feature == "days_since_intro" and score is not None:
+            intro = getattr(score, "introduction_date", None)
+            if intro:
+                return f"Introduced {intro}"
+
+        if raw_feature in ("sponsor_party", "sponsor_party_democrat", "sponsor_party_republican"):
+            if bill and bill.primary_sponsor and member_by_id:
+                for mid in (bill.sponsor_ids or [])[:1]:
+                    m = member_by_id.get(mid)
+                    if m:
+                        return m.party or bill.primary_sponsor
+                return bill.primary_sponsor
+            return None
+
+        if raw_feature == "sponsor_hist_passage_rate" and bill and bill.sponsor_ids:
+            primary_id = bill.sponsor_ids[0] if bill.sponsor_ids else None
+            if primary_id and member_by_id.get(primary_id):
+                return f"Primary sponsor: {bill.primary_sponsor}"
+            return None
+
+        return None
+
+    for factors in (
+        result.get("top_positive_factors", []),
+        result.get("top_negative_factors", []),
+    ):
+        for f in factors:
+            raw = f.get("raw_feature")
+            if raw:
+                detail = detail_for(raw)
+                if detail:
+                    f["detail"] = detail
+
+
 @app.get("/api/bills/{bill_id}/explanation")
 async def bill_explanation_fragment(request: Request, bill_id: str):
     """Return an HTML fragment with SHAP prediction drivers for a bill.
@@ -3667,6 +3840,12 @@ async def bill_explanation_fragment(request: Request, bill_id: str):
     try:
         row = ml.feature_matrix[row_idx]
         result = ml.explainer.explain_prediction(row, ml.feature_names)
+        bill = state.bills_lookup.get(bill_id)
+        score = next(
+            (s for s in ml.bill_scores if s.bill_id == bill_id),
+            None,
+        )
+        _enrich_explanation_factors(result, bill_id, bill, score)
         return templates.TemplateResponse(
             "_explanation_partial.html",
             {"request": request, "explanation": result, "reason": None},

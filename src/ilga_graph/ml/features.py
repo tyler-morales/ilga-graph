@@ -130,7 +130,15 @@ FORECAST_DROP_COLUMNS: frozenset[str] = frozenset(
         "was_tabled",
         "on_consent_calendar",
         "has_bipartisan_sponsors",
-        # Full-text-derived features (leak "enrolled" / law outcome; see Forecast audit)
+    }
+)
+
+# Full-text-derived columns are excluded from ALL models (advance + forecast).
+# Full-text TF-IDF carried ~50% of advance model feature importance via session-
+# year proxies ("2025") and post-hoc artifacts ("enrolled", LRB numbers).
+# The raw PDFs remain for search/display; only ML features are removed.
+FULLTEXT_DROP_COLUMNS: frozenset[str] = frozenset(
+    {
         "full_text_word_count",
         "full_text_log_length",
         "full_text_section_count",
@@ -1649,14 +1657,15 @@ def build_feature_matrix(
     tfidf_matrix, vectorizer, tfidf_bill_ids = build_text_features(
         df_bills_sub, max_features=tfidf_features
     )
-    # Forecast mode: exclude full-text TF-IDF to avoid label leakage
-    # ("enrolled"/LRB in final bill text).
-    if is_forecast:
-        ft_tfidf_matrix = csr_matrix((len(df_bills_sub), 0), dtype=np.float32)
-        ft_vectorizer = TfidfVectorizer()
-        ft_tfidf_bill_ids = df_bills_sub["bill_id"].to_list()
-    else:
-        ft_tfidf_matrix, ft_vectorizer, ft_tfidf_bill_ids = build_full_text_features(df_bills_sub)
+    # Full-text TF-IDF is excluded for ALL modes (not just forecast).
+    # The bill full-text contains post-hoc artifacts ("enrolled", "LRB104",
+    # session year "2025") that leak outcome information into the model.
+    # Advance model was getting ~50% of feature importance from ft_tfidf_*
+    # — mostly session-year proxies, not genuine predictive signal.
+    # Full-text PDFs remain available for search/display; only ML features
+    # are removed.  See TODOS.md "Full-text leakage fix (advance model)".
+    ft_tfidf_matrix = csr_matrix((len(df_bills_sub), 0), dtype=np.float32)
+    ft_vectorizer = TfidfVectorizer()
     df_content_meta = build_content_metadata_features(df_bills_sub)
     df_temporal = build_temporal_features(df_bills_sub)
     df_committee = build_committee_features(df_bills_sub, df_actions, df_labels)
@@ -1839,11 +1848,9 @@ def build_feature_matrix(
         100 * pos_test / max(len(y_test), 1),
     )
 
-    # Build bill_id -> tfidf row index (synopsis)
+    # Build bill_id -> tfidf row index (synopsis and full-text share same row order)
     tfidf_id_to_idx = {bid: i for i, bid in enumerate(tfidf_bill_ids)}
-
-    # Build bill_id -> full-text tfidf row index
-    ft_tfidf_id_to_idx = {bid: i for i, bid in enumerate(ft_tfidf_bill_ids)}
+    ft_tfidf_id_to_idx = {bid: i for i, bid in enumerate(tfidf_bill_ids)}
 
     # Extract numeric feature columns (excludes metadata and raw text)
     _exclude = {
@@ -1854,6 +1861,7 @@ def build_feature_matrix(
         "is_mature",
         "full_text",  # raw text column — not a numeric feature
     }
+    _exclude |= FULLTEXT_DROP_COLUMNS  # always drop full-text-derived cols
     if is_forecast:
         _exclude |= FORECAST_DROP_COLUMNS
     feature_cols = [c for c in df_feat.columns if c not in _exclude]
@@ -2143,29 +2151,19 @@ def build_panel_feature_matrix(
         df_bills_sub, max_features=tfidf_features
     )
     tfidf_id_to_idx = {bid: i for i, bid in enumerate(tfidf_bill_ids)}
+    ft_tfidf_id_to_idx = {bid: i for i, bid in enumerate(tfidf_bill_ids)}
     _tfidf_zero = csr_matrix((1, tfidf_matrix.shape[1]), dtype=np.float32)
 
-    # ── Full-text TF-IDF (snapshot-invariant — skip in forecast to avoid leakage) ──────
-    if is_forecast:
-        ft_tfidf_matrix = csr_matrix((len(df_bills_sub), 0), dtype=np.float32)
-        ft_vectorizer = TfidfVectorizer()
-        ft_tfidf_bill_ids = df_bills_sub["bill_id"].to_list()
-        _ft_has_features = False
-        _ft_tfidf_zero = None
-    else:
-        ft_tfidf_matrix, ft_vectorizer, ft_tfidf_bill_ids = build_full_text_features(df_bills_sub)
-        ft_tfidf_id_to_idx = {bid: i for i, bid in enumerate(ft_tfidf_bill_ids)}
-        _ft_has_features = ft_tfidf_matrix.shape[1] > 0
-        _ft_tfidf_zero = (
-            csr_matrix((1, ft_tfidf_matrix.shape[1]), dtype=np.float32)
-            if _ft_has_features
-            else None
-        )
+    # ── Full-text TF-IDF — excluded for ALL modes (same rationale as
+    #    build_feature_matrix: leaks "enrolled" / session-year proxies).
+    ft_tfidf_matrix = csr_matrix((len(df_bills_sub), 0), dtype=np.float32)
+    ft_vectorizer = TfidfVectorizer()
+    _ft_has_features = False
+    _ft_tfidf_zero = None
 
-    # ── Content metadata (snapshot-invariant; skip in forecast — full-text-derived) ────
-    df_content_meta = (
-        pl.DataFrame() if is_forecast else build_content_metadata_features(df_bills_sub)
-    )
+    # Content metadata columns are still built (some downstream code
+    # may reference them) but are excluded via FULLTEXT_DROP_COLUMNS.
+    df_content_meta = build_content_metadata_features(df_bills_sub)
 
     # ── Sponsor embeddings (snapshot-invariant — graph structure is static) ────
     df_embeddings = build_embedding_features(df_bills_sub)
@@ -2295,7 +2293,7 @@ def build_panel_feature_matrix(
     )
 
     # ── Feature columns ──────────────────────────────────────────────────
-    _exclude_panel = _NON_FEATURE_COLS
+    _exclude_panel = _NON_FEATURE_COLS | FULLTEXT_DROP_COLUMNS
     if is_forecast:
         _exclude_panel = _exclude_panel | FORECAST_DROP_COLUMNS
     feature_cols = [c for c in df_panel.columns if c not in _exclude_panel]
