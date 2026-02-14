@@ -1,0 +1,980 @@
+{% extends "base.html" %}
+{% block title %}Legislative Power Map{% endblock %}
+{% block content %}
+<style>
+    /* ── Explore page overrides ── */
+    .container {
+        max-width: 100%;
+        padding: 0;
+        border: none;
+        background: #f4f4f0;
+    }
+
+    .explore-wrapper {
+        display: flex;
+        height: calc(100vh - 40px);
+        background: #fff;
+        border: 1px solid #ccc;
+    }
+
+    /* ── Left control panel ── */
+    .explore-controls {
+        width: 280px;
+        flex-shrink: 0;
+        border-right: 1px solid #ccc;
+        background: #fafaf8;
+        overflow-y: auto;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .explore-title {
+        font-size: 1.15em;
+        font-weight: bold;
+        margin: 0 0 2px 0;
+        color: #222;
+    }
+
+    .explore-subtitle {
+        font-size: 0.82em;
+        color: #666;
+        line-height: 1.4;
+        margin: 0 0 6px 0;
+    }
+
+    .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .control-group label {
+        font-size: 0.82em;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #555;
+    }
+
+    .control-group select,
+    .control-group input[type="text"] {
+        font-size: 0.92em;
+        padding: 6px 8px;
+        border: 1px solid #aaa;
+        background: #fff;
+        font-family: Georgia, serif;
+        width: 100%;
+    }
+
+    .control-group select:focus,
+    .control-group input[type="text"]:focus {
+        outline: 2px solid #3a6eb5;
+        outline-offset: -1px;
+    }
+
+    .zip-row {
+        display: flex;
+        gap: 6px;
+    }
+
+    .zip-row input {
+        flex: 1;
+    }
+
+    .zip-row button {
+        font-size: 0.85em;
+        padding: 6px 12px;
+        background: #333;
+        color: #fff;
+        border: 1px solid #111;
+        cursor: pointer;
+        font-family: Georgia, serif;
+        white-space: nowrap;
+    }
+
+    .zip-row button:hover {
+        background: #555;
+    }
+
+    /* ── Legend ── */
+    .legend {
+        border: 1px solid #ddd;
+        padding: 10px;
+        background: #fff;
+        font-size: 0.8em;
+    }
+
+    .legend-title {
+        font-weight: bold;
+        font-size: 0.9em;
+        margin-bottom: 6px;
+        color: #444;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 3px 0;
+    }
+
+    .legend-circle {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .legend-circle-dem { background: #3366aa; }
+    .legend-circle-rep { background: #cc3333; }
+    .legend-circle-other { background: #888; }
+    .legend-circle-yours {
+        background: #fff;
+        border: 3px solid #d4a017;
+    }
+
+    .legend-size-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 3px 0;
+    }
+
+    .legend-circle-sm {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #999;
+    }
+
+    .legend-circle-lg {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #999;
+    }
+
+    /* ── Nav links ── */
+    .explore-nav {
+        font-size: 0.82em;
+        padding-top: 8px;
+        border-top: 1px solid #ddd;
+    }
+
+    .explore-nav a {
+        display: block;
+        padding: 3px 0;
+        color: #0645ad;
+        text-decoration: none;
+    }
+
+    .explore-nav a:hover {
+        text-decoration: underline;
+    }
+
+    /* ── Graph container ── */
+    .graph-container {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+        background: #fff;
+    }
+
+    .graph-container svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+
+    /* ── Tooltip ── */
+    .graph-tooltip {
+        position: absolute;
+        pointer-events: none;
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid #aaa;
+        padding: 8px 12px;
+        font-size: 0.82em;
+        line-height: 1.45;
+        max-width: 280px;
+        z-index: 10;
+        display: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+
+    .tooltip-name {
+        font-weight: bold;
+        font-size: 1.05em;
+        margin-bottom: 2px;
+    }
+
+    .tooltip-role {
+        color: #666;
+        font-size: 0.92em;
+    }
+
+    .tooltip-stat {
+        margin-top: 4px;
+        color: #444;
+    }
+
+    /* ── Detail panel (right side) ── */
+    .detail-panel {
+        width: 320px;
+        flex-shrink: 0;
+        border-left: 1px solid #ccc;
+        background: #fafaf8;
+        overflow-y: auto;
+        padding: 16px;
+        display: none;
+    }
+
+    .detail-panel.open {
+        display: block;
+    }
+
+    .detail-close {
+        float: right;
+        cursor: pointer;
+        font-size: 1.1em;
+        color: #888;
+        background: none;
+        border: none;
+        font-family: Georgia, serif;
+        padding: 0 4px;
+    }
+
+    .detail-close:hover {
+        color: #333;
+    }
+
+    .detail-name {
+        font-size: 1.15em;
+        font-weight: bold;
+        margin: 0 0 2px 0;
+    }
+
+    .detail-meta {
+        font-size: 0.85em;
+        color: #666;
+        margin-bottom: 10px;
+    }
+
+    .detail-section {
+        margin: 12px 0;
+        padding: 10px;
+        background: #fff;
+        border: 1px solid #ddd;
+    }
+
+    .detail-section-title {
+        font-size: 0.82em;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #555;
+        margin-bottom: 6px;
+    }
+
+    .detail-stat-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        font-size: 0.88em;
+    }
+
+    .detail-stat-list li {
+        padding: 2px 0;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .detail-stat-value {
+        font-weight: bold;
+        color: #333;
+    }
+
+    .detail-influence-bar {
+        height: 8px;
+        background: #eee;
+        border: 1px solid #ccc;
+        margin: 6px 0;
+    }
+
+    .detail-influence-fill {
+        height: 100%;
+    }
+
+    .detail-fill-high { background: #2d8659; }
+    .detail-fill-moderate { background: #c09020; }
+    .detail-fill-low { background: #b04040; }
+
+    .detail-committees {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        font-size: 0.85em;
+    }
+
+    .detail-committees li {
+        padding: 2px 0;
+    }
+
+    .detail-committee-role {
+        font-weight: bold;
+        color: #7b5b2a;
+        font-size: 0.85em;
+    }
+
+    .detail-signals {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        font-size: 0.85em;
+    }
+
+    .detail-signals li {
+        padding: 2px 0;
+        color: #1a4d8f;
+    }
+
+    .detail-signals li::before {
+        content: "\2022 ";
+        color: #999;
+    }
+
+    .detail-link {
+        display: inline-block;
+        margin-top: 8px;
+        font-size: 0.85em;
+        color: #0645ad;
+    }
+
+    /* ── Status bar ── */
+    .graph-status {
+        position: absolute;
+        bottom: 12px;
+        left: 12px;
+        font-size: 0.78em;
+        color: #888;
+        background: rgba(255,255,255,0.9);
+        padding: 4px 8px;
+        border: 1px solid #ddd;
+    }
+
+    /* ── Loading state ── */
+    .graph-loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1em;
+        color: #888;
+        font-style: italic;
+    }
+
+    /* ── Topic highlight badge on graph ── */
+    .topic-active-badge {
+        display: none;
+        font-size: 0.78em;
+        padding: 4px 10px;
+        background: #e8eef5;
+        border: 1px solid #c0cde0;
+        color: #345;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .topic-active-badge.visible {
+        display: inline-block;
+    }
+</style>
+
+<div class="explore-wrapper">
+    <!-- Left control panel -->
+    <div class="explore-controls">
+        <div>
+            <h1 class="explore-title">Legislative Power Map</h1>
+            <p class="explore-subtitle">
+                See who holds power, how they're connected, and where your voice fits in.
+            </p>
+        </div>
+
+        <div class="control-group">
+            <label for="topic-select">Filter by topic</label>
+            <select id="topic-select">
+                {% for val, label in categories %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+            <span class="topic-active-badge" id="topic-badge"></span>
+        </div>
+
+        <div class="control-group">
+            <label for="zip-input">Your ZIP code (optional)</label>
+            <div class="zip-row">
+                <input type="text" id="zip-input" placeholder="e.g. 60601"
+                    maxlength="5" pattern="[0-9]{5}">
+                <button id="zip-btn" type="button">Find</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label for="focus-select">Show</label>
+            <select id="focus-select">
+                <option value="relevant" selected>Relevant only (topic committee + yours, or top influence)</option>
+                <option value="all">All 180 legislators</option>
+            </select>
+        </div>
+
+        <div class="legend">
+            <div class="legend-title">Legend</div>
+            <div class="legend-item">
+                <span class="legend-circle legend-circle-dem"></span>
+                Democrat
+            </div>
+            <div class="legend-item">
+                <span class="legend-circle legend-circle-rep"></span>
+                Republican
+            </div>
+            <div class="legend-item">
+                <span class="legend-circle legend-circle-other"></span>
+                Other
+            </div>
+            <div class="legend-item">
+                <span class="legend-circle legend-circle-yours"></span>
+                Your legislator
+            </div>
+            <div style="margin-top: 6px; color: #666;">
+                <div class="legend-size-row">
+                    <span class="legend-circle-sm"></span>
+                    <span style="margin-right: 8px;">Low influence</span>
+                    <span class="legend-circle-lg"></span>
+                    High influence
+                </div>
+            </div>
+        </div>
+
+        <div class="explore-nav">
+            <a href="/advocacy">Advocacy Targets (ZIP lookup)</a>
+            <a href="/intelligence">ML Intelligence Dashboard</a>
+        </div>
+    </div>
+
+    <!-- Graph canvas -->
+    <div class="graph-container" id="graph-container">
+        <div class="graph-loading" id="graph-loading">Loading legislative graph...</div>
+        <div class="graph-tooltip" id="graph-tooltip"></div>
+        <div class="graph-status" id="graph-status"></div>
+    </div>
+
+    <!-- Right detail panel -->
+    <div class="detail-panel" id="detail-panel">
+        <button class="detail-close" id="detail-close" title="Close">&times;</button>
+        <div id="detail-content"></div>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+(function () {
+    "use strict";
+
+    // ── Constants ────────────────────────────────────────────────────────
+    const PARTY_COLORS = { D: "#3366aa", R: "#cc3333" };
+    const DEFAULT_COLOR = "#888";
+    const YOUR_LEGISLATOR_STROKE = "#d4a017";
+    const TOPIC_RELEVANT_STROKE = "#3a6eb5";
+    const DIM_OPACITY = 0.12;
+    const EDGE_OPACITY = 0.08;
+    const EDGE_TOPIC_OPACITY = 0.25;
+    const MIN_RADIUS = 2;
+    const MAX_RADIUS = 34;
+    const INFLUENCE_SCALE_EXPONENT = 1.8; // >1 makes high-influence nodes much larger
+    const LABEL_THRESHOLD = 15; // top N nodes get permanent labels
+
+    // ── DOM refs ─────────────────────────────────────────────────────────
+    const container = document.getElementById("graph-container");
+    const tooltip = document.getElementById("graph-tooltip");
+    const statusEl = document.getElementById("graph-status");
+    const loadingEl = document.getElementById("graph-loading");
+    const topicSelect = document.getElementById("topic-select");
+    const zipInput = document.getElementById("zip-input");
+    const zipBtn = document.getElementById("zip-btn");
+    const focusSelect = document.getElementById("focus-select");
+    const topicBadge = document.getElementById("topic-badge");
+    const detailPanel = document.getElementById("detail-panel");
+    const detailContent = document.getElementById("detail-content");
+    const detailClose = document.getElementById("detail-close");
+
+    // ── State ────────────────────────────────────────────────────────────
+    let graphData = null;
+    let simulation = null;
+    let svg, g, linkGroup, nodeGroup, labelGroup;
+    let currentTopic = "";
+    let currentZip = "";
+    let currentFocus = "relevant";
+    let width, height;
+
+    // ── Scales ───────────────────────────────────────────────────────────
+    // Power scale (exponent > 1) makes high-influence nodes visually dominant
+    const radiusScale = d3.scalePow()
+        .exponent(INFLUENCE_SCALE_EXPONENT)
+        .range([MIN_RADIUS, MAX_RADIUS]);
+
+    function nodeColor(d) {
+        return PARTY_COLORS[d.party] || DEFAULT_COLOR;
+    }
+
+    function nodeRadius(d) {
+        return radiusScale(d.influence_score || 0);
+    }
+
+    // ── Init SVG ─────────────────────────────────────────────────────────
+    function initSVG() {
+        const rect = container.getBoundingClientRect();
+        width = rect.width;
+        height = rect.height;
+
+        svg = d3.select(container)
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.2, 5])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Click on background to deselect
+        svg.on("click", (event) => {
+            if (event.target === svg.node()) {
+                closeDetail();
+            }
+        });
+
+        g = svg.append("g");
+        linkGroup = g.append("g").attr("class", "links");
+        nodeGroup = g.append("g").attr("class", "nodes");
+        labelGroup = g.append("g").attr("class", "labels");
+    }
+
+    // ── Fetch data ───────────────────────────────────────────────────────
+    async function fetchGraph(topic, zip, focus) {
+        const params = new URLSearchParams();
+        if (topic) params.set("topic", topic);
+        if (zip) params.set("zip", zip);
+        if (focus) params.set("focus", focus);
+        const url = "/api/graph" + (params.toString() ? "?" + params : "");
+        const resp = await fetch(url);
+        return resp.json();
+    }
+
+    // ── Build / update graph ─────────────────────────────────────────────
+    function buildGraph(data) {
+        graphData = data;
+        const nodes = data.nodes;
+        const edges = data.edges;
+
+        loadingEl.style.display = "none";
+
+        // Update radius scale domain
+        const maxInfluence = d3.max(nodes, d => d.influence_score) || 1;
+        radiusScale.domain([0, maxInfluence]);
+
+        // Track which nodes exist for edge filtering
+        const nodeIds = new Set(nodes.map(d => d.id));
+
+        // Filter edges to only those connecting present nodes
+        const validEdges = edges.filter(e =>
+            nodeIds.has(e.source) && nodeIds.has(e.target)
+        );
+
+        // Determine topic-relevant and your-legislator sets
+        const topicIds = new Set(nodes.filter(d => d.is_topic_relevant).map(d => d.id));
+        const yourIds = new Set();
+        if (data.your_legislators.senator) yourIds.add(data.your_legislators.senator);
+        if (data.your_legislators.representative) yourIds.add(data.your_legislators.representative);
+        const hasTopic = topicIds.size > 0;
+
+        // ── Sort nodes so important ones render on top ──
+        nodes.sort((a, b) => a.influence_score - b.influence_score);
+
+        // ── Links ──
+        const links = linkGroup.selectAll("line")
+            .data(validEdges, d => d.source + "-" + d.target);
+
+        links.exit().remove();
+
+        const linksEnter = links.enter()
+            .append("line")
+            .attr("stroke", "#999")
+            .attr("stroke-width", 0.5);
+
+        const allLinks = linksEnter.merge(links);
+
+        // Set edge opacity based on context
+        allLinks.attr("stroke-opacity", d => {
+            if (!hasTopic) return EDGE_OPACITY;
+            const sid = typeof d.source === "object" ? d.source.id : d.source;
+            const tid = typeof d.target === "object" ? d.target.id : d.target;
+            if (topicIds.has(sid) || topicIds.has(tid) ||
+                yourIds.has(sid) || yourIds.has(tid)) {
+                return EDGE_TOPIC_OPACITY;
+            }
+            return EDGE_OPACITY * 0.3;
+        });
+
+        // ── Nodes ──
+        const nodesSel = nodeGroup.selectAll("circle")
+            .data(nodes, d => d.id);
+
+        nodesSel.exit().remove();
+
+        const nodesEnter = nodesSel.enter()
+            .append("circle")
+            .attr("cursor", "pointer")
+            .call(d3.drag()
+                .on("start", dragStarted)
+                .on("drag", dragged)
+                .on("end", dragEnded)
+            )
+            .on("mouseover", showTooltip)
+            .on("mousemove", moveTooltip)
+            .on("mouseout", hideTooltip)
+            .on("click", (event, d) => {
+                event.stopPropagation();
+                showDetail(d);
+            });
+
+        const allNodes = nodesEnter.merge(nodesSel);
+
+        allNodes
+            .attr("r", d => nodeRadius(d))
+            .attr("fill", d => nodeColor(d))
+            .attr("stroke", d => {
+                if (yourIds.has(d.id)) return YOUR_LEGISLATOR_STROKE;
+                if (hasTopic && d.is_topic_relevant) return TOPIC_RELEVANT_STROKE;
+                return "#fff";
+            })
+            .attr("stroke-width", d => {
+                if (yourIds.has(d.id)) return 3;
+                if (hasTopic && d.is_topic_relevant) return 2;
+                return 1;
+            })
+            .attr("opacity", d => {
+                if (!hasTopic) return 0.9;
+                if (d.is_topic_relevant || yourIds.has(d.id)) return 1.0;
+                return DIM_OPACITY;
+            });
+
+        // ── Labels (top N by influence + your legislators + topic leaders) ──
+        const labelNodes = nodes.slice().sort((a, b) =>
+            b.influence_score - a.influence_score
+        );
+        const alwaysLabel = new Set([...yourIds]);
+        // Top N
+        labelNodes.slice(0, LABEL_THRESHOLD).forEach(d => alwaysLabel.add(d.id));
+        // Topic committee chairs
+        if (hasTopic) {
+            nodes.forEach(d => {
+                if (d.is_topic_relevant && d.committees.some(c => c.is_leadership)) {
+                    alwaysLabel.add(d.id);
+                }
+            });
+        }
+
+        const labelsData = nodes.filter(d => alwaysLabel.has(d.id));
+        const labelsSel = labelGroup.selectAll("text")
+            .data(labelsData, d => d.id);
+
+        labelsSel.exit().remove();
+
+        const labelsEnter = labelsSel.enter()
+            .append("text")
+            .attr("font-size", "9px")
+            .attr("font-family", "Georgia, serif")
+            .attr("text-anchor", "middle")
+            .attr("pointer-events", "none")
+            .attr("dy", d => -nodeRadius(d) - 3);
+
+        const allLabels = labelsEnter.merge(labelsSel);
+
+        allLabels
+            .text(d => {
+                // Short name: last name
+                const parts = d.name.split(",");
+                return parts[0].trim();
+            })
+            .attr("fill", d => {
+                if (yourIds.has(d.id)) return YOUR_LEGISLATOR_STROKE;
+                return "#333";
+            })
+            .attr("font-weight", d => yourIds.has(d.id) ? "bold" : "normal")
+            .attr("opacity", d => {
+                if (!hasTopic) return 0.85;
+                if (d.is_topic_relevant || yourIds.has(d.id)) return 1.0;
+                return DIM_OPACITY;
+            });
+
+        // ── Force simulation ──
+        if (simulation) simulation.stop();
+
+        simulation = d3.forceSimulation(nodes)
+            .force("link", d3.forceLink(validEdges)
+                .id(d => d.id)
+                .distance(80)
+                .strength(0.1)
+            )
+            .force("charge", d3.forceManyBody()
+                .strength(-60)
+            )
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("collide", d3.forceCollide()
+                .radius(d => nodeRadius(d) + 2)
+                .strength(0.7)
+            )
+            .force("y", d3.forceY()
+                .y(d => {
+                    // Higher influence -> higher on screen (lower Y value)
+                    const t = radiusScale.domain()[1] > 0
+                        ? d.influence_score / radiusScale.domain()[1]
+                        : 0.5;
+                    return height * 0.15 + (1 - t) * height * 0.7;
+                })
+                .strength(0.15)
+            )
+            .force("x", d3.forceX()
+                .x(d => {
+                    // Gentle party clustering: D slightly left, R slightly right
+                    if (d.party === "D") return width * 0.42;
+                    if (d.party === "R") return width * 0.58;
+                    return width / 2;
+                })
+                .strength(0.04)
+            )
+            .alphaDecay(0.02)
+            .on("tick", () => {
+                allLinks
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+
+                allNodes
+                    .attr("cx", d => d.x)
+                    .attr("cy", d => d.y);
+
+                allLabels
+                    .attr("x", d => d.x)
+                    .attr("y", d => d.y - nodeRadius(d) - 3);
+            });
+
+        // Status
+        statusEl.textContent =
+            `${data.meta.total_members} legislators | ${data.meta.total_edges} connections` +
+            (data.meta.focus === "relevant" ? " (relevant only)" : "") +
+            (data.meta.topic ? ` | Topic: ${data.meta.topic}` : "") +
+            (data.meta.zip ? ` | ZIP: ${data.meta.zip}` : "");
+    }
+
+    // ── Drag handlers ────────────────────────────────────────────────────
+    function dragStarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+
+    function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+    }
+
+    function dragEnded(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
+
+    // ── Tooltip ──────────────────────────────────────────────────────────
+    function showTooltip(event, d) {
+        let html = `<div class="tooltip-name">${d.name}</div>`;
+        if (d.role) {
+            html += `<div class="tooltip-role">${d.role}</div>`;
+        }
+        html += `<div class="tooltip-role">${d.party === "D" ? "Democrat" : d.party === "R" ? "Republican" : d.party} &mdash; ${d.chamber} District ${d.district}</div>`;
+        html += `<div class="tooltip-stat">Influence: ${d.influence_score.toFixed(1)} (${d.influence_label || "N/A"})</div>`;
+        if (d.laws_filed > 0) {
+            html += `<div class="tooltip-stat">Laws: ${d.laws_passed} passed / ${d.laws_filed} filed</div>`;
+        }
+        if (d.is_your_legislator) {
+            html += `<div class="tooltip-stat" style="color: #d4a017; font-weight: bold;">Your legislator</div>`;
+        }
+        if (d.is_topic_relevant) {
+            html += `<div class="tooltip-stat" style="color: #3a6eb5; font-weight: bold;">On topic committee</div>`;
+        }
+        tooltip.innerHTML = html;
+        tooltip.style.display = "block";
+        moveTooltip(event);
+    }
+
+    function moveTooltip(event) {
+        const rect = container.getBoundingClientRect();
+        let x = event.clientX - rect.left + 14;
+        let y = event.clientY - rect.top + 14;
+        // Keep tooltip within bounds
+        if (x + 280 > rect.width) x = x - 290;
+        if (y + 150 > rect.height) y = y - 160;
+        tooltip.style.left = x + "px";
+        tooltip.style.top = y + "px";
+    }
+
+    function hideTooltip() {
+        tooltip.style.display = "none";
+    }
+
+    // ── Detail panel ─────────────────────────────────────────────────────
+    function showDetail(d) {
+        let html = "";
+        html += `<h2 class="detail-name">${d.name}</h2>`;
+        html += `<div class="detail-meta">`;
+        html += `${d.party === "D" ? "Democrat" : d.party === "R" ? "Republican" : d.party}`;
+        html += ` &mdash; ${d.chamber} District ${d.district}`;
+        if (d.role) html += `<br>${d.role}`;
+        html += `</div>`;
+
+        // Influence score bar
+        const influenceColor = d.influence_score >= 60 ? "detail-fill-high" :
+            d.influence_score >= 30 ? "detail-fill-moderate" : "detail-fill-low";
+        html += `<div class="detail-section">`;
+        html += `<div class="detail-section-title">Influence Score</div>`;
+        html += `<div style="font-size: 1.4em; font-weight: bold; color: #333;">${d.influence_score.toFixed(1)}</div>`;
+        html += `<div class="detail-influence-bar"><div class="${influenceColor} detail-influence-fill" style="width: ${d.influence_score}%;"></div></div>`;
+        html += `<div style="font-size: 0.82em; color: #666;">${d.influence_label || ""} influence`;
+        if (d.moneyball_rank > 0) html += ` &mdash; #${d.moneyball_rank} in ${d.chamber}`;
+        html += `</div>`;
+        html += `</div>`;
+
+        // Key stats
+        html += `<div class="detail-section">`;
+        html += `<div class="detail-section-title">Key Stats</div>`;
+        html += `<ul class="detail-stat-list">`;
+        if (d.laws_filed > 0) {
+            const rate = d.effectiveness_rate > 0 ? (d.effectiveness_rate * 100).toFixed(1) + "%" : "0%";
+            html += `<li><span>Laws passed</span><span class="detail-stat-value">${d.laws_passed} / ${d.laws_filed} (${rate})</span></li>`;
+        }
+        if (d.bridge_score > 0) {
+            html += `<li><span>Cross-party rate</span><span class="detail-stat-value">${(d.bridge_score * 100).toFixed(1)}%</span></li>`;
+        }
+        html += `<li><span>Moneyball score</span><span class="detail-stat-value">${d.moneyball_score.toFixed(1)}</span></li>`;
+        html += `</ul></div>`;
+
+        // Committees
+        if (d.committees && d.committees.length > 0) {
+            html += `<div class="detail-section">`;
+            html += `<div class="detail-section-title">Committees (${d.committees.length})</div>`;
+            html += `<ul class="detail-committees">`;
+            // Sort: leadership first
+            const sorted = [...d.committees].sort((a, b) =>
+                (b.is_leadership ? 1 : 0) - (a.is_leadership ? 1 : 0)
+            );
+            sorted.forEach(c => {
+                html += `<li>`;
+                if (c.is_leadership) {
+                    html += `<span class="detail-committee-role">${c.role}</span> `;
+                }
+                html += `${c.name}`;
+                html += `</li>`;
+            });
+            html += `</ul></div>`;
+        }
+
+        // Influence signals
+        if (d.influence_signals && d.influence_signals.length > 0) {
+            html += `<div class="detail-section">`;
+            html += `<div class="detail-section-title">Influence Signals</div>`;
+            html += `<ul class="detail-signals">`;
+            d.influence_signals.forEach(s => {
+                html += `<li>${s}</li>`;
+            });
+            html += `</ul></div>`;
+        }
+
+        detailContent.innerHTML = html;
+        detailPanel.classList.add("open");
+    }
+
+    function closeDetail() {
+        detailPanel.classList.remove("open");
+    }
+
+    detailClose.addEventListener("click", closeDetail);
+
+    // ── Event handlers ───────────────────────────────────────────────────
+    async function reloadGraph() {
+        currentTopic = topicSelect.value;
+        currentZip = zipInput.value.trim();
+        currentFocus = focusSelect.value || "relevant";
+
+        // Update topic badge
+        if (currentTopic) {
+            topicBadge.textContent = currentTopic;
+            topicBadge.classList.add("visible");
+        } else {
+            topicBadge.classList.remove("visible");
+        }
+
+        loadingEl.style.display = "block";
+        loadingEl.textContent = "Updating...";
+
+        try {
+            const data = await fetchGraph(currentTopic, currentZip, currentFocus);
+            buildGraph(data);
+        } catch (err) {
+            loadingEl.textContent = "Error loading data: " + err.message;
+            console.error(err);
+        }
+    }
+
+    topicSelect.addEventListener("change", reloadGraph);
+    focusSelect.addEventListener("change", reloadGraph);
+
+    zipBtn.addEventListener("click", reloadGraph);
+
+    zipInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") reloadGraph();
+    });
+
+    // ── Handle resize ────────────────────────────────────────────────────
+    let resizeTimer;
+    window.addEventListener("resize", () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            const rect = container.getBoundingClientRect();
+            width = rect.width;
+            height = rect.height;
+            svg.attr("width", width).attr("height", height);
+            if (simulation) {
+                simulation.force("center", d3.forceCenter(width / 2, height / 2));
+                simulation.alpha(0.3).restart();
+            }
+        }, 250);
+    });
+
+    // ── Init ─────────────────────────────────────────────────────────────
+    initSVG();
+    fetchGraph("", "", "relevant").then(data => {
+        buildGraph(data);
+    }).catch(err => {
+        loadingEl.textContent = "Error loading graph: " + err.message;
+        console.error(err);
+    });
+})();
+</script>
+{% endblock %}

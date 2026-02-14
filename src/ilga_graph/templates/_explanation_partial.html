@@ -1,0 +1,51 @@
+{# SHAP prediction drivers — loaded lazily via hx-get #}
+{% if explanation %}
+<h2 style="font-size: 1.1em; margin-top: 0; margin-bottom: 10px; color: #444;">Prediction Drivers</h2>
+<p style="font-size: 0.82em; color: #888; margin-bottom: 12px;">
+    Base probability: {{ "%.1f"|format(explanation.base_value * 100) }}% &mdash;
+    factors that push the score up or down from the average bill.
+</p>
+
+{% if explanation.top_positive_factors %}
+<div style="margin-bottom: 10px;">
+    <span style="font-size: 0.78em; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.04em;">Pushing Up</span>
+    <div style="margin-top: 4px; display: flex; flex-wrap: wrap; gap: 6px;">
+        {% for f in explanation.top_positive_factors %}
+        <span style="display: inline-block; font-size: 0.78em; font-weight: 600; padding: 3px 10px; border-radius: 3px; background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;">
+            {{ f.impact }} {{ f.feature }}{% if f.get('detail') %} ({{ f.detail }}){% endif %}
+        </span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if explanation.top_negative_factors %}
+<div style="margin-bottom: 6px;">
+    <span style="font-size: 0.78em; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.04em;">Pushing Down</span>
+    <div style="margin-top: 4px; display: flex; flex-wrap: wrap; gap: 6px;">
+        {% for f in explanation.top_negative_factors %}
+        <span style="display: inline-block; font-size: 0.78em; font-weight: 600; padding: 3px 10px; border-radius: 3px; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;">
+            {{ f.impact }} {{ f.feature }}{% if f.get('detail') %} ({{ f.detail }}){% endif %}
+        </span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% elif reason == 'not_available' %}
+<p style="color: #5b7c99; font-size: 0.85em;">
+    Prediction drivers are not available. Install ML dependencies in the server environment (<code>make ml-setup</code> or <code>pip install -e ".[ml]"</code>), run the pipeline (<code>make ml-run</code>), then <strong>restart the app server</strong>.
+</p>
+{% elif reason == 'bill_not_found' %}
+<p style="color: #999; font-size: 0.85em; font-style: italic;">
+    Prediction drivers are not available for this bill.
+</p>
+{% elif reason == 'error' %}
+<p style="color: #b91c1c; font-size: 0.85em; font-style: italic;">
+    An error occurred while calculating prediction drivers.
+</p>
+{% else %}
+<p style="color: #999; font-size: 0.85em; font-style: italic;">
+    Explanation not available for this bill.
+</p>
+{% endif %}

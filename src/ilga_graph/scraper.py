@@ -18,6 +18,7 @@ from urllib3.util.retry import Retry
 
 from .config import CACHE_DIR, MOCK_DEV_DIR
 from .models import Bill, CareerRange, Committee, CommitteeMemberRole, Member, Office
+from .normalize import normalize_chamber, normalize_date, validate_bill_cache
 
 LOGGER = logging.getLogger(__name__)
 
@@ -212,12 +213,34 @@ def _committee_member_role_from_dict(d: dict) -> CommitteeMemberRole:
 def _bill_from_dict(b: dict) -> Bill:
     from .models import ActionEntry, VoteEvent, WitnessSlip
 
+    # Lazy import for action classifier
+    try:
+        from .ml.action_classifier import classify_action
+
+        _classify = classify_action
+    except Exception:
+        _classify = None
+
     action_history = []
     for a in b.get("action_history", []):
         if isinstance(a, dict) and "date" in a and "chamber" in a and "action" in a:
-            action_history.append(
-                ActionEntry(date=a["date"], chamber=a["chamber"], action=a["action"])
+            action_text = a["action"]
+            entry = ActionEntry(
+                date=normalize_date(a["date"]),
+                chamber=normalize_chamber(a["chamber"]),
+                action=action_text,
             )
+            if _classify is not None:
+                try:
+                    ca = _classify(action_text)
+                    entry.action_category = ca.category_id
+                    entry.action_category_label = ca.category_label
+                    entry.outcome_signal = ca.outcome_signal
+                    entry.meaning = ca.meaning
+                    entry.rule_reference = ca.rule_reference or ""
+                except Exception:
+                    pass
+            action_history.append(entry)
 
     vote_events = []
     for v in b.get("vote_events", []):
@@ -225,9 +248,9 @@ def _bill_from_dict(b: dict) -> Bill:
             vote_events.append(
                 VoteEvent(
                     bill_number=v.get("bill_number", ""),
-                    date=v.get("date", ""),
+                    date=normalize_date(v.get("date", "")),
                     description=v.get("description", ""),
-                    chamber=v.get("chamber", ""),
+                    chamber=normalize_chamber(v.get("chamber", "")),
                     yea_votes=v.get("yea_votes", []),
                     nay_votes=v.get("nay_votes", []),
                     present_votes=v.get("present_votes", []),
@@ -247,7 +270,7 @@ def _bill_from_dict(b: dict) -> Bill:
                     representing=ws.get("representing", ""),
                     position=ws.get("position", ""),
                     hearing_committee=ws.get("hearing_committee", ""),
-                    hearing_date=ws.get("hearing_date", ""),
+                    hearing_date=normalize_date(ws.get("hearing_date", "")),
                     testimony_type=ws.get("testimony_type", "Record of Appearance Only"),
                     bill_number=ws.get("bill_number", ""),
                 )
@@ -257,9 +280,9 @@ def _bill_from_dict(b: dict) -> Bill:
         bill_number=b["bill_number"],
         leg_id=b["leg_id"],
         description=b["description"],
-        chamber=b["chamber"],
+        chamber=normalize_chamber(b["chamber"]),
         last_action=b.get("last_action", ""),
-        last_action_date=b.get("last_action_date", ""),
+        last_action_date=normalize_date(b.get("last_action_date", "")),
         primary_sponsor=b.get("primary_sponsor", ""),
         synopsis=b.get("synopsis", ""),
         status_url=b.get("status_url", ""),
@@ -348,6 +371,10 @@ def load_normalized_cache(
 
     if members_raw is None or bills_raw is None:
         return None
+
+    # Validate bill cache schema
+    if bills_raw:
+        validate_bill_cache(bills_raw)
 
     bills_lookup: dict[str, Bill] = {lid: _bill_from_dict(bd) for lid, bd in bills_raw.items()}
 
@@ -447,7 +474,7 @@ def parse_bill_table(soup: BeautifulSoup) -> list[Bill]:
         description = cells[1].get_text(" ", strip=True)
         # cells[2] is the Chamber column from the table; we derive chamber from bill_number
         last_action = cells[3].get_text(" ", strip=True)
-        last_action_date = cells[4].get_text(" ", strip=True)
+        last_action_date = normalize_date(cells[4].get_text(" ", strip=True))
 
         bills.append(
             Bill(

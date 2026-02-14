@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Issue Recruiter — Legislative Intelligence{% endblock %}
+
+{% block content %}
+<div class="intel-nav">
+    <a href="/intelligence">&larr; Intelligence Overview</a> &middot;
+    <a href="/intelligence/raw">Raw Data Tables</a>
+</div>
+
+<h1>Issue-Specific Recruitment</h1>
+<p class="intel-subtitle">
+    Who should you recruit for your issue? This model combines <strong>topic affinity</strong> (voting record),
+    <strong>predicted effectiveness</strong> (ML model), <strong>persuadability</strong> (swing voters score higher),
+    and <strong>network reach</strong> (bridge influence) to rank the best targets for each policy area.
+</p>
+
+{% if meta %}
+<div class="recruitment-meta" style="margin-bottom: 1.5em; padding: 0.6em 1em; background: #f5f5f5; border-radius: 4px; font-size: 0.85em; color: #666;">
+    Model: {{ meta.n_members }} members, {{ meta.n_features }} features, LOO-CV R&sup2;={{ "%.3f"|format(meta.model_r2) }}, MAE={{ "%.3f"|format(meta.model_mae) }}
+</div>
+{% endif %}
+
+{% if not topics %}
+<p class="intel-empty-tab">No recruitment data available. Run <code>make ml-run</code> to generate member value scores and recruitment rankings.</p>
+{% else %}
+
+{# ── Value Leaderboard ── #}
+<div class="intel-section">
+    <h2>Member Value Assessment</h2>
+    <p class="intel-subtitle">
+        <strong>Undervalued</strong> = structural position predicts higher effectiveness than observed (untapped potential).
+        <strong>Overvalued</strong> = performing below what network position would suggest.
+    </p>
+
+    <div class="intel-filters" style="margin-bottom: 1em;">
+        <button class="intel-filter-btn active" onclick="filterValue('all', this)">All</button>
+        <button class="intel-filter-btn" onclick="filterValue('undervalued', this)">Undervalued Only</button>
+        <button class="intel-filter-btn" onclick="filterValue('senate', this)">Senate</button>
+        <button class="intel-filter-btn" onclick="filterValue('house', this)">House</button>
+    </div>
+
+    <table class="intel-table" id="value-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Chamber</th>
+                <th>Party</th>
+                <th>Predicted Eff.</th>
+                <th>Actual Eff.</th>
+                <th>Residual</th>
+                <th>Value</th>
+                <th>Top Topics</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in value_scores %}
+            <tr class="value-row"
+                data-label="{{ s.value_label|lower|replace(' ', '-') }}"
+                data-chamber="{{ s.chamber|lower }}">
+                <td>{{ loop.index }}</td>
+                <td><a href="/intelligence/member/{{ s.member_id }}"><strong>{{ s.member_name }}</strong></a></td>
+                <td>{{ s.chamber }}</td>
+                <td>{{ s.party }}</td>
+                <td>{{ "%.0f"|format(s.predicted_effectiveness * 100) }}%</td>
+                <td>{{ "%.0f"|format(s.actual_effectiveness * 100) }}%</td>
+                <td>
+                    {% if s.value_residual > 0 %}
+                    <span style="color: #2d8659;">+{{ "%.0f"|format(s.value_residual * 100) }}%</span>
+                    {% elif s.value_residual < 0 %}
+                    <span style="color: #b04040;">{{ "%.0f"|format(s.value_residual * 100) }}%</span>
+                    {% else %}
+                    0%
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="value-badge value-{{ s.value_label|lower|replace(' ', '-') }}">{{ s.value_label }}</span>
+                </td>
+                <td class="influence-signals">
+                    {% for t in s.top_recruitment_topics[:2] %}
+                    <span class="influence-signal-tag">{{ t }}</span>
+                    {% endfor %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# ── Topic Selector ── #}
+<div class="intel-section" style="margin-top: 2em;">
+    <h2>Recruit by Topic</h2>
+    <p class="intel-subtitle">Select a policy area to see the top recruitment targets.</p>
+
+    <div class="topic-selector" style="display: flex; flex-wrap: wrap; gap: 0.5em; margin-bottom: 1.5em;">
+        {% for t in topics %}
+        <button class="intel-filter-btn topic-btn"
+                hx-get="/intelligence/recruitment/{{ t.name }}"
+                hx-target="#topic-results"
+                hx-swap="innerHTML"
+                onclick="setActiveTopic(this)">
+            {{ t.name }} <small>({{ t.count }})</small>
+        </button>
+        {% endfor %}
+    </div>
+
+    <div id="topic-results">
+        <p class="intel-empty-tab">Select a topic above to see recruitment targets.</p>
+    </div>
+</div>
+{% endif %}
+
+<div class="story-footer">
+    <a href="/intelligence" class="story-footer-link">&larr; Intelligence Overview</a>
+    <span class="story-footer-detail">Member Value Model &mdash; Ridge Regression + LOO-CV</span>
+</div>
+
+<style>
+    .recruitment-meta { font-family: monospace; }
+    .topic-btn.active { background: #2d5f8a; color: white; }
+</style>
+
+<script>
+function filterValue(filter, btn) {
+    document.querySelectorAll('#value-table .value-row').forEach(function(row) {
+        var label = row.dataset.label;
+        var chamber = row.dataset.chamber;
+        var show = filter === 'all'
+            || (filter === 'undervalued' && label === 'undervalued')
+            || (filter === 'senate' && chamber === 'senate')
+            || (filter === 'house' && chamber === 'house');
+        row.style.display = show ? '' : 'none';
+    });
+    btn.parentElement.querySelectorAll('.intel-filter-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+}
+
+function setActiveTopic(btn) {
+    document.querySelectorAll('.topic-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+}
+</script>
+{% endblock %}

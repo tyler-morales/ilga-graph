@@ -1,0 +1,718 @@
+{
+  "_meta": {
+    "sources": [
+      {"file": "104th_Senate_Rules-SR4.pdf", "url": "https://ilga.gov/Uploads/Rules/Senate/104th_Senate_Rules-SR4.pdf", "chamber": "senate"},
+      {"file": "104th_House_Rules.pdf", "url": "https://ilga.gov/Uploads/Rules/House/104th_House_Rules.pdf", "chamber": "house"}
+    ],
+    "general_assembly": 104,
+    "version": "2.0.0",
+    "last_updated": "2026-02-13",
+    "description": "Bicameral machine-readable extraction of 104th IL General Assembly rules (Senate SR-4 + House Rules). Lookup table for action classifier, feature engineering, lifecycle logic, and UI."
+  },
+
+  "bill_to_law_process": [
+    {
+      "step": 1,
+      "title": "Introduction of Bill",
+      "body": "A member of the Senate or the House introduces a bill, which is assigned a unique identifying number (e.g., \"H.B. ___\" for House bills and \"S.B. ___\" for Senate bills). If not enacted, it must be reintroduced in the next General Assembly with a new number."
+    },
+    {
+      "step": 2,
+      "title": "Committee Work — Hearings",
+      "body": "The bill goes to the appropriate committee, which holds hearings to gather expert opinions and determine the need for the legislation."
+    },
+    {
+      "step": 3,
+      "title": "Committee Work — Markup, Amendments, Report",
+      "body": "The committee may make amendments to the bill. If approved, a committee report endorsing the bill is issued."
+    },
+    {
+      "step": 4,
+      "title": "Floor Debate",
+      "body": "The bill is debated and can be further amended. The debate transcripts are accessible online for public viewing."
+    },
+    {
+      "step": 5,
+      "title": "Passage and Consideration in Second Chamber",
+      "body": "If the bill passes in the first chamber, it moves to the second chamber for a similar review process. If both chambers approve, it goes to the governor."
+    },
+    {
+      "step": 6,
+      "title": "Gubernatorial Action",
+      "body": "The governor can sign the bill into law, veto it, or take no action (resulting in an automatic law after 60 days). The type of veto can be total or amendatory. Once signed, the bill becomes a Public Act and is assigned a Public Act number."
+    }
+  ],
+
+  "stages": {
+    "FILED": {
+      "senate_rule": "Rule 5-1(d)",
+      "house_rule": "Rule 37(d)",
+      "description": "Bill introduced, read by title a first time, automatically referred to gatekeeper committee (Senate: Assignments; House: Rules Committee).",
+      "progress_fraction": 0.10,
+      "required_vote": null,
+      "next_stages": ["IN_COMMITTEE"],
+      "senate_order_of_business": "Rule 4-4(3)",
+      "house_order_of_business": "Rule 31(3)"
+    },
+    "IN_COMMITTEE": {
+      "senate_rule": "Rule 3-8, Rule 3-11",
+      "house_rule": "Rule 18, Rule 22",
+      "description": "Bill assigned to a standing committee. Committee may report do pass, do not pass, do pass as amended, without recommendation, tabled, or let it die without action.",
+      "progress_fraction": 0.25,
+      "required_vote": "majority_of_those_appointed",
+      "next_stages": ["PASSED_COMMITTEE"],
+      "senate_order_of_business": "Rule 4-4(4)",
+      "house_order_of_business": "Rule 31(4)"
+    },
+    "PASSED_COMMITTEE": {
+      "senate_rule": "Rule 3-12(a)",
+      "house_rule": "Rule 24(a)",
+      "description": "Bill favorably reported. Stands on the order of Second Reading. May be amended only on Second Reading.",
+      "progress_fraction": 0.40,
+      "required_vote": "majority_of_those_appointed",
+      "next_stages": ["FLOOR_VOTE"],
+      "senate_order_of_business": "Rule 4-4(7)",
+      "house_order_of_business": "Rule 31(8)"
+    },
+    "FLOOR_VOTE": {
+      "senate_rule": "Rule 5-2, Rule 4-4(8)",
+      "house_rule": "Rule 38, Rule 31(9)",
+      "description": "Bill on Third Reading for final vote. Must have been read by title on three different days before passage.",
+      "progress_fraction": 0.55,
+      "required_vote": "majority_of_those_elected",
+      "next_stages": ["CROSSED_CHAMBERS"],
+      "senate_order_of_business": "Rule 4-4(8)",
+      "house_order_of_business": "Rule 31(9)"
+    },
+    "CHAMBER_PASSED": {
+      "senate_rule": "Rule 5-1(f)",
+      "house_rule": "Rule 37(f)",
+      "description": "Bill passed origin chamber on roll call vote of majority of those elected (Senate: 30 votes; House: 60 votes).",
+      "progress_fraction": 0.60,
+      "required_vote": "majority_of_those_elected",
+      "next_stages": ["CROSSED_CHAMBERS"]
+    },
+    "CROSSED_CHAMBERS": {
+      "senate_rule": "Rule 5-1(d), Rule 4-4(11)",
+      "house_rule": "Rule 37(d), Rule 31(12)",
+      "description": "Bill received by second chamber, read a first time, referred to that chamber's gatekeeper (Assignments or Rules Committee).",
+      "progress_fraction": 0.70,
+      "required_vote": null,
+      "next_stages": ["PASSED_BOTH"]
+    },
+    "PASSED_BOTH": {
+      "senate_rule": "Rule 8-1, Rule 8-4",
+      "house_rule": "Rule 72, Rule 75",
+      "description": "Bill passed both chambers. If amended by second chamber, first chamber must concur, non-concur, or request conference. Sent to Governor.",
+      "progress_fraction": 0.85,
+      "required_vote": "majority_of_those_elected",
+      "next_stages": ["GOVERNOR"]
+    },
+    "GOVERNOR": {
+      "senate_rule": "Article IX",
+      "house_rule": "Article IX (Rules 77-82)",
+      "description": "Bill before the Governor. May be signed, vetoed (total, item, amendatory, reduction), or allowed to become law without signature.",
+      "progress_fraction": 0.95,
+      "required_vote": null,
+      "next_stages": ["SIGNED", "VETOED"]
+    },
+    "SIGNED": {
+      "senate_rule": "Article IX",
+      "house_rule": "Article IX",
+      "description": "Bill signed by the Governor or became law without signature. Terminal positive state.",
+      "progress_fraction": 1.0,
+      "required_vote": null,
+      "next_stages": []
+    },
+    "VETOED": {
+      "senate_rule": "Article IX, Rule 9-1",
+      "house_rule": "Article IX, Rule 77",
+      "description": "Bill vetoed by Governor. May be overridden by three-fifths of those elected in each chamber.",
+      "progress_fraction": -1.0,
+      "required_vote": "three_fifths_of_those_elected",
+      "next_stages": []
+    }
+  },
+
+  "committees": {
+    "procedural": [
+      {
+        "name": "assignments",
+        "formal_name": "Committee on Assignments",
+        "senate_rule": "Rule 3-5, Rule 3-7, Rule 3-8",
+        "chamber": "senate",
+        "description": "Senate gatekeeper. All bills automatically referred here after first reading. 6 members (4 majority, 2 minority). Assigns bills to standing committees.",
+        "aliases": ["assignments", "committee on assignments"]
+      },
+      {
+        "name": "rules committee",
+        "formal_name": "Rules Committee",
+        "house_rule": "Rule 15, Rule 18",
+        "chamber": "house",
+        "description": "House gatekeeper. All bills automatically referred here after first reading. 5 members (3 majority, 2 minority). Refers bills to standing/special committees. Also controls floor amendments, joint action motions, and conference reports.",
+        "aliases": ["rules committee", "rules"]
+      },
+      {
+        "name": "executive",
+        "formal_name": "Executive Committee",
+        "senate_rule": "Rule 3-4",
+        "house_rule": "Rule 11",
+        "chamber": "both",
+        "description": "Standing committee in both chambers but handles broad procedural/policy matters. High volume makes it a near-procedural catch-all for policy signal purposes.",
+        "aliases": ["executive"]
+      },
+      {
+        "name": "executive appointments",
+        "formal_name": "Executive Appointments Committee",
+        "senate_rule": "Rule 3-6(b), Rule 10-1",
+        "chamber": "senate",
+        "description": "Handles gubernatorial nominations requiring Senate confirmation. Not a substantive policy committee for bill classification purposes.",
+        "aliases": ["executive appointments"]
+      }
+    ],
+    "senate_standing": {
+      "rule": "Rule 3-4",
+      "membership_rule": "Rule 3-2",
+      "procedure_rule": "Rule 3-11",
+      "committees": [
+        "Agriculture",
+        "Appropriations",
+        "Appropriations-Education",
+        "Appropriations-Health and Human Services",
+        "Appropriations-Public Safety and Infrastructure",
+        "Behavioral and Mental Health",
+        "Child Welfare",
+        "Commerce",
+        "Consumer Protection",
+        "Criminal Law",
+        "Early Childhood Education",
+        "Education",
+        "Energy and Public Utilities",
+        "Environment and Conservation",
+        "Financial Institutions",
+        "Health and Human Services",
+        "Higher Education",
+        "Human Rights",
+        "Insurance",
+        "Judiciary",
+        "Labor",
+        "Licensed Activities",
+        "Local Government",
+        "Pensions",
+        "Public Health",
+        "Revenue",
+        "State Government",
+        "Transportation",
+        "Veterans Affairs"
+      ]
+    },
+    "house_standing": {
+      "rule": "Rule 11",
+      "membership_rule": "Rule 12",
+      "procedure_rule": "Rule 22",
+      "committees": [
+        "Adoption & Child Welfare",
+        "Agriculture & Conservation",
+        "Appropriations-Elementary & Secondary Education",
+        "Appropriations-General Services",
+        "Appropriations-Health and Human Services",
+        "Appropriations-Higher Education",
+        "Appropriations-Pensions and Personnel",
+        "Appropriations-Public Safety and Infrastructure",
+        "Child Care Accessibility & Early Childhood Education",
+        "Cities & Villages",
+        "Consumer Protection",
+        "Counties & Townships",
+        "Cybersecurity, Data Analytics, & IT",
+        "Economic Opportunity & Equity",
+        "Education Policy",
+        "Elementary & Secondary Education: Administration, Licensing, & Charter Schools",
+        "Energy & Environment",
+        "Ethics & Elections",
+        "Executive",
+        "Financial Institutions and Licensing",
+        "Gaming",
+        "Gun Violence Prevention",
+        "Health Care Availability & Accessibility",
+        "Health Care Licenses",
+        "Higher Education",
+        "Housing",
+        "Human Services",
+        "Immigration & Human Rights",
+        "Insurance",
+        "International Relations, Tourism, & Trade",
+        "Judiciary - Civil",
+        "Judiciary - Criminal",
+        "Labor & Commerce",
+        "Mental Health & Addiction",
+        "Museums, Arts, Culture, & Entertainment",
+        "Personnel & Pensions",
+        "Police & Fire",
+        "Prescription Drug Affordability & Accessibility",
+        "Public Health",
+        "Public Utilities",
+        "Restorative Justice & Public Safety",
+        "Revenue & Finance",
+        "Small Business, Technology Innovation, & Entrepreneurship",
+        "State Government Administration",
+        "Transportation: Regulation, Roads & Bridges",
+        "Transportation: Vehicles & Safety",
+        "Veterans' Affairs"
+      ]
+    }
+  },
+
+  "actions": {
+    "introduction": {
+      "senate_rule": "Rule 5-1(d)",
+      "house_rule": "Rule 37(d)",
+      "description": "Bill introduced, read first time, referred to gatekeeper (Senate: Assignments; House: Rules Committee).",
+      "outcome_signal": "neutral"
+    },
+    "assignment": {
+      "senate_rule": "Rule 3-8",
+      "house_rule": "Rule 18",
+      "description": "Gatekeeper refers bill to a standing committee. Senate: Assignments refers. House: Rules Committee refers.",
+      "outcome_signal": "neutral",
+      "referral_patterns": ["Referred to", "Assigned to", "Assignments Refers to", "Re-assigned to", "Approved for Consideration"],
+      "approved_for_consideration_signal": "positive"
+    },
+    "committee_action": {
+      "senate_rule": "Rule 3-11",
+      "house_rule": "Rule 22",
+      "description": "Committee votes or acts on the bill. First major hurdle; most bills die here.",
+      "outcome_signal": "mixed",
+      "favorable_report_types": [
+        "do pass",
+        "do pass as amended",
+        "be adopted",
+        "be adopted as amended",
+        "recommend do adopt",
+        "approved for consideration"
+      ],
+      "unfavorable_report_types": [
+        "do not pass",
+        "do not pass as amended",
+        "be not adopted",
+        "be not adopted as amended",
+        "recommend do not adopt",
+        "without recommendation",
+        "tabled"
+      ],
+      "senate_unfavorable_disposition": "Rule 3-12(a): reported unfavorably shall lie on the table.",
+      "house_unfavorable_disposition": "Rule 24(a): reported unfavorably shall lie on the table.",
+      "senate_tabling_rule": "Rule 3-11(g), Rule 7-10",
+      "house_tabling_rule": "Rule 22(c), Rule 60",
+      "house_two_vote_limit": "Rule 22(g): no bill may be voted on more than twice on motions to report favorably. After 2 failures, automatically reported unfavorably."
+    },
+    "deadline": {
+      "senate_rule": "Rule 2-10, Rule 3-9",
+      "house_rule": "Rule 9, Rule 19",
+      "description": "Deadline-related actions. Bills missing deadlines are re-referred to gatekeeper — NOT killed, but significantly slowed.",
+      "outcome_signal": "negative_weak",
+      "senate_re_referral_rule": "Rule 3-9(a): re-referred to Assignments.",
+      "house_re_referral_rule": "Rule 19(a): re-referred to Rules Committee.",
+      "re_referral_is_terminal": false,
+      "senate_inactivity_rule": "Rule 3-9(b): 31 consecutive days without session.",
+      "house_inactivity_rule": "Rule 19(b): 31 consecutive days without session.",
+      "senate_deadline_types": [
+        {"id": "committee_report", "rule": "Rule 2-10(a)(3)", "description": "Final day for standing committees to report Senate bills."},
+        {"id": "committee_report_approp", "rule": "Rule 2-10(a)(4)", "description": "Final day for standing committees to report Senate appropriation bills."},
+        {"id": "third_reading", "rule": "Rule 2-10(a)(5)", "description": "Final day for Third Reading and passage of Senate bills."},
+        {"id": "third_reading_approp", "rule": "Rule 2-10(a)(6)", "description": "Final day for Third Reading and passage of Senate appropriation bills."},
+        {"id": "conference_report", "rule": "Rule 2-10(b)", "description": "Optional deadline for conference committee reports."}
+      ],
+      "house_deadline_types": [
+        {"id": "committee_report", "rule": "Rule 9(b)(3)", "description": "Final day for standing committees to report House bills."},
+        {"id": "committee_report_approp", "rule": "Rule 9(b)(4)", "description": "Final day for standing committees to report House appropriation bills."},
+        {"id": "third_reading", "rule": "Rule 9(b)(5)", "description": "Final day for Third Reading and passage of House bills."},
+        {"id": "third_reading_approp", "rule": "Rule 9(b)(6)", "description": "Final day for Third Reading and passage of House appropriation bills."},
+        {"id": "joint_action", "rule": "Rule 9(b)(12)", "description": "Final day for joint action motions and conference committee reports."}
+      ],
+      "house_2025_deadlines": {
+        "bill_request_from_lrb": "January 24",
+        "bill_introduction_substantive": "February 7",
+        "committee_report_house_substantive": "March 21",
+        "committee_report_senate_substantive": "May 9",
+        "third_reading_house_substantive": "April 11",
+        "third_reading_senate_substantive": "May 23",
+        "joint_action_motions": "May 31"
+      }
+    },
+    "floor_process": {
+      "senate_rule": "Rule 4-4(7-8), Rule 5-2",
+      "house_rule": "Rule 31(8-9), Rule 38",
+      "description": "Bill on Second or Third Reading on the floor. Three readings on three different days required before passage.",
+      "outcome_signal": "positive_weak",
+      "senate_second_reading": "Rule 3-12(a): favorably reported bills stand on Second Reading.",
+      "house_second_reading": "Rule 24(a): favorably reported bills placed on Second Reading.",
+      "third_reading_rule": "Both chambers: bill read by title on 3 different days before passage.",
+      "house_debate_types": {
+        "short": "Rule 52(a)(1): 2min sponsor + 2min response + 1min close. 7 members can upgrade to standard.",
+        "standard": "Rule 52(a)(2): 5min sponsor + 2 proponents + 3 opponents + 3min close.",
+        "extended": "Rule 52(a)(3): 5min sponsor + 4 proponents + 5 opponents + 5min close.",
+        "unlimited": "Rule 52(a)(4): 10min sponsor + unlimited debate + 5min close.",
+        "amendment": "Rule 52(a)(5): 3min sponsor + 1 proponent + 2 opponents + 3min close."
+      }
+    },
+    "floor_vote": {
+      "senate_rule": "Rule 5-1(f), Rule 7-1, Rule 7-2",
+      "house_rule": "Rule 37(f), Rule 49, Rule 50",
+      "description": "Roll call vote on passage. Requires majority of those elected (Senate: 30; House: 60).",
+      "outcome_signal": "mixed",
+      "passage_threshold": "majority_of_those_elected",
+      "senate_passage_votes": 30,
+      "house_passage_votes": 60,
+      "senate_voting_rule": "Rule 7-2",
+      "house_voting_rule": "Rule 50",
+      "senate_verification_rule": "Rule 7-6",
+      "house_verification_rule": "Rule 56"
+    },
+    "cross_chamber": {
+      "senate_rule": "Rule 5-1(d), Rule 4-4(9-11)",
+      "house_rule": "Rule 37(d), Rule 31(10-12)",
+      "description": "Bill passed one chamber and received by the other. Referred to second chamber's gatekeeper.",
+      "outcome_signal": "positive"
+    },
+    "concurrence": {
+      "senate_rule": "Rule 8-1, Article VIII",
+      "house_rule": "Rule 72, Article VIII",
+      "description": "First chamber considers second chamber's amendments. May concur, non-concur, or request conference.",
+      "outcome_signal": "mixed",
+      "concurrence_options": [
+        {"action": "concur", "senate_rule": "Rule 8-1(a)", "house_rule": "Rule 72(a)"},
+        {"action": "non-concur", "senate_rule": "Rule 8-1(a)", "house_rule": "Rule 72(a)"},
+        {"action": "recede", "senate_rule": "Rule 8-1(b)", "house_rule": "Rule 72(b)"},
+        {"action": "refuse_to_recede", "senate_rule": "Rule 8-1(b)", "house_rule": "Rule 72(b)"},
+        {"action": "conference_committee", "senate_rule": "Rule 8-2", "house_rule": "Rule 73"}
+      ],
+      "conference_report_requirement": "Signed by at least 6 conferees (Senate Rule 8-3(b), House Rule 74(b)).",
+      "second_conference_rule": "If first fails, second may be requested. If second fails, bill is lost (Senate Rule 8-5(b), House Rule 76(c)).",
+      "house_two_vote_limit": "Rule 72(c): motions are renewable but may not be voted on more than twice."
+    },
+    "governor": {
+      "senate_rule": "Article IX, Rules 9-1 through 9-6",
+      "house_rule": "Article IX, Rules 77-82",
+      "description": "Governor acts on passed bill. Sign, veto (total/item/amendatory/reduction), or allow to become law.",
+      "outcome_signal": "mixed",
+      "veto_types": [
+        {"type": "total_veto", "senate_rule": "Rule 9-4(a)", "house_rule": "Rule 80(a)", "override_vote": "three_fifths_of_those_elected"},
+        {"type": "item_veto", "senate_rule": "Rule 9-4(b)", "house_rule": "Rule 80(b)", "override_vote": "three_fifths_of_those_elected"},
+        {"type": "reduction_veto", "senate_rule": "Rule 9-4(c)", "house_rule": "Rule 80(c)", "override_vote": "majority_of_those_elected"},
+        {"type": "amendatory_veto", "senate_rule": "Rule 9-2, Rule 9-4(d)", "house_rule": "Rule 78, Rule 80(d)", "description": "Governor returns with specific recommendations. Must not alter fundamental purpose. Accept by majority or override by 3/5."}
+      ]
+    },
+    "veto_process": {
+      "senate_rule": "Article IX, Rules 9-3 through 9-6",
+      "house_rule": "Article IX, Rules 79-82",
+      "description": "Legislature considers governor's veto. Override requires 3/5 of those elected in each chamber.",
+      "outcome_signal": "mixed",
+      "override_threshold": "three_fifths_of_those_elected",
+      "senate_override_votes": 36,
+      "house_override_votes": 71,
+      "accept_amendatory_threshold": "majority_of_those_elected",
+      "senate_accept_votes": 30,
+      "house_accept_votes": 60
+    },
+    "enacted": {
+      "rule": "Article IX (both chambers)",
+      "description": "Bill signed into law or became law without Governor's signature.",
+      "outcome_signal": "positive_terminal"
+    },
+    "cosponsor": {
+      "senate_rule": "Rule 5-1(a)",
+      "house_rule": "Rule 37(a)",
+      "description": "Sponsorship actions. Principal sponsor listed first; up to 4 chief cosponsors with approval.",
+      "outcome_signal": "neutral",
+      "max_chief_cosponsors": 4,
+      "senate_sponsor_control": "Rule 5-1(b): principal sponsor controls the bill.",
+      "house_sponsor_control": "Rule 37(b): principal sponsor controls the bill."
+    },
+    "amendment": {
+      "senate_rule": "Rule 5-4, Rule 3-8(b-c)",
+      "house_rule": "Rule 40, Rule 18(e)",
+      "description": "Amendment actions. Committee amendments in committee; floor amendments on Second Reading only.",
+      "outcome_signal": "neutral",
+      "senate_amendment_approval": "Rule 5-4(e), Rule 3-8(b): amendments must be approved by Assignments.",
+      "house_amendment_approval": "Rule 18(e): amendments must be referred by Rules Committee."
+    },
+    "resolution": {
+      "senate_rule": "Rule 6-1",
+      "house_rule": "Rule 45, Rule 16",
+      "description": "Resolution actions including consent calendar and congratulatory resolutions.",
+      "outcome_signal": "neutral"
+    },
+    "appointment": {
+      "senate_rule": "Rule 10-1, Rule 10-2",
+      "description": "Executive appointment confirmation. Senate only. 60-session-day window to act.",
+      "outcome_signal": "neutral",
+      "confirmation_window_days": 60
+    },
+    "procedural": {
+      "senate_rule": "Rule 4-4, Rule 7-4",
+      "house_rule": "Rule 31, Rule 54",
+      "description": "Administrative and procedural actions (adjournment, quorum, etc.).",
+      "outcome_signal": "neutral"
+    }
+  },
+
+  "outcomes": {
+    "favorable_report": {
+      "senate_rule": "Rule 3-11(a), Rule 3-12",
+      "house_rule": "Rule 22(a), Rule 24(a)",
+      "patterns": [
+        "do pass",
+        "do pass as amended",
+        "be adopted",
+        "be adopted as amended",
+        "recommend do adopt",
+        "approved for consideration"
+      ],
+      "senate_disposition": "Bill stands on order of Second Reading (Rule 3-12(a)).",
+      "house_disposition": "Bill placed on order of Second Reading (Rule 24(a)).",
+      "signal": "positive"
+    },
+    "unfavorable_report": {
+      "senate_rule": "Rule 3-11(a), Rule 3-12(a)",
+      "house_rule": "Rule 22(a), Rule 24(a)",
+      "patterns": [
+        "do not pass",
+        "do not pass as amended",
+        "be not adopted",
+        "be not adopted as amended",
+        "recommend do not adopt",
+        "without recommendation",
+        "tabled"
+      ],
+      "disposition": "Bill lies on the table.",
+      "signal": "negative"
+    },
+    "tabled": {
+      "senate_rule": "Rule 7-10",
+      "house_rule": "Rule 60",
+      "description": "Principal sponsor may table own bill with leave. Not debatable or amendable.",
+      "is_terminal": false,
+      "senate_recovery": "Rule 7-11: take from table requires majority elected (if Assignments recommends) or 3/5 elected (otherwise).",
+      "house_recovery": "Rule 61: take from table requires majority elected (if Rules Committee recommends) or 71 elected (otherwise).",
+      "signal": "negative_weak"
+    },
+    "discharged": {
+      "senate_rule": "Rule 7-9",
+      "house_rule": "Rule 58",
+      "description": "Committee discharged from further consideration.",
+      "senate_required_vote": "three_fifths_of_those_elected (36 votes)",
+      "house_required_vote": "60 members elected",
+      "is_terminal": false,
+      "signal": "positive_weak"
+    },
+    "re_referred_deadline": {
+      "senate_rule": "Rule 3-9(a)",
+      "house_rule": "Rule 19(a)",
+      "description": "Bill missed deadline and automatically re-referred to gatekeeper (Assignments/Rules). NOT dead — can be re-referred or advanced.",
+      "is_terminal": false,
+      "signal": "negative_weak"
+    },
+    "re_referred_inactivity": {
+      "senate_rule": "Rule 3-9(b)",
+      "house_rule": "Rule 19(b)",
+      "description": "All measures re-referred to gatekeeper on 31st consecutive day chamber has not convened, unless excepted.",
+      "is_terminal": false,
+      "signal": "neutral"
+    },
+    "passed_chamber": {
+      "senate_rule": "Rule 5-1(f)",
+      "house_rule": "Rule 37(f)",
+      "description": "Bill passed on roll call vote of majority of those elected.",
+      "required_vote": "majority_of_those_elected",
+      "senate_votes": 30,
+      "house_votes": 60,
+      "signal": "positive"
+    },
+    "vetoed": {
+      "senate_rule": "Article IX, Rule 9-1",
+      "house_rule": "Article IX, Rule 77",
+      "description": "Governor vetoed the bill.",
+      "is_terminal": true,
+      "recovery": "Override by 3/5 of those elected in each chamber.",
+      "signal": "negative_terminal"
+    },
+    "signed_into_law": {
+      "rule": "Article IX",
+      "description": "Governor signed or bill became law without signature.",
+      "is_terminal": true,
+      "signal": "positive_terminal"
+    },
+    "conference_failed": {
+      "senate_rule": "Rule 8-5(b)",
+      "house_rule": "Rule 76(c)",
+      "description": "If either chamber refuses report of second conference committee, bill is lost.",
+      "is_terminal": true,
+      "signal": "negative_terminal"
+    },
+    "consent_calendar": {
+      "senate_rule": "Rule 6-1(c)",
+      "house_rule": "Rule 42",
+      "description": "Non-controversial bill placed on consent calendar. No debate permitted. House: must stand 2 days on 2nd Reading + 2 days on 3rd Reading before vote.",
+      "house_exclusions": "Rule 42(e): no revenue or appropriation bills; no bills needing >60 votes.",
+      "signal": "positive"
+    }
+  },
+
+  "vote_thresholds": {
+    "simple_majority": {
+      "senate_rule": "Rule 1-9",
+      "house_rule": "Rule 102(11)",
+      "description": "Simple majority of those present and voting. 'Present' votes not counted.",
+      "used_for": ["motions", "amendments", "committee votes"]
+    },
+    "majority_of_those_appointed": {
+      "senate_rule": "Rule 1-11, Rule 3-11(a)",
+      "house_rule": "Rule 102(13), Rule 22(a)",
+      "description": "Absolute majority of total members appointed to a committee. Excludes ex-officio/non-voting members in House.",
+      "used_for": ["committee reports", "committee amendments"]
+    },
+    "majority_of_those_elected": {
+      "senate_rule": "Rule 1-12",
+      "house_rule": "Rule 102(14)",
+      "description": "Absolute majority of total members entitled to be elected. Irrespective of vacancies.",
+      "senate_votes_required": 30,
+      "senate_total_members": 59,
+      "house_votes_required": 60,
+      "house_total_members": 118,
+      "used_for": [
+        "passage of bills (Senate Rule 5-1(f), House Rule 37(f))",
+        "adoption of rules",
+        "take from table with gatekeeper recommendation",
+        "override reduction veto",
+        "accept amendatory veto",
+        "reconsideration of passed bill",
+        "discharge committee (House Rule 58: 60 votes)"
+      ]
+    },
+    "three_fifths_of_those_elected": {
+      "senate_rule": "Rule 7-9, Rule 9-6",
+      "house_rule": "Rule 102(14), Article IX",
+      "description": "Three-fifths of members elected.",
+      "senate_votes_required": 36,
+      "senate_total_members": 59,
+      "house_votes_required": 71,
+      "house_total_members": 118,
+      "used_for": [
+        "discharge committee (Senate Rule 7-9: 36 votes)",
+        "override total veto",
+        "override item veto",
+        "override amendatory veto recommendations",
+        "take from table without gatekeeper recommendation (House Rule 61: 71 votes)",
+        "overrule presiding officer (Senate Rule 7-7; House Rule 57: 71 votes)",
+        "suspend rules",
+        "passage after May 31 with early effective date (Senate Rule 7-19; House Rule 69)",
+        "state constitutional amendment (House Rule 46: 71 votes)"
+      ]
+    },
+    "two_thirds_of_those_elected": {
+      "senate_rule": "Rule 11-1",
+      "house_rule": "Rule 89, Rule 102(14)",
+      "description": "Two-thirds of members elected.",
+      "senate_votes_required": 40,
+      "senate_total_members": 59,
+      "house_votes_required": 79,
+      "house_total_members": 118,
+      "used_for": [
+        "expulsion of a member",
+        "closed sessions",
+        "disciplinary action resulting in expulsion (House Rule 97(c): 79 votes)"
+      ]
+    }
+  },
+
+  "deadlines": {
+    "senate_schedule": {
+      "rule": "Rule 2-10",
+      "authority": "President establishes deadlines. Filed with Secretary and journalized.",
+      "deadline_categories": [
+        "bill_request_from_lrb",
+        "bill_introduction",
+        "committee_report_senate_bills",
+        "committee_report_senate_approp",
+        "third_reading_senate_bills",
+        "third_reading_senate_approp",
+        "committee_report_house_approp",
+        "committee_report_house_bills",
+        "third_reading_house_approp",
+        "third_reading_house_bills",
+        "conference_reports",
+        "joint_action_motions"
+      ]
+    },
+    "house_schedule": {
+      "rule": "Rule 9",
+      "authority": "Speaker establishes deadlines. Filed with Clerk and journalized. May reschedule at discretion.",
+      "deadline_categories": [
+        "bill_request_from_lrb",
+        "bill_introduction",
+        "committee_report_house_bills",
+        "committee_report_house_approp",
+        "third_reading_house_bills",
+        "third_reading_house_approp",
+        "committee_report_senate_approp",
+        "committee_report_senate_bills",
+        "special_committee_reports",
+        "third_reading_senate_approp",
+        "third_reading_senate_bills",
+        "joint_action_motions_and_conference_reports"
+      ],
+      "deadlines_2025": {
+        "governor_budget": "February 19",
+        "bill_request_from_lrb": "January 24",
+        "bill_introduction_substantive": "February 7",
+        "committee_house_substantive": "March 21",
+        "committee_senate_substantive": "May 9",
+        "third_reading_house_substantive": "April 11",
+        "third_reading_senate_substantive": "May 23",
+        "final_actions": "May 31"
+      }
+    },
+    "senate_re_referral_deadline": {
+      "rule": "Rule 3-9(a)",
+      "trigger": "Bill fails to meet Rule 2-10 deadline.",
+      "effect": "Automatically re-referred to Committee on Assignments.",
+      "is_terminal": false,
+      "exceptions": ["Rule 7-17 suspension", "Assignments written exception"]
+    },
+    "house_re_referral_deadline": {
+      "rule": "Rule 19(a)",
+      "trigger": "Bill fails to meet Rule 9 deadline for committee report, Third Reading, or joint action.",
+      "effect": "Automatically re-referred to Rules Committee.",
+      "is_terminal": false,
+      "exceptions": ["Speaker suspension/revision", "Rules Committee written exception", "Bill already passed but subject to further consideration (Rule 65)"]
+    },
+    "senate_re_referral_inactivity": {
+      "rule": "Rule 3-9(b)",
+      "trigger": "Senate has not convened for 31 consecutive days.",
+      "effect": "All measures re-referred to Assignments (except constitutional amendments and Appointment Messages).",
+      "is_terminal": false,
+      "exceptions": ["Rule 7-17 suspension", "Assignments written exception"]
+    },
+    "house_re_referral_inactivity": {
+      "rule": "Rule 19(b)",
+      "trigger": "House has not convened for 31 consecutive days.",
+      "effect": "All measures re-referred to Rules Committee.",
+      "is_terminal": false,
+      "exceptions": ["Speaker deadline > 31 days", "Rule suspension", "Rules Committee written exception (majority vote)", "Bill already passed (Rule 65)"]
+    },
+    "effective_date": {
+      "senate_rule": "Rule 7-19",
+      "house_rule": "Rule 69",
+      "description": "Bill passed after May 31 with effective date before next June 1 requires 3/5 vote. If only majority passes, returned to Second Reading for amendment.",
+      "threshold_date": "May 31",
+      "standard_vote": "majority_of_those_elected",
+      "early_effective_vote": "three_fifths_of_those_elected"
+    },
+    "even_year_restriction": {
+      "senate_rule": "Rule 3-7(b)",
+      "house_rule": "Rule 18(b)",
+      "description": "During even-numbered years, gatekeeper refers only budget appropriation bills and emergency/substantial government measures.",
+      "effect": "Most non-budget bills cannot advance in even-numbered years."
+    }
+  }
+}

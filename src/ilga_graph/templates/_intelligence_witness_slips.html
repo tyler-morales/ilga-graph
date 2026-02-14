@@ -1,0 +1,115 @@
+{# Witness Slips tab: how organizations and lobbying groups influence bills #}
+{% if not bill_slips %}
+<div class="intel-empty">
+    <p>No witness slip data available.</p>
+    <p>Witness slips are loaded from per-bill data in the bills cache. Run vote/slip scraping to populate this tab.</p>
+</div>
+{% else %}
+
+<div class="intel-section-header">
+    <h2>Witness Slips &amp; Organization Influence</h2>
+    <p class="intel-subtitle">
+        Witness slips are filed by individuals and organizations at committee hearings (proponent, opponent, or no position).
+        This view shows which bills attracted the most slip activity and which organizations filed the most often — a proxy for lobbying and advocacy influence.
+    </p>
+</div>
+
+<div class="intel-section">
+    <h3>Top organizations by total filings</h3>
+    <p class="intel-subtitle">Organizations (and unaffiliated &quot;No organization&quot;) ranked by number of witness slips filed across all bills.</p>
+    <table class="intel-table" id="top-orgs-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Organization</th>
+                <th>Total slips filed</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for org_name, count in top_organizations %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ org_name }}</td>
+                <td style="text-align:right">{{ count }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="intel-section">
+    <h3>Bills by witness slip volume</h3>
+    <p class="intel-subtitle">Bills with at least one witness slip, sorted by total slips. Pro / Opp / No pos = proponent, opponent, no position. Controversy = opponent share among pro+opp. Flagged = suspicious coordination (see Anomalies tab).</p>
+    <div class="intel-filters">
+        <label><input type="checkbox" id="filter-slips-flagged" onchange="filterWitnessSlips()"> Flagged only</label>
+        <label style="margin-left:1em;"><input type="text" id="slips-search" placeholder="Search bill or description…" oninput="filterWitnessSlips()"></label>
+    </div>
+    <table class="intel-table" id="witness-slips-table">
+        <thead>
+            <tr>
+                <th>Bill</th>
+                <th>Description</th>
+                <th>Total</th>
+                <th>Pro</th>
+                <th>Opp</th>
+                <th>No pos</th>
+                <th>Controversy</th>
+                <th>Flagged</th>
+                <th>Top organizations</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in bill_slips %}
+            <tr class="slip-row {% if row.is_flagged %}anomaly-flagged{% endif %}"
+                data-flagged="{{ 'true' if row.is_flagged else 'false' }}"
+                data-bill="{{ row.bill_number|lower }}"
+                data-desc="{{ row.description|lower }}"
+                data-orgs="{% for org in row.top_organizations %}{{ org.name|lower }}{% if not loop.last %} {% endif %}{% endfor %}">
+                <td class="bill-num">
+                    <a href="/intelligence/bill/{{ row.bill_number }}">{{ row.bill_number }}</a>
+                </td>
+                <td class="desc-cell" title="{{ row.description }}">{{ row.description[:55] }}{% if row.description|length > 55 %}&hellip;{% endif %}</td>
+                <td style="text-align:right">{{ row.total_count }}</td>
+                <td style="text-align:right">{{ row.proponent_count }}</td>
+                <td style="text-align:right">{{ row.opponent_count }}</td>
+                <td style="text-align:right">{{ row.no_position_count }}</td>
+                <td style="text-align:right">{{ "%.0f"|format(row.controversy * 100) }}%</td>
+                <td>
+                    {% if row.is_flagged %}
+                    <span class="intel-flag" title="{{ row.anomaly_reason }}">FLAGGED</span>
+                    {% else %}
+                    <span class="intel-normal">—</span>
+                    {% endif %}
+                </td>
+                <td class="org-cell">
+                    {% for org in row.top_organizations[:5] %}
+                    <span class="org-tag" title="{{ org.name }}: {{ org.total }} slips ({{ org.pro }} pro / {{ org.opp }} opp)">{{ org.name }} ({{ org.total }})</span>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                    {% if row.top_organizations|length > 5 %}
+                    <span class="org-more">+{{ row.top_organizations|length - 5 }} more</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function filterWitnessSlips() {
+    var flaggedOnly = document.getElementById('filter-slips-flagged') && document.getElementById('filter-slips-flagged').checked;
+    var query = (document.getElementById('slips-search') && document.getElementById('slips-search').value || '').trim().toLowerCase();
+    var words = query ? query.split(/\s+/).filter(Boolean) : [];
+    document.querySelectorAll('#witness-slips-table .slip-row').forEach(function(row) {
+        var show = true;
+        if (flaggedOnly && row.dataset.flagged !== 'true') show = false;
+        if (words.length) {
+            var text = (row.dataset.bill || '') + ' ' + (row.dataset.desc || '') + ' ' + (row.dataset.orgs || '');
+            if (!words.every(function(w) { return text.indexOf(w) !== -1; })) show = false;
+        }
+        row.style.display = show ? '' : 'none';
+    });
+}
+</script>
+
+{% endif %}

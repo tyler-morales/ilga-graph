@@ -15,8 +15,8 @@ from ilga_graph.moneyball import (
     MoneyballProfile,
     MoneyballWeights,
     _assign_badges,
-    _build_cosponsor_edges,
     avg_pipeline_depth,
+    build_cosponsor_edges,
     compute_moneyball,
     degree_centrality,
     is_leadership,
@@ -133,7 +133,7 @@ class TestBuildCosponsorEdges:
         mixed_bill_member: Member,
         cosponsor_republican: Member,
     ) -> None:
-        adjacency = _build_cosponsor_edges([mixed_bill_member, cosponsor_republican])
+        adjacency = build_cosponsor_edges([mixed_bill_member, cosponsor_republican])
         assert cosponsor_republican.id in adjacency[mixed_bill_member.id]
         assert mixed_bill_member.id in adjacency[cosponsor_republican.id]
 
@@ -142,7 +142,7 @@ class TestBuildCosponsorEdges:
         mixed_bill_member: Member,
         member_no_bills: Member,
     ) -> None:
-        adjacency = _build_cosponsor_edges([mixed_bill_member, member_no_bills])
+        adjacency = build_cosponsor_edges([mixed_bill_member, member_no_bills])
         assert member_no_bills.id not in adjacency[mixed_bill_member.id]
 
     def test_multiple_cosponsors(
@@ -152,7 +152,7 @@ class TestBuildCosponsorEdges:
         cosponsor_democrat: Member,
     ) -> None:
         members = [mixed_bill_member, cosponsor_republican, cosponsor_democrat]
-        adjacency = _build_cosponsor_edges(members)
+        adjacency = build_cosponsor_edges(members)
         # Alice connects to both Bob and Carol
         assert len(adjacency[mixed_bill_member.id]) == 2
         # Bob and Carol also share HB0100, so they connect to each other
@@ -368,6 +368,7 @@ class TestBadges:
             pipeline_depth_avg=2.0,
             pipeline_depth_normalized=0.33,
             network_centrality=0.3,
+            betweenness=0.01,
             unique_collaborators=10,
             total_primary_bills=12,
             total_passed=5,

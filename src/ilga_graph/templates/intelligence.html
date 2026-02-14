@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} — ML Intelligence Dashboard{% endblock %}
+
+{% block content %}
+<div class="intel-nav">
+    <a href="/intelligence">&larr; Intelligence Overview</a> &middot;
+    <a href="/explore">Power Map</a> &middot;
+    <a href="/advocacy">Advocacy Portal</a>
+</div>
+<h1>Raw Data Tables</h1>
+<p class="intel-subtitle">Detailed ML pipeline outputs — raw tables for debugging and exploration. <a href="/intelligence">Go to narrative summary &rarr;</a></p>
+
+{% if not available %}
+<div class="intel-empty">
+    <h2>No ML Data Available</h2>
+    <p>Run <code>make ml-run</code> to generate intelligence data from your scraped legislative records.</p>
+    <p>Once generated, this dashboard will show bill predictions, voting coalitions, anomaly detection, and accuracy tracking.</p>
+</div>
+{% else %}
+
+{# ── Summary cards ─────────────────────────────────────────────────── #}
+<div class="intel-summary-grid">
+    <div class="intel-summary-card">
+        <div class="intel-summary-value">{{ summary.total_predictions }}</div>
+        <div class="intel-summary-label">Bills Scored</div>
+        <div class="intel-summary-detail">{{ summary.dest_law|default(0) }} → Law &middot; {{ summary.dest_floor|default(0) }} → Floor &middot; {{ summary.dest_stuck|default(0) }} Stuck</div>
+    </div>
+    <div class="intel-summary-card">
+        <div class="intel-summary-value">{{ summary.forecast_count }}</div>
+        <div class="intel-summary-label">Forecasts</div>
+        <div class="intel-summary-detail">New bills (outcome unknown)</div>
+    </div>
+    <div class="intel-summary-card">
+        <div class="intel-summary-value">{{ summary.n_coalitions }}</div>
+        <div class="intel-summary-label">Coalitions</div>
+        <div class="intel-summary-detail">{{ summary.n_coalition_members }} members clustered</div>
+    </div>
+    <div class="intel-summary-card">
+        <div class="intel-summary-value">{{ summary.flagged_anomalies }}</div>
+        <div class="intel-summary-label">Anomalies Flagged</div>
+        <div class="intel-summary-detail">of {{ summary.total_anomalies }} bills analyzed</div>
+    </div>
+    <div class="intel-summary-card">
+        <div class="intel-summary-value">{{ summary.n_committees|default(0) }}</div>
+        <div class="intel-summary-label">Committees</div>
+        <div class="intel-summary-detail">{{ summary.active_committees|default(0) }} with 10+ bills</div>
+    </div>
+    <div class="intel-summary-card">
+        <div class="intel-summary-value">
+            {% if summary.roc_auc %}{{ "%.3f"|format(summary.roc_auc) }}{% else %}--{% endif %}
+        </div>
+        <div class="intel-summary-label">Model ROC-AUC</div>
+        <div class="intel-summary-detail">
+            <span class="intel-trust-badge intel-trust-{{ summary.trust|lower }}">{{ summary.trust or 'N/A' }}</span>
+            {{ summary.model or '' }}
+        </div>
+    </div>
+    <div class="intel-summary-card">
+        <div class="intel-summary-value">{{ summary.accuracy_runs }}</div>
+        <div class="intel-summary-label">Backtest Runs</div>
+        <div class="intel-summary-detail">Last: {{ summary.last_run or 'never' }}</div>
+    </div>
+</div>
+
+{# ── Tabs ──────────────────────────────────────────────────────────── #}
+<div class="intel-tabs" role="tablist">
+    <button class="intel-tab active" role="tab"
+            hx-get="/intelligence/predictions"
+            hx-target="#intel-content"
+            hx-swap="innerHTML"
+            hx-indicator="#intel-spinner"
+            onclick="setActiveTab(this)">Predictions</button>
+    <button class="intel-tab" role="tab"
+            hx-get="/intelligence/coalitions"
+            hx-target="#intel-content"
+            hx-swap="innerHTML"
+            hx-indicator="#intel-spinner"
+            onclick="setActiveTab(this)">Coalitions</button>
+    <button class="intel-tab" role="tab"
+            hx-get="/intelligence/anomalies"
+            hx-target="#intel-content"
+            hx-swap="innerHTML"
+            hx-indicator="#intel-spinner"
+            onclick="setActiveTab(this)">Anomalies</button>
+    <button class="intel-tab" role="tab"
+            hx-get="/intelligence/influence"
+            hx-target="#intel-content"
+            hx-swap="innerHTML"
+            hx-indicator="#intel-spinner"
+            onclick="setActiveTab(this)">Influence</button>
+    <button class="intel-tab" role="tab"
+            hx-get="/intelligence/witness-slips"
+            hx-target="#intel-content"
+            hx-swap="innerHTML"
+            hx-indicator="#intel-spinner"
+            onclick="setActiveTab(this)">Witness Slips</button>
+    <button class="intel-tab" role="tab"
+            hx-get="/intelligence/committees"
+            hx-target="#intel-content"
+            hx-swap="innerHTML"
+            hx-indicator="#intel-spinner"
+            onclick="setActiveTab(this)">Committees</button>
+    <button class="intel-tab" role="tab"
+            hx-get="/intelligence/accuracy"
+            hx-target="#intel-content"
+            hx-swap="innerHTML"
+            hx-indicator="#intel-spinner"
+            onclick="setActiveTab(this)">Model Quality &amp; Accuracy</button>
+    <span id="intel-spinner" class="htmx-indicator">Loading&hellip;</span>
+</div>
+
+<div id="intel-content"
+     hx-get="/intelligence/predictions"
+     hx-trigger="load"
+     hx-swap="innerHTML">
+    <p class="intel-loading">Loading predictions&hellip;</p>
+</div>
+
+<script>
+function setActiveTab(el) {
+    document.querySelectorAll('.intel-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+}
+
+function filterPredictions() {
+    var searchEl = document.getElementById('predictions-search');
+    var textQuery = (searchEl && searchEl.value) ? searchEl.value.trim().toLowerCase() : '';
+    var forecastOnly = document.getElementById('filter-forecasts') && document.getElementById('filter-forecasts').checked;
+    var highConf = document.getElementById('filter-high-conf') && document.getElementById('filter-high-conf').checked;
+    var lowConf = document.getElementById('filter-low-conf') && document.getElementById('filter-low-conf').checked;
+    // Destination filters
+    var destLaw = document.getElementById('filter-dest-law') && document.getElementById('filter-dest-law').checked;
+    var destFloor = document.getElementById('filter-dest-floor') && document.getElementById('filter-dest-floor').checked;
+    var destStuck = document.getElementById('filter-dest-stuck') && document.getElementById('filter-dest-stuck').checked;
+    var hasDestFilter = destLaw || destFloor || destStuck;
+    // Lifecycle filters
+    var openOnly = document.getElementById('filter-open') && document.getElementById('filter-open').checked;
+    var passedOnly = document.getElementById('filter-passed') && document.getElementById('filter-passed').checked;
+    var vetoedLcOnly = document.getElementById('filter-vetoed-lc') && document.getElementById('filter-vetoed-lc').checked;
+    var hasLifecycleFilter = openOnly || passedOnly || vetoedLcOnly;
+    // Status filters
+    var stagnant = document.getElementById('filter-stagnant') && document.getElementById('filter-stagnant').checked;
+    var slow = document.getElementById('filter-slow') && document.getElementById('filter-slow').checked;
+    var newOnly = document.getElementById('filter-new') && document.getElementById('filter-new').checked;
+    var hasStuckFilter = stagnant || slow || newOnly;
+    var rows = document.querySelectorAll('#predictions-table .pred-row');
+    for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var show = true;
+        if (textQuery) {
+            var bill = (row.dataset.bill || '').toLowerCase();
+            var desc = (row.dataset.desc || '').toLowerCase();
+            var sponsor = (row.dataset.sponsor || '').toLowerCase();
+            var searchable = bill + ' ' + desc + ' ' + sponsor;
+            var words = textQuery.split(/\s+/).filter(Boolean);
+            if (words.length && !words.every(function(w) { return searchable.indexOf(w) !== -1; })) show = false;
+        }
+        if (forecastOnly && row.dataset.forecast !== 'true') show = false;
+        if (highConf && parseFloat(row.dataset.confidence) < 0.8) show = false;
+        if (lowConf && parseFloat(row.dataset.confidence) >= 0.7) show = false;
+        if (hasDestFilter) {
+            var dest = (row.dataset.destination || '').toLowerCase();
+            var matchDest = false;
+            if (destLaw && (dest.indexOf('law') !== -1)) matchDest = true;
+            if (destFloor && (dest.indexOf('floor') !== -1 || dest.indexOf('passed') !== -1 || dest.indexOf('governor') !== -1)) matchDest = true;
+            if (destStuck && dest === 'stuck') matchDest = true;
+            if (!matchDest) show = false;
+        }
+        if (hasStuckFilter) {
+            var ss = row.dataset.stuck;
+            if (!((stagnant && ss === 'stagnant') || (slow && ss === 'slow') || (newOnly && ss === 'new'))) show = false;
+        }
+        if (hasLifecycleFilter) {
+            var lc = row.dataset.lifecycle;
+            if (!((openOnly && lc === 'open') || (passedOnly && lc === 'passed') || (vetoedLcOnly && lc === 'vetoed'))) show = false;
+        }
+        row.style.display = show ? '' : 'none';
+    }
+    // Update visible/total counts
+    var visible = 0;
+    for (var i = 0; i < rows.length; i++) {
+        if (rows[i].style.display !== 'none') visible++;
+    }
+    var visibleEl = document.getElementById('predictions-visible-count');
+    var totalEl = document.getElementById('predictions-total-count');
+    if (visibleEl) visibleEl.textContent = visible.toLocaleString();
+    if (totalEl) totalEl.textContent = rows.length.toLocaleString();
+}
+
+var currentSortCol = -1;
+var currentSortAsc = true;
+function sortTable(colIdx, dataType) {
+    var table = document.getElementById('predictions-table');
+    if (!table) return;
+    var tbody = table.querySelector('tbody');
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr.pred-row'));
+    var headers = table.querySelectorAll('thead th');
+    if (currentSortCol === colIdx) currentSortAsc = !currentSortAsc;
+    else { currentSortAsc = dataType === 'number' ? false : true; currentSortCol = colIdx; }
+    for (var h = 0; h < headers.length; h++) {
+        var arrow = headers[h].querySelector('.sort-arrow');
+        if (arrow) arrow.textContent = '';
+    }
+    var activeArrow = headers[colIdx] && headers[colIdx].querySelector('.sort-arrow');
+    if (activeArrow) activeArrow.textContent = currentSortAsc ? ' \u25B2' : ' \u25BC';
+    rows.sort(function(a, b) {
+        var cellA = a.children[colIdx], cellB = b.children[colIdx];
+        var valA, valB;
+        if (dataType === 'number') {
+            valA = parseFloat(cellA.getAttribute('data-sort-value') || cellA.textContent.replace(/[^0-9.\-]/g, '') || '0');
+            valB = parseFloat(cellB.getAttribute('data-sort-value') || cellB.textContent.replace(/[^0-9.\-]/g, '') || '0');
+            if (isNaN(valA)) valA = 0; if (isNaN(valB)) valB = 0;
+        } else {
+            valA = (cellA.getAttribute('data-sort-value') || cellA.textContent).trim().toLowerCase();
+            valB = (cellB.getAttribute('data-sort-value') || cellB.textContent).trim().toLowerCase();
+        }
+        if (valA < valB) return currentSortAsc ? -1 : 1;
+        if (valA > valB) return currentSortAsc ? 1 : -1;
+        return 0;
+    });
+    for (var r = 0; r < rows.length; r++) tbody.appendChild(rows[r]);
+}
+
+document.body.addEventListener('htmx:afterSettle', function(ev) {
+    if (ev.detail && ev.detail.target && ev.detail.target.id === 'intel-content') {
+        var searchEl = document.getElementById('predictions-search');
+        if (searchEl && !searchEl._predictionsBound) {
+            searchEl._predictionsBound = true;
+            searchEl.addEventListener('input', filterPredictions);
+        }
+        // Run filter once so totals display with comma formatting and correct visible count
+        if (document.getElementById('predictions-table')) filterPredictions();
+    }
+});
+</script>
+
+{% endif %}
+{% endblock %}

@@ -96,15 +96,27 @@ class PageInfo:
 
 @strawberry.type
 class ActionEntryType:
-    """One action in a bill's legislative history."""
+    """One action in a bill's legislative history, with structured classification."""
 
     date: str
     chamber: str
     action: str
+    action_category: str = ""  # e.g. "introduction", "committee_action", "governor"
+    action_category_label: str = ""  # e.g. "Introduction & Filing", "Governor Action"
+    outcome_signal: str = ""  # e.g. "positive", "negative_terminal", "neutral"
+    meaning: str = ""  # Human-readable explanation
 
     @classmethod
     def from_model(cls, a: ActionEntryModel) -> ActionEntryType:
-        return cls(date=a.date, chamber=a.chamber, action=a.action)
+        return cls(
+            date=a.date,
+            chamber=a.chamber,
+            action=a.action,
+            action_category=a.action_category,
+            action_category_label=a.action_category_label,
+            outcome_signal=a.outcome_signal,
+            meaning=a.meaning,
+        )
 
 
 @strawberry.type
@@ -249,6 +261,14 @@ class MoneyballProfileType:
     pipeline_depth_avg: float
     pipeline_depth_normalized: float
     network_centrality: float
+    betweenness: float = strawberry.field(
+        default=0.0,
+        description=(
+            "Betweenness centrality — how often this member lies on shortest "
+            "paths between other members in the co-sponsorship network.  "
+            "High betweenness = bridge/connector between legislative groups."
+        ),
+    )
     unique_collaborators: int
     is_leadership: bool
     rank_overall: int
@@ -266,6 +286,7 @@ class MoneyballProfileType:
             pipeline_depth_avg=mb.pipeline_depth_avg,
             pipeline_depth_normalized=mb.pipeline_depth_normalized,
             network_centrality=mb.network_centrality,
+            betweenness=mb.betweenness,
             unique_collaborators=mb.unique_collaborators,
             is_leadership=mb.is_leadership,
             rank_overall=mb.rank_overall,
@@ -273,6 +294,40 @@ class MoneyballProfileType:
             rank_non_leadership=mb.rank_non_leadership,
             badges=list(mb.badges),
         )
+
+
+@strawberry.type
+class InfluenceProfileType:
+    """Unified influence profile for a legislator."""
+
+    member_id: str
+    influence_score: float = strawberry.field(
+        description="Unified 0-100 influence score combining Moneyball, "
+        "betweenness, pivotality, and sponsor pull."
+    )
+    influence_label: str = strawberry.field(
+        description="Human-readable label: High, Moderate, or Low."
+    )
+    rank_overall: int = 0
+    rank_chamber: int = 0
+
+    # Component scores (all 0-1)
+    moneyball_normalized: float = 0.0
+    betweenness_normalized: float = 0.0
+    pivotality_normalized: float = 0.0
+    pull_normalized: float = 0.0
+
+    # Human-readable signals
+    influence_signals: list[str] = strawberry.field(default_factory=list)
+
+    # Pivotality details
+    close_votes_total: int = 0
+    pivotal_winning: int = 0
+    swing_votes: int = 0
+
+    # Sponsor pull details
+    sponsor_lift: float = 0.0
+    cosponsor_lift: float = 0.0
 
 
 @strawberry.type
@@ -438,6 +493,7 @@ class MemberType:
     co_sponsor_bill_ids: list[str] = strawberry.field(default_factory=list)
     scorecard: ScorecardType | None = None
     moneyball: MoneyballProfileType | None = None
+    influence: InfluenceProfileType | None = None
     # ── Seating chart (Whisper Network) ──
     seat_block_id: str | None = None
     seat_ring: int | None = None
@@ -450,6 +506,7 @@ class MemberType:
         m: MemberModel,
         scorecard: MemberScorecard | None = None,
         moneyball_profile: MoneyballProfileModel | None = None,
+        influence_profile: object | None = None,
     ) -> MemberType:
         sc = scorecard if scorecard is not None else compute_scorecard(m)
 
@@ -457,6 +514,34 @@ class MemberType:
         is_senate = m.chamber.lower() == "senate"
         associated_senator = m.associated_members if not is_senate else None
         associated_representatives = m.associated_members if is_senate else None
+
+        # Build influence type from profile if available
+        influence_type = None
+        if influence_profile is not None:
+            ip = influence_profile
+            # Resolve pivotality and pull details if available
+            close_votes = getattr(ip, "pivotality_raw_close", 0)
+            pivotal_win = getattr(ip, "pivotality_raw_winning", 0)
+            swing = getattr(ip, "pivotality_raw_swing", 0)
+            s_lift = getattr(ip, "pull_raw_sponsor_lift", 0.0)
+            c_lift = getattr(ip, "pull_raw_cosponsor_lift", 0.0)
+            influence_type = InfluenceProfileType(
+                member_id=m.id,
+                influence_score=ip.influence_score,
+                influence_label=ip.influence_label,
+                rank_overall=ip.rank_overall,
+                rank_chamber=ip.rank_chamber,
+                moneyball_normalized=ip.moneyball_normalized,
+                betweenness_normalized=ip.betweenness_normalized,
+                pivotality_normalized=ip.pivotality_normalized,
+                pull_normalized=ip.pull_normalized,
+                influence_signals=list(ip.influence_signals),
+                close_votes_total=close_votes,
+                pivotal_winning=pivotal_win,
+                swing_votes=swing,
+                sponsor_lift=s_lift,
+                cosponsor_lift=c_lift,
+            )
 
         return cls(
             id=m.id,
@@ -482,6 +567,7 @@ class MemberType:
                 if moneyball_profile is not None
                 else None
             ),
+            influence=influence_type,
             seat_block_id=m.seat_block_id,
             seat_ring=m.seat_ring,
             seatmate_names=list(m.seatmate_names),
@@ -682,7 +768,67 @@ def paginate(items: list, offset: int, limit: int) -> tuple[list, PageInfo]:
 
 
 @strawberry.type
+class ActionTypeDefinition:
+    """One action type from the reference."""
+
+    pattern: str
+    meaning: str
+    outcome_signal: str
+
+
+@strawberry.type
+class ActionCategoryDefinition:
+    """One category of legislative actions."""
+
+    id: str
+    label: str
+    description: str
+    outcome_signal: str
+    progress_stage: str | None
+    actions: list[ActionTypeDefinition]
+
+
+@strawberry.type
 class Query:
+    @strawberry.field(
+        description=(
+            "Reference of all IL legislative action types with meanings "
+            "and outcome signals. Use this to understand what bill actions mean."
+        ),
+    )
+    def action_types_reference(self) -> list[ActionCategoryDefinition]:
+        import json
+        from pathlib import Path
+
+        ref_path = Path(__file__).parent / "ml" / "action_types.json"
+        try:
+            with open(ref_path) as f:
+                data = json.load(f)
+        except Exception:
+            return []
+
+        results = []
+        for cat in data.get("categories", []):
+            actions = [
+                ActionTypeDefinition(
+                    pattern=a["pattern"],
+                    meaning=a["meaning"],
+                    outcome_signal=a.get("outcome_signal", "neutral"),
+                )
+                for a in cat.get("actions", [])
+            ]
+            results.append(
+                ActionCategoryDefinition(
+                    id=cat["id"],
+                    label=cat["label"],
+                    description=cat.get("description", ""),
+                    outcome_signal=cat.get("outcome_signal", "neutral"),
+                    progress_stage=cat.get("progress_stage"),
+                    actions=actions,
+                )
+            )
+        return results
+
     @strawberry.field(
         description=(
             "Definitions of all metrics (empirical and derived) "
@@ -1069,6 +1215,53 @@ class Query:
         )
 
     # ----- End New Query Field -----
+
+    @strawberry.field(
+        description=(
+            "Influence leaderboard — legislators ranked by unified "
+            "influence score (Moneyball + betweenness + pivotality + "
+            "sponsor pull).  Filter by chamber."
+        ),
+    )
+    def influence_leaderboard(
+        self,
+        chamber: str | None = None,
+        limit: int = 50,
+    ) -> list[InfluenceProfileType]:
+        profiles = list(state.influence.values())
+        if not profiles:
+            return []
+        if chamber:
+            chamber_lower = chamber.lower()
+            profiles = [p for p in profiles if p.chamber.lower() == chamber_lower]
+        # Sort by influence_score descending
+        profiles.sort(key=lambda p: p.influence_score, reverse=True)
+        profiles = profiles[:limit]
+
+        result = []
+        for ip in profiles:
+            piv = state.pivotality.get(ip.member_name)
+            sp = state.sponsor_pull.get(ip.member_id)
+            result.append(
+                InfluenceProfileType(
+                    member_id=ip.member_id,
+                    influence_score=ip.influence_score,
+                    influence_label=ip.influence_label,
+                    rank_overall=ip.rank_overall,
+                    rank_chamber=ip.rank_chamber,
+                    moneyball_normalized=ip.moneyball_normalized,
+                    betweenness_normalized=ip.betweenness_normalized,
+                    pivotality_normalized=ip.pivotality_normalized,
+                    pull_normalized=ip.pull_normalized,
+                    influence_signals=list(ip.influence_signals),
+                    close_votes_total=(piv.close_votes_total if piv else 0),
+                    pivotal_winning=(piv.pivotal_winning if piv else 0),
+                    swing_votes=piv.swing_votes if piv else 0,
+                    sponsor_lift=sp.sponsor_lift if sp else 0.0,
+                    cosponsor_lift=sp.cosponsor_lift if sp else 0.0,
+                )
+            )
+        return result
 
 
 from strawberry.extensions import QueryDepthLimiter  # noqa: E402

@@ -66,6 +66,9 @@ def _env(key: str, fallback: str = "") -> str:
 # 104th General Assembly (2025-2026): GaId=18, SessionId=114.
 GA_ID: int = int(_env("ILGA_GA_ID", "18"))
 SESSION_ID: int = int(_env("ILGA_SESSION_ID", "114"))
+# General Assembly number (used for direct PDF URL construction).
+# Mapping: GA_NUMBER = GA_ID + 86  →  GAID 18 = 104th GA.
+GA_NUMBER: int = GA_ID + 86
 
 # ── Base URLs ────────────────────────────────────────────────────────────────
 BASE_URL: str = _env("ILGA_BASE_URL", "https://www.ilga.gov/").rstrip("/") + "/"

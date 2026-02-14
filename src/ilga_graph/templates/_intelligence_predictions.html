@@ -1,0 +1,209 @@
+{# Bill Predictions tab partial -- v5 with lifecycle status, corrected predictions, sortable table #}
+{% if not predictions %}
+<div class="intel-empty">No bill predictions available.</div>
+{% else %}
+
+<div class="intel-section-header">
+    <h2>Bill Outcome Predictions</h2>
+    <p class="intel-prediction-totals">Showing <strong id="predictions-visible-count">{{ predictions|length }}</strong> of <strong id="predictions-total-count">{{ predictions|length }}</strong> bills</p>
+    <details class="intel-scores-explained" style="margin-bottom: 10px;">
+        <summary style="cursor: pointer; color: #555; font-size: 0.9em;">What do P(Advance), P(Law), and Forecast mean?</summary>
+        <ul style="margin: 8px 0 0 1.2em; font-size: 0.85em; color: #555; line-height: 1.5;">
+            <li><strong>P(Advance)</strong> — Chance this bill <em>ever</em> reaches a positive milestone (passes committee, floor, etc.). One model for all bills; not “next step.” So a bill already at “Passed Both” can still show a lower P(Advance) if it looks like bills that often stall.</li>
+            <li><strong>P(Law)</strong> — Chance this bill <em>becomes law</em>, given where it is now (stage, momentum, delays). Bills already at Passed Both / Governor usually have high P(Law).</li>
+            <li><strong>Forecast</strong> — “Would this bill become law?” using <em>only</em> intro-day info (sponsor, topic, committee). No progress or staleness. Compare to P(Law) to see how much current momentum matters.</li>
+        </ul>
+    </details>
+    <p style="font-size: 0.85em; color: #666;">Predicted destination (→ Law, → Floor, Stuck), pipeline stage, stuck analysis. Forecasts (outcome not yet known) in <em>italics</em>. Closed bills show actual outcomes. Click column headers to sort.</p>
+</div>
+
+{# Search + grouped quick filters #}
+<div class="intel-filter-bar">
+    <input type="text" id="predictions-search" class="intel-filter-search" placeholder="Search by bill number, description, or sponsor name…" autocomplete="off" aria-label="Filter predictions">
+</div>
+<div class="intel-filters intel-filters-grouped">
+    <div class="intel-filter-group">
+        <span class="intel-filter-group-label">Destination</span>
+        <label><input type="checkbox" id="filter-dest-law" onchange="filterPredictions()"> → Law</label>
+        <label><input type="checkbox" id="filter-dest-floor" onchange="filterPredictions()"> → Floor</label>
+        <label><input type="checkbox" id="filter-dest-stuck" onchange="filterPredictions()"> Stuck</label>
+        <label><input type="checkbox" id="filter-forecasts" onchange="filterPredictions()"> Forecasts only</label>
+        <label><input type="checkbox" id="filter-high-conf" onchange="filterPredictions()"> High confidence (&ge;80%)</label>
+        <label><input type="checkbox" id="filter-low-conf" onchange="filterPredictions()"> Low confidence (&lt;70%)</label>
+    </div>
+    <div class="intel-filter-group">
+        <span class="intel-filter-group-label">Lifecycle</span>
+        <label><input type="checkbox" id="filter-open" onchange="filterPredictions()"> Open</label>
+        <label><input type="checkbox" id="filter-passed" onchange="filterPredictions()"> Passed (law)</label>
+        <label><input type="checkbox" id="filter-vetoed-lc" onchange="filterPredictions()"> Vetoed</label>
+    </div>
+    <div class="intel-filter-group">
+        <span class="intel-filter-group-label">Status</span>
+        <label><input type="checkbox" id="filter-stagnant" onchange="filterPredictions()"> Stagnant</label>
+        <label><input type="checkbox" id="filter-slow" onchange="filterPredictions()"> Slow</label>
+        <label><input type="checkbox" id="filter-new" onchange="filterPredictions()"> New</label>
+    </div>
+</div>
+
+<table class="intel-table" id="predictions-table">
+    <thead>
+        <tr>
+            <th class="sortable" data-sort="string" onclick="sortTable(0, 'string')">Bill <span class="sort-arrow"></span></th>
+            <th class="sortable" data-sort="string" onclick="sortTable(1, 'string')">Description <span class="sort-arrow"></span></th>
+            <th class="sortable" data-sort="string" onclick="sortTable(2, 'string')">Sponsor <span class="sort-arrow"></span></th>
+            <th class="sortable" data-sort="number" onclick="sortTable(3, 'number')" title="Chance this bill ever reaches a positive milestone (passes committee, floor, etc.). One model for all stages — can be lower than P(Law) for bills already far along.">P(Advance) <span class="sort-arrow"></span></th>
+            <th class="sortable" data-sort="number" onclick="sortTable(4, 'number')" title="Chance this bill becomes law, given current stage and progress. Usually high when bill is at Passed Both or Governor.">P(Law) <span class="sort-arrow"></span></th>
+            <th class="sortable" data-sort="number" onclick="sortTable(5, 'number')" title="P(law) using only intro-day info (sponsor, topic). No progress or delay. Compare to P(Law) to see impact of momentum.">Forecast <span class="sort-arrow"></span></th>
+            <th class="sortable" data-sort="string" onclick="sortTable(6, 'string')">Predicted Dest. <span class="sort-arrow"></span></th>
+            <th class="sortable" data-sort="number" onclick="sortTable(7, 'number')">Confidence <span class="sort-arrow"></span></th>
+            <th class="sortable" data-sort="number" onclick="sortTable(8, 'number')">Pipeline Stage <span class="sort-arrow"></span></th>
+            <th class="sortable" data-sort="string" onclick="sortTable(9, 'string')">Lifecycle <span class="sort-arrow"></span></th>
+            <th class="sortable" data-sort="string" onclick="sortTable(10, 'string')">Status <span class="sort-arrow"></span></th>
+            <th class="sortable" data-sort="number" onclick="sortTable(11, 'number')">Days Idle <span class="sort-arrow"></span></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in predictions %}
+        <tr class="pred-row {% if not p.label_reliable %}forecast{% endif %} {% if p.lifecycle_status != 'OPEN' %}closed-bill{% endif %} {% if p.lifecycle_status == 'OPEN' and p.confidence < 0.7 %}low-confidence{% endif %}"
+            data-bill="{{ p.bill_number }}"
+            data-desc="{{ p.description }}"
+            data-sponsor="{{ p.sponsor }}"
+            data-outcome="{{ p.predicted_outcome }}"
+            data-destination="{{ p.predicted_destination }}"
+            data-confidence="{{ p.confidence }}"
+            data-forecast="{{ 'true' if not p.label_reliable else 'false' }}"
+            data-stuck="{{ p.stuck_status|lower }}"
+            data-stage="{{ p.current_stage }}"
+            data-lifecycle="{{ p.lifecycle_status|lower }}">
+            <td class="bill-num"><strong>{{ p.bill_number }}</strong></td>
+            <td class="desc-cell" title="{{ p.description }}">{{ p.description[:70] }}{% if p.description|length > 70 %}&hellip;{% endif %}</td>
+            <td>{{ p.sponsor }}</td>
+            <td data-sort-value="{{ p.prob_advance }}">
+                {% if p.lifecycle_status in ('PASSED', 'VETOED') %}
+                {# Terminal — show actual outcome, not model prediction #}
+                <div class="score-bar-container">
+                    {% if p.lifecycle_status == 'PASSED' %}
+                    <div class="score-bar score-high" style="width: 100%"></div>
+                    <span class="score-text">Passed</span>
+                    {% else %}
+                    <div class="score-bar score-low" style="width: 100%"></div>
+                    <span class="score-text">Failed</span>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="score-bar-container">
+                    <div class="score-bar {% if p.prob_advance >= 0.7 %}score-high{% elif p.prob_advance >= 0.4 %}score-mid{% else %}score-low{% endif %}"
+                         style="width: {{ (p.prob_advance * 100)|int }}%">
+                    </div>
+                    <span class="score-text">{{ "%.1f"|format(p.prob_advance * 100) }}%</span>
+                </div>
+                {% endif %}
+            </td>
+            <td data-sort-value="{{ p.prob_law }}">
+                {% if p.lifecycle_status in ('PASSED', 'VETOED') %}
+                <div class="score-bar-container">
+                    {% if p.lifecycle_status == 'PASSED' %}
+                    <div class="score-bar score-high" style="width: 100%"></div>
+                    <span class="score-text">Law</span>
+                    {% else %}
+                    <div class="score-bar score-low" style="width: 100%"></div>
+                    <span class="score-text">Vetoed</span>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="score-bar-container">
+                    <div class="score-bar {% if p.prob_law >= 0.5 %}score-high{% elif p.prob_law >= 0.2 %}score-mid{% else %}score-low{% endif %}"
+                         style="width: {{ (p.prob_law * 100)|int }}%">
+                    </div>
+                    <span class="score-text">{{ "%.1f"|format(p.prob_law * 100) }}%</span>
+                </div>
+                {% endif %}
+            </td>
+            <td data-sort-value="{{ p.forecast_score }}" title="Forecast P(Law) — based on bill content and sponsor only; ignores current delay.">
+                {% if p.forecast_score > 0 %}
+                <div class="score-bar-container">
+                    <div class="score-bar {% if p.forecast_score >= 0.5 %}score-high{% elif p.forecast_score >= 0.2 %}score-mid{% else %}score-low{% endif %}"
+                         style="width: {{ (p.forecast_score * 100)|int }}%">
+                    </div>
+                    <span class="score-text">{{ "%.1f"|format(p.forecast_score * 100) }}%</span>
+                </div>
+                {% if p.forecast_confidence %}
+                <small class="forecast-conf forecast-{{ p.forecast_confidence|lower }}">{{ p.forecast_confidence }}</small>
+                {% endif %}
+                {% else %}
+                <span class="confidence-actual">&mdash;</span>
+                {% endif %}
+            </td>
+            <td data-sort-value="{{ p.predicted_destination }}">
+                {% if p.predicted_destination == '→ Law' %}
+                <span class="dest-badge dest-law">→ Law</span>
+                {% elif p.predicted_destination == '→ Floor' %}
+                <span class="dest-badge dest-floor">→ Floor</span>
+                {% elif p.predicted_destination == '→ Passed' %}
+                <span class="dest-badge dest-passed">→ Passed</span>
+                {% elif p.predicted_destination == '→ Governor' %}
+                <span class="dest-badge dest-governor">→ Governor</span>
+                {% elif p.predicted_destination == 'Became Law' %}
+                <span class="dest-badge dest-became-law">Became Law</span>
+                {% elif p.predicted_destination == 'Vetoed' %}
+                <span class="dest-badge dest-vetoed">Vetoed</span>
+                {% else %}
+                <span class="dest-badge dest-stuck">Stuck</span>
+                {% endif %}
+            </td>
+            <td data-sort-value="{{ p.confidence }}">
+                {% if p.lifecycle_status != 'OPEN' %}
+                <span class="confidence-actual">&mdash;</span>
+                {% elif p.confidence < 0.7 %}
+                <span class="confidence-low">{{ "%.0f"|format(p.confidence * 100) }}% <small class="confidence-low-label">Uncertain</small></span>
+                {% else %}
+                {{ "%.0f"|format(p.confidence * 100) }}%
+                {% endif %}
+            </td>
+            <td data-sort-value="{{ p.stage_progress }}" {% if p.rule_context %}title="{{ p.rule_context }}"{% endif %}>
+                {# Pipeline progress bar — hover for rule context #}
+                <div class="pipeline-stage-cell">
+                    <div class="pipeline-bar-container">
+                        {% set prog_pct = (p.stage_progress * 100)|int %}
+                        {% if p.current_stage == 'VETOED' %}
+                        <div class="pipeline-bar pipeline-vetoed" style="width: 100%"></div>
+                        {% elif p.current_stage == 'SIGNED' %}
+                        <div class="pipeline-bar pipeline-signed" style="width: 100%"></div>
+                        {% else %}
+                        <div class="pipeline-bar pipeline-active" style="width: {{ prog_pct }}%"></div>
+                        {% endif %}
+                    </div>
+                    <span class="pipeline-label">{{ p.stage_label }}</span>
+                </div>
+            </td>
+            <td data-sort-value="{{ p.lifecycle_status }}">
+                <span class="lifecycle-badge lifecycle-{{ p.lifecycle_status|lower }}">{{ p.lifecycle_status }}</span>
+            </td>
+            <td>
+                {% if p.lifecycle_status == 'PASSED' %}
+                <span class="stuck-badge stuck-law">LAW</span>
+                {% elif p.lifecycle_status == 'VETOED' %}
+                <span class="stuck-badge stuck-dead">VETOED</span>
+                {% elif p.stuck_status %}
+                <span class="stuck-badge stuck-{{ p.stuck_status|lower }}" title="{{ p.stuck_reason }}">{{ p.stuck_status }}</span>
+                {% elif p.stage_progress >= 0.55 %}
+                <span class="stuck-badge stuck-advancing">MOVING</span>
+                {% else %}
+                <span class="stuck-badge stuck-ok">OK</span>
+                {% endif %}
+            </td>
+            <td style="text-align:right" data-sort-value="{{ p.days_since_action }}">
+                {% if p.days_since_action > 180 %}
+                <span class="days-stale days-critical">{{ p.days_since_action }}d</span>
+                {% elif p.days_since_action > 60 %}
+                <span class="days-stale days-warn">{{ p.days_since_action }}d</span>
+                {% else %}
+                <span class="days-fresh">{{ p.days_since_action }}d</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endif %}

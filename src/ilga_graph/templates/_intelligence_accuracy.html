@@ -1,0 +1,195 @@
+{# Model Quality & Accuracy History tab partial #}
+
+{# ── Model Quality ─────────────────────────────────────────────────── #}
+{% if quality %}
+<div class="intel-section-header">
+    <h2>Model Quality Report</h2>
+</div>
+
+<div class="intel-quality-grid">
+    <div class="intel-quality-card">
+        <h3>Model: <code>{{ quality.get('model_selected', 'N/A') }}</code></h3>
+        {% set trust = quality.get('trust_assessment', {}) %}
+        <div class="intel-trust-big">
+            <span class="intel-trust-badge intel-trust-{{ trust.get('overall', 'unknown')|lower }}">
+                {{ trust.get('overall', 'UNKNOWN') }}
+            </span>
+        </div>
+        {% if trust.get('strengths') %}
+        <div class="quality-section">
+            <h4>Strengths</h4>
+            <ul>
+                {% for s in trust.get('strengths', []) %}
+                <li class="quality-good">{{ s }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        {% if trust.get('issues') %}
+        <div class="quality-section">
+            <h4>Issues</h4>
+            <ul>
+                {% for i in trust.get('issues', []) %}
+                <li class="quality-warn">{{ i }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="intel-quality-card">
+        <h3>Test Set Metrics</h3>
+        {% set ts = quality.get('test_set_metrics', {}) %}
+        <table class="intel-table intel-table-compact">
+            <tbody>
+                <tr><td>ROC-AUC</td><td><strong>{{ "%.4f"|format(ts.get('roc_auc', 0)) }}</strong></td></tr>
+                <tr><td>Accuracy</td><td>{{ "%.4f"|format(ts.get('accuracy', 0)) }}</td></tr>
+                <tr><td>Precision (Advance)</td><td>{{ "%.4f"|format(ts.get('precision_pos', 0)) }}</td></tr>
+                <tr><td>Recall (Advance)</td><td>{{ "%.4f"|format(ts.get('recall_pos', 0)) }}</td></tr>
+                <tr><td>F1 (Advance)</td><td>{{ "%.4f"|format(ts.get('f1_pos', 0)) }}</td></tr>
+            </tbody>
+        </table>
+
+        {% set cv = quality.get('cross_validation', {}) %}
+        {% if cv %}
+        <h4 style="margin-top:12px">Cross-Validation (5-fold)</h4>
+        <table class="intel-table intel-table-compact">
+            <tbody>
+                <tr><td>Mean ROC-AUC</td><td>{{ "%.4f"|format(cv.get('mean_roc_auc', 0)) }}</td></tr>
+                <tr><td>Std ROC-AUC</td><td>&plusmn;{{ "%.4f"|format(cv.get('std_roc_auc', 0)) }}</td></tr>
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+
+    <div class="intel-quality-card">
+        <h3>Top Feature Importances</h3>
+        {% set features = quality.get('top_features', []) %}
+        {% if features %}
+        <table class="intel-table intel-table-compact">
+            <thead><tr><th>Feature</th><th>Importance</th></tr></thead>
+            <tbody>
+                {% for f in features[:15] %}
+                <tr>
+                    <td><code>{{ f.get('name', '') }}</code></td>
+                    <td>
+                        <div class="score-bar-container" style="width:120px">
+                            <div class="score-bar score-feature"
+                                 style="width: {{ (f.get('importance', 0) / features[0].get('importance', 1) * 100)|int }}%">
+                            </div>
+                            <span class="score-text">{{ "%.4f"|format(f.get('importance', 0)) }}</span>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+
+    {# Model comparison #}
+    {% set comparison = quality.get('model_comparison', []) %}
+    {% if comparison %}
+    <div class="intel-quality-card">
+        <h3>Model Comparison (CV)</h3>
+        <table class="intel-table intel-table-compact">
+            <thead><tr><th>Model</th><th>Mean AUC</th><th>Std</th><th>Selected?</th></tr></thead>
+            <tbody>
+                {% for c in comparison %}
+                <tr {% if c.get('name') == quality.get('model_selected') %}class="model-selected"{% endif %}>
+                    <td>{{ c.get('name', '') }}</td>
+                    <td>{{ "%.4f"|format(c.get('mean_auc', 0)) }}</td>
+                    <td>&plusmn;{{ "%.4f"|format(c.get('std_auc', 0)) }}</td>
+                    <td>{% if c.get('name') == quality.get('model_selected') %}<strong>YES</strong>{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% else %}
+<div class="intel-section-header">
+    <h2>Model Quality Report</h2>
+    <p>No model quality data. Run <code>make ml-run</code> to generate.</p>
+</div>
+{% endif %}
+
+{# ── Accuracy History ──────────────────────────────────────────────── #}
+<div class="intel-section-header" style="margin-top: 30px">
+    <h2>Prediction Accuracy History (Self-Correcting Feedback Loop)</h2>
+    <p>Each pipeline run backtests previous predictions against new reality.
+       Over time, this shows whether the model is improving.</p>
+</div>
+
+{% if history %}
+<table class="intel-table">
+    <thead>
+        <tr>
+            <th>Run Date</th>
+            <th>vs. Snapshot</th>
+            <th>Days</th>
+            <th>Tested</th>
+            <th>Correct</th>
+            <th>Accuracy</th>
+            <th>Precision</th>
+            <th>Recall</th>
+            <th>F1</th>
+            <th>Model</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in history|reverse %}
+        <tr>
+            <td>{{ r.run_date }}</td>
+            <td>{{ r.snapshot_date }}</td>
+            <td style="text-align:right">{{ r.days_elapsed }}</td>
+            <td style="text-align:right">{{ r.total_testable }}</td>
+            <td style="text-align:right">{{ r.correct }}</td>
+            <td>
+                <div class="score-bar-container" style="width:80px">
+                    <div class="score-bar {% if r.accuracy >= 0.8 %}score-high{% elif r.accuracy >= 0.6 %}score-mid{% else %}score-low{% endif %}"
+                         style="width: {{ (r.accuracy * 100)|int }}%">
+                    </div>
+                    <span class="score-text">{{ "%.1f"|format(r.accuracy * 100) }}%</span>
+                </div>
+            </td>
+            <td>{{ "%.1f"|format(r.precision_advance * 100) }}%</td>
+            <td>{{ "%.1f"|format(r.recall_advance * 100) }}%</td>
+            <td>{{ "%.3f"|format(r.f1_advance) }}</td>
+            <td><code>{{ r.model_version }}</code></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{# Biggest misses from the latest run #}
+{% set latest = history[-1] if history else None %}
+{% if latest and latest.biggest_misses %}
+<div style="margin-top: 16px">
+    <h3>Latest Run: Biggest Misses (confidently wrong)</h3>
+    <table class="intel-table intel-table-compact">
+        <thead>
+            <tr><th>Bill</th><th>Predicted</th><th>Actual</th><th>Confidence</th></tr>
+        </thead>
+        <tbody>
+            {% for m in latest.biggest_misses[:10] %}
+            <tr>
+                <td><strong>{{ m.get('bill_number', '') }}</strong></td>
+                <td><span class="intel-outcome intel-outcome-{{ m.get('predicted', '')|lower }}">{{ m.get('predicted', '') }}</span></td>
+                <td><span class="intel-outcome intel-outcome-{{ m.get('actual', '')|lower }}">{{ m.get('actual', '') }}</span></td>
+                <td>{{ "%.0f"|format(m.get('confidence', 0) * 100) }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% else %}
+<div class="intel-empty">
+    <p>No accuracy history yet. The first backtest will run on the <em>second</em> pipeline run,
+       when previous predictions can be compared against new outcomes.</p>
+    <p>Run <code>make scrape</code> (which triggers <code>ml-run</code> automatically) to start accumulating data.</p>
+</div>
+{% endif %}

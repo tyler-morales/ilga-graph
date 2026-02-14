@@ -1,4 +1,4 @@
-.PHONY: scrape dev serve install test lint lint-fix clean help
+.PHONY: scrape dev serve install test lint lint-fix clean help ml-setup ml-run ml-pipeline ml-resolve ml-predict ml-embed scrape-fulltext logs
 
 # ── Virtual environment ─────────────────────────────────────────────────────
 VENV ?= $(or $(wildcard .venv), $(wildcard venv), $(wildcard src/ilga_graph/.venv))
@@ -29,7 +29,7 @@ help: ## Show this help
 #   make serve               Serve from cache (prod mode)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-scrape: ## Smart incremental scrape (members + bills + votes + slips)
+scrape: ## Smart incremental scrape (members + bills + votes + slips + ML)
 	$(PYTHON) scripts/scrape.py \
 		--fast \
 		$(if $(FRESH),--fresh) \
@@ -38,6 +38,8 @@ scrape: ## Smart incremental scrape (members + bills + votes + slips)
 		$(if $(WORKERS),--workers $(WORKERS)) \
 		$(if $(EXPORT),--export) \
 		$(if $(SKIP_VOTES),--skip-votes)
+	@echo "Running ML pipeline..."
+	PYTHONPATH=src $(PYTHON) scripts/ml_run.py || echo "ML pipeline skipped (run make ml-setup first)"
 
 dev: ## Serve from cache (dev mode, auto-reload)
 	ILGA_LOAD_ONLY=1 ILGA_PROFILE=dev $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src
@@ -61,10 +63,45 @@ lint-fix: ## Auto-fix lint and format
 	$(BIN)ruff check --fix .
 	$(BIN)ruff format .
 
-clean: ## Remove cache/ and generated vault files
+# ── ML Pipeline ───────────────────────────────────────────────────────────────
+
+ml-setup: ## Install ML dependencies
+	$(BIN)pip install -e ".[ml]"
+
+ml-run: ## Run full ML pipeline (no interaction -- scores, coalitions, anomalies). Use ILGA_ML_SKIP_TUNE=1 to skip hyperparameter tuning (faster).
+	PYTHONPATH=src $(PYTHON) scripts/ml_run.py
+
+ml-pipeline: ## Run data pipeline only: cache/*.json -> processed/*.parquet
+	PYTHONPATH=src $(PYTHON) scripts/ml_pipeline.py
+
+ml-resolve: ## Entity resolution only (AUTO=1 for no interaction)
+	PYTHONPATH=src $(PYTHON) scripts/ml_resolve.py $(if $(AUTO),--auto) $(if $(STATS),--stats)
+
+ml-predict: ## Bill outcome prediction only
+	PYTHONPATH=src $(PYTHON) scripts/ml_predict.py
+
+ml-embed: ## Generate Node2Vec graph embeddings (co-sponsorship network)
+	PYTHONPATH=src $(PYTHON) -c "from ilga_graph.ml.node_embedder import run_embedding_pipeline; run_embedding_pipeline()"
+
+scrape-fulltext: ## Scrape full bill text PDFs (incremental, resumable)
+	PYTHONPATH=src $(PYTHON) scripts/scrape_fulltext.py \
+		$(if $(LIMIT),--limit $(LIMIT),--limit 100) \
+		$(if $(WORKERS),--workers $(WORKERS)) \
+		$(if $(FAST),--fast) \
+		$(if $(DELAY),--delay $(DELAY)) \
+		$(if $(SAVE_INTERVAL),--save-interval $(SAVE_INTERVAL))
+
+# ── Utilities ──────────────────────────────────────────────────────────────────
+
+logs: ## Show unified run log (scrape, ml_run, startup) — terminal dashboard
+	PYTHONPATH=src $(PYTHON) scripts/log_dashboard.py $(if $(N),--tail $(N),--tail 20)
+
+clean: ## Remove cache/, processed/, and generated vault files
 	rm -rf cache/
+	rm -rf processed/*.parquet processed/*.pkl
 	rm -rf ILGA_Graph_Vault/Bills/ ILGA_Graph_Vault/Committees/ ILGA_Graph_Vault/Members/
 	rm -f ILGA_Graph_Vault/*.base
 	rm -f ILGA_Graph_Vault/Moneyball\ Report.md
 	rm -f .startup_timings.csv
+	rm -f .run_log.jsonl
 	@echo "Cleaned. Run 'make scrape' then 'make dev'."

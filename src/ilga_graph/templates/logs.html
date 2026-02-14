@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RUN LOG</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0a;
+            color: #00ff00;
+            font-family: "Consolas", "Monaco", "Courier New", monospace;
+            font-size: 13px;
+            line-height: 1.4;
+            padding: 20px 24px;
+            min-height: 100vh;
+        }
+        a { color: #39ff14; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .header {
+            border: 1px solid #00ff00;
+            padding: 10px 14px;
+            margin-bottom: 20px;
+        }
+        .header h1 { font-size: 1.1em; font-weight: bold; letter-spacing: 0.15em; }
+        .header .muted { color: #006600; font-size: 0.9em; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+        }
+        th, td {
+            text-align: left;
+            padding: 6px 10px;
+            border: 1px solid #1a2a1a;
+        }
+        th {
+            color: #ffaa00;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 0.75em;
+        }
+        tr:hover td { background: #0f1a0f; }
+        .status-ok { color: #00ff00; }
+        .status-error { color: #ff4444; }
+        .task { color: #ffaa00; }
+        .dur { text-align: right; font-variant-numeric: tabular-nums; }
+        .phase-list { font-size: 0.9em; color: #006600; }
+        .phase-list span { margin-right: 12px; }
+        .bottleneck-section { margin-top: 28px; }
+        .bottleneck-section h2 {
+            font-size: 0.85em;
+            color: #ffaa00;
+            margin-bottom: 8px;
+            letter-spacing: 0.1em;
+        }
+        .bottleneck-table .task-name { color: #ffaa00; width: 120px; }
+        .bottleneck-table .phase-durs { color: #00aa00; }
+        .footer { margin-top: 24px; color: #004400; font-size: 0.85em; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>[ RUN LOG ]</h1>
+        <p class="muted">scrape · ml_run · startup · {{ runs|length }} runs</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Task</th>
+                <th>Duration</th>
+                <th>Status</th>
+                <th>Phases</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in runs %}
+            <tr>
+                <td>{{ (r.started_at or '')[:19] or '—' }}</td>
+                <td class="task">{{ r.task }}</td>
+                <td class="dur">{% if r.duration_s is not none %}{% if r.duration_s >= 60 %}{{ "%.1f"|format(r.duration_s / 60) }}m{% else %}{{ "%.1f"|format(r.duration_s) }}s{% endif %}{% else %}—{% endif %}</td>
+                <td class="status-{{ r.status }}">{{ r.status }}</td>
+                <td class="phase-list">
+                    {% for p in r.phases[:4] %}
+                    <span>{{ p.name }}: {% if p.duration_s %}{% if p.duration_s >= 60 %}{{ "%.1f"|format(p.duration_s / 60) }}m{% else %}{{ "%.1f"|format(p.duration_s) }}s{% endif %}{% if p.detail %} ({{ p.detail }}){% endif %}{% else %}—{% endif %}</span>
+                    {% endfor %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="bottleneck-section">
+        <h2>[ Bottleneck — avg phase time ]</h2>
+        <table class="bottleneck-table">
+            <thead>
+                <tr>
+                    <th class="task-name">Task</th>
+                    <th>Top phases (avg)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task, phases in bottleneck %}
+                <tr>
+                    <td class="task-name">{{ task }}</td>
+                    <td class="phase-durs">
+                        {% for name, avg in phases %}
+                        {{ name }}: {% if avg >= 60 %}{{ "%.1f"|format(avg / 60) }}m{% else %}{{ "%.1f"|format(avg) }}s{% endif %}{% if not loop.last %} · {% endif %}
+                        {% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer">
+        {{ log_path }} · <a href="/">home</a> · <a href="/intelligence">intelligence</a> · terminal: <code>make logs</code>
+    </div>
+</body>
+</html>

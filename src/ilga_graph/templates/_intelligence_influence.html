@@ -1,0 +1,123 @@
+{# Influence leaderboard tab — loaded via HTMX into #intel-content #}
+
+{% if not profiles %}
+<p class="intel-empty-tab">No influence data available. Influence scores are computed at startup from Moneyball, vote data, and ML predictions.</p>
+{% else %}
+
+<div class="intel-section">
+    <h2>True Influence Leaderboard</h2>
+    <p class="intel-subtitle">
+        Who has real legislative power? This score blends <strong>Moneyball</strong> (outcome effectiveness, 40%),
+        <strong>Betweenness</strong> (bridge between blocs, 20%),
+        <strong>Pivotality</strong> (swing votes on close calls, 20%),
+        and <strong>Sponsor Pull</strong> (ML-predicted bill success, 20%).
+    </p>
+
+    <div class="intel-filters" style="margin-bottom: 1em;">
+        <button class="intel-filter-btn active" onclick="filterInfluence('all', this)">All</button>
+        <button class="intel-filter-btn" onclick="filterInfluence('high', this)">High Only</button>
+        <button class="intel-filter-btn" onclick="filterInfluence('senate', this)">Senate</button>
+        <button class="intel-filter-btn" onclick="filterInfluence('house', this)">House</button>
+    </div>
+
+    <table class="intel-table" id="influence-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Chamber</th>
+                <th>Party</th>
+                <th>Influence</th>
+                <th>Label</th>
+                <th>Moneyball</th>
+                <th>Betweenness</th>
+                <th>Pivotality</th>
+                <th>Pull</th>
+                <th>Why</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in profiles %}
+            <tr class="influence-row"
+                data-label="{{ p.label|lower }}"
+                data-chamber="{{ p.chamber|lower }}">
+                <td>{{ p.rank_overall }}</td>
+                <td><strong>{{ p.name }}</strong></td>
+                <td>{{ p.chamber }}</td>
+                <td>{{ p.party }}</td>
+                <td>
+                    <div class="score-bar-container" style="width: 80px; display: inline-block;">
+                        <div class="score-bar {% if p.score >= 60 %}score-bar-high{% elif p.score >= 30 %}score-bar-moderate{% else %}score-bar-low{% endif %}"
+                             style="width: {{ p.score }}%;"></div>
+                    </div>
+                    <strong>{{ "%.1f"|format(p.score) }}</strong>
+                </td>
+                <td>
+                    <span class="intel-trust-badge intel-trust-{{ p.label|lower }}">{{ p.label }}</span>
+                </td>
+                <td>{{ "%.0f"|format(p.moneyball_pct) }}%</td>
+                <td>{{ "%.0f"|format(p.betweenness_pct) }}%</td>
+                <td>{{ "%.0f"|format(p.pivotality_pct) }}%</td>
+                <td>{{ "%.0f"|format(p.pull_pct) }}%</td>
+                <td class="influence-signals">
+                    {% for sig in p.signals[:2] %}
+                    <span class="influence-signal-tag">{{ sig }}</span>
+                    {% endfor %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if coalition_influence %}
+<div class="intel-section" style="margin-top: 2em;">
+    <h2>Coalition Influence</h2>
+    <p class="intel-subtitle">Top influencer and bridge member for each voting bloc.</p>
+
+    <div class="intel-coalition-grid">
+        {% for ci in coalition_influence %}
+        <div class="intel-coalition-card">
+            <h3>{{ ci.coalition_name or ("Coalition " ~ (ci.coalition_id + 1)) }}</h3>
+            <div class="intel-coalition-stats">
+                <span><strong>{{ ci.total_members }}</strong> members</span>
+                <span>Avg influence: <strong>{{ "%.1f"|format(ci.avg_influence) }}</strong></span>
+                <span>{{ ci.high_influence_count }} high-influence</span>
+            </div>
+            {% if ci.top_influencer_name %}
+            <div class="intel-coalition-leader">
+                <strong>Top influencer:</strong> {{ ci.top_influencer_name }}
+                <span class="intel-trust-badge intel-trust-{{ ci.top_influencer_label|lower }}">
+                    {{ "%.1f"|format(ci.top_influencer_score) }}
+                </span>
+            </div>
+            {% endif %}
+            {% if ci.bridge_member_name %}
+            <div class="intel-coalition-bridge">
+                <strong>Bridge member:</strong> {{ ci.bridge_member_name }}
+                <span class="intel-note">(betweenness: {{ "%.4f"|format(ci.bridge_member_betweenness) }})</span>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<script>
+function filterInfluence(filter, btn) {
+    document.querySelectorAll('.intel-filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.influence-row').forEach(row => {
+        if (filter === 'all') {
+            row.style.display = '';
+        } else if (filter === 'high') {
+            row.style.display = row.dataset.label === 'high' ? '' : 'none';
+        } else {
+            row.style.display = row.dataset.chamber === filter ? '' : 'none';
+        }
+    });
+}
+</script>
+
+{% endif %}

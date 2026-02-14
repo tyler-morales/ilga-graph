@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} — Legislative Intelligence{% endblock %}
+
+{% block content %}
+<div class="intel-nav">
+    <a href="/explore">&larr; Power Map</a> &middot;
+    <a href="/advocacy">Advocacy Portal</a> &middot;
+    <a href="/intelligence/recruitment">Issue Recruiter</a> &middot;
+    <a href="/intelligence/raw">Raw Data Tables &rarr;</a>
+</div>
+<h1>Legislative Intelligence</h1>
+<p class="intel-subtitle">What's happening in the Illinois General Assembly right now.</p>
+
+{% if not available %}
+<div class="intel-empty">
+    <h2>No ML Data Available</h2>
+    <p>Run <code>make ml-run</code> to generate intelligence from your scraped legislative records.</p>
+</div>
+{% else %}
+
+{# ── Model confidence banner ─────────────────────────────────────── #}
+<div class="intel-confidence-banner">
+    <div class="intel-confidence-left">
+        <span class="intel-confidence-label">Model Confidence:</span>
+        <span class="intel-trust-badge intel-trust-{{ trust_level|lower }}">{{ trust_level or 'N/A' }}</span>
+        {% if roc_auc %}
+        <span class="intel-confidence-detail">ROC-AUC {{ "%.3f"|format(roc_auc) }}</span>
+        {% endif %}
+        {% if accuracy_pct %}
+        <span class="intel-confidence-detail">&middot; Last backtest: {{ "%.0f"|format(accuracy_pct) }}% accurate</span>
+        {% endif %}
+    </div>
+    <div class="intel-confidence-right">
+        <span class="intel-confidence-detail">{{ total_bills_scored }} bills scored &middot; {{ n_coalitions }} voting blocs &middot; {{ flagged_anomalies }} anomalies flagged</span>
+    </div>
+</div>
+
+{# ── Bills to Watch ──────────────────────────────────────────────── #}
+<div class="story-section">
+    <h2>Bills to Watch</h2>
+    <p class="story-subtitle">Open bills with the most interesting ML signals — high confidence forecasts, surprise predictions, and bills at critical junctures.</p>
+
+    {% if bills_to_watch %}
+    <div class="story-card-grid">
+        {% for bill in bills_to_watch %}
+        <a href="/intelligence/bill/{{ bill.bill_id }}" class="story-card story-card-bill">
+            <div class="story-card-header">
+                <span class="dest-badge dest-{{ (bill.predicted_destination or 'Stuck')|lower|replace('→ ', '')|replace(' ', '-') }}">
+                    {{ bill.predicted_destination or bill.predicted_outcome }}
+                </span>
+                <span class="story-card-confidence">{{ "%.0f"|format(bill.confidence * 100) }}%</span>
+            </div>
+            <h3 class="story-card-title">{{ bill.bill_number }}</h3>
+            <p class="story-card-desc">{{ bill.description[:80] }}{% if bill.description|length > 80 %}&hellip;{% endif %}</p>
+            <div class="story-card-meta">
+                <span>{{ bill.sponsor }}</span>
+                <span class="story-card-stage">{{ bill.stage_label }}</span>
+                {% if bill.forecast_score > 0 %}
+                <span title="P(law) at intro — sponsor and topic only; no progress or delay">Forecast: {{ "%.0f"|format(bill.forecast_score * 100) }}%
+                    {% if bill.forecast_confidence %}<small class="forecast-conf forecast-{{ bill.forecast_confidence|lower }}">{{ bill.forecast_confidence }}</small>{% endif %}
+                </span>
+                {% endif %}
+            </div>
+            {% if bill.why %}
+            <div class="story-card-why">{{ bill.why }}</div>
+            {% endif %}
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="intel-empty-inline">No notable open bill predictions available.</p>
+    {% endif %}
+</div>
+
+{# ── Power Movers ────────────────────────────────────────────────── #}
+<div class="story-section">
+    <h2>Power Movers</h2>
+    <p class="story-subtitle">Legislators with the highest true influence — combining bill effectiveness, network position, swing votes, and ML-predicted sponsor pull.</p>
+
+    {% if power_movers %}
+    <div class="story-card-grid">
+        {% for m in power_movers %}
+        <a href="/intelligence/member/{{ m.member_id }}" class="story-card story-card-member">
+            <div class="story-card-header">
+                <span class="story-card-rank">#{{ m.rank }}</span>
+                <span class="intel-trust-badge intel-trust-{{ m.label|lower }}">{{ m.label }}</span>
+            </div>
+            <h3 class="story-card-title">{{ m.name }}</h3>
+            <p class="story-card-meta">{{ m.party }} &middot; {{ m.chamber }} District {{ m.district }}</p>
+            <div class="story-card-score-bar">
+                <div class="story-score-fill {% if m.score >= 60 %}score-bar-high{% elif m.score >= 30 %}score-bar-moderate{% else %}score-bar-low{% endif %}"
+                     style="width: {{ m.score }}%"></div>
+                <span class="story-score-text">{{ "%.0f"|format(m.score) }}</span>
+            </div>
+            {% if m.signals %}
+            <div class="story-card-signals">
+                {% for sig in m.signals[:2] %}
+                <span class="influence-signal-tag">{{ sig }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="intel-empty-inline">No influence data available.</p>
+    {% endif %}
+</div>
+
+{# ── Coalition Landscape ─────────────────────────────────────────── #}
+<div class="story-section">
+    <h2>Coalition Landscape</h2>
+    <p class="story-subtitle">{{ n_coalitions }} voting blocs discovered by ML. These are groups of legislators who consistently vote together.</p>
+
+    {% if coalitions_summary %}
+    <div class="story-coalition-grid">
+        {% for c in coalitions_summary %}
+        <div class="story-coalition-card">
+            <h3>{{ c.name }}</h3>
+            <div class="story-coalition-bar">
+                {% set dem_pct = (c.dem / c.size * 100)|int if c.size > 0 else 0 %}
+                <div class="coalition-dem-bar" style="width: {{ dem_pct }}%"></div>
+                <div class="coalition-rep-bar" style="width: {{ 100 - dem_pct }}%"></div>
+            </div>
+            <div class="story-coalition-stats">
+                <span>{{ c.size }} members</span>
+                <span>{{ c.dem }}D / {{ c.rep }}R</span>
+                <span>Cohesion: {{ "%.0f"|format(c.cohesion * 100) }}%</span>
+            </div>
+            {% if c.focus_areas %}
+            <div class="story-coalition-focus">
+                {% for f in c.focus_areas[:3] %}
+                <span class="coalition-focus-tag">{{ f }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if c.top_influencer %}
+            <div class="story-coalition-leader">
+                Top influencer: <strong>{{ c.top_influencer }}</strong>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="intel-empty-inline">No coalition data available.</p>
+    {% endif %}
+</div>
+
+{# ── Anomaly Alert ───────────────────────────────────────────────── #}
+{% if top_anomalies %}
+<div class="story-section">
+    <h2>Anomaly Alert</h2>
+    <p class="story-subtitle">Bills with suspicious witness slip patterns that may indicate coordinated campaigns.</p>
+
+    <div class="story-anomaly-list">
+        {% for a in top_anomalies %}
+        <div class="story-anomaly-row">
+            <strong>{{ a.bill_number }}</strong>
+            <span class="story-anomaly-desc">{{ a.description[:60] }}{% if a.description|length > 60 %}&hellip;{% endif %}</span>
+            <span class="story-anomaly-reason">{{ a.reason }}</span>
+            <span class="story-anomaly-slips">{{ a.total_slips }} slips</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="story-footer">
+    <a href="/intelligence/raw" class="story-footer-link">View raw data tables &rarr;</a>
+    <span class="story-footer-detail">Last pipeline run: {{ last_run or 'never' }}</span>
+</div>
+
+{% endif %}
+{% endblock %}

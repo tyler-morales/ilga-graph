@@ -6,6 +6,7 @@ import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
+from typing import Any
 
 import strawberry
 from fastapi import FastAPI, Form, Request, Response
@@ -36,8 +37,10 @@ from .etl import (
     load_stale_cache_fallback,
 )
 from .metrics_definitions import MONEYBALL_ONE_LINER
+from .ml.rule_engine import get_bill_to_law_process
 from .models import Bill, Committee, CommitteeMemberRole, Member, VoteEvent, WitnessSlip
-from .moneyball import MoneyballReport, compute_power_badges
+from .moneyball import MoneyballReport, build_cosponsor_edges, compute_power_badges
+from .run_log import append_startup_run, get_log_path, load_recent_runs
 from .schema import (
     BillAdvancementAnalyticsType,
     BillConnection,
@@ -352,7 +355,10 @@ else:
 class AppState:
     def __init__(self) -> None:
         self.members: list[Member] = []
-        self.member_lookup: dict[str, Member] = {}
+        self.member_lookup: dict[str, Member] = {}  # name-keyed (for vote normalization, schema)
+        self.member_lookup_by_id: dict[
+            str, Member
+        ] = {}  # id-keyed (for influence, graph, deep-dives)
         self.bills: list[Bill] = []
         self.bill_lookup: dict[str, Bill] = {}
         self.committees: list[Committee] = []
@@ -370,6 +376,14 @@ class AppState:
         self.witness_slips: list[WitnessSlip] = []
         self.witness_slips_lookup: dict[str, list[WitnessSlip]] = {}  # bill_number -> slips
         self.zip_to_district: dict[str, ZipDistrictInfo] = {}  # ZCTA -> district info
+        self.ml: object | None = None  # MLData from ml_loader (optional)
+        # ── Co-sponsorship graph (for /explore visualization) ──
+        self.cosponsor_adjacency: dict[str, set[str]] = {}  # member_id -> {peer_ids}
+        # ── Influence engine (computed after vote data + ML) ──
+        self.pivotality: dict = {}  # member_name -> MemberPivotality
+        self.sponsor_pull: dict = {}  # member_id -> SponsorPull
+        self.influence: dict = {}  # member_id -> InfluenceProfile
+        self.coalition_influence: list = []  # CoalitionInfluence per bloc
 
 
 state = AppState()
@@ -555,6 +569,17 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     except Exception:
         LOGGER.exception("Analytics computation failed; scorecards will be empty.")
 
+    # ── Step 2a: Build co-sponsorship adjacency for graph visualization ──
+    try:
+        state.cosponsor_adjacency = build_cosponsor_edges(state.members)
+        LOGGER.info(
+            "Co-sponsorship graph: %d nodes, %d total edges.",
+            len(state.cosponsor_adjacency),
+            sum(len(peers) for peers in state.cosponsor_adjacency.values()) // 2,
+        )
+    except Exception:
+        LOGGER.exception("Co-sponsorship graph build failed; /explore will have no edges.")
+
     # ── Step 2b: Seating chart analytics ─────────────────────────────────
     try:
         t_seating = _time.perf_counter()
@@ -580,7 +605,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         LOGGER.exception("Vault export failed; Obsidian vault may be stale.")
 
     state.member_lookup = {m.name: m for m in state.members}
+    state.member_lookup_by_id = {m.id: m for m in state.members}
     state.bill_lookup = _collect_unique_bills_by_number(data.bills_lookup)
+    state.bills_lookup = data.bills_lookup  # leg_id -> Bill (for bill detail action_history)
     state.bills = list(state.bill_lookup.values())
     state.committees = data.committees
     state.committee_lookup = {c.code: c for c in data.committees}
@@ -669,6 +696,87 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     except Exception:
         LOGGER.exception("ZIP crosswalk loading failed; advocacy search will be limited.")
 
+    # ── Step 7: Load ML intelligence data (optional) ────────────────────
+    try:
+        from .ml_loader import load_ml_data
+
+        state.ml = load_ml_data()
+        if state.ml and state.ml.available:
+            LOGGER.info(
+                "ML intelligence loaded: %d predictions, %d coalitions, "
+                "%d anomalies, %d backtest runs.",
+                len(state.ml.bill_scores),
+                len(state.ml.coalitions),
+                len(state.ml.anomalies),
+                len(state.ml.accuracy_history),
+            )
+        else:
+            LOGGER.info("ML data not available (run 'make ml-run' to generate).")
+    except Exception:
+        LOGGER.exception("ML data loading failed (non-critical).")
+
+    # ── Step 8: Compute influence engine (pivotality + sponsor pull + score)
+    elapsed_influence = 0.0
+    try:
+        t_inf = _time.perf_counter()
+        from .influence import (
+            compute_influence_scores,
+            compute_sponsor_pull,
+            compute_vote_pivotality,
+        )
+
+        # 8a. Vote pivotality (from scraped vote events)
+        if state.vote_events:
+            state.pivotality = compute_vote_pivotality(state.vote_events, state.member_lookup)
+
+        # 8b. Sponsor pull (from ML bill scores, if available)
+        bill_scores_map: dict[str, float] = {}
+        ml_data = state.ml
+        if ml_data and hasattr(ml_data, "available") and ml_data.available:
+            bill_scores_map = {s.bill_id: s.prob_advance for s in ml_data.bill_scores if s.bill_id}
+        if bill_scores_map:
+            state.sponsor_pull = compute_sponsor_pull(state.members, bill_scores_map)
+
+        # 8c. Unified influence score (needs id-keyed lookup, not name-keyed)
+        if state.moneyball:
+            state.influence = compute_influence_scores(
+                state.moneyball.profiles,
+                state.pivotality,
+                state.sponsor_pull,
+                state.member_lookup_by_id,
+            )
+
+        # 8d. Enrich coalitions with influence data
+        from .influence import enrich_coalitions_with_influence
+
+        if state.influence and ml_data and hasattr(ml_data, "coalitions"):
+            coalition_dicts = [
+                {
+                    "member_id": c.member_id,
+                    "name": c.name,
+                    "coalition_id": c.coalition_id,
+                    "coalition_name": c.coalition_name,
+                }
+                for c in ml_data.coalitions
+            ]
+            mb_profiles = state.moneyball.profiles if state.moneyball else None
+            state.coalition_influence = enrich_coalitions_with_influence(
+                coalition_dicts, state.influence, mb_profiles
+            )
+        else:
+            state.coalition_influence = []
+
+        elapsed_influence = _time.perf_counter() - t_inf
+        LOGGER.info(
+            "Influence engine: %d pivotality, %d pull, %d influence profiles (%.2fs).",
+            len(state.pivotality),
+            len(state.sponsor_pull),
+            len(state.influence),
+            elapsed_influence,
+        )
+    except Exception:
+        LOGGER.exception("Influence engine failed (non-critical).")
+
     # ── Print startup summary table ──────────────────────────────────────
     elapsed_total = _time.perf_counter() - t_startup_begin
     exported_bill_count = (
@@ -715,6 +823,24 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     # ── Log to timing file for historical tracking ──
     _log_startup_timing(
+        elapsed_total,
+        elapsed_load,
+        elapsed_analytics,
+        elapsed_seating,
+        elapsed_export,
+        elapsed_votes,
+        elapsed_slips,
+        elapsed_zip,
+        len(state.members),
+        len(state.bills),
+        len(state.vote_events),
+        len(state.witness_slips),
+        len(state.zip_to_district),
+        DEV_MODE,
+        SEED_MODE,
+    )
+    # ── Unified run log (for /logs dashboard and make logs) ──
+    append_startup_run(
         elapsed_total,
         elapsed_load,
         elapsed_analytics,
@@ -779,6 +905,18 @@ def _safe_parse_date(date_str: str, param_name: str) -> datetime | None:
     except (ValueError, TypeError):
         LOGGER.warning("Invalid date for %s: %r", param_name, date_str)
         return None
+
+
+def _parse_action_date(date_str: str) -> datetime:
+    """Parse action date (YYYY-MM-DD or M/D/YYYY) for sorting. Unparseable -> datetime.min."""
+    if not date_str:
+        return datetime.min
+    try:
+        if "-" in date_str and len(date_str) == 10:
+            return datetime.strptime(date_str, "%Y-%m-%d")
+        return datetime.strptime(date_str, "%m/%d/%Y")
+    except (ValueError, TypeError):
+        return datetime.min
 
 
 @strawberry.type
@@ -1192,6 +1330,422 @@ class Query:
 
         return SearchConnection(items=items, page_info=page_info)
 
+    # ── ML Intelligence queries ─────────────────────────────────────────
+
+    @strawberry.field(
+        description="Bill predictions from the ML pipeline.",
+    )
+    def bill_predictions(
+        self,
+        outcome: str | None = None,
+        min_confidence: float | None = None,
+        reliable_only: bool = False,
+        forecasts_only: bool = False,
+        stuck_status: str | None = None,
+        stage: str | None = None,
+        sort_by: str = "prob_advance",
+        offset: int = 0,
+        limit: int = 50,
+    ) -> BillPredictionConnection:
+        ml = state.ml
+        if not ml or not ml.available:
+            empty_page = PageInfo(
+                total_count=0,
+                has_next_page=False,
+                has_previous_page=False,
+            )
+            return BillPredictionConnection(items=[], page_info=empty_page)
+
+        results = list(ml.bill_scores)
+        if outcome:
+            results = [s for s in results if s.predicted_outcome == outcome.upper()]
+        if min_confidence is not None:
+            results = [s for s in results if s.confidence >= min_confidence]
+        if reliable_only:
+            results = [s for s in results if s.label_reliable]
+        if forecasts_only:
+            results = [s for s in results if not s.label_reliable]
+        if stuck_status:
+            results = [s for s in results if s.stuck_status == stuck_status.upper()]
+        if stage:
+            results = [s for s in results if s.current_stage == stage.upper()]
+
+        if sort_by == "confidence":
+            results.sort(key=lambda s: -s.confidence)
+        else:
+            results.sort(key=lambda s: -s.prob_advance)
+
+        page, page_info = paginate(results, offset, limit)
+        return BillPredictionConnection(
+            items=[_bill_score_to_type(s) for s in page],
+            page_info=page_info,
+        )
+
+    @strawberry.field(description="Prediction for a single bill by number.")
+    def bill_prediction(self, bill_number: str) -> BillPredictionType | None:
+        ml = state.ml
+        if not ml or not ml.available:
+            return None
+        for s in ml.bill_scores:
+            if s.bill_number == bill_number:
+                return _bill_score_to_type(s)
+        return None
+
+    @strawberry.field(
+        description="SHAP-based explanation for why a bill received its prediction score.",
+    )
+    def prediction_explanation(self, bill_id: str) -> PredictionExplanation | None:
+        ml = state.ml
+        if not ml or not ml.available or ml.explainer is None:
+            return None
+        row_idx = ml._bill_id_to_row.get(bill_id)
+        if row_idx is None:
+            return None
+        try:
+            row = ml.feature_matrix[row_idx]
+            result = ml.explainer.explain_prediction(row, ml.feature_names)
+            return PredictionExplanation(
+                base_value=result["base_value"],
+                top_positive_factors=[
+                    PredictionFactor(**f) for f in result["top_positive_factors"]
+                ],
+                top_negative_factors=[
+                    PredictionFactor(**f) for f in result["top_negative_factors"]
+                ],
+            )
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).exception("SHAP explanation failed for %s", bill_id)
+            return None
+
+    @strawberry.field(description="Discovered voting coalitions from the ML pipeline.")
+    def voting_coalitions(self) -> list[CoalitionGroupType]:
+        ml = state.ml
+        if not ml or not ml.available:
+            return []
+        groups: dict[int, list] = {}
+        for m in ml.coalitions:
+            groups.setdefault(m.coalition_id, []).append(m)
+        # Build profile lookup
+        prof_map = {p.coalition_id: p for p in ml.coalition_profiles}
+        result = []
+        for cid, members in sorted(groups.items()):
+            dem = sum(1 for m in members if m.party == "Democrat")
+            rep = sum(1 for m in members if m.party == "Republican")
+            prof = prof_map.get(cid)
+            result.append(
+                CoalitionGroupType(
+                    coalition_id=cid,
+                    name=prof.name if prof else f"Coalition {cid + 1}",
+                    size=len(members),
+                    dem_count=dem,
+                    rep_count=rep,
+                    focus_areas=prof.focus_areas if prof else [],
+                    yes_rate=round(prof.yes_rate, 3) if prof else 0.0,
+                    cohesion=round(prof.cohesion, 3) if prof else 0.0,
+                    signature_bills=[
+                        SignatureBillType(
+                            bill_number=b.get("bill_number", ""),
+                            description=b.get("description", ""),
+                            yes_votes=b.get("yes_votes", 0),
+                        )
+                        for b in (prof.signature_bills if prof else [])[:5]
+                    ],
+                    members=[
+                        CoalitionMemberType(
+                            name=m.name,
+                            party=m.party,
+                            chamber=m.chamber,
+                            district=m.district,
+                        )
+                        for m in members
+                    ],
+                )
+            )
+        return result
+
+    @strawberry.field(description="Slip anomalies (astroturfing detection) from the ML pipeline.")
+    def slip_anomalies(
+        self,
+        flagged_only: bool = False,
+        min_score: float | None = None,
+        offset: int = 0,
+        limit: int = 50,
+    ) -> SlipAnomalyConnection:
+        ml = state.ml
+        if not ml or not ml.available:
+            empty_page = PageInfo(total_count=0, has_next_page=False, has_previous_page=False)
+            return SlipAnomalyConnection(items=[], page_info=empty_page)
+        results = list(ml.anomalies)
+        if flagged_only:
+            results = [a for a in results if a.is_anomaly]
+        if min_score is not None:
+            results = [a for a in results if a.anomaly_score >= min_score]
+        results.sort(key=lambda a: -a.anomaly_score)
+        page, page_info = paginate(results, offset, limit)
+        return SlipAnomalyConnection(
+            items=[
+                SlipAnomalyType(
+                    bill_number=a.bill_number,
+                    description=a.description,
+                    total_slips=a.total_slips,
+                    anomaly_score=round(a.anomaly_score, 4),
+                    is_anomaly=a.is_anomaly,
+                    anomaly_reason=a.anomaly_reason,
+                    top_org_share=round(a.top_org_share, 4),
+                    org_hhi=round(a.org_hhi, 4),
+                    position_unanimity=round(a.position_unanimity, 4),
+                    n_proponent=a.n_proponent,
+                    n_opponent=a.n_opponent,
+                    unique_orgs=a.unique_orgs,
+                )
+                for a in page
+            ],
+            page_info=page_info,
+        )
+
+    @strawberry.field(description="Model quality assessment from the ML pipeline.")
+    def model_quality(self) -> ModelQualityType | None:
+        ml = state.ml
+        if not ml or not ml.available or not ml.quality:
+            return None
+        q = ml.quality
+        trust = q.get("trust_assessment", {})
+        ts = q.get("test_set_metrics", {})
+        return ModelQualityType(
+            model_selected=q.get("model_selected", ""),
+            trust_overall=trust.get("overall", "UNKNOWN"),
+            strengths=trust.get("strengths", []),
+            issues=trust.get("issues", []),
+            test_roc_auc=ts.get("roc_auc"),
+            test_accuracy=ts.get("accuracy"),
+            test_precision_pos=ts.get("precision_pos"),
+            test_recall_pos=ts.get("recall_pos"),
+            test_f1_pos=ts.get("f1_pos"),
+            top_features=[
+                FeatureImportanceType(name=f["name"], importance=round(f["importance"], 4))
+                for f in q.get("top_features", [])[:15]
+            ],
+            last_run_date=ml.last_run_date,
+        )
+
+    @strawberry.field(description="Prediction accuracy history across pipeline runs.")
+    def prediction_accuracy(self, limit_runs: int = 20) -> list[AccuracySnapshotType]:
+        ml = state.ml
+        if not ml or not ml.available:
+            return []
+        runs = ml.accuracy_history[-limit_runs:]
+        return [
+            AccuracySnapshotType(
+                run_date=r.run_date,
+                snapshot_date=r.snapshot_date,
+                days_elapsed=r.days_elapsed,
+                total_testable=r.total_testable,
+                correct=r.correct,
+                accuracy=round(r.accuracy, 4),
+                precision_advance=round(r.precision_advance, 4),
+                recall_advance=round(r.recall_advance, 4),
+                f1_advance=round(r.f1_advance, 4),
+                model_version=r.model_version,
+                biggest_misses=[
+                    PredictionMissType(
+                        bill_number=m.get("bill_number", ""),
+                        description=m.get("description", ""),
+                        predicted=m.get("predicted", ""),
+                        actual=m.get("actual", ""),
+                        confidence=m.get("confidence", 0),
+                    )
+                    for m in r.biggest_misses[:10]
+                ],
+            )
+            for r in runs
+        ]
+
+
+# ── ML Intelligence GraphQL types ────────────────────────────────────────
+
+
+@strawberry.type
+class BillPredictionType:
+    bill_number: str
+    description: str
+    sponsor: str
+    prob_advance: float
+    prob_law: float
+    predicted_outcome: str
+    predicted_destination: str
+    confidence: float
+    label_reliable: bool
+    chamber_origin: str
+    introduction_date: str
+    # Pipeline stage (v4)
+    current_stage: str = ""
+    stage_progress: float = 0.0
+    stage_label: str = ""
+    days_since_action: int = 0
+    last_action_text: str = ""
+    last_action_date: str = ""
+    # Stuck analysis (v4)
+    stuck_status: str = ""
+    stuck_reason: str = ""
+    # Forecast model (v8): intrinsic-only P(law) — no staleness/slips
+    forecast_score: float = 0.0
+    forecast_confidence: str = ""
+
+
+@strawberry.type
+class BillPredictionConnection:
+    items: list[BillPredictionType]
+    page_info: PageInfo
+
+
+# ── SHAP explanation types (v9) ──────────────────────────────────────────
+
+
+@strawberry.type
+class PredictionFactor:
+    """A single feature's contribution to a bill's prediction."""
+
+    feature: str  # Human-readable name
+    impact: str  # e.g. "+12.4%"
+    raw_impact: float  # Numeric for sorting / styling
+
+
+@strawberry.type
+class PredictionExplanation:
+    """SHAP-based explanation for a single bill prediction."""
+
+    base_value: float
+    top_positive_factors: list[PredictionFactor]
+    top_negative_factors: list[PredictionFactor]
+
+
+@strawberry.type
+class CoalitionMemberType:
+    name: str
+    party: str
+    chamber: str
+    district: str
+
+
+@strawberry.type
+class SignatureBillType:
+    bill_number: str
+    description: str
+    yes_votes: int
+
+
+@strawberry.type
+class CoalitionGroupType:
+    coalition_id: int
+    name: str
+    size: int
+    dem_count: int
+    rep_count: int
+    focus_areas: list[str]
+    yes_rate: float
+    cohesion: float
+    signature_bills: list[SignatureBillType]
+    members: list[CoalitionMemberType]
+
+
+@strawberry.type
+class SlipAnomalyType:
+    bill_number: str
+    description: str
+    total_slips: int
+    anomaly_score: float
+    is_anomaly: bool
+    anomaly_reason: str
+    top_org_share: float
+    org_hhi: float
+    position_unanimity: float
+    n_proponent: int
+    n_opponent: int
+    unique_orgs: int
+
+
+@strawberry.type
+class SlipAnomalyConnection:
+    items: list[SlipAnomalyType]
+    page_info: PageInfo
+
+
+@strawberry.type
+class FeatureImportanceType:
+    name: str
+    importance: float
+
+
+@strawberry.type
+class ModelQualityType:
+    model_selected: str
+    trust_overall: str
+    strengths: list[str]
+    issues: list[str]
+    test_roc_auc: float | None
+    test_accuracy: float | None
+    test_precision_pos: float | None
+    test_recall_pos: float | None
+    test_f1_pos: float | None
+    top_features: list[FeatureImportanceType]
+    last_run_date: str
+
+
+@strawberry.type
+class PredictionMissType:
+    bill_number: str
+    description: str
+    predicted: str
+    actual: str
+    confidence: float
+
+
+@strawberry.type
+class AccuracySnapshotType:
+    run_date: str
+    snapshot_date: str
+    days_elapsed: int
+    total_testable: int
+    correct: int
+    accuracy: float
+    precision_advance: float
+    recall_advance: float
+    f1_advance: float
+    model_version: str
+    biggest_misses: list[PredictionMissType]
+
+
+# ── ML Intelligence helpers ──────────────────────────────────────────────
+
+
+def _bill_score_to_type(s) -> BillPredictionType:
+    """Convert a BillScore dataclass to a GraphQL BillPredictionType."""
+    return BillPredictionType(
+        bill_number=s.bill_number,
+        description=s.description,
+        sponsor=s.sponsor,
+        prob_advance=round(s.prob_advance, 4),
+        prob_law=round(getattr(s, "prob_law", 0.0), 4),
+        predicted_outcome=s.predicted_outcome,
+        predicted_destination=getattr(s, "predicted_destination", "Stuck"),
+        confidence=round(s.confidence, 4),
+        label_reliable=s.label_reliable,
+        chamber_origin=s.chamber_origin,
+        introduction_date=s.introduction_date,
+        current_stage=s.current_stage,
+        stage_progress=round(s.stage_progress, 2),
+        stage_label=s.stage_label,
+        days_since_action=s.days_since_action,
+        last_action_text=s.last_action_text,
+        last_action_date=s.last_action_date,
+        stuck_status=s.stuck_status,
+        stuck_reason=s.stuck_reason,
+        forecast_score=round(getattr(s, "forecast_score", 0.0), 4),
+        forecast_confidence=getattr(s, "forecast_confidence", ""),
+    )
+
 
 from strawberry.extensions import QueryDepthLimiter  # noqa: E402
 
@@ -1241,6 +1795,8 @@ async def _api_key_middleware(request: Request, call_next) -> Response:  # type:
         if (
             path not in exempt
             and not path.startswith("/advocacy")
+            and not path.startswith("/explore")
+            and not path.startswith("/api/graph")
             and not path.startswith("/static")
             and request.method != "OPTIONS"
         ):
@@ -1273,6 +1829,36 @@ async def _request_logging_middleware(request: Request, call_next) -> Response: 
 
 
 # ── Health endpoint ──────────────────────────────────────────────────────────
+@app.get("/logs")
+async def logs_dashboard(request: Request):
+    """Unified run log dashboard — scrape, ML, startup. Minimal 2000s-hacker UI."""
+    runs = load_recent_runs(n=100)
+    # Bottleneck summary: avg phase duration per task
+    task_phases: dict[str, dict[str, list[float]]] = {}
+    for r in runs:
+        if r.task not in task_phases:
+            task_phases[r.task] = {}
+        for p in r.phases:
+            name = p.get("name", "?")
+            if name not in task_phases[r.task]:
+                task_phases[r.task][name] = []
+            task_phases[r.task][name].append(p.get("duration_s") or 0)
+    bottleneck: list[tuple[str, list[tuple[str, float]]]] = []
+    for task, phases in task_phases.items():
+        by_name = [(name, sum(durs) / len(durs) if durs else 0) for name, durs in phases.items()]
+        by_name.sort(key=lambda x: x[1], reverse=True)
+        bottleneck.append((task, by_name[:5]))
+    return templates.TemplateResponse(
+        "logs.html",
+        {
+            "request": request,
+            "runs": runs,
+            "bottleneck": bottleneck,
+            "log_path": str(get_log_path()),
+        },
+    )
+
+
 @app.get("/health")
 async def health() -> dict:
     """Service health check with data counts."""
@@ -1332,6 +1918,40 @@ def _committee_member_ids(committee_codes: list[str]) -> set[str]:
         for role in state.committee_rosters.get(code, []):
             ids.add(role.member_id)
     return ids
+
+
+def _build_influence_dict(member: Member) -> dict | None:
+    """Build influence data for a card from the influence engine state."""
+    ip = state.influence.get(member.id)
+    if not ip:
+        return None
+
+    piv = state.pivotality.get(member.name)
+    sp = state.sponsor_pull.get(member.id)
+
+    d: dict = {
+        "score": ip.influence_score,
+        "label": ip.influence_label,
+        "rank_overall": ip.rank_overall,
+        "rank_chamber": ip.rank_chamber,
+        "signals": ip.influence_signals,
+        # Component breakdowns
+        "moneyball_pct": round(ip.moneyball_normalized * 100, 1),
+        "betweenness_pct": round(ip.betweenness_normalized * 100, 1),
+        "pivotality_pct": round(ip.pivotality_normalized * 100, 1),
+        "pull_pct": round(ip.pull_normalized * 100, 1),
+    }
+
+    if piv:
+        d["close_votes"] = piv.close_votes_total
+        d["pivotal_winning"] = piv.pivotal_winning
+        d["swing_votes"] = piv.swing_votes
+
+    if sp:
+        d["sponsor_lift"] = round(sp.sponsor_lift, 3)
+        d["cosponsor_lift"] = round(sp.cosponsor_lift, 3)
+
+    return d
 
 
 def _member_to_card(member: Member, *, why: str = "", badges: list[str] | None = None) -> dict:
@@ -1560,6 +2180,8 @@ def _member_to_card(member: Member, *, why: str = "", badges: list[str] | None =
         "chamber_size": chamber_size,
         "rank_percentile": rank_percentile,
         "active_bills": active_count,
+        # ── Influence engine ──
+        "influence": _build_influence_dict(member),
     }
 
 
@@ -2014,6 +2636,1442 @@ async def advocacy_search(
             "error": error,
         },
     )
+
+
+# ── ML Intelligence Dashboard routes ─────────────────────────────────────
+
+
+@app.get("/intelligence")
+async def intelligence_summary(request: Request):
+    """Executive summary: narrative-driven intelligence overview."""
+    ml = state.ml
+    available = ml and ml.available
+
+    if not available:
+        return templates.TemplateResponse(
+            "intelligence_summary.html",
+            {"request": request, "title": "Intelligence", "available": False},
+        )
+
+    # ── Model confidence ──
+    trust_level = ml.quality.get("trust_assessment", {}).get("overall", "")
+    roc_auc = ml.quality.get("test_set_metrics", {}).get("roc_auc")
+    accuracy_pct = None
+    if ml.accuracy_history:
+        latest = ml.accuracy_history[-1]
+        accuracy_pct = latest.accuracy * 100
+
+    total_bills_scored = len(ml.bill_scores)
+    n_coalitions = len(set(m.coalition_id for m in ml.coalitions))
+    flagged_anomalies = sum(1 for a in ml.anomalies if a.is_anomaly)
+
+    # ── Bills to Watch: OPEN bills with interesting signals ──
+    open_bills = [s for s in ml.bill_scores if s.lifecycle_status == "OPEN"]
+    bills_to_watch = []
+
+    # Category 1: High confidence ADVANCE predictions on open bills
+    advance_preds = sorted(
+        [s for s in open_bills if s.predicted_outcome == "ADVANCE" and s.confidence >= 0.75],
+        key=lambda s: -s.prob_advance,
+    )
+    for s in advance_preds[:3]:
+        why = f"High confidence advance prediction ({s.confidence:.0%})"
+        if s.days_since_action > 60:
+            why += f" despite {s.days_since_action} days idle"
+        bills_to_watch.append(
+            {
+                "bill_id": s.bill_id,
+                "bill_number": s.bill_number,
+                "description": s.description,
+                "sponsor": s.sponsor,
+                "prob_advance": s.prob_advance,
+                "prob_law": getattr(s, "prob_law", 0.0),
+                "predicted_outcome": s.predicted_outcome,
+                "predicted_destination": getattr(s, "predicted_destination", "Stuck"),
+                "confidence": s.confidence,
+                "stage_label": s.stage_label,
+                "forecast_score": getattr(s, "forecast_score", 0.0),
+                "forecast_confidence": getattr(s, "forecast_confidence", ""),
+                "why": why,
+            }
+        )
+
+    # Category 2: Surprise — model says ADVANCE but bill is in early stage
+    surprises = sorted(
+        [
+            s
+            for s in open_bills
+            if s.predicted_outcome == "ADVANCE"
+            and s.prob_advance >= 0.65
+            and s.current_stage in ("IN_COMMITTEE", "FILED")
+        ],
+        key=lambda s: -s.prob_advance,
+    )
+    for s in surprises[:2]:
+        if not any(b["bill_id"] == s.bill_id for b in bills_to_watch):
+            bills_to_watch.append(
+                {
+                    "bill_id": s.bill_id,
+                    "bill_number": s.bill_number,
+                    "description": s.description,
+                    "sponsor": s.sponsor,
+                    "prob_advance": s.prob_advance,
+                    "prob_law": getattr(s, "prob_law", 0.0),
+                    "predicted_outcome": s.predicted_outcome,
+                    "predicted_destination": getattr(s, "predicted_destination", "Stuck"),
+                    "confidence": s.confidence,
+                    "stage_label": s.stage_label,
+                    "forecast_score": getattr(s, "forecast_score", 0.0),
+                    "forecast_confidence": getattr(s, "forecast_confidence", ""),
+                    "why": (
+                        f"Surprise: still in {s.stage_label} but "
+                        f"{s.prob_advance:.0%} chance of advancing"
+                    ),
+                }
+            )
+
+    # Category 3: High confidence STUCK on bills people might expect to move
+    stuck_surprises = sorted(
+        [
+            s
+            for s in open_bills
+            if s.predicted_outcome == "STUCK"
+            and s.confidence >= 0.80
+            and s.current_stage in ("PASSED_COMMITTEE", "FLOOR_VOTE")
+        ],
+        key=lambda s: s.prob_advance,
+    )
+    for s in stuck_surprises[:2]:
+        if not any(b["bill_id"] == s.bill_id for b in bills_to_watch):
+            bills_to_watch.append(
+                {
+                    "bill_id": s.bill_id,
+                    "bill_number": s.bill_number,
+                    "description": s.description,
+                    "sponsor": s.sponsor,
+                    "prob_advance": s.prob_advance,
+                    "prob_law": getattr(s, "prob_law", 0.0),
+                    "predicted_outcome": s.predicted_outcome,
+                    "predicted_destination": getattr(s, "predicted_destination", "Stuck"),
+                    "confidence": s.confidence,
+                    "stage_label": s.stage_label,
+                    "forecast_score": getattr(s, "forecast_score", 0.0),
+                    "forecast_confidence": getattr(s, "forecast_confidence", ""),
+                    "why": (
+                        f"Warning: reached {s.stage_label} but model "
+                        f"predicts stall ({s.confidence:.0%} confidence)"
+                    ),
+                }
+            )
+
+    # ── Power Movers: top influencers ──
+    power_movers = []
+    influence_profiles = sorted(
+        state.influence.values(),
+        key=lambda p: p.influence_score,
+        reverse=True,
+    )
+    for p in influence_profiles[:8]:
+        member = state.member_lookup_by_id.get(p.member_id)
+        if member:
+            power_movers.append(
+                {
+                    "member_id": p.member_id,
+                    "name": p.member_name,
+                    "party": p.party,
+                    "chamber": p.chamber,
+                    "district": member.district,
+                    "score": p.influence_score,
+                    "label": p.influence_label,
+                    "rank": p.rank_overall,
+                    "signals": p.influence_signals,
+                }
+            )
+
+    # ── Coalition Landscape ──
+    coalitions_summary = []
+    prof_map = {cp.coalition_id: cp for cp in ml.coalition_profiles}
+    ci_map = {ci.coalition_id: ci for ci in state.coalition_influence}
+    coalition_groups: dict[int, list] = {}
+    for m in ml.coalitions:
+        coalition_groups.setdefault(m.coalition_id, []).append(m)
+
+    for cid, members in sorted(coalition_groups.items()):
+        prof = prof_map.get(cid)
+        ci = ci_map.get(cid)
+        dem = sum(1 for m in members if m.party == "Democrat")
+        rep = sum(1 for m in members if m.party == "Republican")
+        coalitions_summary.append(
+            {
+                "name": prof.name if prof else f"Coalition {cid + 1}",
+                "size": len(members),
+                "dem": dem,
+                "rep": rep,
+                "cohesion": prof.cohesion if prof else 0,
+                "focus_areas": prof.focus_areas if prof else [],
+                "top_influencer": ci.top_influencer_name if ci else None,
+            }
+        )
+
+    # ── Top anomalies ──
+    top_anomalies = []
+    for a in sorted(ml.anomalies, key=lambda a: -a.anomaly_score):
+        if a.is_anomaly:
+            top_anomalies.append(
+                {
+                    "bill_number": a.bill_number,
+                    "description": a.description,
+                    "reason": a.anomaly_reason,
+                    "total_slips": a.total_slips,
+                }
+            )
+            if len(top_anomalies) >= 5:
+                break
+
+    return templates.TemplateResponse(
+        "intelligence_summary.html",
+        {
+            "request": request,
+            "title": "Intelligence",
+            "available": True,
+            "trust_level": trust_level,
+            "roc_auc": roc_auc,
+            "accuracy_pct": accuracy_pct,
+            "total_bills_scored": total_bills_scored,
+            "n_coalitions": n_coalitions,
+            "flagged_anomalies": flagged_anomalies,
+            "bills_to_watch": bills_to_watch,
+            "power_movers": power_movers,
+            "coalitions_summary": coalitions_summary,
+            "top_anomalies": top_anomalies,
+            "last_run": ml.last_run_date,
+        },
+    )
+
+
+@app.get("/intelligence/raw")
+async def intelligence_raw(request: Request):
+    """Raw data tables — the original tabbed ML dashboard for power users."""
+    ml = state.ml
+    available = ml and ml.available
+
+    # Summary stats for the overview
+    summary = {}
+    if available:
+        scores = ml.bill_scores
+        advance_count = sum(1 for s in scores if s.predicted_outcome == "ADVANCE")
+        stuck_count = sum(1 for s in scores if s.predicted_outcome == "STUCK")
+        forecast_count = sum(1 for s in scores if not s.label_reliable)
+        flagged = sum(1 for a in ml.anomalies if a.is_anomaly)
+        n_coalitions = len(set(m.coalition_id for m in ml.coalitions))
+        # Destination-based counts
+        dest_law = sum(
+            1
+            for s in scores
+            if getattr(s, "predicted_destination", "").startswith("→ Law")
+            or getattr(s, "predicted_destination", "") == "Became Law"
+        )
+        dest_floor = sum(
+            1
+            for s in scores
+            if getattr(s, "predicted_destination", "") in ("→ Floor", "→ Passed", "→ Governor")
+        )
+        dest_stuck = sum(1 for s in scores if getattr(s, "predicted_destination", "") == "Stuck")
+        summary = {
+            "total_predictions": len(scores),
+            "advance_count": advance_count,
+            "stuck_count": stuck_count,
+            "dest_law": dest_law,
+            "dest_floor": dest_floor,
+            "dest_stuck": dest_stuck,
+            "forecast_count": forecast_count,
+            "flagged_anomalies": flagged,
+            "total_anomalies": len(ml.anomalies),
+            "n_coalitions": n_coalitions,
+            "n_coalition_members": len(ml.coalitions),
+            "last_run": ml.last_run_date,
+            "model": ml.quality.get("model_selected", ""),
+            "trust": ml.quality.get("trust_assessment", {}).get("overall", ""),
+            "roc_auc": ml.quality.get("test_set_metrics", {}).get("roc_auc"),
+            "accuracy_runs": len(ml.accuracy_history),
+            "n_committees": len(state.committees),
+            "active_committees": sum(
+                1 for cs in state.committee_stats.values() if cs.total_bills >= 10
+            ),
+        }
+
+    return templates.TemplateResponse(
+        "intelligence.html",
+        {
+            "request": request,
+            "title": "ML Intelligence",
+            "available": available,
+            "summary": summary,
+            "ml": ml,
+        },
+    )
+
+
+@app.get("/intelligence/predictions")
+async def intelligence_predictions(request: Request):
+    """Tab: bill predictions."""
+    ml = state.ml
+    if not ml or not ml.available:
+        return templates.TemplateResponse(
+            "_intelligence_predictions.html",
+            {"request": request, "predictions": [], "ml": None},
+        )
+
+    predictions = sorted(ml.bill_scores, key=lambda s: -s.prob_advance)
+    return templates.TemplateResponse(
+        "_intelligence_predictions.html",
+        {"request": request, "predictions": predictions, "ml": ml},
+    )
+
+
+@app.get("/intelligence/coalitions")
+async def intelligence_coalitions(request: Request):
+    """Tab: voting coalitions."""
+    ml = state.ml
+    if not ml or not ml.available:
+        return templates.TemplateResponse(
+            "_intelligence_coalitions.html",
+            {"request": request, "groups": [], "ml": None},
+        )
+
+    groups: dict[int, list] = {}
+    for m in ml.coalitions:
+        groups.setdefault(m.coalition_id, []).append(m)
+
+    # Build profile lookup
+    prof_map = {p.coalition_id: p for p in ml.coalition_profiles}
+
+    coalition_list = []
+    for cid, members in sorted(groups.items()):
+        dem = sum(1 for m in members if m.party == "Democrat")
+        rep = sum(1 for m in members if m.party == "Republican")
+        members_sorted = sorted(members, key=lambda m: (m.party, m.name))
+        prof = prof_map.get(cid)
+        coalition_list.append(
+            {
+                "id": cid,
+                "name": prof.name if prof else f"Coalition {cid + 1}",
+                "size": len(members),
+                "dem": dem,
+                "rep": rep,
+                "cross_party": dem > 0 and rep > 0,
+                "focus_areas": prof.focus_areas if prof else [],
+                "yes_rate": prof.yes_rate if prof else 0.0,
+                "cohesion": prof.cohesion if prof else 0.0,
+                "signature_bills": (prof.signature_bills[:5] if prof else []),
+                "members": members_sorted,
+            }
+        )
+
+    return templates.TemplateResponse(
+        "_intelligence_coalitions.html",
+        {"request": request, "groups": coalition_list, "ml": ml},
+    )
+
+
+@app.get("/intelligence/anomalies")
+async def intelligence_anomalies(request: Request):
+    """Tab: anomaly detection."""
+    ml = state.ml
+    if not ml or not ml.available:
+        return templates.TemplateResponse(
+            "_intelligence_anomalies.html",
+            {"request": request, "anomalies": [], "ml": None},
+        )
+
+    anomalies = sorted(ml.anomalies, key=lambda a: -a.anomaly_score)
+    return templates.TemplateResponse(
+        "_intelligence_anomalies.html",
+        {"request": request, "anomalies": anomalies, "ml": ml},
+    )
+
+
+@app.get("/intelligence/influence")
+async def intelligence_influence(request: Request):
+    """Tab: influence leaderboard."""
+    profiles = list(state.influence.values())
+    if not profiles:
+        return templates.TemplateResponse(
+            "_intelligence_influence.html",
+            {"request": request, "profiles": [], "coalition_influence": []},
+        )
+
+    profiles.sort(key=lambda p: p.influence_score, reverse=True)
+
+    # Build template-friendly dicts
+    profile_dicts = [
+        {
+            "rank_overall": p.rank_overall,
+            "name": p.member_name,
+            "chamber": p.chamber,
+            "party": p.party,
+            "score": p.influence_score,
+            "label": p.influence_label,
+            "moneyball_pct": round(p.moneyball_normalized * 100, 1),
+            "betweenness_pct": round(p.betweenness_normalized * 100, 1),
+            "pivotality_pct": round(p.pivotality_normalized * 100, 1),
+            "pull_pct": round(p.pull_normalized * 100, 1),
+            "signals": p.influence_signals,
+        }
+        for p in profiles
+    ]
+
+    # Coalition influence
+    ci_dicts = [
+        {
+            "coalition_id": ci.coalition_id,
+            "coalition_name": ci.coalition_name,
+            "total_members": ci.total_members,
+            "avg_influence": ci.avg_influence,
+            "high_influence_count": ci.high_influence_count,
+            "top_influencer_name": ci.top_influencer_name,
+            "top_influencer_score": ci.top_influencer_score,
+            "top_influencer_label": ci.top_influencer_label,
+            "bridge_member_name": ci.bridge_member_name,
+            "bridge_member_betweenness": ci.bridge_member_betweenness,
+        }
+        for ci in state.coalition_influence
+    ]
+
+    return templates.TemplateResponse(
+        "_intelligence_influence.html",
+        {
+            "request": request,
+            "profiles": profile_dicts,
+            "coalition_influence": ci_dicts,
+        },
+    )
+
+
+@app.get("/intelligence/recruitment")
+async def intelligence_recruitment(request: Request):
+    """Topic-specific recruitment recommendations."""
+    ml = state.ml
+    topics: list[dict] = []
+    meta: dict = {}
+    value_scores: list[dict] = []
+
+    if ml and ml.topic_recruitment:
+        meta = ml.member_value_meta or {}
+        for topic_name in sorted(ml.topic_recruitment.keys()):
+            rankings = ml.topic_recruitment[topic_name]
+            topics.append(
+                {
+                    "name": topic_name,
+                    "slug": (topic_name.lower().replace(" ", "-").replace("&", "and")),
+                    "count": len(rankings),
+                }
+            )
+
+    if ml and ml.member_value_scores:
+        sorted_scores = sorted(
+            ml.member_value_scores.values(),
+            key=lambda s: -s.value_residual,
+        )
+        for s in sorted_scores:
+            value_scores.append(
+                {
+                    "member_id": s.member_id,
+                    "member_name": s.member_name,
+                    "party": s.party,
+                    "chamber": s.chamber,
+                    "predicted_effectiveness": s.predicted_effectiveness,
+                    "actual_effectiveness": s.actual_effectiveness,
+                    "value_residual": s.value_residual,
+                    "value_percentile": s.value_percentile,
+                    "value_label": s.value_label,
+                    "moneyball_score": s.moneyball_score,
+                    "top_recruitment_topics": s.top_recruitment_topics,
+                }
+            )
+
+    return templates.TemplateResponse(
+        "intelligence_recruitment.html",
+        {
+            "request": request,
+            "topics": topics,
+            "meta": meta,
+            "value_scores": value_scores,
+        },
+    )
+
+
+@app.get("/intelligence/recruitment/{topic}")
+async def intelligence_recruitment_topic(
+    request: Request,
+    topic: str,
+):
+    """HTMX partial: per-topic recruitment rankings."""
+    ml = state.ml
+    if not ml or not ml.topic_recruitment:
+        return templates.TemplateResponse(
+            "_recruitment_topic_partial.html",
+            {"request": request, "topic": topic, "rankings": []},
+        )
+
+    rankings_raw = ml.topic_recruitment.get(topic, [])
+    rankings = []
+    for r in rankings_raw[:30]:  # top 30
+        rankings.append(
+            {
+                "member_id": r.get("member_id", ""),
+                "member_name": r.get("member_name", ""),
+                "party": r.get("party", ""),
+                "chamber": r.get("chamber", ""),
+                "recruitment_score": r.get("recruitment_score", 0),
+                "affinity_score": r.get("affinity_score", 0),
+                "effectiveness_score": r.get("effectiveness_score", 0),
+                "persuadability_score": r.get("persuadability_score", 0),
+                "network_reach": r.get("network_reach", 0),
+                "coalition_tier": r.get("coalition_tier", ""),
+                "value_label": r.get("value_label", ""),
+                "yes_rate": r.get("yes_rate", 0),
+            }
+        )
+
+    return templates.TemplateResponse(
+        "_recruitment_topic_partial.html",
+        {"request": request, "topic": topic, "rankings": rankings},
+    )
+
+
+# Procedural/routing committees: bills are assigned here after passing substantive
+# committees (e.g. "Referred to Rules * Reports"). "Advanced" in our pipeline
+# means last_action = Do Pass/Reported Out, so these show 0% and are misleading.
+_PROCEDURAL_COMMITTEE_NAMES = frozenset(
+    {
+        "rules * reports",
+        "assignments * reports",
+        "committee of the whole",
+        "assignments",
+        "rules committee",
+    }
+)
+
+
+@app.get("/intelligence/committees")
+async def intelligence_committees(request: Request):
+    """Tab: committee power dashboard."""
+    if not state.committees:
+        return templates.TemplateResponse(
+            "_intelligence_committees.html",
+            {
+                "request": request,
+                "committees": [],
+                "top_by_volume": [],
+                "top_by_passage": [],
+                "top_law_factories": [],
+            },
+        )
+
+    # Build template-friendly committee dicts
+    committee_dicts = []
+    for c in state.committees:
+        cstats = state.committee_stats.get(c.code)
+        roster = state.committee_rosters.get(c.code, [])
+
+        # Determine chamber from code prefix
+        chamber = "Senate" if c.code.startswith("S") else "House"
+
+        # Procedural committees (Rules, Assignments) route bills after passage;
+        # our "advanced" count is 0 there, which is misleading.
+        is_procedural = c.name.strip().lower() in _PROCEDURAL_COMMITTEE_NAMES
+
+        # Find the chair
+        chair_name = None
+        chair_id = None
+        for cmr in roster:
+            if cmr.role.lower() == "chair":
+                chair_name = cmr.member_name
+                chair_id = cmr.member_id
+                break
+
+        committee_dicts.append(
+            {
+                "code": c.code,
+                "name": c.name,
+                "chamber": chamber,
+                "total_bills": cstats.total_bills if cstats else 0,
+                "advanced_count": cstats.advanced_count if cstats else 0,
+                "passed_count": cstats.passed_count if cstats else 0,
+                "advancement_rate": cstats.advancement_rate if cstats else 0.0,
+                "pass_rate": cstats.pass_rate if cstats else 0.0,
+                "chair": chair_name,
+                "chair_id": chair_id,
+                "member_count": len(roster),
+                "is_procedural": is_procedural,
+            }
+        )
+
+    # Sort by total bills (busiest first)
+    committee_dicts.sort(key=lambda x: -x["total_bills"])
+
+    # Insight cards: exclude procedural from passage/law so they don't dominate
+    substantive = [c for c in committee_dicts if not c["is_procedural"]]
+    active = [c for c in substantive if c["total_bills"] >= 10]
+    top_by_volume = sorted(committee_dicts, key=lambda x: -x["total_bills"])[:10]
+    top_by_passage = sorted(active, key=lambda x: -x["advancement_rate"])[:10]
+    top_law_factories = sorted(
+        [c for c in substantive if c["passed_count"] > 0],
+        key=lambda x: -x["passed_count"],
+    )[:10]
+
+    return templates.TemplateResponse(
+        "_intelligence_committees.html",
+        {
+            "request": request,
+            "committees": committee_dicts,
+            "top_by_volume": top_by_volume,
+            "top_by_passage": top_by_passage,
+            "top_law_factories": top_law_factories,
+        },
+    )
+
+
+@app.get("/intelligence/accuracy")
+async def intelligence_accuracy(request: Request):
+    """Tab: accuracy history / feedback loop."""
+    ml = state.ml
+    if not ml or not ml.available:
+        return templates.TemplateResponse(
+            "_intelligence_accuracy.html",
+            {"request": request, "history": [], "quality": {}, "ml": None},
+        )
+
+    return templates.TemplateResponse(
+        "_intelligence_accuracy.html",
+        {
+            "request": request,
+            "history": ml.accuracy_history,
+            "quality": ml.quality,
+            "ml": ml,
+        },
+    )
+
+
+# Canonical labels for witness-slip org names (avoids duplicate rows for Self/self/NA/None etc.)
+_CANONICAL_NO_ORG = "No organization"
+_CANONICAL_INDIVIDUAL = "Individual"
+_ORG_NORMALIZE_MAP = None
+
+
+def _get_org_normalize_map() -> dict[str, str]:
+    """Lazy-build map from normalized raw org string -> canonical display name."""
+    global _ORG_NORMALIZE_MAP
+    if _ORG_NORMALIZE_MAP is not None:
+        return _ORG_NORMALIZE_MAP
+    # No-organization variants (case-insensitive match keys)
+    no_org = (
+        "na",
+        "n/a",
+        "none",
+        "not applicable",
+        "not specified",
+        "no organization",
+        "(no organization)",
+        "—",
+        "-",
+        "",
+    )
+    # Individual/self variants
+    individual = (
+        "self",
+        "myself",
+        "on behalf of self",
+        "individual",
+        "citizen",
+        "family",
+        "personal",
+        "retired",
+        "private citizen",
+        "self-employed",
+        "me",
+    )
+    m = {}
+    for v in no_org:
+        m[v.strip().lower()] = _CANONICAL_NO_ORG
+    for v in individual:
+        m[v.strip().lower()] = _CANONICAL_INDIVIDUAL
+    _ORG_NORMALIZE_MAP = m
+    return _ORG_NORMALIZE_MAP
+
+
+def _canonical_organization_name(raw: str) -> str:
+    """Map raw witness-slip organization string to a canonical name for grouping."""
+    s = (raw or "").strip()
+    if not s:
+        return _CANONICAL_NO_ORG
+    key = s.lower()
+    canonical = _get_org_normalize_map().get(key)
+    if canonical is not None:
+        return canonical
+    return s  # keep original for real org names
+
+
+def _bill_description_for_slip_bill_number(bill_number: str) -> str:
+    """Resolve bill description for a witness-slip bill number (may lack leading zeros)."""
+    import re
+
+    bill = getattr(state, "bill_lookup", {}).get(bill_number)
+    if bill:
+        return bill.description or ""
+    # Normalize and match (e.g. HB100 vs HB0100)
+    m = re.match(r"([A-Za-z]+)0*(\d+)", (bill_number or "").strip(), re.IGNORECASE)
+    if m:
+        norm = f"{m.group(1).upper()}{m.group(2)}"
+        for b in getattr(state, "bills", []):
+            m2 = re.match(r"([A-Za-z]+)0*(\d+)", (b.bill_number or "").strip(), re.IGNORECASE)
+            if m2 and f"{m2.group(1).upper()}{m2.group(2)}" == norm:
+                return b.description or ""
+    return ""
+
+
+@app.get("/intelligence/witness-slips")
+async def intelligence_witness_slips(request: Request):
+    """Tab: witness slips and organization/lobbying influence on bills."""
+    lookup = getattr(state, "witness_slips_lookup", {})
+    if not lookup:
+        return templates.TemplateResponse(
+            "_intelligence_witness_slips.html",
+            {
+                "request": request,
+                "bill_slips": [],
+                "top_organizations": [],
+                "anomaly_by_bill": {},
+            },
+        )
+
+    # Build bill_number -> anomaly for flagged/suspicious bills
+    anomaly_by_bill = {}
+    ml = getattr(state, "ml", None)
+    if ml and getattr(ml, "anomalies", None):
+        for a in ml.anomalies:
+            if getattr(a, "is_anomaly", False) and getattr(a, "bill_number", None):
+                anomaly_by_bill[a.bill_number] = a
+        # Also by normalized bill_id (e.g. leg_id) for cross-reference
+        for a in ml.anomalies:
+            if getattr(a, "is_anomaly", False) and getattr(a, "bill_id", None):
+                # bill_id may be HB0100-style; match to slip keys
+                bn = getattr(a, "bill_number", None) or a.bill_id
+                if bn and bn not in anomaly_by_bill:
+                    anomaly_by_bill[bn] = a
+
+    # Per-bill: total, pro/opp/no_pos, controversy, top orgs
+    bill_slips = []
+    for bill_number, slips in lookup.items():
+        pro = sum(1 for s in slips if s.position == "Proponent")
+        opp = sum(1 for s in slips if s.position == "Opponent")
+        no_pos = sum(1 for s in slips if s.position and "no position" in s.position.lower())
+        total = len(slips)
+        controversy = (opp / (pro + opp)) if (pro + opp) > 0 else 0.0
+        desc = _bill_description_for_slip_bill_number(bill_number)
+        # Top organizations: (name, count, pro, opp) — use canonical names to merge Self/NA/etc.
+        org_counts = {}
+        for s in slips:
+            org = _canonical_organization_name(s.organization or "")
+            if org not in org_counts:
+                org_counts[org] = {"total": 0, "pro": 0, "opp": 0}
+            org_counts[org]["total"] += 1
+            if s.position == "Proponent":
+                org_counts[org]["pro"] += 1
+            elif s.position == "Opponent":
+                org_counts[org]["opp"] += 1
+        top_orgs = sorted(
+            [
+                {"name": org, "total": d["total"], "pro": d["pro"], "opp": d["opp"]}
+                for org, d in org_counts.items()
+            ],
+            key=lambda x: -x["total"],
+        )[:10]
+        anomaly = anomaly_by_bill.get(bill_number)
+        bill_slips.append(
+            {
+                "bill_number": bill_number,
+                "description": desc,
+                "total_count": total,
+                "proponent_count": pro,
+                "opponent_count": opp,
+                "no_position_count": no_pos,
+                "controversy": controversy,
+                "top_organizations": top_orgs,
+                "is_flagged": bool(anomaly),
+                "anomaly_reason": getattr(anomaly, "anomaly_reason", "") if anomaly else "",
+            }
+        )
+    bill_slips.sort(key=lambda x: -x["total_count"])
+
+    # Global top organizations (across all bills) — canonical names to merge duplicates
+    org_global = {}
+    for slips in lookup.values():
+        for s in slips:
+            org = _canonical_organization_name(s.organization or "")
+            org_global[org] = org_global.get(org, 0) + 1
+    top_organizations = sorted(org_global.items(), key=lambda x: -x[1])[:50]
+
+    return templates.TemplateResponse(
+        "_intelligence_witness_slips.html",
+        {
+            "request": request,
+            "bill_slips": bill_slips,
+            "top_organizations": top_organizations,
+            "anomaly_by_bill": anomaly_by_bill,
+        },
+    )
+
+
+# ── Intelligence deep-dive routes ─────────────────────────────────────────
+
+
+@app.get("/intelligence/member/{member_id}")
+async def intelligence_member_detail(request: Request, member_id: str):
+    """Deep-dive on a single legislator's influence profile."""
+    member = state.member_lookup_by_id.get(member_id)
+    if not member:
+        # Fallback: try name-keyed lookup (member_id could be a name)
+        member = state.member_lookup.get(member_id)
+    if not member:
+        return templates.TemplateResponse(
+            "intelligence_member.html",
+            {
+                "request": request,
+                "member": None,
+                "influence": None,
+                "moneyball": None,
+                "narrative": None,
+                "top_bills": [],
+                "coalition": None,
+                "value": None,
+            },
+        )
+
+    # ── Influence profile ──
+    ip = state.influence.get(member_id)
+    influence_dict = None
+    if ip:
+        piv = state.pivotality.get(member.name)
+        sp = state.sponsor_pull.get(member_id)
+        influence_dict = {
+            "score": ip.influence_score,
+            "label": ip.influence_label,
+            "rank_overall": ip.rank_overall,
+            "rank_chamber": ip.rank_chamber,
+            "moneyball_pct": round(ip.moneyball_normalized * 100, 1),
+            "betweenness_pct": round(ip.betweenness_normalized * 100, 1),
+            "pivotality_pct": round(ip.pivotality_normalized * 100, 1),
+            "pull_pct": round(ip.pull_normalized * 100, 1),
+            "signals": ip.influence_signals,
+            "pivotal_winning": piv.pivotal_winning if piv else 0,
+            "swing_votes": piv.swing_votes if piv else 0,
+            "close_votes_total": piv.close_votes_total if piv else 0,
+            "sponsor_lift": sp.sponsor_lift if sp else 0,
+            "cosponsor_lift": sp.cosponsor_lift if sp else 0,
+        }
+
+    # ── Moneyball profile ──
+    mb = state.moneyball.profiles.get(member_id) if state.moneyball else None
+    moneyball_dict = None
+    if mb:
+        moneyball_dict = {
+            "laws_passed": mb.laws_passed,
+            "effectiveness_rate": mb.effectiveness_rate,
+            "magnet_score": mb.magnet_score,
+            "bridge_score": mb.bridge_score,
+            "unique_collaborators": mb.unique_collaborators,
+            "moneyball_score": mb.moneyball_score,
+            "badges": mb.badges,
+        }
+
+    # ── Build narrative ──
+    narrative_parts = []
+    if ip:
+        narrative_parts.append(
+            f"{member.name} ranks #{ip.rank_overall} overall in the Illinois General Assembly"
+        )
+        if ip.influence_label == "High":
+            narrative_parts.append("with high legislative influence")
+        elif ip.influence_label == "Moderate":
+            narrative_parts.append("with moderate influence")
+
+    if mb:
+        if mb.laws_passed > 0:
+            narrative_parts.append(
+                f"They have passed {mb.laws_passed} law{'s' if mb.laws_passed != 1 else ''} "
+                f"with a {mb.effectiveness_rate:.0%} effectiveness rate"
+            )
+        if mb.unique_collaborators > 20:
+            narrative_parts.append(
+                f"and collaborate with {mb.unique_collaborators} different legislators"
+            )
+        if mb.bridge_score > 0.3:
+            narrative_parts.append(
+                f"({mb.bridge_score:.0%} of their laws have cross-party co-sponsors)"
+            )
+
+    if ip and ip.influence_signals:
+        narrative_parts.append(". " + ip.influence_signals[0])
+
+    narrative = ", ".join(narrative_parts) + "." if narrative_parts else None
+
+    # ── Top bills ──
+    top_bills = []
+    ml = state.ml
+    if ml and ml.available:
+        member_bills = [
+            s for s in ml.bill_scores if s.sponsor and member.name and member.name in s.sponsor
+        ]
+        member_bills.sort(key=lambda s: -s.prob_advance)
+        for s in member_bills[:10]:
+            top_bills.append(
+                {
+                    "bill_id": s.bill_id,
+                    "bill_number": s.bill_number,
+                    "description": s.description,
+                    "prob_advance": s.prob_advance,
+                    "prob_law": getattr(s, "prob_law", 0.0),
+                    "predicted_destination": getattr(s, "predicted_destination", "Stuck"),
+                    "stage_label": s.stage_label,
+                    "lifecycle_status": s.lifecycle_status,
+                    "forecast_score": getattr(s, "forecast_score", 0.0),
+                    "forecast_confidence": getattr(s, "forecast_confidence", ""),
+                }
+            )
+
+    # ── Coalition membership ──
+    coalition = None
+    if ml and ml.coalitions:
+        for cm in ml.coalitions:
+            if cm.member_id == member_id:
+                prof_map = {p.coalition_id: p for p in ml.coalition_profiles}
+                prof = prof_map.get(cm.coalition_id)
+                coalition_members = [m for m in ml.coalitions if m.coalition_id == cm.coalition_id]
+                coalition = {
+                    "name": (prof.name if prof else f"Coalition {cm.coalition_id + 1}"),
+                    "size": len(coalition_members),
+                    "cohesion": prof.cohesion if prof else 0,
+                    "focus_areas": prof.focus_areas if prof else [],
+                }
+                break
+
+    # ── Member value assessment ──
+    value_dict = None
+    if ml and ml.member_value_scores:
+        vs = ml.member_value_scores.get(member_id)
+        if vs:
+            value_dict = {
+                "predicted_effectiveness": vs.predicted_effectiveness,
+                "actual_effectiveness": vs.actual_effectiveness,
+                "value_residual": vs.value_residual,
+                "value_percentile": vs.value_percentile,
+                "value_label": vs.value_label,
+                "top_recruitment_topics": vs.top_recruitment_topics,
+            }
+
+    return templates.TemplateResponse(
+        "intelligence_member.html",
+        {
+            "request": request,
+            "member": member,
+            "influence": influence_dict,
+            "moneyball": moneyball_dict,
+            "narrative": narrative,
+            "top_bills": top_bills,
+            "coalition": coalition,
+            "value": value_dict,
+        },
+    )
+
+
+@app.get("/intelligence/bill/{bill_id}")
+async def intelligence_bill_detail(request: Request, bill_id: str):
+    """Deep-dive on a single bill's prediction and context."""
+    ml = state.ml
+    bill = None
+    if ml and ml.available:
+        for s in ml.bill_scores:
+            if s.bill_id == bill_id:
+                bill = s
+                break
+
+    if not bill:
+        try:
+            bill_to_law_process = get_bill_to_law_process()
+        except Exception:
+            bill_to_law_process = []
+        return templates.TemplateResponse(
+            "intelligence_bill.html",
+            {
+                "request": request,
+                "bill": None,
+                "sponsor_influence": None,
+                "anomaly": None,
+                "bill_to_law_process": bill_to_law_process,
+            },
+        )
+
+    # ── Sponsor influence ──
+    sponsor_influence = None
+    # Find sponsor member_id
+    sponsor_member = None
+    for m in state.members:
+        if m.name and bill.sponsor and m.name in bill.sponsor:
+            sponsor_member = m
+            break
+
+    if sponsor_member:
+        ip = state.influence.get(sponsor_member.id)
+        sp = state.sponsor_pull.get(sponsor_member.id)
+        if ip:
+            sponsor_influence = {
+                "member_id": sponsor_member.id,
+                "label": ip.influence_label,
+                "rank": ip.rank_overall,
+                "signals": ip.influence_signals,
+                "sponsor_lift": sp.sponsor_lift if sp else 0,
+            }
+        # Add sponsor_id to bill for linking
+        bill_dict_extra = {"sponsor_id": sponsor_member.id}
+    else:
+        bill_dict_extra = {"sponsor_id": None}
+
+    # ── Anomaly data ──
+    anomaly = None
+    if ml and ml.anomalies:
+        for a in ml.anomalies:
+            if a.bill_id == bill_id:
+                anomaly = {
+                    "total_slips": a.total_slips,
+                    "n_proponent": a.n_proponent,
+                    "n_opponent": a.n_opponent,
+                    "unique_orgs": a.unique_orgs,
+                    "anomaly_score": a.anomaly_score,
+                    "is_anomaly": a.is_anomaly,
+                    "anomaly_reason": a.anomaly_reason,
+                }
+                break
+
+    # Build a dict-like object with all bill fields + extras
+    class _BillCtx:
+        """Template-friendly bill context."""
+
+        def __init__(self, score, extras):
+            self.bill_id = score.bill_id
+            self.bill_number = score.bill_number
+            self.description = score.description
+            self.sponsor = score.sponsor
+            self.prob_advance = score.prob_advance
+            self.prob_law = getattr(score, "prob_law", 0.0)
+            self.predicted_outcome = score.predicted_outcome
+            self.predicted_destination = getattr(score, "predicted_destination", "Stuck")
+            self.confidence = score.confidence
+            self.label_reliable = score.label_reliable
+            self.chamber_origin = score.chamber_origin
+            self.introduction_date = score.introduction_date
+            self.current_stage = score.current_stage
+            self.stage_progress = score.stage_progress
+            self.stage_label = score.stage_label
+            self.days_since_action = score.days_since_action
+            self.last_action_text = score.last_action_text
+            self.last_action_date = score.last_action_date
+            self.stuck_status = score.stuck_status
+            self.stuck_reason = score.stuck_reason
+            self.lifecycle_status = score.lifecycle_status
+            self.rule_context = getattr(score, "rule_context", "")
+            self.forecast_score = getattr(score, "forecast_score", 0.0)
+            self.forecast_confidence = getattr(score, "forecast_confidence", "")
+            self.sponsor_id = extras.get("sponsor_id")
+
+    bill_ctx = _BillCtx(bill, bill_dict_extra)
+
+    # ── Classified action history (from live bill cache so last action date is accurate) ──
+    action_history = []
+    bill_obj = None
+    if hasattr(state, "bills_lookup"):
+        bill_obj = state.bills_lookup.get(bill_id)
+    if bill_obj is None and hasattr(state, "bill_lookup"):
+        bill_obj = state.bill_lookup.get(bill.bill_number)
+    # If still None, the score's bill_id may not match cache keys; pick the bill with this number
+    # that has the latest action so we show the most up-to-date copy from the cache.
+    if bill_obj is None and hasattr(state, "bills_lookup") and state.bills_lookup:
+        candidates = [b for b in state.bills_lookup.values() if b.bill_number == bill.bill_number]
+        if candidates:
+
+            def _latest_action_date(b: Bill) -> datetime:
+                if not b.action_history:
+                    return datetime.min
+                return max(_parse_action_date(ae.date) for ae in b.action_history)
+
+            bill_obj = max(candidates, key=_latest_action_date)
+    if bill_obj and bill_obj.action_history:
+        for ae in bill_obj.action_history:
+            action_history.append(
+                {
+                    "date": ae.date,
+                    "action": ae.action,
+                    "chamber": ae.chamber,
+                    "action_category": ae.action_category or "other",
+                    "action_category_label": ae.action_category_label or "Other",
+                    "outcome_signal": ae.outcome_signal or "neutral",
+                    "meaning": ae.meaning or "",
+                    "rule_reference": getattr(ae, "rule_reference", "") or "",
+                }
+            )
+        # Sort by date ascending so last item is chronologically last
+        action_history.sort(key=lambda a: _parse_action_date(a["date"]))
+        # Override last action and days_since from action history (fixes stale ML dates)
+        last_act = action_history[-1]
+        bill_ctx.last_action_date = last_act["date"]
+        bill_ctx.last_action_text = last_act["action"]
+        last_dt = _parse_action_date(last_act["date"])
+        if last_dt != datetime.min:
+            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            bill_ctx.days_since_action = max(0, (today - last_dt).days)
+
+    try:
+        bill_to_law_process = get_bill_to_law_process()
+    except Exception:
+        bill_to_law_process = []
+
+    return templates.TemplateResponse(
+        "intelligence_bill.html",
+        {
+            "request": request,
+            "bill": bill_ctx,
+            "sponsor_influence": sponsor_influence,
+            "anomaly": anomaly,
+            "action_history": action_history,
+            "bill_to_law_process": bill_to_law_process,
+        },
+    )
+
+
+# ── SHAP explanation endpoint (lazy-loaded by HTMX) ─────────────────────
+
+
+def _enrich_explanation_factors(
+    result: dict,
+    bill_id: str,
+    bill: Bill | None,
+    score: Any | None,
+) -> None:
+    """Add concrete bill/score details to explanation factors (e.g. co-sponsor count and names)."""
+    member_by_id = getattr(state, "member_lookup_by_id", None) or {}
+
+    def detail_for(raw_feature: str) -> str | None:
+        if raw_feature == "sponsor_count" and bill and bill.sponsor_ids:
+            # sponsor_ids includes primary; co-sponsors are the rest
+            n = max(0, len(bill.sponsor_ids) - 1)
+            if n == 0:
+                return "0 co-sponsors"
+            names = []
+            for mid in bill.sponsor_ids[1:][:8]:  # skip primary, cap at 8
+                m = member_by_id.get(mid)
+                names.append(m.name if m else f"ID {mid}")
+            if n > len(names):
+                return f"{n} co-sponsors: " + ", ".join(names) + f", and {n - len(names)} more"
+            return f"{n} co-sponsors: " + ", ".join(names)
+
+        if raw_feature == "days_since_last_action" and score is not None:
+            d = getattr(score, "days_since_action", None)
+            if d is not None:
+                return f"{int(d)} days since last movement"
+            if getattr(score, "last_action_text", None):
+                return (score.last_action_text or "")[:50]
+
+        if raw_feature == "days_since_intro" and score is not None:
+            intro = getattr(score, "introduction_date", None)
+            if intro:
+                return f"Introduced {intro}"
+
+        if raw_feature in ("sponsor_party", "sponsor_party_democrat", "sponsor_party_republican"):
+            if bill and bill.primary_sponsor and member_by_id:
+                for mid in (bill.sponsor_ids or [])[:1]:
+                    m = member_by_id.get(mid)
+                    if m:
+                        return m.party or bill.primary_sponsor
+                return bill.primary_sponsor
+            return None
+
+        if raw_feature == "sponsor_hist_passage_rate" and bill and bill.sponsor_ids:
+            primary_id = bill.sponsor_ids[0] if bill.sponsor_ids else None
+            if primary_id and member_by_id.get(primary_id):
+                return f"Primary sponsor: {bill.primary_sponsor}"
+            return None
+
+        return None
+
+    for factors in (
+        result.get("top_positive_factors", []),
+        result.get("top_negative_factors", []),
+    ):
+        for f in factors:
+            raw = f.get("raw_feature")
+            if raw:
+                detail = detail_for(raw)
+                if detail:
+                    f["detail"] = detail
+
+
+@app.get("/api/bills/{bill_id}/explanation")
+async def bill_explanation_fragment(request: Request, bill_id: str):
+    """Return an HTML fragment with SHAP prediction drivers for a bill.
+
+    Designed to be loaded lazily via ``hx-get`` so the main bill page
+    renders instantly and SHAP computation happens in the background.
+    """
+    ml = state.ml
+    if not ml or not ml.available or ml.explainer is None:
+        return templates.TemplateResponse(
+            "_explanation_partial.html",
+            {"request": request, "explanation": None, "reason": "not_available"},
+        )
+
+    row_idx = ml._bill_id_to_row.get(bill_id)
+    if row_idx is None:
+        return templates.TemplateResponse(
+            "_explanation_partial.html",
+            {"request": request, "explanation": None, "reason": "bill_not_found"},
+        )
+
+    try:
+        row = ml.feature_matrix[row_idx]
+        result = ml.explainer.explain_prediction(row, ml.feature_names)
+        bill = state.bills_lookup.get(bill_id)
+        score = next(
+            (s for s in ml.bill_scores if s.bill_id == bill_id),
+            None,
+        )
+        _enrich_explanation_factors(result, bill_id, bill, score)
+        return templates.TemplateResponse(
+            "_explanation_partial.html",
+            {"request": request, "explanation": result, "reason": None},
+        )
+    except Exception:
+        LOGGER.exception("SHAP explanation failed for bill %s", bill_id)
+        return templates.TemplateResponse(
+            "_explanation_partial.html",
+            {"request": request, "explanation": None, "reason": "error"},
+        )
+
+
+# ── Legislative Power Map routes ──────────────────────────────────────────
+
+
+@app.get("/explore")
+async def explore_page(request: Request):
+    """Render the interactive Legislative Power Map."""
+    return templates.TemplateResponse(
+        "explore.html",
+        {
+            "request": request,
+            "title": "Legislative Power Map",
+            "categories": CATEGORY_CHOICES,
+        },
+    )
+
+
+@app.get("/api/graph")
+async def graph_data(
+    topic: str = "",
+    zip: str = "",
+    focus: str = "relevant",
+):
+    """Return graph data (nodes + edges) for the Legislative Power Map.
+
+    Query params:
+    - topic: policy category name (e.g. "Transportation") — highlights
+      members on relevant committees.
+    - zip: Illinois ZIP code — identifies the user's senator and
+      representative.
+    - focus: "relevant" (default) — only top influencers + topic + your
+      legislators; "all" — all 180 members.
+
+    Returns JSON with nodes, edges, your_legislators, topic_committees, meta.
+    """
+    # ── Resolve topic to committee codes and member IDs ──
+    topic = topic.strip()
+    committee_codes = _CATEGORY_COMMITTEES.get(topic, [])
+    topic_member_ids: set[str] = set()
+    topic_committees_list: list[dict] = []
+    if committee_codes:
+        for code in committee_codes:
+            cmembers: list[str] = []
+            for role in state.committee_rosters.get(code, []):
+                if role.member_id:
+                    topic_member_ids.add(role.member_id)
+                    cmembers.append(role.member_id)
+            cmt = state.committee_lookup.get(code)
+            topic_committees_list.append(
+                {
+                    "code": code,
+                    "name": cmt.name if cmt else code,
+                    "member_ids": cmembers,
+                }
+            )
+
+    # ── Resolve ZIP to user's legislators ──
+    zip_code = zip.strip()
+    your_senator_id: str | None = None
+    your_rep_id: str | None = None
+    if zip_code:
+        district_info = state.zip_to_district.get(zip_code)
+        if district_info:
+            if district_info.il_senate:
+                sen = _find_member_by_district("senate", district_info.il_senate)
+                if sen:
+                    your_senator_id = sen.id
+            if district_info.il_house:
+                rep = _find_member_by_district("house", district_info.il_house)
+                if rep:
+                    your_rep_id = rep.id
+
+    your_legislator_ids = set()
+    if your_senator_id:
+        your_legislator_ids.add(your_senator_id)
+    if your_rep_id:
+        your_legislator_ids.add(your_rep_id)
+
+    # ── Build nodes ──
+    nodes: list[dict] = []
+    for member in state.members:
+        mb = state.moneyball.profiles.get(member.id) if state.moneyball else None
+        ip = state.influence.get(member.id)
+
+        influence_score = ip.influence_score if ip else (mb.moneyball_score if mb else 0.0)
+        influence_label = ip.influence_label if ip else ""
+
+        # Committee roles for this member
+        member_committees: list[dict] = []
+        for cr in state.member_committee_roles.get(member.id, []):
+            member_committees.append(
+                {
+                    "code": cr.get("code", ""),
+                    "name": cr.get("name", ""),
+                    "role": cr.get("role", ""),
+                    "is_leadership": cr.get("is_leadership", False),
+                }
+            )
+
+        # Party abbreviation
+        party_lower = (member.party or "").lower()
+        if "republican" in party_lower:
+            party_abbr = "R"
+        elif "democrat" in party_lower:
+            party_abbr = "D"
+        else:
+            party_abbr = member.party[:1] if member.party else ""
+
+        is_topic_relevant = member.id in topic_member_ids if topic_member_ids else False
+        is_your_legislator = member.id in your_legislator_ids
+
+        nodes.append(
+            {
+                "id": member.id,
+                "name": member.name,
+                "party": party_abbr,
+                "chamber": member.chamber,
+                "district": member.district,
+                "influence_score": round(influence_score, 2),
+                "influence_label": influence_label,
+                "moneyball_score": round(mb.moneyball_score, 2) if mb else 0.0,
+                "moneyball_rank": mb.rank_chamber if mb else 0,
+                "is_leadership": mb.is_leadership if mb else False,
+                "role": member.role or "",
+                "committees": member_committees,
+                "laws_passed": mb.laws_passed if mb else 0,
+                "laws_filed": mb.laws_filed if mb else 0,
+                "bridge_score": round(mb.bridge_score, 4) if mb else 0.0,
+                "effectiveness_rate": round(mb.effectiveness_rate, 4) if mb else 0.0,
+                "is_topic_relevant": is_topic_relevant,
+                "is_your_legislator": is_your_legislator,
+                "influence_signals": ip.influence_signals if ip else [],
+            }
+        )
+
+    # ── Optional: restrict to relevant members only ──
+    RELEVANT_TOP_N = 50
+    if focus.strip().lower() == "relevant":
+        if topic_member_ids:
+            # Topic selected: only members on that topic's committees + your legislators
+            relevant_ids = topic_member_ids | your_legislator_ids
+        else:
+            # No topic: top influencers + your legislators
+            by_influence = sorted(nodes, key=lambda n: n["influence_score"], reverse=True)
+            relevant_ids = your_legislator_ids | {n["id"] for n in by_influence[:RELEVANT_TOP_N]}
+        nodes = [n for n in nodes if n["id"] in relevant_ids]
+
+    # ── Build edges (pruned for performance) ──
+    # Full adjacency can have 15k+ edges which slows SVG rendering.
+    # Strategy: keep edges where at least one endpoint is "important"
+    # (high influence, topic-relevant, or user's legislator).
+    # For the remaining, cap at top N connections per member.
+    edges: list[dict] = []
+    seen_edges: set[tuple[str, str]] = set()
+    adjacency = state.cosponsor_adjacency
+
+    # Build node influence lookup for edge prioritization
+    node_influence: dict[str, float] = {}
+    for n in nodes:
+        node_influence[n["id"]] = n["influence_score"]
+
+    # Important member IDs: always keep all their edges
+    important_ids = topic_member_ids | your_legislator_ids
+    # Also include top 20 by influence
+    top_by_influence = sorted(nodes, key=lambda n: n["influence_score"], reverse=True)[:20]
+    important_ids |= {n["id"] for n in top_by_influence}
+
+    MAX_EDGES_PER_NODE = 8  # for non-important members
+
+    for member_id, peers in adjacency.items():
+        is_important = member_id in important_ids
+
+        if is_important:
+            # Keep all edges for important nodes
+            target_peers = peers
+        else:
+            # For regular members, keep top N by peer influence
+            sorted_peers = sorted(
+                peers,
+                key=lambda pid: node_influence.get(pid, 0),
+                reverse=True,
+            )
+            target_peers = sorted_peers[:MAX_EDGES_PER_NODE]
+
+        for peer_id in target_peers:
+            edge_key = tuple(sorted((member_id, peer_id)))
+            if edge_key not in seen_edges:
+                seen_edges.add(edge_key)
+                edges.append(
+                    {
+                        "source": member_id,
+                        "target": peer_id,
+                    }
+                )
+
+    # When focus=relevant, drop edges whose endpoints are not both in nodes
+    node_ids = {n["id"] for n in nodes}
+    edges = [e for e in edges if e["source"] in node_ids and e["target"] in node_ids]
+
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "your_legislators": {
+            "senator": your_senator_id,
+            "representative": your_rep_id,
+        },
+        "topic_committees": topic_committees_list,
+        "meta": {
+            "total_members": len(nodes),
+            "total_edges": len(edges),
+            "topic": topic,
+            "zip": zip_code,
+            "focus": focus.strip().lower() or "all",
+        },
+    }
 
 
 app.include_router(graphql_app, prefix="/graphql")
