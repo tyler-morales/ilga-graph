@@ -78,7 +78,7 @@ def _parse_vote_date_sort_key(date_str: str) -> tuple[int, int, int]:
     if len(parts) != 3:
         return (0, 0, 0)
     try:
-        month_name, day_str, year_str = parts[0], parts[1], parts[2]
+        month_name, day_str, year_str = parts
         month_abbrevs = {m: i for i, m in enumerate(calendar.month_name) if m}
         month_num = month_abbrevs.get(month_name, 0)
         return (int(year_str), month_num, int(day_str))
