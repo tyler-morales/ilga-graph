@@ -57,7 +57,7 @@
                 <span>{{ bill.sponsor }}</span>
                 <span class="story-card-stage">{{ bill.stage_label }}</span>
                 {% if bill.forecast_score > 0 %}
-                <span title="Forecast P(Law) — content + sponsor only">Forecast: {{ "%.0f"|format(bill.forecast_score * 100) }}%
+                <span title="P(law) at intro — sponsor and topic only; no progress or delay">Forecast: {{ "%.0f"|format(bill.forecast_score * 100) }}%
                     {% if bill.forecast_confidence %}<small class="forecast-conf forecast-{{ bill.forecast_confidence|lower }}">{{ bill.forecast_confidence }}</small>{% endif %}
                 </span>
                 {% endif %}

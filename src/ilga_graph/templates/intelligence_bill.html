@@ -40,28 +40,30 @@
                 </span>
             </div>
             <div class="bill-prediction-prob" style="margin-top: 8px;">
-                <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                <div style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap;">
                     <div>
-                        <small style="color: #666;">P(Advance past committee)</small>
+                        <strong style="font-size: 0.9em;">P(Advance)</strong>
                         <div class="score-bar-container" style="width: 180px;">
                             <div class="score-bar {% if bill.prob_advance >= 0.7 %}score-high{% elif bill.prob_advance >= 0.4 %}score-mid{% else %}score-low{% endif %}"
                                  style="width: {{ (bill.prob_advance * 100)|int }}%">
                             </div>
                             <span class="score-text">{{ "%.1f"|format(bill.prob_advance * 100) }}%</span>
                         </div>
+                        <small style="display: block; color: #666; max-width: 200px; margin-top: 2px;">Chance it ever reaches a milestone (committee, floor, etc.). Not “next step.”</small>
                     </div>
                     <div>
-                        <small style="color: #666;">P(Becomes law)</small>
+                        <strong style="font-size: 0.9em;">P(Law)</strong>
                         <div class="score-bar-container" style="width: 180px;">
                             <div class="score-bar {% if bill.prob_law >= 0.5 %}score-high{% elif bill.prob_law >= 0.2 %}score-mid{% else %}score-low{% endif %}"
                                  style="width: {{ (bill.prob_law * 100)|int }}%">
                             </div>
                             <span class="score-text">{{ "%.1f"|format(bill.prob_law * 100) }}%</span>
                         </div>
+                        <small style="display: block; color: #666; max-width: 200px; margin-top: 2px;">Chance it becomes law given where it is now (stage, momentum).</small>
                     </div>
                     {% if bill.forecast_score > 0 %}
                     <div>
-                        <small style="color: #666;" title="Based on bill content and sponsor only — ignores current delay">Forecast P(Law)</small>
+                        <strong style="font-size: 0.9em;">Forecast</strong>
                         <div class="score-bar-container" style="width: 180px;">
                             <div class="score-bar {% if bill.forecast_score >= 0.5 %}score-high{% elif bill.forecast_score >= 0.2 %}score-mid{% else %}score-low{% endif %}"
                                  style="width: {{ (bill.forecast_score * 100)|int }}%">
@@ -71,6 +73,7 @@
                         {% if bill.forecast_confidence %}
                         <small class="forecast-conf forecast-{{ bill.forecast_confidence|lower }}">{{ bill.forecast_confidence }}</small>
                         {% endif %}
+                        <small style="display: block; color: #666; max-width: 200px; margin-top: 2px;">P(law) at intro — sponsor &amp; topic only; no progress or delay.</small>
                     </div>
                     {% endif %}
                 </div>

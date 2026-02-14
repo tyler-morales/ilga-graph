@@ -6,11 +6,15 @@
 <div class="intel-section-header">
     <h2>Bill Outcome Predictions</h2>
     <p class="intel-prediction-totals">Showing <strong id="predictions-visible-count">{{ predictions|length }}</strong> of <strong id="predictions-total-count">{{ predictions|length }}</strong> bills</p>
-    <p>Shows predicted destination (→ Law, → Floor, Stuck), P(Advance past committee), P(Becomes law), <strong>Forecast P(Law)</strong>, current pipeline stage, and stuck-bill analysis.
-       <strong>Forecast</strong> uses only bill content and sponsor — ignores current delay.
-       Forecasts (label not yet reliable) shown in <em>italics</em>.<br>
-       <strong>Closed bills</strong> (Passed or Vetoed) show actual outcomes, not predictions.
-       Click any column header to sort.</p>
+    <details class="intel-scores-explained" style="margin-bottom: 10px;">
+        <summary style="cursor: pointer; color: #555; font-size: 0.9em;">What do P(Advance), P(Law), and Forecast mean?</summary>
+        <ul style="margin: 8px 0 0 1.2em; font-size: 0.85em; color: #555; line-height: 1.5;">
+            <li><strong>P(Advance)</strong> — Chance this bill <em>ever</em> reaches a positive milestone (passes committee, floor, etc.). One model for all bills; not “next step.” So a bill already at “Passed Both” can still show a lower P(Advance) if it looks like bills that often stall.</li>
+            <li><strong>P(Law)</strong> — Chance this bill <em>becomes law</em>, given where it is now (stage, momentum, delays). Bills already at Passed Both / Governor usually have high P(Law).</li>
+            <li><strong>Forecast</strong> — “Would this bill become law?” using <em>only</em> intro-day info (sponsor, topic, committee). No progress or staleness. Compare to P(Law) to see how much current momentum matters.</li>
+        </ul>
+    </details>
+    <p style="font-size: 0.85em; color: #666;">Predicted destination (→ Law, → Floor, Stuck), pipeline stage, stuck analysis. Forecasts (outcome not yet known) in <em>italics</em>. Closed bills show actual outcomes. Click column headers to sort.</p>
 </div>
 
 {# Search + grouped quick filters #}
@@ -47,9 +51,9 @@
             <th class="sortable" data-sort="string" onclick="sortTable(0, 'string')">Bill <span class="sort-arrow"></span></th>
             <th class="sortable" data-sort="string" onclick="sortTable(1, 'string')">Description <span class="sort-arrow"></span></th>
             <th class="sortable" data-sort="string" onclick="sortTable(2, 'string')">Sponsor <span class="sort-arrow"></span></th>
-            <th class="sortable" data-sort="number" onclick="sortTable(3, 'number')">P(Advance) <span class="sort-arrow"></span></th>
-            <th class="sortable" data-sort="number" onclick="sortTable(4, 'number')">P(Law) <span class="sort-arrow"></span></th>
-            <th class="sortable" data-sort="number" onclick="sortTable(5, 'number')" title="Forecast P(Law) — intrinsic features only (content + sponsor). Ignores delay.">Forecast <span class="sort-arrow"></span></th>
+            <th class="sortable" data-sort="number" onclick="sortTable(3, 'number')" title="Chance this bill ever reaches a positive milestone (passes committee, floor, etc.). One model for all stages — can be lower than P(Law) for bills already far along.">P(Advance) <span class="sort-arrow"></span></th>
+            <th class="sortable" data-sort="number" onclick="sortTable(4, 'number')" title="Chance this bill becomes law, given current stage and progress. Usually high when bill is at Passed Both or Governor.">P(Law) <span class="sort-arrow"></span></th>
+            <th class="sortable" data-sort="number" onclick="sortTable(5, 'number')" title="P(law) using only intro-day info (sponsor, topic). No progress or delay. Compare to P(Law) to see impact of momentum.">Forecast <span class="sort-arrow"></span></th>
             <th class="sortable" data-sort="string" onclick="sortTable(6, 'string')">Predicted Dest. <span class="sort-arrow"></span></th>
             <th class="sortable" data-sort="number" onclick="sortTable(7, 'number')">Confidence <span class="sort-arrow"></span></th>
             <th class="sortable" data-sort="number" onclick="sortTable(8, 'number')">Pipeline Stage <span class="sort-arrow"></span></th>
