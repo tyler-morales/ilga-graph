@@ -42,10 +42,10 @@ if key in query and query[key]:
 #### `voting_record.py:77-84` - Date Parsing
 **Status:** ✅ **IMPROVED** (Added IndexError to exception handling)
 
-**Issue:** Need to catch IndexError in addition to ValueError and KeyError during date parsing.
+**Issue:** Improve exception handling by moving unpacking into try block for consistency.
 
 ```python
-# BEFORE (Missing IndexError)
+# BEFORE (Unpacking outside try block)
 parts = date_str.replace(",", "").split()
 if len(parts) != 3:
     return (0, 0, 0)
@@ -55,7 +55,7 @@ try:
 except (ValueError, KeyError):
     return (0, 0, 0)
 
-# AFTER (Complete exception handling)
+# AFTER (Unpacking inside try block with complete exception handling)
 parts = date_str.replace(",", "").split()
 if len(parts) != 3:
     return (0, 0, 0)
@@ -66,7 +66,9 @@ except (ValueError, KeyError, IndexError):
     return (0, 0, 0)
 ```
 
-**Impact:** While the length check on line 78 prevents IndexError during unpacking, adding IndexError to the exception handler provides defense-in-depth for any unexpected edge cases in the parsing logic.
+**Analysis:** The length check guarantees exactly 3 elements, so IndexError cannot occur during unpacking. However, moving the unpacking into the try block and adding IndexError provides defense-in-depth and is more explicit about error handling scope. This is a minor consistency improvement, not a bug fix.
+
+**Impact:** Improved code organization and exception handling completeness. No actual vulnerability existed.
 
 ---
 
