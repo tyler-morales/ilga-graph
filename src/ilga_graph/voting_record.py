@@ -77,12 +77,12 @@ def _parse_vote_date_sort_key(date_str: str) -> tuple[int, int, int]:
     parts = date_str.replace(",", "").split()
     if len(parts) != 3:
         return (0, 0, 0)
-    month_name, day_str, year_str = parts
     try:
+        month_name, day_str, year_str = parts
         month_abbrevs = {m: i for i, m in enumerate(calendar.month_name) if m}
         month_num = month_abbrevs.get(month_name, 0)
         return (int(year_str), month_num, int(day_str))
-    except (ValueError, KeyError):
+    except (ValueError, KeyError, IndexError):
         return (0, 0, 0)
 
 

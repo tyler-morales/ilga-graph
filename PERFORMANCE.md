@@ -2,6 +2,8 @@
 
 This document tracks performance observations and bottleneck analysis for the ILGA Graph application startup.
 
+> **See also:** [SECURITY_ANALYSIS.md](SECURITY_ANALYSIS.md) for comprehensive code quality analysis, including performance recommendations.
+
 ## Startup Timing Instrumentation
 
 As of the latest implementation, the application logs detailed timing for each ETL step:
