@@ -17,6 +17,10 @@ dependencies = [
     "python-dotenv",
     "jinja2",
     "python-multipart",
+    "sqlalchemy[asyncio]",
+    "aiosqlite",
+    "itsdangerous",
+    "aiosmtplib",
 ]
 
 [project.optional-dependencies]
@@ -26,6 +30,10 @@ dev = [
     "httpx",
     "rich",
     "pre-commit",
+]
+docs = [
+    "mkdocs>=1.5",
+    "mkdocs-material>=9.5",
 ]
 ml = [
     "polars",
@@ -53,3 +61,5 @@ select = ["E", "F", "I", "W", "UP"]
 [tool.ruff.lint.per-file-ignores]
 # Query resolvers use state/helpers injected by main at runtime
 "src/ilga_graph/schema.py" = ["F821"]
+# Advocacy helpers: long string literals (email/script copy) kept readable
+"src/ilga_graph/advocacy_helpers.py" = ["E501"]

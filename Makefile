@@ -1,4 +1,4 @@
-.PHONY: scrape dev serve install test lint lint-fix clean help ml-setup ml-run ml-pipeline ml-resolve ml-predict ml-embed scrape-fulltext logs
+.PHONY: scrape scrape-full dev serve dev-reset install test lint lint-fix clean help ml-setup ml-run ml-pipeline ml-resolve ml-predict ml-embed scrape-fulltext scrape-members scrape-full-members snapshot-mocks logs docs docs-serve
 
 # ── Virtual environment ─────────────────────────────────────────────────────
 VENV ?= $(or $(wildcard .venv), $(wildcard venv), $(wildcard src/ilga_graph/.venv))
@@ -15,37 +15,53 @@ help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# One pipeline: make scrape → make dev
+# One pipeline: make scrape → make dev / make serve
 #
-#   make scrape              Smart tiered scan (~2 min daily, auto-decides)
-#   make scrape FULL=1       Force full index walk (all 125 pages, ~30 min)
-#   make scrape FRESH=1      Nuke cache and re-scrape from scratch
-#   make scrape LIMIT=100    Limit vote/slip phase to 100 bills
-#   make scrape WORKERS=10   More parallel workers for votes/slips
-#   make scrape SKIP_VOTES=1 Skip vote/slip phase
-#   make scrape EXPORT=1     Include Obsidian vault export
+# Index strategy (bill list from ILGA):
+#   make scrape              Smart/tiered: full walk if no cache or >7d old;
+#                            else tail-only (~24h) or skip index (<24h). Then
+#                            scrape metadata + votes + slips for new/recent bills.
+#   make scrape FULL=1       Force FULL index walk every time (all ~125 pages),
+#                            then scrape. Use for new session or "refresh all."
+#   make scrape-full-members If you see "20 members" and want the full roster:
+#                            re-fetches all members from ILGA (~177). Uses existing
+#                            cache/bills.json; run after a normal scrape.
 #
-#   make dev                 Serve from cache (dev mode, auto-reload)
-#   make serve               Serve from cache (prod mode)
+# Other flags:
+#   make scrape FRESH=1      Nuke cache/ and re-scrape from scratch
+#   make scrape FULLTEXT=1  Include full text PDFs in same pass
+#   make scrape WORKERS=20  Parallel workers (default 10)
+#   make scrape SKIP_VOTES=1 Metadata only (no votes/slips)
+#   make scrape EXPORT=1    Include Obsidian vault export
+#
+#   make dev    Serve from cache (dev mode, auto-reload)
+#   make serve  Serve from cache (prod mode)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-scrape: ## Smart incremental scrape (members + bills + votes + slips + ML)
-	$(PYTHON) scripts/scrape.py \
+scrape: ## Unified scrape: members + bills + votes + slips. Smart index (use FULL=1 to force full index walk) + ML
+	ILGA_PROFILE=prod $(PYTHON) scripts/scrape.py \
 		--fast \
 		$(if $(FRESH),--fresh) \
 		$(if $(FULL),--full) \
-		$(if $(LIMIT),--vote-limit $(LIMIT)) \
+		$(if $(FULLTEXT),--fulltext) \
 		$(if $(WORKERS),--workers $(WORKERS)) \
 		$(if $(EXPORT),--export) \
 		$(if $(SKIP_VOTES),--skip-votes)
 	@echo "Running ML pipeline..."
 	PYTHONPATH=src $(PYTHON) scripts/ml_run.py || echo "ML pipeline skipped (run make ml-setup first)"
 
+scrape-full: ## Full reset: delete cache/, then scrape all members (~177) + full bill index + ML. Use when data is wrong or incomplete (e.g. only 20 or 60 members).
+	$(MAKE) scrape FRESH=1 FULL=1
+
 dev: ## Serve from cache (dev mode, auto-reload)
 	ILGA_LOAD_ONLY=1 ILGA_PROFILE=dev $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src
 
 serve: ## Serve from cache (prod mode)
 	ILGA_LOAD_ONLY=1 ILGA_PROFILE=prod $(BIN)uvicorn ilga_graph.main:app --app-dir src
+
+dev-reset: ## Clear dev cache (next make dev uses mocks/dev seed data)
+	rm -rf cache/dev
+	@echo "Dev cache cleared. Next 'make dev' will use mocks/dev/ seed data."
 
 # ── Utilities ──────────────────────────────────────────────────────────────────
 
@@ -83,18 +99,39 @@ ml-predict: ## Bill outcome prediction only
 ml-embed: ## Generate Node2Vec graph embeddings (co-sponsorship network)
 	PYTHONPATH=src $(PYTHON) -c "from ilga_graph.ml.node_embedder import run_embedding_pipeline; run_embedding_pipeline()"
 
+scrape-members: ## Only fetch members + committees; load bills from cache (no bill/vote scrape). Use after deleting members.json.
+	ILGA_PROFILE=prod $(PYTHON) scripts/scrape.py --members-only --fast
+
+scrape-full-members: ## Re-fetch full member roster from ILGA (~177). Removes cache/members.json then runs scrape-members so the scraper does not reuse a small cached roster (e.g. 20).
+	rm -f cache/members.json
+	$(MAKE) scrape-members
+
+refresh-photos: ## Refresh member photo_url from ILGA detail pages only (requires existing cache/members.json and bills.json).
+	ILGA_PROFILE=prod PYTHONPATH=src $(PYTHON) scripts/refresh_member_photos.py
+
 scrape-fulltext: ## Scrape full bill text PDFs (incremental, resumable)
-	PYTHONPATH=src $(PYTHON) scripts/scrape_fulltext.py \
+	ILGA_PROFILE=prod PYTHONPATH=src $(PYTHON) scripts/scrape_fulltext.py \
 		$(if $(LIMIT),--limit $(LIMIT),--limit 100) \
 		$(if $(WORKERS),--workers $(WORKERS)) \
 		$(if $(FAST),--fast) \
 		$(if $(DELAY),--delay $(DELAY)) \
 		$(if $(SAVE_INTERVAL),--save-interval $(SAVE_INTERVAL))
 
+snapshot-mocks: ## Sample cache/ into mocks/dev/ (run after scrape; commit result to refresh dev seed)
+	$(PYTHON) scripts/snapshot_mocks.py
+
 # ── Utilities ──────────────────────────────────────────────────────────────────
 
 logs: ## Show unified run log (scrape, ml_run, startup) — terminal dashboard
 	PYTHONPATH=src $(PYTHON) scripts/log_dashboard.py $(if $(N),--tail $(N),--tail 20)
+
+# ── Documentation site (MkDocs) ─────────────────────────────────────────────
+
+docs: ## Build the documentation site to site/
+	$(BIN)mkdocs build
+
+docs-serve: ## Serve the documentation site at http://127.0.0.1:8001 (port 8001 to avoid clashing with make dev on 8000)
+	$(BIN)mkdocs serve -a 127.0.0.1:8001
 
 clean: ## Remove cache/, processed/, and generated vault files
 	rm -rf cache/
@@ -104,4 +141,8 @@ clean: ## Remove cache/, processed/, and generated vault files
 	rm -f ILGA_Graph_Vault/Moneyball\ Report.md
 	rm -f .startup_timings.csv
 	rm -f .run_log.jsonl
+	rm -rf site/
 	@echo "Cleaned. Run 'make scrape' then 'make dev'."
+
+seed-outreach: ## Seed outreach DB: real backlog always; mock community data only when ILGA_PROFILE=dev. Dev uses data/ilga_dev.db, prod uses data/ilga.db.
+	$(PYTHON) scripts/seed_outreach.py
