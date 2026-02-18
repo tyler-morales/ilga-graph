@@ -3,46 +3,1881 @@
 {% block title %}{{ title }} — Find Your Targets{% endblock %}
 
 {% block content %}
-<div class="intel-nav">
+{# ── Hero section ─────────────────────────────────────────────────── #}
+<div class="advocacy-hero">
+    <div class="hero-inner">
+        <p class="hero-eyebrow">Illinois Legislative Advocacy Tool</p>
+        <h1 class="hero-headline">{{ title }}</h1>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/a/ad/SuzukiCarry8th.jpg" alt="Suzuki Carry kei truck"
+            class="hero-image" loading="lazy">
+        <p class="hero-subhead">
+            Enter your ZIP code. We'll tell you <strong>exactly who to call</strong>,
+            <strong>what to say</strong>, and <strong>who has the power</strong> to move
+            your issue through Springfield.
+        </p>
+
+        <div class="hero-form">
+            <form action="/advocacy/search" method="post" id="advocacy-form" hx-post="/advocacy/search"
+                hx-target="#results" hx-swap="innerHTML" hx-indicator="#search-spinner">
+                <div class="hero-form-row">
+                    <div class="hero-field">
+                        <label for="zip_code">Your Illinois ZIP Code</label>
+                        <input type="text" id="zip_code" name="zip_code" inputmode="numeric" pattern="[0-9]{5}"
+                            placeholder="60614" maxlength="5" required autocomplete="postal-code"
+                            value="{{ zip or '' }}">
+                    </div>
+                    <div class="hero-field">
+                        <label for="category">Policy Area <span class="label-optional">(optional)</span></label>
+                        <select id="category" name="category">
+                            {% for value, label in categories %}
+                            <option value="{{ value }}" {% if category is defined and category==value %}selected{% endif
+                                %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="hero-field hero-field-btn">
+                        <button type="submit" id="find-btn">Find My Targets</button>
+                        <span id="search-spinner" class="htmx-indicator">Searching&hellip;</span>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="hero-meta" id="auth-strip" aria-live="polite">
+            <div class="hero-meta-line">
+                <span class="hero-meta-item">Data from <strong>ilga.gov</strong></span>
+                <span class="hero-meta-sep">&middot;</span>
+                <span class="hero-meta-item">{{ member_count or 177 }} legislators tracked</span>
+                <span class="hero-meta-sep">&middot;</span>
+                <span class="hero-meta-item">ML-scored influence rankings</span>
+                <span class="hero-meta-sep">&middot;</span>
+                <span id="auth-strip-signed-out" class="hero-meta-auth">
+                    <button type="button" class="auth-strip-signin-btn" id="auth-strip-signin-btn">Sign in</button>
+                </span>
+                <span id="auth-strip-signed-in" class="hero-meta-auth auth-strip-signed-in" hidden><span
+                        class="hero-verified-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                            <polyline points="22 4 12 14.01 9 11.01" />
+                        </svg></span> Verified <span id="auth-strip-email"></span> &middot; <button type="button"
+                        class="auth-strip-signout" id="auth-strip-signout">Sign out</button></span>
+            </div>
+            <div id="auth-strip-inline-signin" class="hero-signin-inline" hidden>
+                <div class="hero-signin-state" id="hero-signin-state-email">
+                    <input type="email" class="hero-signin-input" id="hero-signin-email" placeholder="Your email"
+                        autocomplete="email" inputmode="email">
+                    <button type="button" class="hero-signin-btn" id="hero-signin-request-btn">Send code</button>
+                </div>
+                <div class="hero-signin-state" id="hero-signin-state-code" hidden>
+                    <span class="hero-signin-code-hint" id="hero-signin-code-hint">Check your email for a 6-digit
+                        code</span>
+                    <div class="hero-signin-code-row">
+                        <input type="text" class="hero-signin-code-input" id="hero-signin-code-input"
+                            placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code">
+                        <button type="button" class="hero-signin-btn" id="hero-signin-verify-btn">Verify</button>
+                    </div>
+                    <span class="hero-signin-error" id="hero-signin-error" hidden></span>
+                    <button type="button" class="hero-signin-resend" id="hero-signin-resend">Resend code</button>
+                </div>
+                <button type="button" class="hero-signin-cancel" id="hero-signin-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Nav row (compact) ── #}
+<!-- <div class="intel-nav" style="margin-top:12px;">
     <a href="/explore">&larr; Power Map</a> &middot;
     <a href="/intelligence">ML Intelligence Dashboard &rarr;</a>
-</div>
-<h1>Kei Truck Freedom</h1>
-<p>Find your Illinois advocacy targets. Enter your ZIP code to identify your
-<strong>Senator</strong> and <strong>Representative</strong>, plus a
-<strong>Power Broker</strong> to pressure and a potential
-<strong>Ally</strong> to recruit.</p>
-
-<div class="search-form">
-    <form action="/advocacy/search" method="post"
-          hx-post="/advocacy/search"
-          hx-target="#results"
-          hx-swap="innerHTML"
-          hx-indicator="#search-spinner">
-        <label for="zip_code">Illinois ZIP Code</label>
-        <input type="text" id="zip_code" name="zip_code"
-               placeholder="e.g. 60614" maxlength="5" required
-               value="{{ zip or '' }}">
-
-        <label for="category" style="margin-top: 10px;">Policy Category <span style="font-weight:normal; color:#888;">(optional)</span></label>
-        <select id="category" name="category">
-            {% for value, label in categories %}
-            <option value="{{ value }}" {% if category is defined and category == value %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-        </select>
-
-        <div style="margin-top: 10px;">
-            <button type="submit">Find Targets</button>
-            <span id="search-spinner" class="htmx-indicator">Searching&hellip;</span>
-        </div>
-    </form>
-</div>
+</div> -->
 
 {% if error %}
 <div class="error-msg">{{ error }}</div>
 {% endif %}
 
 <div id="results">
-{% block results %}{% endblock %}
+    {% block results %}{% endblock %}
 </div>
+
+{# ── Advocacy drawer (Call script → After-call email, or Email-first) ── #}
+<div id="advocacy-drawer-overlay" class="phone-overlay" onclick="closeAdvocacyDrawer()"></div>
+<div id="advocacy-drawer" class="phone-panel" data-member-id="" data-drawer-zip="" data-drawer-photo-url="">
+    <button class="phone-panel-close" onclick="closeAdvocacyDrawer()" aria-label="Close">&times;</button>
+    <h3 id="advocacy-drawer-title" class="phone-panel-title">Call script</h3>
+    <div id="advocacy-drawer-body" class="phone-panel-body"></div>
+</div>
+
+{# Reminder modal: date/time + Google Calendar or email myself; details include link back to this call script #}
+<div id="reminder-modal" class="reminder-modal" role="dialog" aria-labelledby="reminder-modal-title" aria-modal="true"
+    hidden>
+    <div class="reminder-modal-backdrop" id="reminder-modal-backdrop"></div>
+    <div class="reminder-modal-card">
+        <h2 id="reminder-modal-title" class="reminder-modal-title">Set a reminder to follow up</h2>
+        <p class="reminder-modal-hint">Pick when you want to be reminded. The call script link will be included so you
+            can jump right back.</p>
+        <div class="reminder-modal-fields">
+            <label class="reminder-modal-row">
+                <span class="reminder-modal-label">Date</span>
+                <input type="date" id="reminder-date" class="reminder-modal-input"
+                    aria-describedby="reminder-date-desc">
+            </label>
+            <label class="reminder-modal-row">
+                <span class="reminder-modal-label">Time</span>
+                <input type="time" id="reminder-time" class="reminder-modal-input" value="09:00"
+                    aria-describedby="reminder-time-desc">
+            </label>
+        </div>
+        <p id="reminder-link-preview" class="reminder-link-preview" aria-live="polite"></p>
+        <div class="reminder-modal-ctas">
+            <button type="button" class="reminder-modal-btn reminder-modal-btn-primary" id="reminder-btn-calendar">Add
+                to Google Calendar</button>
+            <button type="button" class="reminder-modal-btn reminder-modal-btn-secondary" id="reminder-btn-email">Email
+                myself a reminder</button>
+            <button type="button" class="reminder-modal-btn reminder-modal-btn-secondary" id="reminder-btn-copy">Copy
+                link only</button>
+            <button type="button" class="reminder-modal-btn reminder-modal-btn-ghost"
+                id="reminder-btn-cancel">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* ── Floating UI: position click tooltips with flip/shift ── */
+    function updateTooltipPosition(wrap) {
+        if (typeof window.FloatingUIDOM === 'undefined') return;
+        var content = wrap && wrap.querySelector('.tooltip-content');
+        if (!content) return;
+        var lib = window.FloatingUIDOM;
+        var middleware = [];
+        if (lib.offset) middleware.push(lib.offset(6));
+        if (lib.flip) middleware.push(lib.flip());
+        if (lib.shift) middleware.push(lib.shift({ padding: 8 }));
+        lib.computePosition(wrap, content, {
+            placement: 'top',
+            strategy: 'fixed',
+            middleware: middleware
+        }).then(function (result) {
+            content.classList.add('tooltip-floating-positioned');
+            content.classList.remove('tooltip-placement-top', 'tooltip-placement-bottom', 'tooltip-placement-left', 'tooltip-placement-right');
+            content.classList.add('tooltip-placement-' + result.placement);
+            content.style.transform = 'translate(' + result.x + 'px, ' + result.y + 'px)';
+        }).catch(function () { });
+    }
+
+    /* ── Auto-submit on 5-digit ZIP ── */
+    document.getElementById('zip_code').addEventListener('input', function () {
+        if (this.value.replace(/\D/g, '').length === 5) {
+            this.value = this.value.replace(/\D/g, '').slice(0, 5);
+            document.getElementById('advocacy-form').requestSubmit();
+            setTimeout(function () {
+                var results = document.getElementById('results');
+                results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 600);
+        }
+    });
+
+    /* ── Card bio "Read more" toggle ── */
+    document.addEventListener('click', function (e) {
+        var bioBtn = e.target.closest('.card-bio-toggle');
+        if (bioBtn) {
+            var id = bioBtn.getAttribute('data-bio-id');
+            var p = id ? document.getElementById(id) : null;
+            if (p) {
+                var expanded = bioBtn.getAttribute('aria-expanded') === 'true';
+                p.classList.toggle('card-bio-truncated', expanded);
+                bioBtn.setAttribute('aria-expanded', !expanded);
+                bioBtn.textContent = expanded ? 'Read more' : 'Show less';
+            }
+            return;
+        }
+        /* ── Aside: toggle Moneyball definition (inline below Power Broker) ── */
+        var moneyballTrigger = e.target.closest('.moneyball-aside-trigger');
+        if (moneyballTrigger) {
+            var blockId = moneyballTrigger.getAttribute('aria-controls');
+            var block = blockId ? document.getElementById(blockId) : null;
+            if (block) {
+                var open = block.classList.toggle('is-open');
+                moneyballTrigger.setAttribute('aria-expanded', open);
+                block.setAttribute('aria-hidden', !open);
+            }
+            return;
+        }
+        /* ── Close Moneyball definition when clicking outside ── */
+        if (!e.target.closest('.moneyball-aside-trigger') && !e.target.closest('.moneyball-definition-block')) {
+            document.querySelectorAll('.moneyball-definition-block.is-open').forEach(function (el) {
+                el.classList.remove('is-open');
+                el.setAttribute('aria-hidden', 'true');
+            });
+            document.querySelectorAll('.moneyball-aside-trigger[aria-expanded="true"]').forEach(function (el) {
+                el.setAttribute('aria-expanded', 'false');
+            });
+        }
+        /* ── Close Moneyball (and other click) tooltips when clicking outside ── */
+        if (!e.target.closest('.tooltip-wrap')) {
+            document.querySelectorAll('.tooltip-wrap.tooltip-open').forEach(function (el) {
+                el.classList.remove('tooltip-open');
+                var content = el.querySelector('.tooltip-content');
+                if (content) {
+                    content.classList.remove('tooltip-floating-positioned', 'tooltip-placement-top', 'tooltip-placement-bottom', 'tooltip-placement-left', 'tooltip-placement-right');
+                    content.style.transform = '';
+                }
+            });
+        } else {
+            var tooltipWrap = e.target.closest('.tooltip-wrap.tooltip-click');
+            if (tooltipWrap) {
+                setTimeout(function () {
+                    if (tooltipWrap.classList.contains('tooltip-open')) {
+                        updateTooltipPosition(tooltipWrap);
+                    }
+                }, 0);
+            }
+        }
+        // #region agent log
+        /* Debug: sidebar Moneyball tooltip clipping — log overflow chain when opening tooltip in .results-aside */
+        var asideTrigger = e.target.closest('.results-aside .moneyball-help, .results-aside .moneyball-term');
+        if (asideTrigger && asideTrigger.closest('.tooltip-wrap')) {
+            var wrap = asideTrigger.closest('.tooltip-wrap');
+            setTimeout(function () {
+                var openWrap = document.querySelector('.results-aside .tooltip-wrap.tooltip-open');
+                if (!openWrap) return;
+                var tooltipContent = openWrap.querySelector('.tooltip-content');
+                var aside = document.querySelector('.results-aside');
+                var howItWorks = aside ? aside.querySelector('.how-it-works') : null;
+                var hiwBody = aside ? aside.querySelector('.hiw-body') : null;
+                var data = { hypothesisId: 'H1', message: 'sidebar Moneyball tooltip opened' };
+                if (aside) {
+                    var s = getComputedStyle(aside);
+                    data.resultsAside = { overflow: s.overflow, overflowX: s.overflowX, overflowY: s.overflowY, width: aside.offsetWidth };
+                    var ar = aside.getBoundingClientRect();
+                    data.asideRect = { left: ar.left, right: ar.right, width: ar.width };
+                }
+                if (howItWorks) {
+                    var s = getComputedStyle(howItWorks);
+                    data.howItWorks = { overflow: s.overflow, overflowX: s.overflowX, overflowY: s.overflowY };
+                }
+                if (hiwBody) {
+                    var s = getComputedStyle(hiwBody);
+                    data.hiwBody = { overflow: s.overflow, overflowX: s.overflowX, overflowY: s.overflowY };
+                }
+                if (tooltipContent) {
+                    var tr = tooltipContent.getBoundingClientRect();
+                    data.tooltipRect = { left: tr.left, right: tr.right, width: tr.width };
+                    data.tooltipOverflowsRight = aside ? tr.right > aside.getBoundingClientRect().right : null;
+                }
+                var el = tooltipContent;
+                var ancestors = [];
+                while (el && el !== document.body) {
+                    var s = getComputedStyle(el);
+                    if (s.overflow !== 'visible' || s.overflowX !== 'visible' || s.overflowY !== 'visible') {
+                        ancestors.push({ tag: el.tagName, className: el.className || '', overflow: s.overflow, overflowX: s.overflowX, overflowY: s.overflowY });
+                    }
+                    el = el.parentElement;
+                }
+                data.clippingAncestors = ancestors;
+                fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'index.html:sidebar-tooltip', message: 'Moneyball tooltip overflow diagnostic', data: data, timestamp: Date.now() }) }).catch(function () { });
+            }, 0);
+        }
+        // #endregion
+    });
+
+    /* ── Moneyball definition: keyboard toggle (Enter/Space) ── */
+    document.addEventListener('keydown', function (e) {
+        var moneyballTrigger = e.target.closest('.moneyball-aside-trigger');
+        if (!moneyballTrigger || (e.key !== 'Enter' && e.key !== ' ')) return;
+        e.preventDefault();
+        var blockId = moneyballTrigger.getAttribute('aria-controls');
+        var block = blockId ? document.getElementById(blockId) : null;
+        if (block) {
+            var open = block.classList.toggle('is-open');
+            moneyballTrigger.setAttribute('aria-expanded', open);
+            block.setAttribute('aria-hidden', !open);
+        }
+    });
+
+    /* ── Show "Read more" only when bio is actually truncated ── */
+    function applyCardBioOverflow() {
+        document.querySelectorAll('.card-bio .card-bio-toggle').forEach(function (btn) {
+            var id = btn.getAttribute('data-bio-id');
+            var p = id ? document.getElementById(id) : null;
+            if (!p || !p.classList.contains('card-bio-truncated')) return;
+            if (p.scrollHeight > p.clientHeight) {
+                btn.style.display = '';
+            } else {
+                p.classList.remove('card-bio-truncated');
+                btn.style.display = 'none';
+            }
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', applyCardBioOverflow);
+    } else {
+        applyCardBioOverflow();
+    }
+
+    /* ── Reposition open tooltips on scroll/resize (Floating UI) ── */
+    function repositionOpenTooltips() {
+        document.querySelectorAll('.tooltip-wrap.tooltip-click.tooltip-open').forEach(updateTooltipPosition);
+    }
+
+    /* ── Hover tooltips: run Floating UI so they flip/shift and stay in viewport ── */
+    document.addEventListener('mouseover', function (e) {
+        var wrap = e.target.closest('.tooltip-wrap');
+        if (!wrap || wrap.classList.contains('tooltip-click')) return;
+        if (wrap.contains(e.relatedTarget)) return;
+        setTimeout(function () {
+            updateTooltipPosition(wrap);
+        }, 0);
+    });
+    var repositionTicks;
+    window.addEventListener('scroll', function () {
+        if (repositionTicks) cancelAnimationFrame(repositionTicks);
+        repositionTicks = requestAnimationFrame(function () {
+            repositionTicks = 0;
+            repositionOpenTooltips();
+        });
+    }, true);
+    window.addEventListener('resize', function () {
+        if (repositionTicks) cancelAnimationFrame(repositionTicks);
+        repositionTicks = requestAnimationFrame(function () {
+            repositionTicks = 0;
+            repositionOpenTooltips();
+        });
+    });
+
+    /* ── Scroll to results after htmx swap ── */
+    document.body.addEventListener('htmx:afterSwap', function (e) {
+        if (e.detail.target && e.detail.target.id === 'results') {
+            setTimeout(function () {
+                applyCardBioOverflow();
+                e.detail.target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+    });
+
+    function esc(s) { return (s == null ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+    /* ── Advocacy drawer: Call (script + after-call form) or Email (template + copy/mailto) ── */
+    function openAdvocacyDrawer(view, memberId, zipCode, photoUrl, targetType) {
+        var drawer = document.getElementById('advocacy-drawer');
+        var body = document.getElementById('advocacy-drawer-body');
+        var titleEl = document.getElementById('advocacy-drawer-title');
+        if (!drawer || !body) return;
+        drawer.setAttribute('data-member-id', memberId || '');
+        drawer.setAttribute('data-drawer-zip', zipCode || '');
+        drawer.setAttribute('data-drawer-photo-url', (photoUrl != null && photoUrl !== '') ? photoUrl : '');
+        if (targetType != null && targetType !== '') drawer.setAttribute('data-drawer-target-type', targetType);
+        else drawer.removeAttribute('data-drawer-target-type');
+        titleEl.textContent = view === 'email' ? 'Follow-up email' : 'Call script';
+        drawer.classList.toggle('phone-panel--email', view === 'email');
+        body.innerHTML = '<p class="drawer-loading">Loading…</p>';
+        drawer.classList.add('open');
+        document.getElementById('advocacy-drawer-overlay').classList.add('open');
+        var fetchView = (view === 'call_wrapup') ? 'call' : view;
+        var params = new URLSearchParams({ view: fetchView, member_id: memberId || '', zip: zipCode || '' });
+        var photo = (photoUrl != null && photoUrl !== '') ? photoUrl : (drawer.getAttribute('data-drawer-photo-url') || '');
+        if (photo) params.set('photo_url', photo);
+        var target = (targetType != null && targetType !== '') ? targetType : (drawer.getAttribute('data-drawer-target-type') || '');
+        if (target) params.set('target_type', target);
+        fetch('/advocacy/drawer?' + params.toString(), { headers: { Accept: 'text/html' } })
+            .then(function (r) { return r.text(); })
+            .then(function (html) {
+                body.innerHTML = html;
+                if (typeof htmx !== 'undefined') htmx.process(body);
+                var photoUrl = drawer.getAttribute('data-drawer-photo-url') || '';
+                if (photoUrl) {
+                    var header = body.querySelector('.drawer-call-header-inner');
+                    if (header) {
+                        var placeholder = header.querySelector('.drawer-call-photo-placeholder');
+                        var img = header.querySelector('.drawer-call-photo');
+                        if (placeholder) {
+                            var newImg = document.createElement('img');
+                            newImg.src = photoUrl;
+                            newImg.alt = '';
+                            newImg.className = 'drawer-call-photo';
+                            newImg.loading = 'lazy';
+                            placeholder.parentNode.replaceChild(newImg, placeholder);
+                        } else if (img && img.tagName === 'IMG') {
+                            img.src = photoUrl;
+                        }
+                    }
+                }
+                initDrawerEmailActions(body);
+                initDrawerCapturePulse(body);
+                initDrawerEndCall(body);
+                initDrawerConstituentCheckbox(body);
+                initDrawerVoicemailToggle(body);
+                if (view === 'call_wrapup') showWrapupWithMockPoll(body);
+            })
+            .catch(function () { body.innerHTML = '<p class="drawer-error">Could not load. Try again.</p>'; });
+    }
+
+    function closeAdvocacyDrawer() {
+        document.getElementById('advocacy-drawer').classList.remove('open');
+        document.getElementById('advocacy-drawer-overlay').classList.remove('open');
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            var drawer = document.getElementById('advocacy-drawer');
+            if (drawer && drawer.classList.contains('open')) {
+                closeAdvocacyDrawer();
+            }
+        }
+    });
+
+    /** Build URL that opens this call script (deep link). Used in reminder details so user can jump back. */
+    function buildCallScriptUrl(memberId, zipCode) {
+        var base = window.location.origin + window.location.pathname;
+        var params = new URLSearchParams();
+        if (zipCode) params.set('zip', zipCode);
+        if (memberId) params.set('member_id', memberId);
+        params.set('view', 'call');
+        return base + (base.indexOf('?') !== -1 ? '&' : '?') + params.toString();
+    }
+
+    function openReminderModal() {
+        var drawer = document.getElementById('advocacy-drawer');
+        var body = document.getElementById('advocacy-drawer-body');
+        var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
+        var zipCode = (drawer && drawer.getAttribute('data-drawer-zip')) || '';
+        var nameEl = body && body.querySelector('.drawer-call-name');
+        var linkEl = body && body.querySelector('[data-legislator]');
+        var legislator = (nameEl && nameEl.textContent.trim()) || (linkEl && linkEl.getAttribute('data-legislator')) || 'Legislator';
+
+        var callScriptUrl = buildCallScriptUrl(memberId, zipCode);
+        var defaultDate = new Date();
+        defaultDate.setDate(defaultDate.getDate() + 2);
+        var dateStr = defaultDate.getFullYear() + '-' + String(defaultDate.getMonth() + 1).padStart(2, '0') + '-' + String(defaultDate.getDate()).padStart(2, '0');
+
+        var modal = document.getElementById('reminder-modal');
+        var dateInput = document.getElementById('reminder-date');
+        var timeInput = document.getElementById('reminder-time');
+        var previewEl = document.getElementById('reminder-link-preview');
+
+        if (dateInput) dateInput.value = dateStr;
+        if (timeInput) timeInput.value = '09:00';
+        if (previewEl) previewEl.textContent = 'Link in reminder: ' + callScriptUrl;
+        modal.setAttribute('data-reminder-legislator', legislator);
+        modal.setAttribute('data-reminder-member-id', memberId);
+        modal.setAttribute('data-reminder-zip', zipCode);
+        modal.setAttribute('data-reminder-call-url', callScriptUrl);
+        modal.removeAttribute('hidden');
+    }
+
+    function closeReminderModal() {
+        document.getElementById('reminder-modal').setAttribute('hidden', '');
+    }
+
+    function initReminderModal() {
+        var modal = document.getElementById('reminder-modal');
+        if (!modal) return;
+        var backdrop = document.getElementById('reminder-modal-backdrop');
+        var btnCal = document.getElementById('reminder-btn-calendar');
+        var btnEmail = document.getElementById('reminder-btn-email');
+        var btnCopy = document.getElementById('reminder-btn-copy');
+        var btnCancel = document.getElementById('reminder-btn-cancel');
+
+        function getModalData() {
+            var legislator = modal.getAttribute('data-reminder-legislator') || 'Legislator';
+            var memberId = modal.getAttribute('data-reminder-member-id') || '';
+            var zipCode = modal.getAttribute('data-reminder-zip') || '';
+            var callScriptUrl = modal.getAttribute('data-reminder-call-url') || buildCallScriptUrl(memberId, zipCode);
+            var dateInput = document.getElementById('reminder-date');
+            var timeInput = document.getElementById('reminder-time');
+            var dateVal = (dateInput && dateInput.value) || '';
+            var timeVal = (timeInput && timeInput.value) || '09:00';
+            return { legislator, memberId, zipCode, callScriptUrl, dateVal, timeVal };
+        }
+
+        function openGoogleCalendar() {
+            var d = getModalData();
+            var title = 'Follow up: ' + d.legislator + ' — kei truck email';
+            var details = 'Follow up with an email to the office (constituent mail).\n\nCall script (open this link to get back to the exact script):\n' + d.callScriptUrl;
+            var startDate = d.dateVal && d.timeVal ? new Date(d.dateVal + 'T' + d.timeVal) : new Date();
+            if (!d.dateVal) startDate.setDate(startDate.getDate() + 2);
+            startDate.setHours(parseInt(d.timeVal.slice(0, 2), 10) || 9, parseInt(d.timeVal.slice(3, 5), 10) || 0, 0, 0);
+            var endDate = new Date(startDate.getTime() + 30 * 60 * 1000);
+            var start = startDate.toISOString().replace(/-|:|\.\d{3}/g, '').slice(0, 15);
+            var end = endDate.toISOString().replace(/-|:|\.\d{3}/g, '').slice(0, 15);
+            var url = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(title) + '&dates=' + start + 'Z/' + end + 'Z&details=' + encodeURIComponent(details);
+            window.open(url, '_blank', 'noopener');
+            closeReminderModal();
+        }
+
+        function openMailto() {
+            var d = getModalData();
+            var subject = 'Reminder: Follow up ' + d.legislator + ' — kei truck email';
+            var body = 'Follow up with an email to the office (constituent mail). You left a voicemail; a short email with the SOS memo and sample letters doubles your touchpoint.\n\nCall script (open this link to get back to the exact script):\n' + d.callScriptUrl;
+            window.location.href = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+            closeReminderModal();
+        }
+
+        function copyLink() {
+            var d = getModalData();
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(d.callScriptUrl).then(function () {
+                    var el = document.getElementById('reminder-btn-copy');
+                    if (el) { var t = el.textContent; el.textContent = 'Copied!'; setTimeout(function () { el.textContent = t; }, 1500); }
+                });
+            }
+        }
+
+        if (backdrop) backdrop.addEventListener('click', closeReminderModal);
+        if (btnCal) btnCal.addEventListener('click', openGoogleCalendar);
+        if (btnEmail) btnEmail.addEventListener('click', openMailto);
+        if (btnCopy) btnCopy.addEventListener('click', copyLink);
+        if (btnCancel) btnCancel.addEventListener('click', closeReminderModal);
+    }
+
+    function initDrawerEndCall(container) {
+        if (!container) container = document.getElementById('advocacy-drawer-body');
+        var endCallBtn = container && container.querySelector('#drawer-end-call');
+        var endCallVmBtn = container && container.querySelector('#drawer-end-call-vm');
+        var pill = container && container.querySelector('.drawer-call-number-pill');
+        var wrapupInline = container && container.querySelector('#drawer-wrapup-inline');
+        var pollBubble = container && container.querySelector('#drawer-wrapup-poll-bubble');
+        var pollPillsWrap = container && container.querySelector('#drawer-wrapup-poll-pills');
+        var draftBubble = container && container.querySelector('#drawer-draft-followup-bubble');
+
+        function showInlineWrapup() {
+            if (endCallBtn) endCallBtn.style.display = 'none';
+            if (wrapupInline) {
+                wrapupInline.removeAttribute('hidden');
+                wrapupInline.classList.add('drawer-wrapup-inline-just-in');
+                if (pollBubble) pollBubble.setAttribute('hidden', '');
+                if (pollPillsWrap) pollPillsWrap.setAttribute('hidden', '');
+                if (draftBubble) {
+                    draftBubble.setAttribute('hidden', '');
+                    var ctaBlock = draftBubble.querySelector('#drawer-draft-followup-cta-block');
+                    if (ctaBlock) ctaBlock.classList.remove('drawer-draft-followup-cta-visible');
+                }
+                wrapupInline.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+            if (pill) pill.classList.add('drawer-call-number-pill-ended');
+            window.setTimeout(function () {
+                if (pollBubble) {
+                    pollBubble.removeAttribute('hidden');
+                    pollBubble.classList.add('drawer-bubble-just-in');
+                    pollBubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+                window.setTimeout(function () {
+                    if (pollPillsWrap) {
+                        pollPillsWrap.removeAttribute('hidden');
+                        pollPillsWrap.classList.add('drawer-bubble-just-in');
+                        requestAnimationFrame(function () {
+                            pollPillsWrap.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                        });
+                    }
+                }, 500);
+            }, 800);
+        }
+
+        if (endCallBtn) {
+            endCallBtn.addEventListener('click', function () {
+                showInlineWrapup();
+            });
+        }
+        var reminderBubble = container && container.querySelector('#drawer-voicemail-reminder-bubble');
+        if (endCallVmBtn) {
+            endCallVmBtn.addEventListener('click', function () {
+                endCallVmBtn.style.display = 'none';
+                if (reminderBubble) {
+                    reminderBubble.removeAttribute('hidden');
+                    reminderBubble.classList.add('drawer-voicemail-reminder-just-in');
+                }
+                if (pill) pill.classList.add('drawer-call-number-pill-ended');
+            });
+        }
+    }
+
+    function initDrawerConstituentCheckbox(container) {
+        if (!container) container = document.getElementById('advocacy-drawer-body');
+        var content = container && container.querySelector('.drawer-call-content');
+        var checkbox = container && container.querySelector('#drawer-constituent-checkbox');
+        var introPhrase = container && container.querySelector('#drawer-intro-location-phrase');
+        var vmPhrase = container && container.querySelector('#drawer-voicemail-location-phrase');
+        if (!content || !checkbox || !introPhrase) return;
+
+        function updatePhrases() {
+            var isConstituent = checkbox.checked;
+            var zip = (content.getAttribute('data-drawer-zip') || '').trim();
+            if (isConstituent && zip) {
+                introPhrase.innerHTML = 'I\'m a constituent in <strong>ZIP ' + zip + '</strong>';
+                if (vmPhrase) vmPhrase.innerHTML = 'a constituent in <strong>ZIP ' + zip + '</strong>';
+            } else if (isConstituent) {
+                introPhrase.innerHTML = 'I\'m a constituent in <strong>[ZIP]</strong>';
+                if (vmPhrase) vmPhrase.innerHTML = 'a constituent in <strong>[ZIP]</strong>';
+            } else {
+                introPhrase.innerHTML = 'I\'m calling from <strong>[CALLER_CITY] [CALLER_ZIP]</strong>';
+                if (vmPhrase) vmPhrase.innerHTML = 'calling from <strong>[CALLER_CITY] [CALLER_ZIP]</strong>';
+            }
+        }
+
+        checkbox.addEventListener('change', updatePhrases);
+        updatePhrases();
+    }
+
+    function initDrawerVoicemailToggle(container) {
+        if (!container) container = document.getElementById('advocacy-drawer-body');
+        var btn = container && container.querySelector('#drawer-voicemail-toggle-btn');
+        var chat = container && container.querySelector('#drawer-chat');
+        var voicemail = container && container.querySelector('#drawer-voicemail');
+        var intro = container && container.querySelector('#drawer-script-intro');
+        if (!btn || !chat || !voicemail) return;
+
+        var introCall = 'Read one bubble at a time. Say your line, then listen.';
+        var introVoicemail = 'Leave this message on their voicemail. Then follow up with an email when you can.';
+
+        function setVoicemailMode(isVoicemail) {
+            if (isVoicemail) {
+                chat.setAttribute('hidden', '');
+                voicemail.removeAttribute('hidden');
+                if (intro) intro.textContent = introVoicemail;
+                btn.textContent = 'Switch back to call script';
+                btn.setAttribute('aria-pressed', 'true');
+            } else {
+                chat.removeAttribute('hidden');
+                voicemail.setAttribute('hidden', '');
+                if (intro) intro.textContent = introCall;
+                btn.textContent = 'Switch to voicemail script';
+                btn.setAttribute('aria-pressed', 'false');
+            }
+        }
+
+        btn.addEventListener('click', function () {
+            var isVoicemail = voicemail.getAttribute('hidden') === null;
+            setVoicemailMode(!isVoicemail);
+        });
+
+        var calendarLink = container.querySelector('#drawer-reminder-calendar');
+        var inlineBlock = container.querySelector('#drawer-reminder-inline');
+        var inlineDate = container.querySelector('#reminder-inline-date');
+        var inlineTime = container.querySelector('#reminder-inline-time');
+        var inlineLinkPreview = container.querySelector('#reminder-inline-link-preview');
+        var inlineBtnCal = container.querySelector('#reminder-inline-btn-calendar');
+        var inlineBtnCopy = container.querySelector('#reminder-inline-btn-copy');
+
+        function showInlineReminder() {
+            var drawer = document.getElementById('advocacy-drawer');
+            var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
+            var zipCode = (drawer && drawer.getAttribute('data-drawer-zip')) || '';
+            var nameEl = container.querySelector('.drawer-call-name');
+            var linkEl = container.querySelector('[data-legislator]');
+            var legislator = (nameEl && nameEl.textContent.trim()) || (linkEl && linkEl.getAttribute('data-legislator')) || 'Legislator';
+            var callScriptUrl = buildCallScriptUrl(memberId, zipCode);
+            var d = new Date();
+            d.setDate(d.getDate() + 2);
+            var dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            if (inlineDate) inlineDate.value = dateStr;
+            if (inlineTime) inlineTime.value = '09:00';
+            if (inlineLinkPreview) inlineLinkPreview.textContent = 'Link in reminder: ' + callScriptUrl;
+            if (inlineBlock) {
+                inlineBlock.removeAttribute('hidden');
+                inlineBlock.classList.add('drawer-reminder-inline-just-in');
+                inlineBlock.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        function doInlineCalendar() {
+            var drawer = document.getElementById('advocacy-drawer');
+            var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
+            var zipCode = (drawer && drawer.getAttribute('data-drawer-zip')) || '';
+            var nameEl = container.querySelector('.drawer-call-name');
+            var linkEl = container.querySelector('[data-legislator]');
+            var legislator = (nameEl && nameEl.textContent.trim()) || (linkEl && linkEl.getAttribute('data-legislator')) || 'Legislator';
+            var callScriptUrl = buildCallScriptUrl(memberId, zipCode);
+            var dateVal = (inlineDate && inlineDate.value) || '';
+            var timeVal = (inlineTime && inlineTime.value) || '09:00';
+            var title = 'Follow up: ' + legislator + ' — kei truck email';
+            var details = 'Follow up with an email to the office (constituent mail).\n\nCall script (open this link to get back to the exact script):\n' + callScriptUrl;
+            var startDate = dateVal && timeVal ? new Date(dateVal + 'T' + timeVal) : new Date();
+            if (!dateVal) startDate.setDate(startDate.getDate() + 2);
+            startDate.setHours(parseInt(timeVal.slice(0, 2), 10) || 9, parseInt(timeVal.slice(3, 5), 10) || 0, 0, 0);
+            var endDate = new Date(startDate.getTime() + 30 * 60 * 1000);
+            var start = startDate.toISOString().replace(/-|:|\.\d{3}/g, '').slice(0, 15);
+            var end = endDate.toISOString().replace(/-|:|\.\d{3}/g, '').slice(0, 15);
+            var url = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(title) + '&dates=' + start + 'Z/' + end + 'Z&details=' + encodeURIComponent(details);
+            window.open(url, '_blank', 'noopener');
+        }
+
+        function doInlineCopy() {
+            var drawer = document.getElementById('advocacy-drawer');
+            var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
+            var zipCode = (drawer && drawer.getAttribute('data-drawer-zip')) || '';
+            var callScriptUrl = buildCallScriptUrl(memberId, zipCode);
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(callScriptUrl).then(function () {
+                    if (inlineBtnCopy) { var t = inlineBtnCopy.textContent; inlineBtnCopy.textContent = 'Copied!'; setTimeout(function () { inlineBtnCopy.textContent = t; }, 1500); }
+                });
+            }
+        }
+
+        if (calendarLink) {
+            calendarLink.addEventListener('click', function (e) {
+                e.preventDefault();
+                showInlineReminder();
+            });
+        }
+        if (inlineBtnCal) inlineBtnCal.addEventListener('click', doInlineCalendar);
+        if (inlineBtnCopy) inlineBtnCopy.addEventListener('click', doInlineCopy);
+    }
+
+    function initDrawerCapturePulse(container) {
+        if (!container) container = document.getElementById('advocacy-drawer-body');
+        var emailEl = container && container.querySelector('#drawer-email-capture');
+        var nameEl = container && container.querySelector('#drawer-name-capture');
+        if (!emailEl || !nameEl) return;
+        var emailWrap = emailEl.closest('.drawer-email-capture-wrap');
+        var nameWrap = nameEl.closest('.drawer-name-capture-wrap');
+        var emailSaved = container.querySelector('.drawer-email-saved');
+        var nameSaved = container.querySelector('.drawer-name-saved');
+        var emailSavedText = container.querySelector('.drawer-email-saved-text');
+        var nameDisplayEl = container.querySelector('.drawer-contact-card-name');
+        var pulseClass = 'drawer-capture-pulse';
+
+        function syncCaptureToWrapupForm() {
+            var form = container.querySelector('.drawer-wrapup-form');
+            if (!form) return;
+            var stafferInput = form.querySelector('input[name="staffer_name"]');
+            var emailInput = form.querySelector('input[name="email_address"]');
+            var nameVal = (nameEl.value || '').trim();
+            var emailVal = (emailEl.value || '').trim();
+            if (stafferInput) stafferInput.value = nameVal;
+            if (emailVal && emailInput) {
+                emailInput.value = emailVal;
+            } else {
+                var callContent = container.querySelector('.drawer-call-content');
+                var knownEmail = (callContent && callContent.getAttribute('data-known-email')) || '';
+                if (knownEmail && emailInput) emailInput.value = knownEmail;
+            }
+        }
+
+        function setFocusGreenOpacity(el) {
+            var len = (el.value || '').length;
+            var opacity = 0.28 + Math.min(len, 30) * 0.022;
+            el.style.setProperty('--drawer-focus-green-opacity', String(Math.round(opacity * 100) / 100));
+        }
+
+        function updatePulse() {
+            var emailVal = (emailEl.value || '').trim();
+            var nameVal = (nameEl.value || '').trim();
+            var hasEmail = emailVal.length > 0;
+            var hasName = nameVal.length > 0;
+            var emailFocused = document.activeElement === emailEl;
+            var nameFocused = document.activeElement === nameEl;
+            var showEmailSaved = hasEmail && !emailFocused;
+            var showNameSaved = hasName && !nameFocused;
+            setFocusGreenOpacity(emailEl);
+            setFocusGreenOpacity(nameEl);
+            emailEl.classList.toggle(pulseClass, !hasEmail);
+            nameEl.classList.toggle(pulseClass, hasEmail && !hasName);
+            if (emailWrap) emailWrap.classList.toggle('drawer-email-saved-visible', showEmailSaved);
+            if (nameWrap) nameWrap.classList.toggle('drawer-name-saved-visible', showNameSaved);
+            if (emailSavedText) emailSavedText.textContent = emailVal;
+            if (nameDisplayEl) nameDisplayEl.textContent = nameVal;
+            syncCaptureToWrapupForm();
+        }
+
+        function expandEmail() {
+            if (emailWrap) emailWrap.classList.remove('drawer-email-saved-visible');
+            emailEl.focus();
+        }
+        function expandName() {
+            if (nameWrap) nameWrap.classList.remove('drawer-name-saved-visible');
+            nameEl.focus();
+        }
+
+        if (emailSaved) {
+            emailSaved.addEventListener('click', expandEmail);
+            emailSaved.setAttribute('role', 'button');
+            emailSaved.setAttribute('tabindex', '0');
+            emailSaved.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expandEmail(); } });
+        }
+        if (nameSaved) {
+            nameSaved.addEventListener('click', expandName);
+            nameSaved.setAttribute('role', 'button');
+            nameSaved.setAttribute('tabindex', '0');
+            nameSaved.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expandName(); } });
+        }
+
+        emailEl.addEventListener('input', updatePulse);
+        emailEl.addEventListener('change', updatePulse);
+        nameEl.addEventListener('input', updatePulse);
+        nameEl.addEventListener('change', updatePulse);
+        emailEl.addEventListener('blur', updatePulse);
+        nameEl.addEventListener('blur', updatePulse);
+        updatePulse();
+    }
+
+    /* ── Auth: From field verify + outreach tracking ── */
+    var _ilgaUserEmail = null;
+    var _pendingAuthEmail = '';
+
+    function updateAuthStrip(signedIn, email) {
+        var stripSignedOut = document.getElementById('auth-strip-signed-out');
+        var stripSignedIn = document.getElementById('auth-strip-signed-in');
+        var stripEmail = document.getElementById('auth-strip-email');
+        if (!stripSignedOut || !stripSignedIn) return;
+        if (signedIn && email) {
+            stripSignedOut.hidden = true;
+            stripSignedIn.hidden = false;
+            if (stripEmail) stripEmail.textContent = email;
+            stripSignedIn.classList.remove('auth-strip-signed-in--visible');
+            requestAnimationFrame(function () {
+                stripSignedIn.classList.add('auth-strip-signed-in--visible');
+            });
+        } else {
+            stripSignedOut.hidden = false;
+            stripSignedIn.hidden = true;
+            stripSignedIn.classList.remove('auth-strip-signed-in--visible');
+        }
+    }
+
+    function initDrawerFromAuth(container) {
+        if (!container) return;
+        var stateInput = container.querySelector('#gmail-from-state-input');
+        var stateCode = container.querySelector('#gmail-from-state-code');
+        var stateVerified = container.querySelector('#gmail-from-state-verified');
+        if (!stateInput) return;
+
+        var fromInput = container.querySelector('#gmail-from-input');
+        var fromVerifyBtn = container.querySelector('#gmail-from-verify-btn');
+        var codeInput = container.querySelector('#gmail-from-code-input');
+        var codeSubmit = container.querySelector('#gmail-from-code-submit');
+        var codeHint = container.querySelector('#gmail-from-code-hint');
+        var codeError = container.querySelector('#gmail-from-code-error');
+        var resendBtn = container.querySelector('#gmail-from-resend-btn');
+        var emailText = container.querySelector('#gmail-from-email-text');
+        var signoutBtn = container.querySelector('#gmail-from-signout-btn');
+
+        function showState(which) {
+            stateInput.hidden = (which !== 'input');
+            stateCode.hidden = (which !== 'code');
+            stateVerified.hidden = (which !== 'verified');
+        }
+
+        function goVerified(email) {
+            _ilgaUserEmail = email;
+            if (emailText) emailText.textContent = email;
+            showState('verified');
+            updateAuthStrip(true, email);
+            if (typeof window._guideGoVerifiedHook === 'function') {
+                window._guideGoVerifiedHook(email);
+            }
+        }
+
+        function goInput() {
+            _ilgaUserEmail = null;
+            _pendingAuthEmail = '';
+            if (fromInput) fromInput.value = '';
+            showState('input');
+            updateAuthStrip(false);
+        }
+
+        function goCode(email) {
+            _pendingAuthEmail = email;
+            if (codeHint) codeHint.textContent = 'Code sent to ' + email;
+            if (codeInput) { codeInput.value = ''; codeInput.focus(); }
+            if (codeError) codeError.hidden = true;
+            showState('code');
+        }
+
+        function sendCode(email) {
+            var body = new FormData();
+            body.append('email', email);
+            return fetch('/auth/request-code', { method: 'POST', body: body, credentials: 'same-origin' })
+                .then(function (r) { return r.json(); });
+        }
+
+        if (_ilgaUserEmail) {
+            goVerified(_ilgaUserEmail);
+        } else {
+            showState('input');
+            fetch('/auth/me', { credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.authenticated && data.email) {
+                        goVerified(data.email);
+                    } else {
+                        _ilgaUserEmail = null;
+                    }
+                })
+                .catch(function () { _ilgaUserEmail = null; });
+        }
+
+        fromVerifyBtn.onclick = function () {
+            var email = (fromInput.value || '').trim().toLowerCase();
+            if (!email || email.indexOf('@') === -1) { fromInput.focus(); return; }
+            fromVerifyBtn.disabled = true;
+            fromVerifyBtn.textContent = 'Sending\u2026';
+            sendCode(email)
+                .then(function (data) {
+                    fromVerifyBtn.disabled = false;
+                    fromVerifyBtn.textContent = 'Verify';
+                    if (data.ok) {
+                        goCode(email);
+                    } else {
+                        if (codeError) { codeError.textContent = data.error || 'Could not send code'; codeError.hidden = false; }
+                    }
+                })
+                .catch(function () {
+                    fromVerifyBtn.disabled = false;
+                    fromVerifyBtn.textContent = 'Verify';
+                });
+        };
+
+        function doVerifyCode() {
+            var code = (codeInput.value || '').trim();
+            if (!code || code.length < 6) return;
+            codeSubmit.disabled = true;
+            codeSubmit.textContent = 'Verifying\u2026';
+            if (codeError) codeError.hidden = true;
+            var body = new FormData();
+            body.append('email', _pendingAuthEmail);
+            body.append('code', code);
+            fetch('/auth/verify-code', { method: 'POST', body: body, credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    codeSubmit.disabled = false;
+                    codeSubmit.textContent = 'Confirm';
+                    if (data.ok && data.email) {
+                        goVerified(data.email);
+                    } else {
+                        if (codeError) { codeError.textContent = data.error || 'Invalid or expired code. Try again or resend.'; codeError.hidden = false; }
+                        if (codeInput) { codeInput.value = ''; codeInput.focus(); }
+                    }
+                })
+                .catch(function () {
+                    codeSubmit.disabled = false;
+                    codeSubmit.textContent = 'Confirm';
+                    if (codeError) { codeError.textContent = 'Network error \u2014 try again'; codeError.hidden = false; }
+                });
+        }
+
+        codeSubmit.onclick = doVerifyCode;
+
+        if (codeInput) {
+            codeInput.addEventListener('input', function () {
+                this.value = this.value.replace(/\D/g, '').slice(0, 6);
+                if (this.value.length === 6) doVerifyCode();
+            });
+        }
+
+        resendBtn.onclick = function () {
+            if (!_pendingAuthEmail) { goInput(); return; }
+            resendBtn.disabled = true;
+            resendBtn.textContent = 'Sending\u2026';
+            if (codeError) codeError.hidden = true;
+            sendCode(_pendingAuthEmail)
+                .then(function (data) {
+                    resendBtn.disabled = false;
+                    resendBtn.textContent = 'Resend code';
+                    if (data.ok) {
+                        if (codeHint) codeHint.textContent = 'New code sent to ' + _pendingAuthEmail;
+                        if (codeInput) { codeInput.value = ''; codeInput.focus(); }
+                    } else {
+                        if (codeError) { codeError.textContent = data.error || 'Could not resend'; codeError.hidden = false; }
+                    }
+                })
+                .catch(function () {
+                    resendBtn.disabled = false;
+                    resendBtn.textContent = 'Resend code';
+                    if (codeError) { codeError.textContent = 'Network error'; codeError.hidden = false; }
+                });
+        };
+
+        signoutBtn.onclick = function () {
+            fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' })
+                .then(function () { goInput(); })
+                .catch(function () { goInput(); });
+        };
+    }
+
+    (function initAuthStrip() {
+        var stripSignout = document.getElementById('auth-strip-signout');
+        if (stripSignout) {
+            stripSignout.onclick = function () {
+                var signedInEl = document.getElementById('auth-strip-signed-in');
+                if (signedInEl && !signedInEl.hidden) {
+                    signedInEl.classList.remove('auth-strip-signed-in--visible');
+                    function finishSignout() {
+                        signedInEl.removeEventListener('transitionend', finishSignout);
+                        _ilgaUserEmail = null;
+                        updateAuthStrip(false);
+                    }
+                    signedInEl.addEventListener('transitionend', finishSignout, { once: true });
+                    setTimeout(finishSignout, 560);
+                } else {
+                    _ilgaUserEmail = null;
+                    updateAuthStrip(false);
+                }
+                fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' })
+                    .then(function () { })
+                    .catch(function () { });
+            };
+        }
+        fetch('/auth/me', { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.authenticated && data.email) {
+                    _ilgaUserEmail = data.email;
+                    updateAuthStrip(true, data.email);
+                } else {
+                    _ilgaUserEmail = null;
+                    updateAuthStrip(false);
+                }
+            })
+            .catch(function () { });
+    })();
+
+    (function initHeroInlineSignin() {
+        var stripSignedOut = document.getElementById('auth-strip-signed-out');
+        var inlineBlock = document.getElementById('auth-strip-inline-signin');
+        var signinBtn = document.getElementById('auth-strip-signin-btn');
+        var stateEmail = document.getElementById('hero-signin-state-email');
+        var stateCode = document.getElementById('hero-signin-state-code');
+        var emailInput = document.getElementById('hero-signin-email');
+        var requestBtn = document.getElementById('hero-signin-request-btn');
+        var codeHint = document.getElementById('hero-signin-code-hint');
+        var codeInput = document.getElementById('hero-signin-code-input');
+        var verifyBtn = document.getElementById('hero-signin-verify-btn');
+        var codeError = document.getElementById('hero-signin-error');
+        var resendBtn = document.getElementById('hero-signin-resend');
+        var cancelBtn = document.getElementById('hero-signin-cancel');
+
+        var _inlineCloseTimer = null;
+
+        function showInline(show) {
+            if (!inlineBlock) return;
+            if (show) {
+                if (_inlineCloseTimer) { clearTimeout(_inlineCloseTimer); _inlineCloseTimer = null; }
+                inlineBlock.hidden = false;
+                inlineBlock.classList.remove('hero-signin-inline--open');
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () {
+                        inlineBlock.classList.add('hero-signin-inline--open');
+                    });
+                });
+            } else {
+                if (_inlineCloseTimer) clearTimeout(_inlineCloseTimer);
+                inlineBlock.classList.remove('hero-signin-inline--open');
+                _inlineCloseTimer = setTimeout(function () {
+                    _inlineCloseTimer = null;
+                    inlineBlock.hidden = true;
+                }, 560);
+            }
+        }
+
+        function showHeroState(which) {
+            if (stateEmail) {
+                stateEmail.hidden = (which !== 'email');
+                stateEmail.classList.toggle('hero-signin-state-visible', which === 'email');
+            }
+            if (stateCode) {
+                stateCode.hidden = (which !== 'code');
+                if (which === 'code') {
+                    requestAnimationFrame(function () {
+                        stateCode.classList.add('hero-signin-state-visible');
+                    });
+                } else {
+                    stateCode.classList.remove('hero-signin-state-visible');
+                }
+            }
+        }
+
+        function closeInline() {
+            if (_inlineCloseTimer) { clearTimeout(_inlineCloseTimer); _inlineCloseTimer = null; }
+            if (inlineBlock) {
+                inlineBlock.hidden = true;
+                inlineBlock.classList.remove('hero-signin-inline--open');
+            }
+            showHeroState('email');
+            if (emailInput) emailInput.value = '';
+            if (codeInput) codeInput.value = '';
+            if (codeError) { codeError.textContent = ''; codeError.hidden = true; }
+        }
+
+        signinBtn && (signinBtn.onclick = function () {
+            showInline(true);
+            showHeroState('email');
+            requestAnimationFrame(function () {
+                stateEmail && stateEmail.classList.add('hero-signin-state-visible');
+            });
+            if (emailInput) { emailInput.value = ''; emailInput.focus(); }
+            if (requestBtn) requestBtn.disabled = true;
+            if (codeError) { codeError.hidden = true; codeError.textContent = ''; }
+        });
+
+        if (emailInput) {
+            emailInput.addEventListener('input', setSendCodeEnabled);
+            emailInput.addEventListener('change', setSendCodeEnabled);
+        }
+
+        cancelBtn && (cancelBtn.onclick = closeInline);
+
+        requestBtn && (requestBtn.onclick = function () {
+            var email = (emailInput && emailInput.value || '').trim().toLowerCase();
+            if (!email || email.indexOf('@') === -1) { if (emailInput) emailInput.focus(); return; }
+            requestBtn.disabled = true;
+            requestBtn.textContent = 'Sending\u2026';
+            var body = new FormData();
+            body.append('email', email);
+            fetch('/auth/request-code', { method: 'POST', body: body, credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    requestBtn.disabled = false;
+                    requestBtn.textContent = 'Send code';
+                    if (data.ok) {
+                        _pendingAuthEmail = email;
+                        if (codeHint) {
+                            var esc = (function (s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); })(email);
+                            codeHint.innerHTML = 'Code sent to <strong>' + esc + '</strong>';
+                        }
+                        if (codeInput) { codeInput.value = ''; codeInput.focus(); }
+                        if (codeError) codeError.hidden = true;
+                        showHeroState('code');
+                    } else {
+                        if (codeError) { codeError.textContent = data.error || 'Could not send code'; codeError.hidden = false; }
+                    }
+                })
+                .catch(function () {
+                    requestBtn.disabled = false;
+                    requestBtn.textContent = 'Send code';
+                    if (codeError) { codeError.textContent = 'Network error'; codeError.hidden = false; }
+                });
+        });
+
+        function doHeroVerify() {
+            var code = (codeInput && codeInput.value || '').trim();
+            if (!code || code.length < 6) return;
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = 'Verifying\u2026';
+            if (codeError) codeError.hidden = true;
+            var body = new FormData();
+            body.append('email', _pendingAuthEmail);
+            body.append('code', code);
+            fetch('/auth/verify-code', { method: 'POST', body: body, credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    verifyBtn.disabled = false;
+                    verifyBtn.textContent = 'Verify';
+                    if (data.ok && data.email) {
+                        _ilgaUserEmail = data.email;
+                        if (_inlineCloseTimer) { clearTimeout(_inlineCloseTimer); _inlineCloseTimer = null; }
+                        if (inlineBlock) {
+                            inlineBlock.hidden = true;
+                            inlineBlock.classList.remove('hero-signin-inline--open');
+                        }
+                        showHeroState('email');
+                        if (emailInput) emailInput.value = '';
+                        if (codeInput) codeInput.value = '';
+                        if (codeError) { codeError.textContent = ''; codeError.hidden = true; }
+                        updateAuthStrip(true, data.email);
+                    } else {
+                        if (codeError) { codeError.textContent = data.error || 'Invalid or expired code.'; codeError.hidden = false; }
+                        if (codeInput) { codeInput.value = ''; codeInput.focus(); }
+                    }
+                })
+                .catch(function () {
+                    verifyBtn.disabled = false;
+                    verifyBtn.textContent = 'Verify';
+                    if (codeError) { codeError.textContent = 'Network error'; codeError.hidden = false; }
+                });
+        }
+
+        function isEmailLike(val) {
+            var s = (val || '').trim();
+            return s.length > 0 && s.indexOf('@') >= 1 && s.indexOf('@') < s.length - 1;
+        }
+
+        function setSendCodeEnabled() {
+            if (requestBtn) requestBtn.disabled = !isEmailLike(emailInput && emailInput.value);
+        }
+
+        verifyBtn && (verifyBtn.onclick = doHeroVerify);
+
+        if (codeInput) {
+            codeInput.addEventListener('input', function () {
+                this.value = this.value.replace(/\D/g, '').slice(0, 6);
+                if (this.value.length === 6) doHeroVerify();
+            });
+        }
+
+        resendBtn && (resendBtn.onclick = function () {
+            if (!_pendingAuthEmail) return;
+            resendBtn.disabled = true;
+            resendBtn.textContent = 'Sending\u2026';
+            if (codeError) codeError.hidden = true;
+            var body = new FormData();
+            body.append('email', _pendingAuthEmail);
+            fetch('/auth/request-code', { method: 'POST', body: body, credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    resendBtn.disabled = false;
+                    resendBtn.textContent = 'Resend code';
+                    if (data.ok && codeHint) {
+                        var escResend = (function (s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); })(_pendingAuthEmail);
+                        codeHint.innerHTML = 'New code sent to <strong>' + escResend + '</strong>';
+                    }
+                    if (codeInput) { codeInput.value = ''; codeInput.focus(); }
+                })
+                .catch(function () {
+                    resendBtn.disabled = false;
+                    resendBtn.textContent = 'Resend code';
+                });
+        });
+    })();
+
+    function recordOutreach(memberId, kind, zipCode, outcome, notes, contactName, supportScore) {
+        if (!_ilgaUserEmail) return Promise.resolve();
+        var body = new FormData();
+        body.append('member_id', memberId || '');
+        body.append('kind', kind || 'call');
+        body.append('zip_code', zipCode || '');
+        body.append('outcome', outcome || '');
+        body.append('notes', notes || '');
+        if (contactName) body.append('contact_name', contactName);
+        if (supportScore) body.append('support_score', String(supportScore));
+        return fetch('/outreach/record', { method: 'POST', body: body, credentials: 'same-origin' })
+            .then(function (r) { return r.json ? r.json() : {}; })
+            .then(function (data) {
+                if (data && data.ok && memberId && kind) setOutreachDone(memberId, kind);
+                return data;
+            })
+            .catch(function () { return undefined; });
+    }
+
+    function setOutreachDone(memberId, kind) {
+        var card = document.getElementById('card-' + memberId);
+        if (!card) return;
+        var sel = kind === 'call' ? '.outreach-phone' : '.outreach-email';
+        var btn = card.querySelector(sel);
+        if (!btn || btn.classList.contains('outreach-done')) return;
+        var label = kind === 'call' ? 'Called!' : 'Emailed!';
+        var iconSvg = btn.querySelector('.outreach-icon');
+        var span = document.createElement('span');
+        span.className = btn.className + ' outreach-done';
+        span.setAttribute('aria-label', kind === 'call' ? 'You called this legislator' : 'You emailed this legislator');
+        if (iconSvg) span.appendChild(iconSvg.cloneNode(true));
+        span.appendChild(document.createTextNode(' ' + label));
+        btn.parentNode.replaceChild(span, btn);
+    }
+
+    function getConstituentZip() {
+        var drawer = document.getElementById('advocacy-drawer');
+        var zip = (drawer && drawer.getAttribute('data-drawer-zip')) || '';
+        if (zip) return zip;
+        var input = document.getElementById('zip_code');
+        return (input && input.value && input.value.trim()) || '';
+    }
+
+    /* ── Mad Libs placeholder config ── */
+    var MADLIB_PLACEHOLDERS = {
+        'CALLER_NAME': { label: 'Your name', type: 'text', size: 14 },
+        'CALLER_CITY': { label: 'City', type: 'text', size: 10 },
+        'CALLER_ZIP': { label: 'ZIP', type: 'text', size: 5 },
+        'CALLER_PHONE': { label: 'Phone', type: 'tel', size: 12 },
+        'CALLER_EMAIL': { label: 'Email', type: 'email', size: 18 },
+        'YOUR FULL NAME': { label: 'Your name', type: 'text', size: 14 },
+        'YOUR STREET ADDRESS': { label: 'Address', type: 'text', size: 20 },
+        'YOUR CITY, STATE ZIP': { label: 'City, ST ZIP', type: 'text', size: 16 },
+        'YOUR PHONE': { label: 'Phone', type: 'tel', size: 12 }
+    };
+    var MADLIB_REGEX = /\[(CALLER_NAME|CALLER_CITY|CALLER_ZIP|CALLER_PHONE|CALLER_EMAIL|YOUR FULL NAME|YOUR STREET ADDRESS|YOUR CITY, STATE ZIP|YOUR PHONE)\]/g;
+
+    function renderMadLibsBody(bodyText, container, prefills) {
+        container.innerHTML = '';
+        var parts = bodyText.split(MADLIB_REGEX);
+        var blanks = [];
+        var valueMap = {};
+
+        for (var i = 0; i < parts.length; i++) {
+            if (i % 2 === 0) {
+                if (parts[i]) {
+                    var span = document.createElement('span');
+                    span.textContent = parts[i];
+                    container.appendChild(span);
+                }
+            } else {
+                var key = parts[i];
+                var cfg = MADLIB_PLACEHOLDERS[key] || { label: key, type: 'text', size: 12 };
+                var inp = document.createElement('input');
+                inp.type = cfg.type;
+                inp.className = 'madlib-blank';
+                inp.placeholder = cfg.label;
+                inp.size = cfg.size;
+                inp.setAttribute('data-madlib-key', key);
+                inp.setAttribute('autocomplete', 'off');
+                if (prefills && prefills[key]) {
+                    inp.value = prefills[key];
+                    inp.classList.add('filled');
+                    if (!valueMap[key]) valueMap[key] = prefills[key];
+                }
+                (function (input, k) {
+                    var isNameKey = (k === 'CALLER_NAME' || k === 'YOUR FULL NAME');
+                    input.addEventListener('input', function () {
+                        var val = isNameKey ? input.value : input.value.trim();
+                        valueMap[k] = val;
+                        container.querySelectorAll('input[data-madlib-key="' + k + '"]').forEach(function (el) {
+                            if (el !== input) el.value = val;
+                            el.classList.toggle('filled', !!val.trim());
+                            el.classList.remove('error');
+                        });
+                    });
+                    input.addEventListener('focus', function () {
+                        input.classList.remove('error');
+                    });
+                })(inp, key);
+                container.appendChild(inp);
+                blanks.push(inp);
+            }
+        }
+        return { blanks: blanks, valueMap: valueMap };
+    }
+
+    function getComposedBody(wrap) {
+        var container = wrap.querySelector('#gmail-madlib-body');
+        if (!container || !container.children.length) {
+            var ta = wrap.querySelector('#gmail-body-text');
+            return ta ? (ta.value || '').trim() : '';
+        }
+        var text = '';
+        container.childNodes.forEach(function (node) {
+            if (node.nodeType === 3) {
+                text += node.textContent;
+            } else if (node.tagName === 'SPAN') {
+                text += node.textContent;
+            } else if (node.tagName === 'INPUT') {
+                text += node.value || ('[' + (node.getAttribute('data-madlib-key') || '?') + ']');
+            }
+        });
+        return text.trim();
+    }
+
+    function allBlanksValid(blanks) {
+        var valid = true;
+        var seen = {};
+        for (var i = 0; i < blanks.length; i++) {
+            var k = blanks[i].getAttribute('data-madlib-key');
+            if (seen[k]) continue;
+            seen[k] = true;
+            if (!blanks[i].value.trim()) {
+                valid = false;
+                blanks[i].classList.add('error');
+            }
+        }
+        return valid;
+    }
+
+    function firstUnfilledBlank(blanks) {
+        var seen = {};
+        for (var i = 0; i < blanks.length; i++) {
+            var k = blanks[i].getAttribute('data-madlib-key');
+            if (seen[k]) continue;
+            seen[k] = true;
+            if (!blanks[i].value.trim()) return blanks[i];
+        }
+        return null;
+    }
+
+    /* ── Email Guide state machine ── */
+    var GUIDE_STEPS = ['sign_in', 'subject', 'madlibs', 'pdf', 'open_client', 'confirm_sent'];
+
+    function EmailGuide(wrap, blanks) {
+        this.wrap = wrap;
+        this.blanks = blanks || [];
+        this.step = 0;
+        this.currentEl = null;
+        this.dots = wrap.querySelectorAll('.guide-dot');
+        this._pdfClicked = false;
+        this._mailtoClicked = false;
+    }
+
+    EmailGuide.prototype.setStep = function (idx) {
+        if (idx < 0 || idx >= GUIDE_STEPS.length) return;
+        if (this.currentEl) {
+            this.currentEl.classList.remove('guide-pulse');
+            this.currentEl.classList.remove('guide-pulse-green');
+        }
+        for (var d = 0; d < this.dots.length; d++) {
+            this.dots[d].classList.toggle('active', d === idx);
+            this.dots[d].classList.toggle('done', d < idx);
+        }
+        this.step = idx;
+        var name = GUIDE_STEPS[idx];
+        var el = null;
+        if (name === 'sign_in') el = this.wrap.querySelector('#gmail-from-row');
+        else if (name === 'subject') el = this.wrap.querySelector('#gmail-subject-row');
+        else if (name === 'madlibs') el = this.wrap.querySelector('#gmail-body-area');
+        else if (name === 'pdf') el = this.wrap.querySelector('#gmail-attachment-bar');
+        else if (name === 'open_client') el = this.wrap.querySelector('#gmail-mailto-btn');
+        else if (name === 'confirm_sent') el = this.wrap.querySelector('#gmail-sent-email-btn');
+
+        if (el) {
+            var cls = (name === 'confirm_sent') ? 'guide-pulse-green' : 'guide-pulse';
+            el.classList.add(cls);
+            this.currentEl = el;
+            if (typeof el.scrollIntoView === 'function') {
+                el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+    };
+
+    EmailGuide.prototype.advance = function () {
+        this.setStep(this.step + 1);
+    };
+
+    EmailGuide.prototype.jumpTo = function (name) {
+        var idx = GUIDE_STEPS.indexOf(name);
+        if (idx >= 0 && idx > this.step) this.setStep(idx);
+    };
+
+    EmailGuide.prototype.complete = function () {
+        if (this.currentEl) {
+            this.currentEl.classList.remove('guide-pulse');
+            this.currentEl.classList.remove('guide-pulse-green');
+        }
+        for (var d = 0; d < this.dots.length; d++) {
+            this.dots[d].classList.remove('active');
+            this.dots[d].classList.add('done');
+        }
+    };
+
+    EmailGuide.prototype.focusNextBlank = function () {
+        var blank = firstUnfilledBlank(this.blanks);
+        if (blank) {
+            blank.focus();
+        } else {
+            this.jumpTo('pdf');
+        }
+    };
+
+    function initDrawerEmailActions(container) {
+        if (!container) container = document.getElementById('advocacy-drawer-body');
+        var wrap = container && container.querySelector('.gmail-compose');
+        if (!wrap) return;
+        initDrawerFromAuth(wrap);
+
+        var subjectEl = wrap.querySelector('#gmail-subject-text');
+        var toInput = wrap.querySelector('#gmail-to-input');
+        var hiddenBodyEl = wrap.querySelector('#gmail-body-text');
+        var madlibContainer = wrap.querySelector('#gmail-madlib-body');
+        var rawBody = wrap.getAttribute('data-body') || (hiddenBodyEl ? hiddenBodyEl.value : '') || '';
+
+        function getSubject() { return subjectEl ? (subjectEl.value || '').trim() : ''; }
+        function getRecipient() { return toInput ? (toInput.value || '').trim() : (wrap.getAttribute('data-recipient') || ''); }
+
+        /* ── Render Mad Libs body ── */
+        var drawerEl = document.getElementById('advocacy-drawer');
+        var drawerZip = (drawerEl && drawerEl.getAttribute('data-drawer-zip')) || getConstituentZip() || '';
+        var prefills = {};
+        if (drawerZip) prefills['CALLER_ZIP'] = drawerZip;
+        if (_ilgaUserEmail) prefills['CALLER_EMAIL'] = _ilgaUserEmail;
+
+        var madlibResult = renderMadLibsBody(rawBody, madlibContainer, prefills);
+        var blanks = madlibResult.blanks;
+
+        function getBody() { return getComposedBody(wrap); }
+
+        /* ── Init guide ── */
+        var guide = new EmailGuide(wrap, blanks);
+        var startStep = _ilgaUserEmail ? 1 : 0;
+        guide.setStep(startStep);
+
+        /* ── Watch auth state to auto-advance past sign_in ── */
+        var origGoVerified = window._guideGoVerifiedHook;
+        window._guideGoVerifiedHook = function (email) {
+            if (guide.step === 0) {
+                prefills['CALLER_EMAIL'] = email;
+                var emailBlanks = madlibContainer.querySelectorAll('input[data-madlib-key="CALLER_EMAIL"]');
+                emailBlanks.forEach(function (el) {
+                    if (!el.value) { el.value = email; el.classList.add('filled'); }
+                });
+                guide.advance();
+            }
+        };
+
+        /* ── Subject verify button ── */
+        var subjectVerifyBtn = wrap.querySelector('#gmail-subject-verify-btn');
+        if (subjectVerifyBtn) {
+            subjectVerifyBtn.onclick = function () {
+                subjectVerifyBtn.classList.add('verified');
+                var sp = subjectVerifyBtn.querySelector('span');
+                if (sp) sp.textContent = 'Verified';
+                guide.jumpTo('madlibs');
+                setTimeout(function () { guide.focusNextBlank(); }, 300);
+            };
+        }
+
+        /* ── Mad Libs: auto-advance when all blanks filled ── */
+        blanks.forEach(function (blank) {
+            blank.addEventListener('input', function () {
+                if (guide.step === 2 && !firstUnfilledBlank(blanks)) {
+                    guide.jumpTo('pdf');
+                }
+            });
+            blank.addEventListener('keydown', function (e) {
+                if (e.key === 'Tab' && !e.shiftKey && guide.step === 2) {
+                    var idx = blanks.indexOf(blank);
+                    var nextUnfilled = null;
+                    for (var n = idx + 1; n < blanks.length; n++) {
+                        if (!blanks[n].value.trim()) { nextUnfilled = blanks[n]; break; }
+                    }
+                    if (!nextUnfilled && !firstUnfilledBlank(blanks)) {
+                        guide.jumpTo('pdf');
+                    }
+                }
+            });
+        });
+
+        /* ── Copy handlers ── */
+        var LABEL_MAP = { subject: 'Subject', body: 'Body', all: 'All' };
+        wrap.querySelectorAll('.gmail-copy-btn').forEach(function (btn) {
+            var kind = btn.getAttribute('data-copy');
+            var labelSpan = btn.querySelector('span:last-child');
+            var restoreLabel = (labelSpan && labelSpan.textContent) ? labelSpan.textContent.trim() : (LABEL_MAP[kind] || kind);
+            btn.onclick = function () {
+                var subject = getSubject();
+                var bodyText = getBody();
+                var text = kind === 'subject' ? subject : (kind === 'body' ? bodyText : (subject + '\n\n' + bodyText));
+                navigator.clipboard.writeText(text).then(function () {
+                    btn.classList.add('gmail-copied');
+                    if (labelSpan) labelSpan.textContent = 'Copied!';
+                    setTimeout(function () {
+                        btn.classList.remove('gmail-copied');
+                        if (labelSpan) labelSpan.textContent = restoreLabel;
+                    }, 1400);
+                });
+            };
+        });
+
+        /* ── To chip copy ── */
+        var toChip = wrap.querySelector('.gmail-to-chip-copy');
+        if (toChip) {
+            var toChipText = toChip.querySelector('.gmail-to-chip-text');
+            var chipEmail = toChip.getAttribute('data-email') || wrap.getAttribute('data-recipient') || '';
+            if (chipEmail && toChipText) {
+                var originalChipText = toChipText.textContent;
+                toChip.onclick = function () {
+                    navigator.clipboard.writeText(chipEmail).then(function () {
+                        toChip.classList.add('gmail-to-chip-copied');
+                        toChipText.textContent = 'Copied!';
+                        setTimeout(function () {
+                            toChip.classList.remove('gmail-to-chip-copied');
+                            toChipText.textContent = originalChipText;
+                        }, 1400);
+                    });
+                };
+            }
+        }
+
+        /* ── PDF download tracking ── */
+        var pdfLink = wrap.querySelector('#gmail-attachment-link');
+        if (pdfLink) {
+            pdfLink.addEventListener('click', function () {
+                guide._pdfClicked = true;
+                guide.jumpTo('open_client');
+            });
+        }
+
+        /* ── Mailto handler ── */
+        var mailtoBtn = wrap.querySelector('#gmail-mailto-btn');
+        if (mailtoBtn) {
+            mailtoBtn.onclick = function () {
+                if (guide.step <= 2 && blanks.length > 0 && !allBlanksValid(blanks)) {
+                    guide.setStep(2);
+                    var first = firstUnfilledBlank(blanks);
+                    if (first) first.focus();
+                    return;
+                }
+                var recipient = getRecipient();
+                var url = 'mailto:' + (recipient ? encodeURIComponent(recipient) : '') +
+                    '?subject=' + encodeURIComponent(getSubject()) +
+                    '&body=' + encodeURIComponent(getBody());
+                window.location.href = url;
+                guide._mailtoClicked = true;
+                guide.jumpTo('confirm_sent');
+            };
+        }
+
+        /* ── "I sent" button ── */
+        var sentBtn = wrap.querySelector('#gmail-sent-email-btn');
+        if (sentBtn) {
+            sentBtn.onclick = function () {
+                var drawer = document.getElementById('advocacy-drawer');
+                var memberId = drawer ? drawer.getAttribute('data-member-id') || '' : '';
+                var zip = getConstituentZip();
+                recordOutreach(memberId, 'email', zip).then(function (data) {
+                    var span = sentBtn.querySelector('span:last-child');
+                    if (data && data.ok) {
+                        sentBtn.classList.add('sent-done');
+                        if (span) span.textContent = 'Sent!';
+                        guide.complete();
+                    } else if (span) {
+                        span.textContent = 'Recorded!';
+                        setTimeout(function () { span.textContent = 'I sent'; }, 1500);
+                    }
+                });
+            };
+        }
+    }
+
+    var INTEREST_LABELS = { '1': 'Opposed', '2': 'Skeptical', '3': 'Neutral', '4': 'Interested', '5': 'Champion' };
+
+    function getInterestPollResultsContainer(pill) {
+        return document.getElementById('drawer-interest-poll-results-inline');
+    }
+
+    var PILL_BAR_COLORS = {
+        '1': { base: 'rgba(230,57,70,', solid: '#E63946' },
+        '2': { base: 'rgba(249,115,22,', solid: '#F97316' },
+        '3': { base: 'rgba(107,114,128,', solid: '#6B7280' },
+        '4': { base: 'rgba(34,197,94,', solid: '#22C55E' },
+        '5': { base: 'rgba(234,179,8,', solid: '#EAB308' }
+    };
+
+    /** Dev only: show call wrap-up with poll already visible and filled with mock data. */
+    function showWrapupWithMockPoll(container) {
+        if (!container) container = document.getElementById('advocacy-drawer-body');
+        if (!container) return;
+        var wrapupInline = container.querySelector('#drawer-wrapup-inline');
+        var pollBubble = container.querySelector('#drawer-wrapup-poll-bubble');
+        var draftBubble = container.querySelector('#drawer-draft-followup-bubble');
+        var endCallBtn = container.querySelector('#drawer-end-call');
+        var pill = container.querySelector('.drawer-call-number-pill');
+        if (endCallBtn) endCallBtn.style.display = 'none';
+        if (pill) pill.classList.add('drawer-call-number-pill-ended');
+        if (wrapupInline) {
+            wrapupInline.removeAttribute('hidden');
+            wrapupInline.classList.add('drawer-wrapup-inline-just-in');
+        }
+        if (pollBubble) {
+            pollBubble.removeAttribute('hidden');
+            pollBubble.classList.add('drawer-bubble-just-in');
+            pollBubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        var pollPillsWrap = container.querySelector('#drawer-wrapup-poll-pills');
+        if (pollPillsWrap) {
+            window.setTimeout(function () {
+                pollPillsWrap.removeAttribute('hidden');
+                pollPillsWrap.classList.add('drawer-bubble-just-in');
+                requestAnimationFrame(function () {
+                    pollPillsWrap.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                });
+            }, 500);
+        }
+        if (draftBubble) draftBubble.setAttribute('hidden', '');
+        var chosenScore = 4;
+        var supportInput = container.querySelector('#support-score-inline');
+        if (supportInput) supportInput.value = String(chosenScore);
+        var pills = container.querySelectorAll('.drawer-interest-pill');
+        pills.forEach(function (p) {
+            p.setAttribute('aria-pressed', p.getAttribute('data-score') === String(chosenScore) ? 'true' : 'false');
+        });
+        var mockData = {
+            total_responses: 11,
+            by_score: { '1': 1, '2': 2, '3': 2, '4': 4, '5': 3 }
+        };
+        var resultsEl = container.querySelector('#drawer-interest-poll-results-inline');
+        renderInterestPollResults(resultsEl, mockData, chosenScore);
+        window.setTimeout(function () {
+            if (draftBubble) {
+                var ctaBlock = draftBubble.querySelector('#drawer-draft-followup-cta-block');
+                if (ctaBlock) ctaBlock.classList.remove('drawer-draft-followup-cta-visible');
+                draftBubble.removeAttribute('hidden');
+                draftBubble.classList.add('drawer-bubble-just-in');
+                draftBubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                window.setTimeout(function () {
+                    if (ctaBlock) ctaBlock.classList.add('drawer-draft-followup-cta-visible');
+                }, 500);
+            }
+        }, 200);
+        if (wrapupInline) wrapupInline.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function renderInterestPollResults(container, data, chosenScore) {
+        var total = data && data.total_responses ? data.total_responses : 0;
+        var byScore = (data && data.by_score) ? data.by_score : {};
+        if (chosenScore) {
+            total += 1;
+            var k = String(chosenScore);
+            byScore = Object.assign({}, byScore);
+            byScore[k] = (byScore[k] || 0) + 1;
+        }
+        var pillsWrap = document.getElementById('drawer-wrapup-poll-pills');
+        var pills = pillsWrap ? pillsWrap.querySelectorAll('.drawer-interest-pill') : [];
+        if (!pills.length) return;
+        var maxCount = 0;
+        for (var i = 1; i <= 5; i++) {
+            var cnt = byScore[String(i)] || 0;
+            if (cnt > maxCount) maxCount = cnt;
+        }
+        pills.forEach(function (pill) {
+            var s = pill.getAttribute('data-score');
+            var n = byScore[s] || 0;
+            var pct = total > 0 ? Math.round((n / total) * 100) : 0;
+            pill.classList.add('poll-voted');
+            var countEl = pill.querySelector('.drawer-interest-pill-count');
+            var pctEl = pill.querySelector('.drawer-interest-pill-pct');
+            if (pctEl) pctEl.textContent = pct + '%';
+            if (countEl) countEl.textContent = n > 0 ? n : '';
+            var barPct = maxCount > 0 ? (n / maxCount) * 100 : 0;
+            var c = PILL_BAR_COLORS[s];
+            if (c && barPct > 0) {
+                pill.classList.remove('poll-bar-zero');
+                var alpha = 0.35 + (barPct / 100) * 0.4;
+                pill.style.background = 'linear-gradient(to right, ' + c.base + alpha + ') 0%, ' + c.base + alpha + ') ' + barPct + '%, transparent ' + barPct + '%)';
+            } else {
+                pill.classList.add('poll-bar-zero');
+                var lightAlpha = 0.18;
+                pill.style.background = c ? (c.base + lightAlpha + ')') : 'rgba(0,0,0,0.06)';
+            }
+        });
+        if (container) {
+            container.removeAttribute('hidden');
+            container.classList.remove('poll-zero', 'poll-has-results');
+            if (total === 0) {
+                container.classList.add('poll-zero');
+                container.innerHTML = '<span class="poll-zero-title">You\'re the first to report! \u2728</span>Your response will show up here for the next advocate who calls this office.';
+            } else {
+                container.classList.add('poll-has-results');
+                var totalLabel = total === 1 ? '1 advocate reported' : total + ' advocates reported';
+                container.innerHTML = '<span class="poll-zero-title">' + totalLabel + '</span>';
+            }
+        }
+    }
+
+    document.body.addEventListener('click', function (e) {
+        var pill = e.target && e.target.closest && e.target.closest('.drawer-interest-pill');
+        if (!pill || pill.getAttribute('type') !== 'button') return;
+        var score = pill.getAttribute('data-score');
+        if (!score) return;
+        var supportInput = document.getElementById('support-score-inline');
+        if (supportInput) supportInput.value = score;
+        var group = pill.closest('.drawer-interest-pills');
+        if (group) {
+            group.querySelectorAll('.drawer-interest-pill').forEach(function (p) {
+                p.setAttribute('aria-pressed', p === pill ? 'true' : 'false');
+            });
+        }
+        var resultsEl = getInterestPollResultsContainer(pill);
+        var drawer = document.getElementById('advocacy-drawer');
+        var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
+        if (memberId && resultsEl) {
+            fetch('/outreach/interest-poll/' + encodeURIComponent(memberId), { credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    renderInterestPollResults(resultsEl, data, score);
+                    window.setTimeout(function () {
+                        var draftBubble = document.getElementById('drawer-draft-followup-bubble');
+                        if (draftBubble) {
+                            var ctaBlock = draftBubble.querySelector('#drawer-draft-followup-cta-block');
+                            if (ctaBlock) ctaBlock.classList.remove('drawer-draft-followup-cta-visible');
+                            draftBubble.removeAttribute('hidden');
+                            draftBubble.classList.add('drawer-bubble-just-in');
+                            draftBubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            window.setTimeout(function () {
+                                if (ctaBlock) ctaBlock.classList.add('drawer-draft-followup-cta-visible');
+                            }, 500);
+                        }
+                    }, 200);
+                })
+                .catch(function () {
+                    resultsEl.classList.add('poll-zero');
+                    resultsEl.removeAttribute('hidden');
+                    resultsEl.innerHTML = '<span class="poll-zero-title">Your vote counts!</span>Results will show here once we\'ve saved your response.';
+                    window.setTimeout(function () {
+                        var draftBubble = document.getElementById('drawer-draft-followup-bubble');
+                        if (draftBubble) {
+                            var ctaBlock = draftBubble.querySelector('#drawer-draft-followup-cta-block');
+                            if (ctaBlock) ctaBlock.classList.remove('drawer-draft-followup-cta-visible');
+                            draftBubble.removeAttribute('hidden');
+                            draftBubble.classList.add('drawer-bubble-just-in');
+                            draftBubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            window.setTimeout(function () {
+                                if (ctaBlock) ctaBlock.classList.add('drawer-draft-followup-cta-visible');
+                            }, 500);
+                        }
+                    }, 200);
+                });
+        }
+    });
+
+    document.body.addEventListener('click', function (e) {
+        var link = e.target && e.target.closest && (e.target.closest('#drawer-draft-followup-link') || e.target.closest('.drawer-draft-followup-btn'));
+        if (!link) return;
+        e.preventDefault();
+        var drawer = document.getElementById('advocacy-drawer');
+        var body = document.getElementById('advocacy-drawer-body');
+        if (!drawer || !body) return;
+        var memberId = (drawer.getAttribute('data-member-id') || '').trim();
+        if (!memberId) return;
+        var zip = (drawer.getAttribute('data-drawer-zip') || '').trim() || (document.getElementById('zip_code') && document.getElementById('zip_code').value) || '';
+        var supportInput = document.getElementById('support-score-inline');
+        var supportVal = (supportInput && supportInput.value) ? supportInput.value : '';
+        var callContent = body.querySelector('.drawer-call-content');
+        var knownEmail = (callContent && callContent.getAttribute('data-known-email')) || '';
+        var stafferVal = (body.querySelector('#drawer-name-capture') && (body.querySelector('#drawer-name-capture').value || '').trim()) || '';
+        var emailVal = (body.querySelector('#drawer-email-capture') && (body.querySelector('#drawer-email-capture').value || '').trim()) || knownEmail;
+        var noteEl = document.getElementById('wrapup-nextstep-inline');
+        var nextStepVal = (noteEl && (noteEl.value || '').trim()) || '';
+        var targetTypeVal = (drawer.getAttribute('data-drawer-target-type') || '').trim();
+        var callDateVal = (function () {
+            var d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        })();
+        var formData = new FormData();
+        formData.append('zip', zip);
+        formData.append('support_score', supportVal);
+        formData.append('staffer_name', stafferVal);
+        formData.append('email_address', emailVal);
+        formData.append('next_step', nextStepVal);
+        if (targetTypeVal) formData.append('target_type', targetTypeVal);
+        formData.append('call_date', callDateVal);
+        link.classList.add('drawer-draft-followup-link-loading');
+        fetch('/advocacy/call/' + encodeURIComponent(memberId) + '/wrapup', {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin',
+            headers: { 'Accept': 'text/html' }
+        })
+            .then(function (r) { return r.text(); })
+            .then(function (html) {
+                body.innerHTML = html;
+                var titleEl = document.getElementById('advocacy-drawer-title');
+                if (titleEl && body.querySelector('.gmail-compose')) titleEl.textContent = 'Follow-up email';
+                if (window.htmx && window.htmx.process) window.htmx.process(body);
+                initDrawerEmailActions(body);
+                if (body.querySelector('.drawer-call-content')) {
+                    initDrawerCapturePulse(body);
+                    initDrawerEndCall(body);
+                    initDrawerVoicemailToggle(body);
+                }
+                recordOutreach(memberId, 'call', zip, '', nextStepVal, stafferVal, supportVal);
+            })
+            .catch(function () {
+                link.classList.remove('drawer-draft-followup-link-loading');
+            });
+    });
+
+    document.body.addEventListener('htmx:afterSwap', function (e) {
+        if (e.detail.target && e.detail.target.id === 'advocacy-drawer-body') {
+            var body = e.detail.target;
+            var titleEl = document.getElementById('advocacy-drawer-title');
+            if (titleEl && body.querySelector('.gmail-compose')) {
+                titleEl.textContent = 'Follow-up email';
+            }
+            initDrawerEmailActions(body);
+            if (body.querySelector('.drawer-call-content')) {
+                initDrawerCapturePulse(body);
+                initDrawerEndCall(body);
+                initDrawerVoicemailToggle(body);
+            }
+        }
+    });
+
+    initReminderModal();
+
+</script>
 {% endblock %}

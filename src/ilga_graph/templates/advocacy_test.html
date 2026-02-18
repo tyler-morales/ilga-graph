@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Dev Testing — Jump to any feature{% endblock %}
+
+{% block content %}
+<div class="advocacy-test-page">
+    <h1>Dev testing</h1>
+    <p class="advocacy-test-desc">
+        Skip the flow and open any drawer or feature directly. Append <code>?dev</code> to any page URL to
+        activate the dev bar, or use the form and links below.
+    </p>
+
+    <p><a href="/advocacy?dev">&larr; Back to Advocacy (with dev bar)</a></p>
+
+    <div class="advocacy-test-devbar-notice">
+        <strong>New: Dev bar</strong> &mdash; Add <code>?dev</code> to any page URL to get a floating toolbar with
+        quick actions. It persists across navigation. Press <kbd>Ctrl+Shift+D</kbd> to toggle.
+    </div>
+
+    <h2>Jump to drawer (opens on advocacy page)</h2>
+    <p>Choose member and view; you'll be sent to the advocacy page with the drawer already open.</p>
+    <form method="get" action="/advocacy" class="advocacy-test-form">
+        <input type="hidden" name="dev" value="">
+        <div class="advocacy-test-row">
+            <label for="zip">ZIP</label>
+            <input type="text" id="zip" name="zip" value="{{ default_zip }}" pattern="[0-9]{5}" maxlength="5" placeholder="60601">
+        </div>
+        <div class="advocacy-test-row">
+            <label for="member_id">Member</label>
+            <select id="member_id" name="member_id">
+                {% for m in test_members %}
+                <option value="{{ m.id }}">{{ m.name }} ({{ m.id }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="advocacy-test-row">
+            <span class="advocacy-test-label">Open</span>
+            <button type="submit" name="view" value="call">Call script</button>
+            <button type="submit" name="view" value="email">Email drawer</button>
+            <button type="submit" name="view" value="call_wrapup" class="advocacy-test-btn-poll">Call wrap-up + poll (mock)</button>
+        </div>
+    </form>
+
+    <h2>Quick links (first few members, ZIP {{ default_zip }})</h2>
+    <ul class="advocacy-test-links">
+        {% for m in test_members[:8] %}
+        <li>
+            <a href="/advocacy?dev&zip={{ default_zip }}&member_id={{ m.id }}&view=call">Call script: {{ m.name }}</a>
+            &middot;
+            <a href="/advocacy?dev&zip={{ default_zip }}&member_id={{ m.id }}&view=email">Email: {{ m.name }}</a>
+            &middot;
+            <a href="/advocacy?dev&zip={{ default_zip }}&member_id={{ m.id }}&view=call_wrapup" class="advocacy-test-link-poll">Poll (mock): {{ m.name }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <h2>Other pages (dev bar enabled)</h2>
+    <ul class="advocacy-test-links">
+        <li><a href="/intelligence?dev">Intelligence dashboard</a></li>
+        <li><a href="/intelligence/raw?dev">Intelligence &mdash; Raw tables</a></li>
+        <li><a href="/intelligence/predictions?dev">Intelligence &mdash; Predictions</a></li>
+        <li><a href="/intelligence/influence?dev">Intelligence &mdash; Influence</a></li>
+        <li><a href="/explore?dev">Power Map</a></li>
+        <li><a href="/graphql?dev">GraphQL</a></li>
+        <li><a href="/logs?dev">Logs</a></li>
+    </ul>
+
+    <p class="advocacy-test-tip"><strong>Tip:</strong> Add <code>?dev&amp;zip=60601&amp;member_id=YOUR_ID&amp;view=call</code> to <code>/advocacy</code> and bookmark it to open the call script for that member anytime.</p>
+</div>
+
+<style>
+    .advocacy-test-page { max-width: 640px; }
+    .advocacy-test-desc { margin-bottom: 16px; color: #444; }
+    .advocacy-test-devbar-notice { margin: 16px 0; padding: 12px 16px; background: #eef0ff; border: 1px solid #c0c4ff; border-radius: 4px; font-size: 0.95em; }
+    .advocacy-test-devbar-notice kbd { background: #ddd; padding: 1px 5px; border-radius: 3px; font-size: 0.9em; border: 1px solid #bbb; }
+    .advocacy-test-form { margin: 16px 0; }
+    .advocacy-test-row { margin-bottom: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .advocacy-test-row label, .advocacy-test-label { min-width: 60px; font-weight: bold; }
+    .advocacy-test-row input[type="text"] { width: 80px; padding: 6px 8px; }
+    .advocacy-test-row select { min-width: 220px; padding: 6px 8px; }
+    .advocacy-test-row button { padding: 8px 14px; margin-right: 8px; cursor: pointer; background: #333; color: #fff; border: none; }
+    .advocacy-test-row button:hover { background: #555; }
+    .advocacy-test-btn-poll { background: #16a34a !important; }
+    .advocacy-test-btn-poll:hover { background: #15803d !important; }
+    .advocacy-test-link-poll { color: #15803d; font-weight: 600; }
+    .advocacy-test-links { list-style: none; }
+    .advocacy-test-links li { margin-bottom: 6px; }
+    .advocacy-test-tip { margin-top: 24px; padding: 12px; background: #fafafa; border: 1px solid #ddd; font-size: 0.95em; }
+    .advocacy-test-tip code { background: #eee; padding: 2px 6px; }
+</style>
+{% endblock %}

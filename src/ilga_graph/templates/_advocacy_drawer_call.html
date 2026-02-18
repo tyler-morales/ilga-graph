@@ -1,0 +1,236 @@
+{# Partial: drawer body for CALL view — iMessage-style script + after-call form. #}
+<div class="drawer-call-content" data-known-email="{{ member_public_email or '' }}" data-drawer-zip="{{ zip_code or '' }}">
+    <header class="drawer-call-header">
+        <div class="drawer-call-header-inner">
+            {% if photo_url %}
+            <img src="{{ photo_url }}" alt="" class="drawer-call-photo" loading="lazy">
+            {% else %}
+            <div class="drawer-call-photo drawer-call-photo-placeholder"></div>
+            {% endif %}
+            {% if title_label %}
+            <p class="drawer-call-title">{{ title_label }}</p>
+            {% endif %}
+            <p class="drawer-call-name">{{ legislator_name or 'Legislator' }}</p>
+            {% if phone %}
+            <p class="drawer-call-number">
+                <a href="tel:{{ phone }}" class="drawer-call-number-pill">{{ phone }}</a>
+            </p>
+            {% endif %}
+        </div>
+        <p class="drawer-script-intro" id="drawer-script-intro">Read one bubble at a time. Say your line, then listen.
+        </p>
+    </header>
+
+    <div class="drawer-no-answer-hint" role="status" aria-live="polite">
+        <span class="drawer-no-answer-hint-text">No answer?</span>
+        <button type="button" class="drawer-no-answer-hint-btn" id="drawer-voicemail-toggle-btn" aria-pressed="false">
+            Switch to voicemail script
+        </button>
+    </div>
+
+    <div class="drawer-constituent-hint" role="group" aria-label="Constituent status">
+        <label class="drawer-constituent-checkbox-wrap">
+            <input type="checkbox" id="drawer-constituent-checkbox" class="drawer-constituent-checkbox"{% if zip_code %} checked{% endif %}>
+            <span class="drawer-constituent-label" id="drawer-constituent-label">I'm a constituent{% if zip_code %} (ZIP {{ zip_code }}){% endif %}</span>
+        </label>
+    </div>
+
+    <div class="drawer-chat" id="drawer-chat">
+        <div class="chat-divider"><span>OPEN (~25–40 sec, then ask for email + next step)</span></div>
+        <div class="chat-bubble chat-you" id="drawer-intro-bubble">
+            <span class="chat-label">You</span>
+            Hi — my name is <strong>[CALLER_NAME]</strong>, <span id="drawer-intro-location-phrase">I'm a constituent in <strong>ZIP {{ zip_code or '[ZIP]' }}</strong></span>. May I leave a quick message for <strong>{{ title_label }} {{ legislator_last }}</strong> about kei vehicles in Illinois?
+        </div>
+
+        <div class="chat-bubble chat-them">
+            <span class="chat-label">Staffer</span>
+            They'll say yes or transfer. Then go to the next bubble.
+        </div>
+
+        <div class="chat-divider"><span>THE PROBLEM (1–2 sentences)</span></div>
+        <div class="chat-bubble chat-you">
+            <span class="chat-label">You</span>
+            The Secretary of State is treating imported kei vehicles as off-highway and branding titles <strong>"Not Eligible for Registration."</strong> Their position is basically: other states that allow road use do it by statute, and Illinois doesn't have that statute right now.
+        </div>
+
+        <div class="chat-divider"><span>THE LEGAL "WHY" (keep it simple)</span></div>
+        <div class="chat-bubble chat-you">
+            <span class="chat-label">You</span>
+            They're relying on <strong>625 ILCS 5/3-401(c-1)</strong> — the "originally manufactured for highway use" test — to deny registration, even when the vehicle is 25+ years old and lawfully imported.
+        </div>
+
+        <div class="chat-divider"><span>THE ASK</span></div>
+        <div class="chat-bubble chat-you">
+            <span class="chat-label">You</span>
+            I'm asking <strong>{{ title_label }} {{ legislator_last }}</strong> to support and help advance a narrow, safety-focused bill that explicitly authorizes registration of 25+ year old kei vehicles for limited on-road use (for example: no interstates, equipment and insurance requirements).
+        </div>
+
+        <div class="chat-divider"><span>NEXT STEP (this matters)</span></div>
+        <div class="chat-bubble chat-you chat-key">
+            <span class="chat-label">You</span>
+            What's the <strong>best email for constituent correspondence</strong> so I can send a one-pager? And could I please get <strong>your name</strong> so I can address my follow-up correctly?
+        </div>
+
+        <div class="drawer-name-capture-wrap">
+            <input type="text" id="drawer-name-capture" class="drawer-name-capture drawer-capture-input"
+                placeholder="Type their name here (e.g. staffer)" autocomplete="name">
+            <div class="drawer-name-saved" aria-hidden="true" title="Tap to edit">
+                <div class="drawer-contact-card">
+                    <span class="drawer-contact-card-icon" aria-hidden="true">👤</span>
+                    <div class="drawer-contact-card-body">
+                        <span class="drawer-contact-card-label">Contact</span>
+                        <span class="drawer-contact-card-name"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-divider"><span>IF THEY PUSH BACK (short responses)</span></div>
+        <div class="chat-bubble chat-them chat-branch">
+            <span class="chat-label">Use only if needed</span>
+            Pick the response that fits.
+        </div>
+        <div class="chat-bubble chat-you chat-optional">
+            <span class="chat-label">You</span>
+            <p><strong>"They're not highway vehicles / don't meet federal standards."</strong> — Totally understood — that's why the request is for a state statute with restrictions. Federal import eligibility doesn't equal state road registration — we're asking Illinois to set clear rules.</p>
+            <p><strong>"We need more info."</strong> — Great — I'll email a two-page brief with the exact statute reference and examples of how other states have clarified this.</p>
+            <p><strong>"We can't commit."</strong> — That's fine — could you tell me the right staffer for transportation/vehicle policy, and the best email to send the brief?</p>
+        </div>
+
+        <div class="drawer-email-capture-wrap">
+            <input type="email" id="drawer-email-capture"
+                class="drawer-email-capture drawer-capture-input drawer-capture-pulse"
+                placeholder="Type the email they give you here" autocomplete="email" inputmode="email">
+            <div class="drawer-email-saved" aria-hidden="true" title="Tap to edit">
+                <span class="drawer-email-saved-pill"><span class="drawer-email-saved-check"
+                        aria-hidden="true">✓</span><span class="drawer-email-saved-text"></span></span>
+            </div>
+        </div>
+
+        <button type="button" class="drawer-end-call-btn" id="drawer-end-call">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path
+                    d="M22 16.92v3a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+            </svg>
+            End call
+        </button>
+
+        {# In-chat wrap up: staggered bubbles — Nice work → (2s) poll → (after choice) results + draft link #}
+        <div class="drawer-wrapup-inline" id="drawer-wrapup-inline" hidden>
+            <div class="chat-bubble chat-them drawer-wrapup-inline-intro">
+                Nice work! 👋 Quick deets so we can draft your follow-up email:
+            </div>
+            {# Poll bubble: hidden until 2s after Nice work #}
+            <div class="chat-bubble chat-them drawer-interest-poll-bubble drawer-bubble-delayed"
+                id="drawer-wrapup-poll-bubble" hidden>
+                <span class="chat-label">Quick poll</span>
+                <p class="drawer-interest-question">How interested did they seem? Tap one — you’ll see how other
+                    advocates rated this office.</p>
+                <input type="hidden" id="support-score-inline" value="">
+                <div class="drawer-interest-poll-results" id="drawer-interest-poll-results-inline" aria-live="polite"
+                    hidden></div>
+            </div>
+            {# Chart bars outside the bubble; constrained to same padding as content #}
+            <div class="drawer-interest-pills-wrap drawer-bubble-delayed" id="drawer-wrapup-poll-pills" hidden>
+                <div class="drawer-interest-pills" role="group" aria-label="Interest level">
+                    <button type="button" class="drawer-interest-pill drawer-interest-pill-score-1" data-score="1"
+                        data-label="Opposed" aria-pressed="false"><span
+                            class="drawer-interest-pill-label">Opposed</span><span
+                            class="drawer-interest-pill-stats"><span class="drawer-interest-pill-pct"></span><span
+                                class="drawer-interest-pill-count"></span></span><span class="drawer-interest-pill-dot"
+                            aria-hidden="true"></span></button>
+                    <button type="button" class="drawer-interest-pill drawer-interest-pill-score-2" data-score="2"
+                        data-label="Skeptical" aria-pressed="false"><span
+                            class="drawer-interest-pill-label">Skeptical</span><span
+                            class="drawer-interest-pill-stats"><span class="drawer-interest-pill-pct"></span><span
+                                class="drawer-interest-pill-count"></span></span><span class="drawer-interest-pill-dot"
+                            aria-hidden="true"></span></button>
+                    <button type="button" class="drawer-interest-pill drawer-interest-pill-score-3" data-score="3"
+                        data-label="Neutral" aria-pressed="false"><span
+                            class="drawer-interest-pill-label">Neutral</span><span
+                            class="drawer-interest-pill-stats"><span class="drawer-interest-pill-pct"></span><span
+                                class="drawer-interest-pill-count"></span></span><span class="drawer-interest-pill-dot"
+                            aria-hidden="true"></span></button>
+                    <button type="button" class="drawer-interest-pill drawer-interest-pill-score-4" data-score="4"
+                        data-label="Interested" aria-pressed="false"><span
+                            class="drawer-interest-pill-label">Interested</span><span
+                            class="drawer-interest-pill-stats"><span class="drawer-interest-pill-pct"></span><span
+                                class="drawer-interest-pill-count"></span></span><span class="drawer-interest-pill-dot"
+                            aria-hidden="true"></span></button>
+                    <button type="button" class="drawer-interest-pill drawer-interest-pill-score-5" data-score="5"
+                        data-label="Champion" aria-pressed="false"><span
+                            class="drawer-interest-pill-label">Champion</span><span
+                            class="drawer-interest-pill-stats"><span class="drawer-interest-pill-pct"></span><span
+                                class="drawer-interest-pill-count"></span></span><span class="drawer-interest-pill-dot"
+                            aria-hidden="true"></span></button>
+                </div>
+            </div>
+            {# Draft follow-up: sticky note (user writing, right-aligned) + button outside #}
+            <div class="drawer-draft-followup-wrap drawer-bubble-delayed" id="drawer-draft-followup-bubble" hidden>
+                <div class="drawer-draft-followup-note-block">
+                    <label class="drawer-note-sticky-input">
+                        <span class="drawer-note-sticky-label">Note (optional)</span>
+                        <textarea id="wrapup-nextstep-inline" class="drawer-note-sticky-textarea"
+                            placeholder="Any notes from the call…" rows="4" autocomplete="off"></textarea>
+                    </label>
+                </div>
+                <div class="drawer-draft-followup-cta-block drawer-draft-followup-cta-staggered" id="drawer-draft-followup-cta-block">
+                    <button type="button" class="drawer-draft-followup-btn" id="drawer-draft-followup-link">Draft
+                        follow-up email</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Voicemail script: one bubble with short script; identify yourself, state the ask, leave callback + request best email. #}
+    <div class="drawer-voicemail" id="drawer-voicemail" hidden>
+        <div class="drawer-voicemail-intro">Leave this message on their voicemail. Follow up with an email when you can—it doubles your touchpoint.</div>
+        <div class="chat-divider"><span>Voicemail / no answer</span></div>
+        <div class="chat-bubble chat-you drawer-voicemail-single">
+            <span class="chat-label">You (say this)</span>
+            <p>Hi, this is <strong>[CALLER_NAME]</strong>, <span id="drawer-voicemail-location-phrase">a constituent in <strong>ZIP {{ zip_code or '[ZIP]' }}</strong></span>. I'm calling for <strong>{{ title_label }} {{ legislator_last }}</strong> about kei vehicles in Illinois.</p>
+            <p>The Secretary of State is branding these titles "Not Eligible for Registration" and treating them as off-highway unless Illinois specifically authorizes and regulates them by statute.</p>
+            <p>I'm asking <strong>{{ legislator_last }}</strong> to support and help advance a narrow bill to allow registration of 25+ year old kei vehicles for limited on-road use with clear restrictions (like no interstates, equipment and insurance requirements).</p>
+            <p>Please call me back at <strong>[CALLER_PHONE]</strong> — and if possible, email me the best address for constituent correspondence so I can send a short one-pager. Thank you.</p>
+        </div>
+        <div class="chat-bubble chat-them drawer-voicemail-reminder-bubble" id="drawer-voicemail-reminder-bubble"
+            hidden>
+            Next step: <a href="#" class="drawer-reminder-link" id="drawer-reminder-calendar"
+                data-legislator="{{ legislator_name or 'Legislator' }}">Add reminder to follow up</a>
+        </div>
+        {# In-chat reminder setup (iMessage-style); shown when they tap "Add reminder to follow up" #}
+        <div class="chat-bubble chat-them drawer-reminder-inline" id="drawer-reminder-inline" hidden>
+            <p class="drawer-reminder-inline-copy">Future-you will thank present-you. 🔔 Pick when you want a nudge —
+                we’ll put the call script link in the reminder so you can jump right back.</p>
+            <div class="drawer-reminder-inline-fields">
+                <label class="drawer-reminder-inline-row">
+                    <span class="drawer-reminder-inline-label">When</span>
+                    <span class="drawer-reminder-inline-inputs">
+                        <input type="date" id="reminder-inline-date" class="drawer-reminder-inline-date"
+                            aria-label="Reminder date">
+                        <input type="time" id="reminder-inline-time" class="drawer-reminder-inline-time" value="09:00"
+                            aria-label="Reminder time">
+                    </span>
+                </label>
+            </div>
+            <p class="drawer-reminder-inline-link" id="reminder-inline-link-preview" aria-live="polite"></p>
+            <div class="drawer-reminder-inline-ctas">
+                <button type="button" class="drawer-reminder-inline-btn drawer-reminder-inline-btn-primary"
+                    id="reminder-inline-btn-calendar">Add to Google Calendar</button>
+                <button type="button" class="drawer-reminder-inline-btn drawer-reminder-inline-btn-ghost"
+                    id="reminder-inline-btn-copy">Copy link</button>
+            </div>
+        </div>
+        <button type="button" class="drawer-end-call-btn" id="drawer-end-call-vm">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path
+                    d="M22 16.92v3a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+            </svg>
+            End call
+        </button>
+    </div>
+
+</div>
+</div>
