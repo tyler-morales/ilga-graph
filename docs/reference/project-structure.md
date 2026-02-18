@@ -1,0 +1,70 @@
+# Project structure
+
+Where to find things in the repo.
+
+---
+
+## Top level
+
+| Path | Purpose |
+|------|---------|
+| `src/ilga_graph/` | Application and library code. |
+| `scripts/` | CLI scripts (scrape, ML run, refresh photos, etc.). |
+| `docs/` | MkDocs source (this doc site). |
+| `graphql/` | Example GraphQL query files and README. |
+| `mocks/dev/` | Seed data (committed) for fast dev without cache. |
+| `cache/` | Scraped JSON (git-ignored). |
+| `processed/` | ML pipeline outputs: parquet, pkl, json (git-ignored). |
+| `ILGA_Graph_Vault/` | Generated Obsidian vault (git-ignored). |
+| `tests/` | Pytest tests. |
+| `Makefile` | All commands; run `make help`. |
+| `pyproject.toml` | Deps, extras: `dev`, `docs`, `ml`. |
+| `TODOS.md` | Roadmap and completed work. |
+
+---
+
+## Application (`src/ilga_graph/`)
+
+| Module / path | Purpose |
+|----------------|---------|
+| `main.py` | FastAPI app, routes (advocacy, intelligence, explore, GraphQL), ETL orchestration. |
+| `scraper.py` | ILGA scraper: members, committees, bills, votes; caching. |
+| `models.py` | Dataclasses: Member, Bill, Committee, Office, etc. |
+| `schema.py` | Strawberry GraphQL types and queries. |
+| `etl.py` | Load/scrape orchestration, vault export. |
+| `analytics.py` | Scorecards, committee stats, advancement analytics. |
+| `moneyball.py` | Moneyball profiles, power badges, cosponsor edges. |
+| `influence.py` | Influence scoring (betweenness, sponsor pull, etc.). |
+| `zip_crosswalk.py` | ZIP → district lookup for advocacy. |
+| `templates/` | Jinja2 HTML (advocacy, explore, intelligence, drawer partials). |
+| `static/` | CSS, JS, static assets (e.g. advocacy). |
+| `ml/` | ML pipeline: features, bill predictor, coalitions, embeddings, etc. |
+
+---
+
+## Cache and processed (generated)
+
+| Path | Purpose |
+|------|---------|
+| `cache/members.json` | All members (metadata, photo_url, etc.). |
+| `cache/bills.json` | All bills (deduplicated by leg_id). |
+| `cache/committees.json` | Committees. |
+| `cache/vote_events.json` | Roll-call vote data. |
+| `processed/*.parquet` | Star-schema tables from ML pipeline. |
+| `processed/*.pkl` | Trained models, etc. |
+
+---
+
+## Docs (this site)
+
+| Path | Purpose |
+|------|---------|
+| `docs/index.md` | Doc site home. |
+| `docs/getting-started.md` | Install, run app, run docs, scrape. |
+| `docs/features/app-overview.md` | App areas (Advocacy, Power Map, Intelligence, GraphQL). |
+| `docs/user-guide/` | User-facing guides (e.g. Advocacy Test Mode). |
+| `docs/development/` | Internals and testing (test mode, bills-first). |
+| `docs/reference/` | CLI, env vars, GraphQL, project structure. |
+| `mkdocs.yml` | MkDocs config and nav. |
+
+Build output: `site/` (git-ignored). Serve with `make docs-serve`.
