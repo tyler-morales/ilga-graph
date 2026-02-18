@@ -81,12 +81,18 @@ def main() -> int:
         subset_bills_raw = {k: subset_bills_raw[k] for k in keys}
 
     subset_leg_ids = set(subset_bills_raw.keys())
-    subset_bill_numbers = {b.get("bill_number") for b in subset_bills_raw.values() if b.get("bill_number")}
+    subset_bill_numbers = {
+        b.get("bill_number") for b in subset_bills_raw.values() if b.get("bill_number")
+    }
 
     # Trim member bill id lists to only include bills we kept
     for m in subset_members:
-        m["sponsored_bill_ids"] = [x for x in m.get("sponsored_bill_ids", []) if x in subset_leg_ids]
-        m["co_sponsor_bill_ids"] = [x for x in m.get("co_sponsor_bill_ids", []) if x in subset_leg_ids]
+        m["sponsored_bill_ids"] = [
+            x for x in m.get("sponsored_bill_ids", []) if x in subset_leg_ids
+        ]
+        m["co_sponsor_bill_ids"] = [
+            x for x in m.get("co_sponsor_bill_ids", []) if x in subset_leg_ids
+        ]
 
     # Committees: load and filter to those with roster overlap or bill overlap
     committees_path = CACHE_SOURCE / "committees.json"
@@ -124,7 +130,11 @@ def main() -> int:
     if subset_committees:
         with open(MOCKS_TARGET / "committees.json", "w", encoding="utf-8") as f:
             json.dump(subset_committees, f, indent=2, ensure_ascii=False)
-        logger.info("Wrote %s: %d committees", MOCKS_TARGET / "committees.json", len(subset_committees))
+        logger.info(
+            "Wrote %s: %d committees",
+            MOCKS_TARGET / "committees.json",
+            len(subset_committees),
+        )
 
     logger.info("Done. Commit mocks/dev/ to refresh the dev seed for everyone.")
     return 0

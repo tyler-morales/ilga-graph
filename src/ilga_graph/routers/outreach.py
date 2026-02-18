@@ -37,7 +37,7 @@ def _parse_support_score(raw: str) -> int | None:
 
 
 def _parse_constituent(raw: str) -> bool | None:
-    """Parse constituent from form: '1'/'true'/'yes' -> True, '0'/'false'/'no' -> False, else None."""
+    """Parse constituent: '1'/'true'/'yes' -> True, '0'/'false'/'no' -> False, else None."""
     s = (raw or "").strip().lower()
     if s in ("1", "true", "yes"):
         return True

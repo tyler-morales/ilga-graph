@@ -10,6 +10,7 @@
   + Transportation so heat pills show varied counts in dev.
 Run from repo root: python scripts/seed_outreach.py  (or: make seed-outreach)
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -31,50 +32,229 @@ load_dotenv(ROOT / ".env")
 # Backlog: Date, Rep Name, Constituent, Called?, Emailed?, Support Score (1–5), Notes, Contact (from notes).
 # Source: user backlog table (Next Action / Task Status columns not stored in outreach_events).
 _SEED_ROWS = [
-    ("1/28/2026", "Edgar González", False, True, False, 3, "Spoke with Wenda and understood once I told her why I was calling other senators. Email: office@repedgargonzalez.com", "Wenda"),
-    ("1/27/2026", "Diane Blair-Sherlock", False, True, True, 4, "Alicia said her son is is stationed in Japan. Did not know about Kei vehicles", "Alicia"),
-    ("1/26/2026", "Ram Villivalam", False, True, True, 3, "Cynthia seemed luke warm on the issue and did not know about Kei vehicles", "Cynthia"),
-    ("1/26/2026", "Steve Stadelman", False, True, True, 3, "Howard said he'll contact the SOS to learn more. Email him: howard@senatorstadelman.com", "Howard"),
-    ("1/26/2026", "Darby A. Hills", False, True, True, 3, "Deb said to send email to her with more info", "Deb"),
-    ("1/26/2026", "Seth Lewis", False, True, True, 4, "Maurine said to speak with my district rep to ask for a legisulative remedy", "Maurine"),
-    ("1/26/2026", "Celina Villanueva", True, True, True, 4, "Fatima gave two routes: individual case report and/ or advocacy policy change. Fatima will be leaving for good next week", "Fatima"),
-    ("1/26/2026", "Norma Hernandez", True, True, True, 4, "Fernanda did not know what Kei vehicles were and said she'll be in touch. When I told her I was part of a group, she took note and notice", "Fernanda"),
-    ("1/23/2026", "Yolonda Morris", False, True, False, 3, "Adriana was very helpful. Said first two weeks of the new year, they take new bills. Now, get a group to keep calling their legisulators. YOU are the ones who need to be educated. The reps just need to look at the facts and move along", "Adriana"),
-    ("1/23/2026", "Camille Y. Lilly", False, True, False, 3, "Jaylen answered and said he'll make a note and pass it along", "Jaylen"),
-    ("1/23/2026", "Jesus Garcia", True, True, False, 3, "Kyro answered and said to reach out to state reps, Mah and Villanueva", "Kyro"),
-    ("1/23/2026", "Jesus Garcia", True, True, False, 4, "Spoke to Samir. While she said she was unfamilar with the issue, she would log the call and encouraged me to contact my D.O offices", "Samir"),
-    ("1/22/2026", "Theresa Mah", True, True, True, 5, "Ricky answered and seemed happy and helpful to hear out my issue. He even mentioned that he sees a guy across the street from the office who drives a similar truck", "Ricky"),
+    (
+        "1/28/2026",
+        "Edgar González",
+        False,
+        True,
+        False,
+        3,
+        "Spoke with Wenda and understood once I told her why I was calling other senators. Email: office@repedgargonzalez.com",
+        "Wenda",
+    ),
+    (
+        "1/27/2026",
+        "Diane Blair-Sherlock",
+        False,
+        True,
+        True,
+        4,
+        "Alicia said her son is is stationed in Japan. Did not know about Kei vehicles",
+        "Alicia",
+    ),
+    (
+        "1/26/2026",
+        "Ram Villivalam",
+        False,
+        True,
+        True,
+        3,
+        "Cynthia seemed luke warm on the issue and did not know about Kei vehicles",
+        "Cynthia",
+    ),
+    (
+        "1/26/2026",
+        "Steve Stadelman",
+        False,
+        True,
+        True,
+        3,
+        "Howard said he'll contact the SOS to learn more. Email him: howard@senatorstadelman.com",
+        "Howard",
+    ),
+    (
+        "1/26/2026",
+        "Darby A. Hills",
+        False,
+        True,
+        True,
+        3,
+        "Deb said to send email to her with more info",
+        "Deb",
+    ),
+    (
+        "1/26/2026",
+        "Seth Lewis",
+        False,
+        True,
+        True,
+        4,
+        "Maurine said to speak with my district rep to ask for a legisulative remedy",
+        "Maurine",
+    ),
+    (
+        "1/26/2026",
+        "Celina Villanueva",
+        True,
+        True,
+        True,
+        4,
+        "Fatima gave two routes: individual case report and/ or advocacy policy change. Fatima will be leaving for good next week",
+        "Fatima",
+    ),
+    (
+        "1/26/2026",
+        "Norma Hernandez",
+        True,
+        True,
+        True,
+        4,
+        "Fernanda did not know what Kei vehicles were and said she'll be in touch. When I told her I was part of a group, she took note and notice",
+        "Fernanda",
+    ),
+    (
+        "1/23/2026",
+        "Yolonda Morris",
+        False,
+        True,
+        False,
+        3,
+        "Adriana was very helpful. Said first two weeks of the new year, they take new bills. Now, get a group to keep calling their legisulators. YOU are the ones who need to be educated. The reps just need to look at the facts and move along",
+        "Adriana",
+    ),
+    (
+        "1/23/2026",
+        "Camille Y. Lilly",
+        False,
+        True,
+        False,
+        3,
+        "Jaylen answered and said he'll make a note and pass it along",
+        "Jaylen",
+    ),
+    (
+        "1/23/2026",
+        "Jesus Garcia",
+        True,
+        True,
+        False,
+        3,
+        "Kyro answered and said to reach out to state reps, Mah and Villanueva",
+        "Kyro",
+    ),
+    (
+        "1/23/2026",
+        "Jesus Garcia",
+        True,
+        True,
+        False,
+        4,
+        "Spoke to Samir. While she said she was unfamilar with the issue, she would log the call and encouraged me to contact my D.O offices",
+        "Samir",
+    ),
+    (
+        "1/22/2026",
+        "Theresa Mah",
+        True,
+        True,
+        True,
+        5,
+        "Ricky answered and seemed happy and helpful to hear out my issue. He even mentioned that he sees a guy across the street from the office who drives a similar truck",
+        "Ricky",
+    ),
 ]
 
 # Dev-only mock: multiple advocates for 60608 + Transportation (heat pill demo).
 # (adv_email, zip, list of (member_id, kind, date_str, support_score, notes, contact_name))
 _COMMUNITY_ROWS: list[tuple[str, str, list[tuple[str, str, str, int, str, str]]]] = [
-    ("advocate1@example.com", "60608", [
-        ("3291", "call", "2/10/2026", 4, "Left message with receptionist about kei truck registration", "Dana"),
-        ("3291", "email", "2/10/2026", 4, "Follow-up email with info packet", "Dana"),
-        ("3366", "call", "2/11/2026", 3, "Spoke briefly, was told to send details by email", "Marcus"),
-        ("3318", "call", "2/12/2026", 3, "Called about transportation policy, staff said to email info", "Tina"),
-    ]),
-    ("advocate2@example.com", "60608", [
-        ("3291", "call", "2/12/2026", 3, "Reached staffer who was aware of the issue", "Chris"),
-        ("3318", "call", "2/13/2026", 4, "Good conversation about kei trucks on rural roads", "Jerome"),
-        ("3318", "email", "2/13/2026", 4, "Sent fact sheet and safety data", "Jerome"),
-    ]),
-    ("advocate3@example.com", "60616", [
-        ("3291", "email", "2/14/2026", 3, "Sent constituent letter via website form", ""),
-        ("3366", "call", "2/14/2026", 4, "Staffer very interested, asked for more info", "Priya"),
-        ("3366", "email", "2/14/2026", 4, "Emailed one-pager on kei vehicle benefits", "Priya"),
-        ("3318", "call", "2/15/2026", 3, "Brief call, left voicemail", ""),
-    ]),
-    ("advocate4@example.com", "60607", [
-        ("3318", "call", "2/15/2026", 5, "Enthusiastic staffer, said senator is open to hearing more", "Val"),
-        ("3318", "email", "2/15/2026", 5, "Sent detailed policy brief", "Val"),
-        ("3291", "call", "2/16/2026", 4, "Good call, staffer took detailed notes", "Dana"),
-    ]),
-    ("advocate5@example.com", "60608", [
-        ("3366", "call", "2/16/2026", 3, "Quick call, asked to send email instead", "Marcus"),
-        ("3318", "email", "2/17/2026", 4, "Sent comparison of state kei vehicle policies", ""),
-    ]),
+    (
+        "advocate1@example.com",
+        "60608",
+        [
+            (
+                "3291",
+                "call",
+                "2/10/2026",
+                4,
+                "Left message with receptionist about kei truck registration",
+                "Dana",
+            ),
+            ("3291", "email", "2/10/2026", 4, "Follow-up email with info packet", "Dana"),
+            (
+                "3366",
+                "call",
+                "2/11/2026",
+                3,
+                "Spoke briefly, was told to send details by email",
+                "Marcus",
+            ),
+            (
+                "3318",
+                "call",
+                "2/12/2026",
+                3,
+                "Called about transportation policy, staff said to email info",
+                "Tina",
+            ),
+        ],
+    ),
+    (
+        "advocate2@example.com",
+        "60608",
+        [
+            ("3291", "call", "2/12/2026", 3, "Reached staffer who was aware of the issue", "Chris"),
+            (
+                "3318",
+                "call",
+                "2/13/2026",
+                4,
+                "Good conversation about kei trucks on rural roads",
+                "Jerome",
+            ),
+            ("3318", "email", "2/13/2026", 4, "Sent fact sheet and safety data", "Jerome"),
+        ],
+    ),
+    (
+        "advocate3@example.com",
+        "60616",
+        [
+            ("3291", "email", "2/14/2026", 3, "Sent constituent letter via website form", ""),
+            (
+                "3366",
+                "call",
+                "2/14/2026",
+                4,
+                "Staffer very interested, asked for more info",
+                "Priya",
+            ),
+            ("3366", "email", "2/14/2026", 4, "Emailed one-pager on kei vehicle benefits", "Priya"),
+            ("3318", "call", "2/15/2026", 3, "Brief call, left voicemail", ""),
+        ],
+    ),
+    (
+        "advocate4@example.com",
+        "60607",
+        [
+            (
+                "3318",
+                "call",
+                "2/15/2026",
+                5,
+                "Enthusiastic staffer, said senator is open to hearing more",
+                "Val",
+            ),
+            ("3318", "email", "2/15/2026", 5, "Sent detailed policy brief", "Val"),
+            ("3291", "call", "2/16/2026", 4, "Good call, staffer took detailed notes", "Dana"),
+        ],
+    ),
+    (
+        "advocate5@example.com",
+        "60608",
+        [
+            ("3366", "call", "2/16/2026", 3, "Quick call, asked to send email instead", "Marcus"),
+            ("3318", "email", "2/17/2026", 4, "Sent comparison of state kei vehicle policies", ""),
+        ],
+    ),
 ]
 
 
@@ -136,9 +316,9 @@ def _resolve_member_id(rep_name: str, by_name: dict[str, str], by_norm: dict[str
 async def _main() -> None:
     from sqlalchemy import select
 
-    from ilga_graph.db import DB_PATH, init_db, async_session_factory
-    from ilga_graph.db_models import OutreachEvent, User
     from ilga_graph import config as cfg
+    from ilga_graph.db import DB_PATH, async_session_factory, init_db
+    from ilga_graph.db_models import OutreachEvent, User
 
     by_name, by_norm = _load_members_name_to_id()
     if not by_name:
@@ -162,7 +342,16 @@ async def _main() -> None:
             print(f"Using existing user: {user.email} (id={user.id})")
 
         created = 0
-        for date_str, rep_name, constituent, called, emailed, support_score, notes, contact_name in _SEED_ROWS:
+        for (
+            date_str,
+            rep_name,
+            constituent,
+            called,
+            emailed,
+            support_score,
+            notes,
+            contact_name,
+        ) in _SEED_ROWS:
             member_id = _resolve_member_id(rep_name, by_name, by_norm)
             dt = _parse_date(date_str)
             if called:
@@ -234,7 +423,9 @@ async def _main() -> None:
                     )
                     community_created += 1
             await session.commit()
-            print(f"Inserted {community_created} dev mock outreach events across {len(_COMMUNITY_ROWS)} advocates.")
+            print(
+                f"Inserted {community_created} dev mock outreach events across {len(_COMMUNITY_ROWS)} advocates."
+            )
 
 
 if __name__ == "__main__":

@@ -169,7 +169,9 @@ def main() -> None:
             )
             logger.info(
                 "  Workers: %d  |  Fast: %s  |  Full index: %s",
-                args.workers, args.fast, args.full,
+                args.workers,
+                args.fast,
+                args.full,
             )
             logger.info("=" * 72)
             t0 = time.perf_counter()

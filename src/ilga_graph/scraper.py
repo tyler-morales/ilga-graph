@@ -976,7 +976,11 @@ class ILGAScraper:
 
     def _extract_photo_url(self, soup: BeautifulSoup, page_url: str) -> str:
         """Extract member photo URL from img.member-photo on the detail page."""
-        img = soup.find("img", class_=lambda c: c and "member-photo" in (c if isinstance(c, str) else " ".join(c)))
+
+        def has_member_photo(c):
+            return c and "member-photo" in (c if isinstance(c, str) else " ".join(c))
+
+        img = soup.find("img", class_=has_member_photo)
         if not img or not img.get("src"):
             return ""
         src = img["src"].strip()

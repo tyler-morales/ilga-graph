@@ -63,3 +63,6 @@ select = ["E", "F", "I", "W", "UP"]
 "src/ilga_graph/schema.py" = ["F821"]
 # Advocacy helpers: long string literals (email/script copy) kept readable
 "src/ilga_graph/advocacy_helpers.py" = ["E501"]
+# Scripts: path must be set before project imports
+"scripts/refresh_member_photos.py" = ["E402"]
+"scripts/seed_outreach.py" = ["E402", "E501"]

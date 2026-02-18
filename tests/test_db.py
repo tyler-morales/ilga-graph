@@ -126,7 +126,9 @@ class TestSessionPersistence:
                 session.add(user)
                 await session.commit()
             async with db_mod.async_session_factory() as session:
-                r = await session.execute(select(User).where(User.email == "test_session@example.com"))
+                r = await session.execute(
+                    select(User).where(User.email == "test_session@example.com")
+                )
                 u = r.scalar_one_or_none()
                 assert u is not None
                 assert u.email == "test_session@example.com"

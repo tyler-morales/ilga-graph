@@ -57,17 +57,17 @@ class ZipDistrictInfo:
 
 _SEED_CROSSWALK: dict[str, ZipDistrictInfo] = {
     # Primary dev ZIPs — use these to test; all 4 cards render.
-    "60601": ZipDistrictInfo(il_house="26", il_senate="18", us_house="4"),   # Cunningham + Buckner
-    "60605": ZipDistrictInfo(il_house="106", il_senate="53", us_house="16"), # Balkema + Bunting
+    "60601": ZipDistrictInfo(il_house="26", il_senate="18", us_house="4"),  # Cunningham + Buckner
+    "60605": ZipDistrictInfo(il_house="106", il_senate="53", us_house="16"),  # Balkema + Bunting
     "60120": ZipDistrictInfo(il_house="26", il_senate="22", us_house="8"),  # Castro + Buckner
     "60540": ZipDistrictInfo(il_house="90", il_senate="41", us_house="11"),  # Curran + Cabello
-    "60201": ZipDistrictInfo(il_house="26", il_senate="9", us_house="9"),    # Fine + Buckner
-    "60643": ZipDistrictInfo(il_house="26", il_senate="18", us_house="1"),   # Cunningham + Buckner
-    "60608": ZipDistrictInfo(il_house="26", il_senate="18", us_house="4"),   # Cunningham + Buckner
+    "60201": ZipDistrictInfo(il_house="26", il_senate="9", us_house="9"),  # Fine + Buckner
+    "60643": ZipDistrictInfo(il_house="26", il_senate="18", us_house="1"),  # Cunningham + Buckner
+    "60608": ZipDistrictInfo(il_house="26", il_senate="18", us_house="4"),  # Cunningham + Buckner
     "60614": ZipDistrictInfo(il_house="90", il_senate="41", us_house="11"),  # Curran + Cabello
-    "60637": ZipDistrictInfo(il_house="26", il_senate="57", us_house="1"),   # Belt + Buckner
+    "60637": ZipDistrictInfo(il_house="26", il_senate="57", us_house="1"),  # Belt + Buckner
     "61032": ZipDistrictInfo(il_house="90", il_senate="47", us_house="16"),  # Anderson + Cabello
-    "61701": ZipDistrictInfo(il_house="106", il_senate="53", us_house="16"), # Balkema + Bunting
+    "61701": ZipDistrictInfo(il_house="106", il_senate="53", us_house="16"),  # Balkema + Bunting
     "60532": ZipDistrictInfo(il_house="85", il_senate="22", us_house="11"),  # Castro + Avelar
 }
 

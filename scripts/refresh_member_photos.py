@@ -39,7 +39,10 @@ LOGGER = logging.getLogger("refresh_photos")
 def main() -> int:
     cached = load_normalized_cache(seed_fallback=False)
     if cached is None:
-        LOGGER.error("No cache found. Need cache/members.json and cache/bills.json. Run make scrape or make scrape-members first.")
+        LOGGER.error(
+            "No cache found. Need cache/members.json and cache/bills.json. "
+            "Run make scrape or make scrape-members first."
+        )
         return 1
 
     members, bills_lookup = cached
@@ -54,7 +57,8 @@ def main() -> int:
             continue
         try:
             detail = scraper.scrape_details(m.member_url, m.chamber)
-            if detail and detail.photo_url and detail.photo_url != (getattr(m, "photo_url", "") or ""):
+            current = getattr(m, "photo_url", "") or ""
+            if detail and detail.photo_url and detail.photo_url != current:
                 m.photo_url = detail.photo_url
                 updated += 1
         except Exception:

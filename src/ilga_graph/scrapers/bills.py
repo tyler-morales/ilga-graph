@@ -24,7 +24,7 @@ from urllib3.util.retry import Retry
 from ..config import BASE_URL, CACHE_DIR, GA_ID, MOCK_DEV_DIR, SESSION_ID
 from ..models import ActionEntry, Bill, VoteEvent, WitnessSlip
 from ..normalize import normalize_chamber, normalize_date, validate_bill_cache
-from ._log import fmt_duration, log_phase, log_progress
+from ._log import log_phase, log_progress
 
 LOGGER = logging.getLogger(__name__)
 
@@ -1036,9 +1036,7 @@ def scrape_all_bills(
                     bills[bill.leg_id] = bill
                     rate = completed / elapsed if elapsed > 0 else 0
                     eta = (total - completed) / rate if rate > 0 else 0
-                    log_progress(
-                        LOGGER, completed, total, bill.bill_number, elapsed, eta
-                    )
+                    log_progress(LOGGER, completed, total, bill.bill_number, elapsed, eta)
                 else:
                     LOGGER.warning("  [%d/%d] Failed: %s", completed, total, entry.bill_number)
             except Exception:
@@ -1476,8 +1474,7 @@ def incremental_bill_scrape(
         return existing
 
     LOGGER.info(
-        "Incremental: scraping %d bills (%d new + %d re-check) "
-        "[votes=%s, slips=%s, fulltext=%s]",
+        "Incremental: scraping %d bills (%d new + %d re-check) [votes=%s, slips=%s, fulltext=%s]",
         len(to_scrape),
         len(new_ids),
         len(rescrape_ids - new_ids),
@@ -1534,8 +1531,12 @@ def incremental_bill_scrape(
                     rate = completed / elapsed if elapsed > 0 else 0
                     eta = (total_to_scrape - completed) / rate if rate > 0 else 0
                     log_progress(
-                        LOGGER, completed, total_to_scrape,
-                        entry.bill_number, elapsed, eta,
+                        LOGGER,
+                        completed,
+                        total_to_scrape,
+                        entry.bill_number,
+                        elapsed,
+                        eta,
                     )
                 else:
                     LOGGER.warning(
@@ -1554,7 +1555,9 @@ def incremental_bill_scrape(
             ):
                 LOGGER.info(
                     "  Checkpoint: saving %d bills at %d/%d...",
-                    len(existing), completed, total_to_scrape,
+                    len(existing),
+                    completed,
+                    total_to_scrape,
                 )
                 save_bill_cache(existing)
                 last_checkpoint = completed

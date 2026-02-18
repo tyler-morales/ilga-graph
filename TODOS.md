@@ -33,7 +33,9 @@
 
 ## Current
 
-- **Status report (2026-02-18):** `docs/reference/status-report.md` — what’s broken (lint 69 errors), buggy (none known at runtime), missing (Procfile env/port, db-and-outreach in nav), and **deployment checklist**: fix lint, set `ILGA_PROFILE=prod` + `ILGA_LOAD_ONLY=1`, CORS, `ILGA_AUTH_SECRET`, optional `ILGA_API_KEY`, populate cache, persistent `data/`, SMTP, HTTPS. Procfile does not include `--port $PORT`; override start command on Railway/Render. Tests 301 pass; docs build (one page was missing from nav — fixed: added status-report + db-and-outreach to mkdocs.yml).
+- **Lint (2026-02-18):** All 48 Ruff E402/E501 errors fixed. Per-file-ignores for script path-before-import (refresh_member_photos, seed_outreach) and seed_outreach long data; line breaks in refresh_member_photos, snapshot_mocks, db_models, etl, main, routers/outreach, scraper, tests. `make lint` passes.
+
+- **Status report (2026-02-18):** `docs/reference/status-report.md` — what’s broken (none; lint fixed 2026-02-18), buggy (none known at runtime), missing (Procfile env/port, db-and-outreach in nav), and **deployment checklist**: fix lint, set `ILGA_PROFILE=prod` + `ILGA_LOAD_ONLY=1`, CORS, `ILGA_AUTH_SECRET`, optional `ILGA_API_KEY`, populate cache, persistent `data/`, SMTP, HTTPS. Procfile does not include `--port $PORT`; override start command on Railway/Render. Tests 301 pass; docs build (one page was missing from nav — fixed: added status-report + db-and-outreach to mkdocs.yml).
 
 - **Guided Email Flow — "Mad Libs" Compose Experience (2026-02-18):**
   - **Traveling outline:** A pulsing CSS `guide-pulse` animation travels through the email drawer step-by-step (From sign-in → Subject verify → Body fill-in → PDF download → Open client → Confirm sent). Non-blocking — users can skip ahead freely.

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import functools
 import logging
 import sys
 from collections.abc import AsyncIterator
-from urllib.parse import urljoin
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any
+from urllib.parse import urljoin
 
 import strawberry
 from fastapi import Depends, FastAPI, Form, Request, Response
@@ -15,12 +14,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from strawberry.fastapi import GraphQLRouter
 
+from . import advocacy_helpers as ah
 from . import config as cfg
 from .analytics import (
-    CommitteeStats,
-    MemberScorecard,
     build_member_committee_roles,
     compute_advancement_analytics,
     compute_committee_stats,
@@ -28,6 +28,12 @@ from .analytics import (
     lobbyist_alignment,
 )
 from .analytics_cache import load_analytics_cache, save_analytics_cache
+from .app_state import state
+from .constants import CATEGORY_CHOICES, CATEGORY_COMMITTEES
+from .date_parse import parse_action_date, parse_bill_date, safe_parse_date
+from .db import get_db
+from .db_models import OutreachEvent, User
+from .dependencies import get_current_user_optional
 from .etl import (
     ScrapedData,
     _link_members_to_bills,
@@ -37,10 +43,12 @@ from .etl import (
     load_or_scrape_data,
     load_stale_cache_fallback,
 )
-from .metrics_definitions import MONEYBALL_ONE_LINER
+from .member_lookup import find_member_by_district
 from .ml.rule_engine import get_bill_to_law_process
-from .models import Bill, Committee, CommitteeMemberRole, Member, VoteEvent, WitnessSlip
-from .moneyball import MoneyballReport, build_cosponsor_edges, compute_power_badges
+from .models import Bill, Member, WitnessSlip
+from .moneyball import build_cosponsor_edges
+from .routers.auth import router as _auth_router
+from .routers.outreach import router as _outreach_router
 from .run_log import append_startup_run, get_log_path, load_recent_runs
 from .schema import (
     BillAdvancementAnalyticsType,
@@ -75,27 +83,14 @@ from .scrapers.bills import load_bill_cache
 from .search import EntityType as SearchEntityTypeEnum
 from .search import search_all
 from .seating import process_seating
+from .startup_banner import _Colors, format_startup_table, log_startup_timing
 from .vote_name_normalizer import normalize_vote_events
 from .vote_timeline import compute_bill_vote_timeline
 from .voting_record import (
-    VotingSummary,
     build_all_category_bill_sets,
     build_member_vote_index,
 )
-from .zip_crosswalk import ZipDistrictInfo, load_zip_crosswalk
-from .app_state import state
-from .constants import CATEGORY_CHOICES, CATEGORY_COMMITTEES
-from .startup_banner import format_startup_table, log_startup_timing, _Colors
-from .date_parse import parse_action_date, parse_bill_date, safe_parse_date
-from .member_lookup import find_member_by_id, find_member_by_district
-from . import advocacy_helpers as ah
-from .db import get_db
-from .db_models import OutreachEvent, User
-from .dependencies import get_current_user_optional
-from .routers.auth import router as _auth_router
-from .routers.outreach import router as _outreach_router
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from .zip_crosswalk import load_zip_crosswalk
 
 # Backward compat for tests
 _parse_bill_date = parse_bill_date
@@ -118,7 +113,6 @@ get_bill_status_urls = cfg.get_bill_status_urls
 # ── Startup timing log & summary table ──────────────────────────────────────
 
 from pathlib import Path  # noqa: E402
-
 
 # ── Mode flags (from config) ──────────────────────────────────────────────────
 DEV_MODE = cfg.DEV_MODE
@@ -602,7 +596,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         f"\n  {c.BOLD}Services:{c.RESET}\n"
         f"    {c.WHITE}Website    {c.BRIGHT_CYAN}http://127.0.0.1:8000{c.RESET}\n"
         f"    {c.WHITE}GraphQL    {c.BRIGHT_CYAN}http://127.0.0.1:8000/graphql{c.RESET}\n"
-        f"    {c.WHITE}Docs       {c.BRIGHT_CYAN}http://127.0.0.1:8001{c.RESET}  {c.DIM}(make docs-serve){c.RESET}\n",
+        f"    {c.WHITE}Docs       {c.BRIGHT_CYAN}http://127.0.0.1:8001{c.RESET}  "
+        f"{c.DIM}(make docs-serve){c.RESET}\n",
         flush=True,
     )
 
@@ -1675,7 +1670,7 @@ async def advocacy_index(request: Request, zip: str = "", member_id: str = "", v
 
 @app.get("/advocacy/test")
 async def advocacy_test(request: Request):
-    """Dev back door: jump to any advocacy feature (call script, email drawer, etc.) without clicking through."""
+    """Dev back door: jump to any advocacy feature without clicking through."""
     test_members = ah.test_member_list(state)
     default_zip = "60601"
     return templates.TemplateResponse(
@@ -1703,11 +1698,13 @@ async def advocacy_letter_template(request: Request):
 
 @app.get("/advocacy/letter-template.pdf")
 async def advocacy_letter_template_pdf():
-    """Download the constituent letter template PDF. Place your PDF at static/advocacy/letter-template.pdf."""
+    """Download constituent letter template PDF (static/advocacy/letter-template.pdf)."""
     if not _LETTER_PDF_PATH.is_file():
         return JSONResponse(
             status_code=404,
-            content={"detail": "Letter template PDF not found. Add static/advocacy/letter-template.pdf."},
+            content={
+                "detail": "Letter template PDF not found. Add static/advocacy/letter-template.pdf."
+            },
         )
     return FileResponse(
         path=str(_LETTER_PDF_PATH),
@@ -1725,7 +1722,7 @@ async def advocacy_drawer(
     db: AsyncSession = Depends(get_db),
     user: User | None = Depends(get_current_user_optional),
 ):
-    """Return drawer body partial: view=call (script + after-call form) or view=email (email template)."""
+    """Return drawer body: view=call (script + form) or view=email (template)."""
     zip_code = (request.query_params.get("zip") or "").strip()
     photo_url_param = (request.query_params.get("photo_url") or "").strip()
     target_type_param = (request.query_params.get("target_type") or "").strip().upper()
@@ -1783,15 +1780,22 @@ async def advocacy_drawer(
         )
 
     # Call view: kei/mini truck script + after-call mini-form
-    title_label = "Senator" if member and (member.chamber or "").lower() == "senate" else "Representative"
+    is_senate = member and (member.chamber or "").lower() == "senate"
+    title_label = "Senator" if is_senate else "Representative"
     photo_url = photo_url_param or (getattr(member, "photo_url", "") or "" if member else "")
     if photo_url and not photo_url.startswith(("http://", "https://")):
         photo_url = urljoin("https://www.ilga.gov/", photo_url)
     member_public_email = (member.email or "").strip() if member else ""
     # Script variables: last name, office name, district label, target type for ASK block
-    legislator_last = (legislator_name.split()[-1] if legislator_name else "") or "[LEGISLATOR_LAST]"
+    legislator_last = (
+        legislator_name.split()[-1] if legislator_name else ""
+    ) or "[LEGISLATOR_LAST]"
     short_title = "Sen." if (member and (member.chamber or "").lower() == "senate") else "Rep."
-    office_name = f"Office of {short_title} {legislator_last}" if legislator_last and legislator_last != "[LEGISLATOR_LAST]" else "[OFFICE_NAME]"
+    office_name = (
+        f"Office of {short_title} {legislator_last}"
+        if legislator_last and legislator_last != "[LEGISLATOR_LAST]"
+        else "[OFFICE_NAME]"
+    )
     district_num = (member.district or "") if member else ""
     district_label = ""
     if member and (member.chamber or "").lower() == "senate" and district_num:
@@ -1824,7 +1828,7 @@ async def advocacy_drawer(
 
 @app.post("/advocacy/call/{call_id}/wrapup")
 async def advocacy_call_wrapup(request: Request, call_id: str):
-    """Wrap-up from call: swap drawer to Email view (prefilled after-call template or copy-only if no email)."""
+    """Wrap-up from call: swap drawer to Email view (prefilled or copy-only)."""
     form = await request.form()
     zip_code = (form.get("zip") or "").strip()
     staffer_name = (form.get("staffer_name") or "").strip()
@@ -1998,7 +2002,9 @@ async def advocacy_search(
         )
 
     # ── Find Your Representative ──
-    rep_member = ah.find_member_by_district(state, "house", house_district) if house_district else None
+    rep_member = (
+        ah.find_member_by_district(state, "house", house_district) if house_district else None
+    )
     rep_card = None
     if rep_member:
         rep_card = ah.member_to_card(
@@ -2036,7 +2042,7 @@ async def advocacy_search(
             continue
         your_legislators.append({"card": card, "role_label": role_label, "role_class": role_class})
     your_legislators.sort(
-        key=lambda x: (x["card"].get("moneyball_score") or 0),
+        key=lambda x: x["card"].get("moneyball_score") or 0,
         reverse=True,
     )
 
@@ -2081,9 +2087,7 @@ async def advocacy_search(
             badges=["Power Broker", "Potential Ally"],
         )
         super_ally_card["script_hint"] = ah.build_script_hint_super_ally(super_ally_card)
-        super_ally_card["script_sections"] = ah.build_script_sections_super_ally(
-            super_ally_card
-        )
+        super_ally_card["script_sections"] = ah.build_script_sections_super_ally(super_ally_card)
         super_ally_card["email_subject"] = ah.build_email_subject(zip_code)
         super_ally_card["email_body"] = ah.build_email_body(
             broker_member.name,

@@ -286,7 +286,12 @@ def member_to_card(
         )
         raw_badges = compute_power_badges(mb, committee_roles, chamber_size)
         power_badges_list = [
-            {"label": pb.label, "icon": pb.icon, "explanation": pb.explanation, "css_class": pb.css_class}
+            {
+                "label": pb.label,
+                "icon": pb.icon,
+                "explanation": pb.explanation,
+                "css_class": pb.css_class,
+            }
             for pb in raw_badges
         ]
 
@@ -427,8 +432,7 @@ def build_script_sections_senator(card: dict, zip_code: str, district: str) -> d
         ),
         "why_them": (
             "This is your state senator \u2014 your direct representative in Springfield. "
-            "Constituent calls are tracked; yours counts."
-            + wow
+            "Constituent calls are tracked; yours counts." + wow
         ),
         "the_ask": (
             "I'm calling to ask for the Senator's support for kei truck legalization in Illinois. "
@@ -447,8 +451,7 @@ def build_script_sections_rep(card: dict, zip_code: str, district: str) -> dict:
         ),
         "why_them": (
             "This is your state representative. They vote on bills in the House before they reach "
-            "the Senate, so their support is critical."
-            + wow
+            "the Senate, so their support is critical." + wow
         ),
         "the_ask": (
             "I'm calling to ask them to sponsor or support kei truck legislation. "
@@ -470,8 +473,7 @@ def build_script_sections_broker(card: dict, broker_why: str) -> dict:
     else:
         why = (
             "This senator has one of the highest influence scores in the chamber. "
-            "Their co-sponsorship signals to other members that the bill is serious."
-            + wow
+            "Their co-sponsorship signals to other members that the bill is serious." + wow
         )
     return {
         "opening": (
@@ -530,8 +532,7 @@ def build_script_sections_super_ally(card: dict) -> dict:
         ),
         "why_them": (
             "This legislator is both the top influence in the chamber and sits next to your senator. "
-            "Their support can move the bill in committee and on the floor."
-            + wow
+            "Their support can move the bill in committee and on the floor." + wow
         ),
         "the_ask": (
             "Ask them to co-sponsor and to work with your senator. "
@@ -628,9 +629,7 @@ def build_email_body_full(
         greeting = f"Good {time_word}, {staffer_name},\n\n"
     else:
         greeting = f"Dear {office_name},\n\n"
-    intro = (
-        "My name is [CALLER_NAME] and I'm a constituent in [CALLER_CITY] [CALLER_ZIP]. "
-    )
+    intro = "My name is [CALLER_NAME] and I'm a constituent in [CALLER_CITY] [CALLER_ZIP]. "
     if called_or_email_first == "CALLED":
         intro += (
             f"I'm following up on my call to request {legislator_title} {legislator_last}'s "
@@ -643,17 +642,17 @@ def build_email_body_full(
         )
     whats_happening = (
         "What's happening: The Illinois Secretary of State is treating kei vehicles as "
-        "off-highway/non-highway and branding titles \"Not Eligible for Registration,\" stating "
+        'off-highway/non-highway and branding titles "Not Eligible for Registration," stating '
         "that states which allow on-road use do so by statute.\n\n"
     )
     why_plain = (
         "Why (in plain terms): Illinois is relying on the registration eligibility test in "
-        "625 ILCS 5/3-401(c-1) (the \"originally manufactured for highway use\" requirement) to "
+        '625 ILCS 5/3-401(c-1) (the "originally manufactured for highway use" requirement) to '
         "deny registration.\n\n"
     )
     my_ask = (
         "My ask: Please support and help advance a narrow, safety-focused bill that:\n"
-        "• Defines a \"Kei Vehicle\" category (e.g., 25+ years old)\n"
+        '• Defines a "Kei Vehicle" category (e.g., 25+ years old)\n'
         "• Authorizes registration for limited on-road use with clear restrictions (e.g., no interstates)\n"
         "• Sets standard requirements (equipment, insurance, documentation)\n\n"
     )
@@ -700,8 +699,14 @@ def _legislator_email_context(
     title_label = "Senator" if chamber and chamber.lower() == "senate" else "Representative"
     short_title = "Sen." if chamber and chamber.lower() == "senate" else "Rep."
     legislator_full = legislator_name or "[LEGISLATOR_FULL]"
-    legislator_last = (legislator_name.split()[-1] if legislator_name else "") or "[LEGISLATOR_LAST]"
-    office_name = f"Office of {short_title} {legislator_last}" if legislator_last != "[LEGISLATOR_LAST]" else "[OFFICE_NAME]"
+    legislator_last = (
+        legislator_name.split()[-1] if legislator_name else ""
+    ) or "[LEGISLATOR_LAST]"
+    office_name = (
+        f"Office of {short_title} {legislator_last}"
+        if legislator_last != "[LEGISLATOR_LAST]"
+        else "[OFFICE_NAME]"
+    )
     if chamber and (chamber.lower() == "senate") and district:
         district_label = f"Senate District {district}"
     elif district:

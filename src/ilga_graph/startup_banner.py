@@ -117,23 +117,17 @@ def format_startup_table(
         )
     )
     export_detail = f"{exported_bill_count} bills exported ({bill_count} in memory)"
-    lines.append(
-        row("Load", "4) Export vault artifacts", elapsed_export, export_detail)
-    )
+    lines.append(row("Load", "4) Export vault artifacts", elapsed_export, export_detail))
     committee_detail = (
         f"{committee_count} committee stats, {member_committee_role_count} members with roles"
     )
-    lines.append(
-        row("Transform", "5) Committee indexes", elapsed_committee, committee_detail)
-    )
+    lines.append(row("Transform", "5) Committee indexes", elapsed_committee, committee_detail))
     vote_detail = f"{vote_event_count} vote events"
     if bills_with_votes > 0:
         vote_detail += f" ({bills_with_votes} bills)"
     if elapsed_votes < 0.1 and vote_event_count > 0:
         vote_detail += f" {c.DIM}(cached){c.RESET}"
-    lines.append(
-        row("Transform", "6) Vote event index + normalize", elapsed_votes, vote_detail)
-    )
+    lines.append(row("Transform", "6) Vote event index + normalize", elapsed_votes, vote_detail))
     voting_records_detail = (
         f"{member_vote_record_count} members, {category_bill_set_count} category bill sets"
     )

@@ -209,7 +209,10 @@ def load_or_scrape_data(
     # ── EXTRACT: bills ───────────────────────────────────────────────────
     if members_only:
         bills_lookup = load_bill_cache(seed_fallback=seed_mode) or {}
-        LOGGER.info("Members-only mode: loaded %d bills from cache (no bill scrape).", len(bills_lookup))
+        LOGGER.info(
+            "Members-only mode: loaded %d bills from cache (no bill scrape).",
+            len(bills_lookup),
+        )
     elif incremental:
         LOGGER.info("Incremental bill scrape (SB limit=%d, HB limit=%d)...", sb_limit, hb_limit)
         bills_lookup = incremental_bill_scrape(

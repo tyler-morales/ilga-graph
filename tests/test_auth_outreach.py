@@ -142,7 +142,9 @@ class TestOutreachRecord:
         assert resp.status_code == 401
         assert resp.json().get("ok") is False
 
-    def test_record_invalid_kind_returns_400(self, client: TestClient, authed_client: TestClient) -> None:
+    def test_record_invalid_kind_returns_400(
+        self, client: TestClient, authed_client: TestClient
+    ) -> None:
         resp = authed_client.post(
             "/outreach/record",
             data={"member_id": "1234", "kind": "invalid", "zip_code": "60601"},
@@ -203,12 +205,10 @@ class TestOutreachRecord:
         self, client: TestClient, test_db_path: Path
     ) -> None:
         import asyncio
-        import hashlib
-        from datetime import datetime, timedelta, timezone
 
         from sqlalchemy import select
 
-        from ilga_graph.db_models import AuthCode, OutreachEvent
+        from ilga_graph.db_models import OutreachEvent
 
         email = "support@example.com"
         code = "111222"
@@ -227,6 +227,7 @@ class TestOutreachRecord:
                 "constituent": "1",
             },
         )
+
         async def check():
             async with db_mod.async_session_factory() as session:
                 r = await session.execute(
@@ -286,9 +287,7 @@ class TestOutreachStats:
         assert data["no_answers"] == 0
         assert data["total"] == 0
 
-    def test_stats_aggregates_after_record(
-        self, client: TestClient, test_db_path: Path
-    ) -> None:
+    def test_stats_aggregates_after_record(self, client: TestClient, test_db_path: Path) -> None:
         import asyncio
 
         email = "stats@example.com"

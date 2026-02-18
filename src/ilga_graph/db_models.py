@@ -51,11 +51,12 @@ class OutreachEvent(Base):
     zip_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
     outcome: Mapped[str | None] = mapped_column(String(64), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    contact_name: Mapped[str | None] = mapped_column(String(128), nullable=True)  # person who picked up / was contacted
-    support_score: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 1=opposed, 2=skeptical, 3=neutral, 4=interested, 5=champion
-    constituent: Mapped[bool | None] = mapped_column(Boolean, nullable=True)  # was advocate a constituent of this rep?
+    # person who picked up / was contacted
+    contact_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # 1=opposed, 2=skeptical, 3=neutral, 4=interested, 5=champion
+    support_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # was advocate a constituent of this rep?
+    constituent: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
-    __table_args__ = (
-        Index("ix_outreach_member_kind", "member_id", "kind"),
-    )
+    __table_args__ = (Index("ix_outreach_member_kind", "member_id", "kind"),)
