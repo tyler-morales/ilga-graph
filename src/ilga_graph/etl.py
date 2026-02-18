@@ -165,6 +165,11 @@ def load_or_scrape_data(
     hb_limit: int = 100,
     save_cache: bool = True,
     force_full_index: bool = False,
+    members_only: bool = False,
+    include_votes: bool = True,
+    include_slips: bool = True,
+    include_fulltext: bool = False,
+    max_workers: int = 10,
 ) -> ScrapedData:
     """Load data from cache/seed or scrape from ilga.gov.
 
@@ -175,6 +180,11 @@ def load_or_scrape_data(
         at the end.  Set to False when the caller will do additional
         transformations (e.g. merging vote events / witness slips) before
         saving — avoids writing an incomplete intermediate cache.
+    members_only:
+        If True, only fetch members (and committees). Load bills from cache
+        if present; do not run bill index or bill-detail scrape. Use to
+        repopulate members (e.g. after deleting members.json) without
+        re-scraping bills.
     """
     request_delay = 0.25 if dev_mode else 0.5
 
@@ -197,14 +207,21 @@ def load_or_scrape_data(
             members.append(test_member)
 
     # ── EXTRACT: bills ───────────────────────────────────────────────────
-    if incremental:
+    if members_only:
+        bills_lookup = load_bill_cache(seed_fallback=seed_mode) or {}
+        LOGGER.info("Members-only mode: loaded %d bills from cache (no bill scrape).", len(bills_lookup))
+    elif incremental:
         LOGGER.info("Incremental bill scrape (SB limit=%d, HB limit=%d)...", sb_limit, hb_limit)
         bills_lookup = incremental_bill_scrape(
             sb_limit=sb_limit,
             hb_limit=hb_limit,
             request_delay=request_delay,
+            max_workers=max_workers,
             rescrape_recent_days=30,
             force_full=force_full_index,
+            include_votes=include_votes,
+            include_slips=include_slips,
+            include_fulltext=include_fulltext,
         )
     else:
         bills_lookup = load_bill_cache(seed_fallback=seed_mode)

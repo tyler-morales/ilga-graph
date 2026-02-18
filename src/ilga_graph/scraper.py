@@ -300,6 +300,7 @@ def _member_metadata_dict(m: Member) -> dict:
         "id": m.id,
         "name": m.name,
         "member_url": m.member_url,
+        "photo_url": m.photo_url or "",
         "chamber": m.chamber,
         "party": m.party,
         "district": m.district,
@@ -384,6 +385,7 @@ def load_normalized_cache(
             id=d["id"],
             name=d["name"],
             member_url=d["member_url"],
+            photo_url=d.get("photo_url", "") or "",
             chamber=d["chamber"],
             party=d["party"],
             district=d["district"],
@@ -856,6 +858,7 @@ class ILGAScraper:
         associated_members = self._extract_associated_members(soup, text_lines)
         offices, email = self._extract_offices_and_email(soup)
         career_ranges = self._parse_career_ranges(career_timeline_text)
+        photo_url = self._extract_photo_url(soup, url)
 
         committees = self._extract_committees_table(soup)
         if not committees:
@@ -883,6 +886,7 @@ class ILGAScraper:
             id=_member_id_from_url(url),
             name=name,
             member_url=url,
+            photo_url=photo_url,
             chamber=chamber,
             party=party,
             role=role,
@@ -969,6 +973,16 @@ class ILGAScraper:
                 continue
             seen_ids.add(mid)
             yield full_url
+
+    def _extract_photo_url(self, soup: BeautifulSoup, page_url: str) -> str:
+        """Extract member photo URL from img.member-photo on the detail page."""
+        img = soup.find("img", class_=lambda c: c and "member-photo" in (c if isinstance(c, str) else " ".join(c)))
+        if not img or not img.get("src"):
+            return ""
+        src = img["src"].strip()
+        if not src:
+            return ""
+        return urljoin(page_url, src)
 
     def _extract_name(self, soup: BeautifulSoup) -> str | None:
         matched_header = self._find_name_party_header(soup)

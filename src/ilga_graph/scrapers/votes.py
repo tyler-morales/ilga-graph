@@ -157,7 +157,7 @@ def scrape_vote_pdf(
 ) -> dict[str, Any]:
     """Download a vote PDF and parse it into structured vote data."""
     sess = session or requests.Session()
-    LOGGER.info("  Downloading vote PDF: %s", pdf_url)
+    LOGGER.debug("  Downloading vote PDF: %s", pdf_url)
     t0 = time.perf_counter()
 
     resp = sess.get(pdf_url, timeout=timeout)
@@ -182,7 +182,7 @@ def scrape_vote_pdf(
     _total_votes = (
         len(result["yeas"]) + len(result["nays"]) + len(result["present"]) + len(result["nv"])
     )
-    LOGGER.info(
+    LOGGER.debug(
         "    PDF parsed: %d Y, %d N, %d P, %d NV  (download %.0fms, parse %.0fms)",
         len(result["yeas"]),
         len(result["nays"]),
@@ -302,63 +302,41 @@ def _extract_date_from_label(label: str) -> str:
 # ── Public API ───────────────────────────────────────────────────────────────
 
 
-def scrape_bill_votes(
+def scrape_votes_from_html(
+    bill_status_html: str,
     bill_status_url: str,
     session: requests.Session | None = None,
     timeout: int = 20,
     request_delay: float = 0.5,
 ) -> list[VoteEvent]:
-    """Scrape all vote PDFs for a single bill.
+    """Scrape vote PDFs using an already-fetched BillStatus HTML page.
 
-    Args:
-        bill_status_url: URL to the bill status page (BillStatus?DocNum=...).
-        session: Optional requests session for connection reuse.
-        timeout: HTTP timeout in seconds.
-        request_delay: Delay between requests to avoid rate-limiting.
-
-    Returns:
-        List of VoteEvent objects (floor + committee), ordered chronologically.
+    This avoids re-fetching the main BillStatus page when the caller
+    (e.g. ``scrape_bill_complete``) already has the HTML.
     """
     sess = session or requests.Session()
-    t_bill_start = time.perf_counter()
 
-    # Step 1: Get bill status page, extract Votes tab URL
-    LOGGER.info("Fetching bill status: %s", bill_status_url)
-    resp = sess.get(bill_status_url, timeout=timeout)
-    resp.raise_for_status()
-    time.sleep(request_delay)
-
-    votes_url = _extract_votes_tab_url(resp.text, bill_status_url)
+    votes_url = _extract_votes_tab_url(bill_status_html, bill_status_url)
     if not votes_url:
-        LOGGER.warning("  No 'Votes' tab found on bill status page.")
         return []
 
-    # Step 2: Get vote history page
-    LOGGER.info("  Fetching vote history: %s", votes_url)
     resp = sess.get(votes_url, timeout=timeout)
     resp.raise_for_status()
     time.sleep(request_delay)
 
-    # Step 3: Parse all PDF links from both tables
     pdf_infos = _parse_vote_history_page(resp.text, votes_url)
     if not pdf_infos:
-        LOGGER.info("  No vote PDFs found for this bill.")
         return []
 
-    LOGGER.info("  Found %d vote PDFs to process.", len(pdf_infos))
-
-    # Step 4: Download and parse each PDF
     events: list[VoteEvent] = []
     for info in pdf_infos:
         time.sleep(request_delay)
         try:
             parsed = scrape_vote_pdf(info["pdf_url"], session=sess, timeout=timeout)
 
-            # Build bill_number from the label (first part before ' - ')
             label_parts = info["label"].split(" - ")
             bill_number = label_parts[0].strip() if label_parts else ""
 
-            # Use label-derived metadata, fall back to PDF-parsed metadata
             description = _extract_description_from_label(info["label"])
             date = _extract_date_from_label(info["label"]) or parsed.get("date", "")
 
@@ -377,6 +355,34 @@ def scrape_bill_votes(
             events.append(event)
         except Exception:
             LOGGER.exception("  Failed to parse vote PDF: %s", info["pdf_url"])
+
+    return events
+
+
+def scrape_bill_votes(
+    bill_status_url: str,
+    session: requests.Session | None = None,
+    timeout: int = 20,
+    request_delay: float = 0.5,
+) -> list[VoteEvent]:
+    """Scrape all vote PDFs for a single bill.
+
+    Fetches the BillStatus page then delegates to
+    :func:`scrape_votes_from_html`.  When the caller already has the
+    HTML, call ``scrape_votes_from_html`` directly to avoid the
+    duplicate fetch.
+    """
+    sess = session or requests.Session()
+    t_bill_start = time.perf_counter()
+
+    LOGGER.info("Fetching bill status: %s", bill_status_url)
+    resp = sess.get(bill_status_url, timeout=timeout)
+    resp.raise_for_status()
+    time.sleep(request_delay)
+
+    events = scrape_votes_from_html(
+        resp.text, bill_status_url, session=sess, timeout=timeout, request_delay=request_delay
+    )
 
     elapsed_ms = (time.perf_counter() - t_bill_start) * 1000
     LOGGER.info(

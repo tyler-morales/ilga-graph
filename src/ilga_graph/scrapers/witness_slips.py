@@ -169,7 +169,7 @@ def scrape_witness_slips(
 
     # Step 1: Fetch the WitnessSlips tab page
     ws_url = _witness_slips_tab_url(bill_status_url)
-    LOGGER.info("Fetching witness slips page: %s", ws_url)
+    LOGGER.debug("Fetching witness slips page: %s", ws_url)
     resp = sess.get(ws_url, timeout=timeout)
     resp.raise_for_status()
     time.sleep(request_delay)
@@ -180,13 +180,13 @@ def scrape_witness_slips(
         LOGGER.warning("  No LegDocId links found on witness slips page.")
         return []
 
-    LOGGER.info("  Found %d bill version(s) with witness slips.", len(leg_doc_ids))
+    LOGGER.debug("  Found %d bill version(s) with witness slips.", len(leg_doc_ids))
 
     # Step 3: Fetch export data for each LegDocId
     all_slips: list[WitnessSlip] = []
     for leg_doc_id, label in leg_doc_ids:
         export_url = f"{EXPORT_BASE}?legdocid={leg_doc_id}&legislationname={label}"
-        LOGGER.info("  Fetching export for %s (LegDocId=%s)", label, leg_doc_id)
+        LOGGER.debug("  Fetching export for %s (LegDocId=%s)", label, leg_doc_id)
 
         try:
             resp = sess.get(export_url, timeout=timeout)
@@ -194,7 +194,7 @@ def scrape_witness_slips(
             time.sleep(request_delay)
 
             slips = _parse_export_text(resp.text)
-            LOGGER.info("    Parsed %d witness slips.", len(slips))
+            LOGGER.debug("    Parsed %d witness slips.", len(slips))
             all_slips.extend(slips)
         except Exception:
             LOGGER.exception("  Failed to fetch/parse export for LegDocId=%s", leg_doc_id)
@@ -207,7 +207,7 @@ def scrape_witness_slips(
                 slip.bill_number = parent_bill
 
     elapsed_ms = (time.perf_counter() - t_start) * 1000
-    LOGGER.info(
+    LOGGER.debug(
         "Witness slips complete: %d total slips for %s in %.0fms",
         len(all_slips),
         parent_bill or "unknown bill",

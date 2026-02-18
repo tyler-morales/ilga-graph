@@ -33,7 +33,6 @@ Target: Binary -- 1 if bill passed committee (advanced), 0 if stuck/dead.
 from __future__ import annotations
 
 import logging
-import os
 import re
 from datetime import datetime
 from datetime import timedelta as _timedelta
@@ -67,12 +66,6 @@ SNAPSHOT_DAYS_AFTER_INTRO = [30, 60, 90]
 # reliable label.  E.g. snapshot at day 60 + 90 observation = bill must
 # be at least 150 days old for this snapshot row to be usable.
 OBSERVATION_DAYS_AFTER_SNAPSHOT = 90
-
-# ── Full-text feature caps (keeps signal, limits matrix size and runtime) ──────
-# Override with ILGA_ML_FULLTEXT_MAX_FEATURES and ILGA_ML_FULLTEXT_MAX_TOKENS.
-# Lower values = faster training; higher = more text signal (diminishing returns).
-FULLTEXT_MAX_FEATURES = int(os.environ.get("ILGA_ML_FULLTEXT_MAX_FEATURES", "400"))
-FULLTEXT_MAX_TOKENS = int(os.environ.get("ILGA_ML_FULLTEXT_MAX_TOKENS", "2000"))
 
 # ── Action-based outcome classification ──────────────────────────────────────
 #
@@ -749,107 +742,6 @@ def build_text_features(
     tfidf_matrix = vectorizer.fit_transform(cleaned)
     LOGGER.info(
         "TF-IDF: %d bills x %d features",
-        tfidf_matrix.shape[0],
-        tfidf_matrix.shape[1],
-    )
-
-    return tfidf_matrix, vectorizer, bill_ids
-
-
-# ── Legislative boilerplate patterns (for full-text cleaning) ────────────────
-
-_RE_LEGISLATIVE_BOILERPLATE = re.compile(
-    r"(?:"
-    r"AN ACT concerning[^.]*\."
-    r"|Be it enacted by the People of the State of Illinois[^.]*\."
-    r"|ARTICLE \d+"
-    r"|WHEREAS[,;]"
-    r"|NOW,?\s*THEREFORE"
-    r"|Section \d+[\-.]?\d*\."
-    r")",
-    re.IGNORECASE,
-)
-
-
-def build_full_text_features(
-    df_bills: pl.DataFrame,
-    max_features: int | None = None,
-    max_tokens: int | None = None,
-) -> tuple[np.ndarray, TfidfVectorizer, list[str]]:
-    """Build TF-IDF features from full bill text.
-
-    Uses module-level FULLTEXT_MAX_FEATURES and FULLTEXT_MAX_TOKENS (env-overridable)
-    when max_features/max_tokens are None, so we cap size and runtime by default.
-
-    Handles the extreme length variance (sub-1-page to 500+ pages) with:
-    - Truncation to first ``max_tokens`` words
-    - ``sublinear_tf=True`` to dampen long-bill term dominance
-    - ``norm='l2'`` so long and short bills have equal weight
-    - Higher ``min_df`` / lower ``max_df`` than synopsis to filter legal boilerplate
-
-    Returns (tfidf_matrix, fitted_vectorizer, bill_ids).
-    When no bills have full_text, returns a zero sparse matrix.
-    """
-    if max_features is None:
-        max_features = FULLTEXT_MAX_FEATURES
-    if max_tokens is None:
-        max_tokens = FULLTEXT_MAX_TOKENS
-
-    bill_ids = df_bills["bill_id"].to_list()
-
-    # Check if full_text column exists
-    if "full_text" not in df_bills.columns:
-        LOGGER.info("Full-text TF-IDF: no full_text column — returning zeros.")
-        zero_matrix = csr_matrix((len(bill_ids), 0), dtype=np.float32)
-        vectorizer = TfidfVectorizer()
-        return zero_matrix, vectorizer, bill_ids
-
-    texts = df_bills["full_text"].fill_null("").to_list()
-
-    # Check if any bills have text
-    non_empty = sum(1 for t in texts if t and len(t) > 10 and not t.startswith("[SKIPPED:"))
-    if non_empty == 0:
-        LOGGER.info("Full-text TF-IDF: 0 bills have full_text — returning zeros.")
-        zero_matrix = csr_matrix((len(bill_ids), 0), dtype=np.float32)
-        vectorizer = TfidfVectorizer()
-        return zero_matrix, vectorizer, bill_ids
-
-    LOGGER.info(
-        "Full-text TF-IDF: %d of %d bills have full_text (max %d features, %d tokens/bill).",
-        non_empty,
-        len(bill_ids),
-        max_features,
-        max_tokens,
-    )
-
-    # Clean and truncate
-    cleaned = []
-    for t in texts:
-        if not t or t.startswith("[SKIPPED:"):
-            cleaned.append("")
-            continue
-        # Strip legislative boilerplate
-        t = _RE_LEGISLATIVE_BOILERPLATE.sub(" ", t)
-        # Collapse whitespace
-        t = re.sub(r"\s+", " ", t).strip()
-        # Truncate to first max_tokens words
-        tokens = t.split()[:max_tokens]
-        text = " ".join(tokens) if len(tokens) > 5 else ""
-        cleaned.append(text)
-
-    vectorizer = TfidfVectorizer(
-        max_features=max_features,
-        stop_words="english",
-        min_df=5,
-        max_df=0.7,
-        ngram_range=(1, 2),
-        sublinear_tf=True,  # log(tf) to dampen long-bill dominance
-        norm="l2",  # normalize so long and short bills have equal weight
-    )
-
-    tfidf_matrix = vectorizer.fit_transform(cleaned)
-    LOGGER.info(
-        "Full-text TF-IDF: %d bills x %d features",
         tfidf_matrix.shape[0],
         tfidf_matrix.shape[1],
     )

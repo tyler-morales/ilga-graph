@@ -51,7 +51,8 @@ _BILL_NUM_RE = re.compile(r"^([A-Z]+)\s*0*(\d+)(?:\s*\((.+)\))?$")
 
 def _parse_bill_number(raw: str) -> tuple[str, int | None, str]:
     """Parse 'SB0009' -> ('SB', 9, '') or 'HB123 (SCA1)' -> ('HB', 123, 'SCA1')."""
-    m = _BILL_NUM_RE.match(raw.strip())
+    raw = str(raw).strip() if raw is not None else ""
+    m = _BILL_NUM_RE.match(raw)
     if m:
         return m.group(1), int(m.group(2)), m.group(3) or ""
     return raw, None, ""
@@ -166,7 +167,7 @@ def process_bills() -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFr
     slip_rows = []
 
     for leg_id, b in bills_raw.items():
-        bill_number_raw = b.get("bill_number", "")
+        bill_number_raw = str(b.get("bill_number", "") or "")
         bill_type, bill_number_int, amendment_suffix = _parse_bill_number(bill_number_raw)
 
         # Find introduction date from first action
@@ -174,9 +175,10 @@ def process_bills() -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFr
         if b.get("action_history"):
             introduction_date = _parse_date_str(b["action_history"][0].get("date", ""))
 
-        # Primary sponsor ID = first in sponsor_ids
+        # Primary sponsor ID = first in sponsor_ids (normalize to str for consistent Polars schema)
         sponsor_ids = b.get("sponsor_ids", [])
-        primary_sponsor_id = sponsor_ids[0] if sponsor_ids else None
+        _pid = sponsor_ids[0] if sponsor_ids else None
+        primary_sponsor_id = str(_pid) if _pid is not None else None
 
         # Chamber: map S->Senate, H->House
         chamber_raw = b.get("chamber", "")
@@ -327,8 +329,41 @@ def process_bills() -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFr
 
     # ── Write parquet files ──────────────────────────────────────────────
 
-    # dim_bills
-    df_bills = pl.DataFrame(bill_rows) if bill_rows else pl.DataFrame()
+    # dim_bills (explicit schema so mixed int/str from JSON don't break inference)
+    _bill_schema = {
+        "bill_id": pl.String,
+        "bill_number_raw": pl.String,
+        "bill_type": pl.String,
+        "bill_number_int": pl.Int64,
+        "amendment_suffix": pl.String,
+        "description": pl.String,
+        "synopsis_text": pl.String,
+        "chamber_origin": pl.String,
+        "primary_sponsor": pl.String,
+        "primary_sponsor_id": pl.String,
+        "introduction_date": pl.String,
+        "last_action": pl.String,
+        "last_action_date": pl.String,
+        "sponsor_count": pl.Int64,
+        "status_url": pl.String,
+        "full_text": pl.String,
+    }
+    if bill_rows:
+        # Normalize types to match schema (e.g. primary_sponsor_id str, bill_number_int int)
+        normalized = []
+        for r in bill_rows:
+            nr = dict(r)
+            if nr.get("bill_number_int") is not None and not isinstance(nr["bill_number_int"], int):
+                try:
+                    nr["bill_number_int"] = int(nr["bill_number_int"])
+                except (TypeError, ValueError):
+                    nr["bill_number_int"] = None
+            if nr.get("primary_sponsor_id") is not None:
+                nr["primary_sponsor_id"] = str(nr["primary_sponsor_id"])
+            normalized.append(nr)
+        df_bills = pl.DataFrame(normalized, schema=_bill_schema)
+    else:
+        df_bills = pl.DataFrame(schema=_bill_schema)
     df_bills.write_parquet(PROCESSED_DIR / "dim_bills.parquet")
     LOGGER.info("  dim_bills: %d rows", len(df_bills))
 
