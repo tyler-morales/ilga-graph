@@ -3,7 +3,12 @@
     "code": "SAGR",
     "name": "Agriculture",
     "parent_code": null,
-    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3069"
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3069",
+    "roster": [
+      {"member_id": "3317", "member_name": "Cristina Castro", "member_url": "https://www.ilga.gov/Senate/Members/Details/3317", "role": "Member"},
+      {"member_id": "3312", "member_name": "Neil Anderson", "member_url": "https://www.ilga.gov/Senate/Members/Details/3312", "role": "Member"}
+    ],
+    "bill_numbers": ["SB3974", "SB3819", "SB3891"]
   },
   {
     "code": "APED",
@@ -33,7 +38,12 @@
     "code": "SCOA",
     "name": "Assignments * Reports",
     "parent_code": null,
-    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3086"
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3086",
+    "roster": [
+      {"member_id": "3291", "member_name": "Bill Cunningham", "member_url": "https://www.ilga.gov/Senate/Members/Details/3291", "role": "Member"},
+      {"member_id": "3312", "member_name": "Neil Anderson", "member_url": "https://www.ilga.gov/Senate/Members/Details/3312", "role": "Member"}
+    ],
+    "bill_numbers": ["SB3974", "SB3975", "SB4017", "SB3819"]
   },
   {
     "code": "SBMH",
@@ -93,7 +103,13 @@
     "code": "SENE",
     "name": "Energy and Public Utilities",
     "parent_code": null,
-    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3087"
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3087",
+    "roster": [
+      {"member_id": "3291", "member_name": "Bill Cunningham", "member_url": "https://www.ilga.gov/Senate/Members/Details/3291", "role": "Member"},
+      {"member_id": "3317", "member_name": "Cristina Castro", "member_url": "https://www.ilga.gov/Senate/Members/Details/3317", "role": "Member"},
+      {"member_id": "3312", "member_name": "Neil Anderson", "member_url": "https://www.ilga.gov/Senate/Members/Details/3312", "role": "Member"}
+    ],
+    "bill_numbers": ["SB3936", "SB4022", "SB4023"]
   },
   {
     "code": "SNVR",
@@ -105,13 +121,25 @@
     "code": "SEXC",
     "name": "Executive",
     "parent_code": null,
-    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3072"
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3072",
+    "roster": [
+      {"member_id": "3291", "member_name": "Bill Cunningham", "member_url": "https://www.ilga.gov/Senate/Members/Details/3291", "role": "Member"},
+      {"member_id": "3329", "member_name": "John F. Curran", "member_url": "https://www.ilga.gov/Senate/Members/Details/3329", "role": "Member"},
+      {"member_id": "3317", "member_name": "Cristina Castro", "member_url": "https://www.ilga.gov/Senate/Members/Details/3317", "role": "Member"},
+      {"member_id": "3312", "member_name": "Neil Anderson", "member_url": "https://www.ilga.gov/Senate/Members/Details/3312", "role": "Member"}
+    ],
+    "bill_numbers": ["SB3974", "SB3845", "SB4017", "SB3819"]
   },
   {
     "code": "SEXC-AISM",
     "name": "AI and Social Media",
     "parent_code": "SEXC",
-    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3206"
+    "members_list_url": "https://www.ilga.gov/Senate/Committees/MembersList/3206",
+    "roster": [
+      {"member_id": "3291", "member_name": "Bill Cunningham", "member_url": "https://www.ilga.gov/Senate/Members/Details/3291", "role": "Chair"},
+      {"member_id": "3317", "member_name": "Cristina Castro", "member_url": "https://www.ilga.gov/Senate/Members/Details/3317", "role": "Member"}
+    ],
+    "bill_numbers": ["SB3974", "SB3975", "SB3976"]
   },
   {
     "code": "SEXC-SCAN",
