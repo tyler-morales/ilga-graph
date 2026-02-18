@@ -30,6 +30,7 @@ Thumbs.db
 # Project
 name_map.json
 cache/
+cache.bak/
 data/
 .startup_timings.csv
 .run_log.jsonl
