@@ -196,7 +196,7 @@ def main():
     parser.add_argument(
         "--fast",
         action="store_true",
-        help="Use shorter request delay (0.15s instead of 0.5s)",
+        help="Use shorter request delay (0.1s instead of 0.5s)",
     )
     parser.add_argument(
         "--delay",
@@ -310,7 +310,7 @@ def main():
     if args.delay is not None:
         delay = args.delay
     elif args.fast:
-        delay = 0.15
+        delay = 0.1
     else:
         delay = 0.5
 

@@ -270,6 +270,20 @@ make clean          # remove cache/ and vault files
 
 **Before opening a PR:** run `make lint` and `make test`.
 
+### Documentation site
+
+The project includes a **MkDocs Material** doc site in `docs/` (user guides, development internals, and pipeline testing).
+
+| Command | What it does |
+|---------|----------------|
+| `make docs` | Build the site to `site/` (static HTML). |
+| `make docs-serve` | Serve the docs at **http://127.0.0.1:8001** (port 8001 so it doesn’t clash with `make dev` on 8000). |
+
+Install doc dependencies first: `pip install -e ".[docs]"` (or add `docs` to your install, e.g. `pip install -e ".[dev,docs]"`). Then run `make docs-serve` and open the URL above. The site includes:
+
+- **User guide:** Advocacy Test Mode — how to skip the normal flow and jump to the call script or email drawer.
+- **Development:** Advocacy Test Mode internals (URL contract, routes, templates, auto-open behavior) and bills-first pipeline testing.
+
 ### Environment Variables
 
 Copy [`.env.example`](.env.example) to `.env` in the project root. The app loads it via `python-dotenv`.

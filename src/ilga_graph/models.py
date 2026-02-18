@@ -71,6 +71,7 @@ class Member:
     district: str
     bio_text: str
     role: str = ""
+    photo_url: str = ""  # CDN URL from member detail page (img.member-photo)
     career_timeline_text: str = ""
     career_ranges: list[CareerRange] = field(default_factory=list)
     committees: list[str] = field(default_factory=list)

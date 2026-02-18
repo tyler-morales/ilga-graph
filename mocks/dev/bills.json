@@ -6,7 +6,25 @@
     "chamber": "S",
     "last_action": "Referred to Assignments",
     "last_action_date": "2/6/2026",
-    "primary_sponsor": "Omar Aquino"
+    "primary_sponsor": "Omar Aquino",
+    "action_history": [
+      {"date": "2/6/2026", "chamber": "S", "action": "Referred to Assignments"}
+    ],
+    "vote_events": [
+      {
+        "bill_number": "SB3974",
+        "date": "2/10/2026",
+        "description": "Third Reading",
+        "chamber": "S",
+        "yea_votes": ["Bill Cunningham", "Cristina Castro", "Christopher Belt"],
+        "nay_votes": ["Neil Anderson"],
+        "present_votes": [],
+        "nv_votes": [],
+        "pdf_url": "",
+        "vote_type": "floor"
+      }
+    ],
+    "witness_slips": []
   },
   "167472": {
     "bill_number": "SB3975",
@@ -15,7 +33,25 @@
     "chamber": "S",
     "last_action": "Referred to Assignments",
     "last_action_date": "2/6/2026",
-    "primary_sponsor": "Omar Aquino"
+    "primary_sponsor": "Omar Aquino",
+    "action_history": [
+      {"date": "2/6/2026", "chamber": "S", "action": "Referred to Assignments"}
+    ],
+    "vote_events": [
+      {
+        "bill_number": "SB3975",
+        "date": "2/11/2026",
+        "description": "Third Reading",
+        "chamber": "S",
+        "yea_votes": ["Bill Cunningham", "Cristina Castro"],
+        "nay_votes": ["Neil Anderson", "John F. Curran"],
+        "present_votes": [],
+        "nv_votes": [],
+        "pdf_url": "",
+        "vote_type": "floor"
+      }
+    ],
+    "witness_slips": []
   },
   "167473": {
     "bill_number": "SB3976",
@@ -33,7 +69,25 @@
     "chamber": "S",
     "last_action": "Referred to Assignments",
     "last_action_date": "2/6/2026",
-    "primary_sponsor": "Neil Anderson"
+    "primary_sponsor": "Neil Anderson",
+    "action_history": [
+      {"date": "2/6/2026", "chamber": "S", "action": "Referred to Assignments"}
+    ],
+    "vote_events": [
+      {
+        "bill_number": "SB3819",
+        "date": "2/12/2026",
+        "description": "Third Reading",
+        "chamber": "S",
+        "yea_votes": ["Neil Anderson", "John F. Curran"],
+        "nay_votes": ["Bill Cunningham"],
+        "present_votes": ["Cristina Castro"],
+        "nv_votes": [],
+        "pdf_url": "",
+        "vote_type": "floor"
+      }
+    ],
+    "witness_slips": []
   },
   "167334": {
     "bill_number": "SB3891",
@@ -42,7 +96,25 @@
     "chamber": "S",
     "last_action": "Referred to Assignments",
     "last_action_date": "2/6/2026",
-    "primary_sponsor": "Neil Anderson"
+    "primary_sponsor": "Neil Anderson",
+    "action_history": [
+      {"date": "2/6/2026", "chamber": "S", "action": "Referred to Assignments"}
+    ],
+    "vote_events": [
+      {
+        "bill_number": "SB3891",
+        "date": "2/13/2026",
+        "description": "Third Reading",
+        "chamber": "S",
+        "yea_votes": ["Neil Anderson", "Bill Cunningham", "Christopher Belt"],
+        "nay_votes": [],
+        "present_votes": [],
+        "nv_votes": [],
+        "pdf_url": "",
+        "vote_type": "floor"
+      }
+    ],
+    "witness_slips": []
   },
   "167335": {
     "bill_number": "SB3892",

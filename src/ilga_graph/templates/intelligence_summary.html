@@ -32,33 +32,40 @@
         {% endif %}
     </div>
     <div class="intel-confidence-right">
-        <span class="intel-confidence-detail">{{ total_bills_scored }} bills scored &middot; {{ n_coalitions }} voting blocs &middot; {{ flagged_anomalies }} anomalies flagged</span>
+        <span class="intel-confidence-detail">{{ total_bills_scored }} bills scored &middot; {{ n_coalitions }} voting
+            blocs &middot; {{ flagged_anomalies }} anomalies flagged</span>
     </div>
 </div>
 
 {# ── Bills to Watch ──────────────────────────────────────────────── #}
 <div class="story-section">
     <h2>Bills to Watch</h2>
-    <p class="story-subtitle">Open bills with the most interesting ML signals — high confidence forecasts, surprise predictions, and bills at critical junctures.</p>
+    <p class="story-subtitle">Open bills with the most interesting ML signals — high confidence forecasts, surprise
+        predictions, and bills at critical junctures.</p>
 
     {% if bills_to_watch %}
     <div class="story-card-grid">
         {% for bill in bills_to_watch %}
         <a href="/intelligence/bill/{{ bill.bill_id }}" class="story-card story-card-bill">
             <div class="story-card-header">
-                <span class="dest-badge dest-{{ (bill.predicted_destination or 'Stuck')|lower|replace('→ ', '')|replace(' ', '-') }}">
+                <span
+                    class="dest-badge dest-{{ (bill.predicted_destination or 'Stuck')|lower|replace('→ ', '')|replace(' ', '-') }}">
                     {{ bill.predicted_destination or bill.predicted_outcome }}
                 </span>
                 <span class="story-card-confidence">{{ "%.0f"|format(bill.confidence * 100) }}%</span>
             </div>
             <h3 class="story-card-title">{{ bill.bill_number }}</h3>
-            <p class="story-card-desc">{{ bill.description[:80] }}{% if bill.description|length > 80 %}&hellip;{% endif %}</p>
+            <p class="story-card-desc">{{ bill.description[:80] }}{% if bill.description|length > 80 %}&hellip;{% endif
+                %}</p>
             <div class="story-card-meta">
                 <span>{{ bill.sponsor }}</span>
                 <span class="story-card-stage">{{ bill.stage_label }}</span>
                 {% if bill.forecast_score > 0 %}
-                <span title="P(law) at intro — sponsor and topic only; no progress or delay">Forecast: {{ "%.0f"|format(bill.forecast_score * 100) }}%
-                    {% if bill.forecast_confidence %}<small class="forecast-conf forecast-{{ bill.forecast_confidence|lower }}">{{ bill.forecast_confidence }}</small>{% endif %}
+                <span title="P(law) at intro — sponsor and topic only; no progress or delay">Forecast: {{
+                    "%.0f"|format(bill.forecast_score * 100) }}%
+                    {% if bill.forecast_confidence %}<small
+                        class="forecast-conf forecast-{{ bill.forecast_confidence|lower }}">{{ bill.forecast_confidence
+                        }}</small>{% endif %}
                 </span>
                 {% endif %}
             </div>
@@ -76,7 +83,8 @@
 {# ── Power Movers ────────────────────────────────────────────────── #}
 <div class="story-section">
     <h2>Power Movers</h2>
-    <p class="story-subtitle">Legislators with the highest true influence — combining bill effectiveness, network position, swing votes, and ML-predicted sponsor pull.</p>
+    <p class="story-subtitle">Legislators with the highest true influence — combining bill effectiveness, network
+        position, swing votes, and ML-predicted sponsor pull.</p>
 
     {% if power_movers %}
     <div class="story-card-grid">
@@ -90,7 +98,7 @@
             <p class="story-card-meta">{{ m.party }} &middot; {{ m.chamber }} District {{ m.district }}</p>
             <div class="story-card-score-bar">
                 <div class="story-score-fill {% if m.score >= 60 %}score-bar-high{% elif m.score >= 30 %}score-bar-moderate{% else %}score-bar-low{% endif %}"
-                     style="width: {{ m.score }}%"></div>
+                    style="width: {{ m.score }}%"></div>
                 <span class="story-score-text">{{ "%.0f"|format(m.score) }}</span>
             </div>
             {% if m.signals %}
@@ -111,7 +119,8 @@
 {# ── Coalition Landscape ─────────────────────────────────────────── #}
 <div class="story-section">
     <h2>Coalition Landscape</h2>
-    <p class="story-subtitle">{{ n_coalitions }} voting blocs discovered by ML. These are groups of legislators who consistently vote together.</p>
+    <p class="story-subtitle">{{ n_coalitions }} voting blocs discovered by ML. These are groups of legislators who
+        consistently vote together.</p>
 
     {% if coalitions_summary %}
     <div class="story-coalition-grid">
@@ -158,7 +167,8 @@
         {% for a in top_anomalies %}
         <div class="story-anomaly-row">
             <strong>{{ a.bill_number }}</strong>
-            <span class="story-anomaly-desc">{{ a.description[:60] }}{% if a.description|length > 60 %}&hellip;{% endif %}</span>
+            <span class="story-anomaly-desc">{{ a.description[:60] }}{% if a.description|length > 60 %}&hellip;{% endif
+                %}</span>
             <span class="story-anomaly-reason">{{ a.reason }}</span>
             <span class="story-anomaly-slips">{{ a.total_slips }} slips</span>
         </div>

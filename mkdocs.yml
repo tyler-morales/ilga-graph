@@ -1,0 +1,57 @@
+# ILGA Graph — documentation site
+# Serve: mkdocs serve   Build: mkdocs build
+
+site_name: ILGA Graph Docs
+site_description: Documentation for the ILGA Graph proof-of-concept
+site_url: https://github.com/your-org/ilga_graph_poc  # optional
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Features:
+    - App overview: features/app-overview.md
+  - User guide:
+    - Advocacy Test Mode: user-guide/advocacy-test-mode.md
+  - Reference:
+    - CLI (Make): reference/cli-make.md
+    - Deployment: reference/deployment.md
+    - Environment variables: reference/environment-variables.md
+    - GraphQL API: reference/graphql.md
+    - Project structure: reference/project-structure.md
+    - Status report: reference/status-report.md
+  - Development:
+    - Advocacy Test Mode (internals): development/advocacy-test-mode-internals.md
+    - Bills-first pipeline testing: BILLS_FIRST_TESTING.md
+    - DB and outreach: development/db-and-outreach.md
+
+plugins:
+  - search
+
+markdown_extensions:
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - admonition
+  - tables

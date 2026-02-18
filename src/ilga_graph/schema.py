@@ -476,6 +476,7 @@ class MemberType:
     id: str
     name: str
     member_url: str
+    photo_url: str = ""
     chamber: str
     party: str
     district: str
@@ -547,6 +548,7 @@ class MemberType:
             id=m.id,
             name=m.name,
             member_url=m.member_url,
+            photo_url=getattr(m, "photo_url", "") or "",
             chamber=m.chamber,
             party=m.party,
             district=m.district,

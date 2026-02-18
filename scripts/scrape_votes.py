@@ -351,7 +351,7 @@ def main() -> None:  # noqa: C901
     parser.add_argument(
         "--fast",
         action="store_true",
-        help="Use shorter request delay (0.15s instead of 0.4s)",
+        help="Use shorter request delay (0.1s instead of 0.4s)",
     )
     parser.add_argument(
         "--reset",
@@ -497,7 +497,7 @@ def main() -> None:  # noqa: C901
         batch = todo
 
     batch_size = len(batch)
-    delay = 0.15 if args.fast else 0.4
+    delay = 0.1 if args.fast else 0.4
 
     print(flush=True)
     print("=" * 80, flush=True)

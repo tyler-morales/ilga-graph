@@ -51,37 +51,24 @@ class ZipDistrictInfo:
     us_house: str  # US Congressional district (numeric string, e.g. "4")
 
 
-# ── Seed-mode fallback (Chicago-area ZIPs for dev/testing) ────────────────────
+# ── Seed-mode fallback (ZIPs that match the 20-member dev mock) ─────────────────
+# All pairings below use Senate+House districts that exist in mocks/dev/members.json
+# so dev/seed mode shows Your Senator, Your Rep, Power Broker, and Ally (no red banners).
 
 _SEED_CROSSWALK: dict[str, ZipDistrictInfo] = {
-    # ── Real-ish Chicago-area ZIPs (may not match both chambers in dev) ──
-    # Humboldt Park / Logan Square — Senate 2 (Aquino), House 4
-    "60647": ZipDistrictInfo(il_house="4", il_senate="2", us_house="4"),
-    # Pilsen / Chinatown — Senate 1 (Cervantes), House 2 (Mah)
-    "60608": ZipDistrictInfo(il_house="2", il_senate="1", us_house="4"),
-    # Beverly / Mt. Greenwood — Senate 18 (Cunningham), House 35
-    "60643": ZipDistrictInfo(il_house="35", il_senate="18", us_house="1"),
-    # Hyde Park — Senate 13, House 26 (Buckner)
-    "60637": ZipDistrictInfo(il_house="26", il_senate="13", us_house="1"),
-    #
-    # ── Demo ZIPs: these map to Senate+House pairings that exist in the
-    #    40-member dev dataset, so all 4 cards render in seed mode. ──
-    # Lincoln Park — Senate 6 (Feigenholtz) + House 12 (Croke)
-    "60614": ZipDistrictInfo(il_house="12", il_senate="6", us_house="5"),
-    # Elgin — Senate 22 (Castro) + House 43 (Moeller)
-    "60120": ZipDistrictInfo(il_house="43", il_senate="22", us_house="8"),
-    # Lisle / western suburbs — Senate 23 (Glowiak Hilton) + House 46 (Blair-Sherlock)
-    "60532": ZipDistrictInfo(il_house="46", il_senate="23", us_house="11"),
-    # Freeport / NW IL — Senate 45 (Chesney) + House 90 (Cabello)
-    "61032": ZipDistrictInfo(il_house="90", il_senate="45", us_house="16"),
-    # Champaign — Senate 52 (Faraci) + House 103 (Ammons)
-    "61820": ZipDistrictInfo(il_house="103", il_senate="52", us_house="13"),
-    # Bloomington — Senate 53 (Balkema) + House 106 (Bunting)
-    "61701": ZipDistrictInfo(il_house="106", il_senate="53", us_house="16"),
-    # Evanston — Senate 9 (Fine), House 18
-    "60201": ZipDistrictInfo(il_house="18", il_senate="9", us_house="9"),
-    # Naperville — Senate 41 (Curran), House 81
-    "60540": ZipDistrictInfo(il_house="81", il_senate="41", us_house="11"),
+    # Primary dev ZIPs — use these to test; all 4 cards render.
+    "60601": ZipDistrictInfo(il_house="26", il_senate="18", us_house="4"),  # Cunningham + Buckner
+    "60605": ZipDistrictInfo(il_house="106", il_senate="53", us_house="16"),  # Balkema + Bunting
+    "60120": ZipDistrictInfo(il_house="26", il_senate="22", us_house="8"),  # Castro + Buckner
+    "60540": ZipDistrictInfo(il_house="90", il_senate="41", us_house="11"),  # Curran + Cabello
+    "60201": ZipDistrictInfo(il_house="26", il_senate="9", us_house="9"),  # Fine + Buckner
+    "60643": ZipDistrictInfo(il_house="26", il_senate="18", us_house="1"),  # Cunningham + Buckner
+    "60608": ZipDistrictInfo(il_house="26", il_senate="18", us_house="4"),  # Cunningham + Buckner
+    "60614": ZipDistrictInfo(il_house="90", il_senate="41", us_house="11"),  # Curran + Cabello
+    "60637": ZipDistrictInfo(il_house="26", il_senate="57", us_house="1"),  # Belt + Buckner
+    "61032": ZipDistrictInfo(il_house="90", il_senate="47", us_house="16"),  # Anderson + Cabello
+    "61701": ZipDistrictInfo(il_house="106", il_senate="53", us_house="16"),  # Balkema + Bunting
+    "60532": ZipDistrictInfo(il_house="85", il_senate="22", us_house="11"),  # Castro + Avelar
 }
 
 

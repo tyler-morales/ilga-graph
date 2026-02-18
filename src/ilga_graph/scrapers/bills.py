@@ -24,10 +24,12 @@ from urllib3.util.retry import Retry
 from ..config import BASE_URL, CACHE_DIR, GA_ID, MOCK_DEV_DIR, SESSION_ID
 from ..models import ActionEntry, Bill, VoteEvent, WitnessSlip
 from ..normalize import normalize_chamber, normalize_date, validate_bill_cache
+from ._log import log_phase, log_progress
 
 LOGGER = logging.getLogger(__name__)
 
 BILLS_CACHE_FILE = CACHE_DIR / "bills.json"
+FULLTEXT_DIR = CACHE_DIR / "fulltext"
 METADATA_FILE = CACHE_DIR / "scrape_metadata.json"
 BILL_INDEX_CHECKPOINT_FILE = CACHE_DIR / "bill_index_checkpoint.json"
 
@@ -63,14 +65,21 @@ class DocTypeInfo:
 # ── Session builder ──────────────────────────────────────────────────────────
 
 
-def _build_session(request_delay: float = 0.5) -> requests.Session:
+def _build_session(
+    request_delay: float = 0.5,
+    pool_size: int = 10,
+) -> requests.Session:
     session = requests.Session()
     retry = Retry(
         total=3,
         backoff_factor=1.0,
         status_forcelist=[429, 500, 502, 503, 504],
     )
-    adapter = HTTPAdapter(max_retries=retry, pool_connections=5, pool_maxsize=5)
+    adapter = HTTPAdapter(
+        max_retries=retry,
+        pool_connections=pool_size,
+        pool_maxsize=pool_size,
+    )
     session.mount("https://", adapter)
     session.mount("http://", adapter)
     return session
@@ -741,14 +750,19 @@ def _parse_action_history(soup: BeautifulSoup) -> list[ActionEntry]:
     return entries
 
 
-def scrape_bill_status(
+def _scrape_bill_status_with_html(
     bill_status_url: str,
     index_entry: BillIndexEntry | None = None,
     session: requests.Session | None = None,
     timeout: int = 20,
     request_delay: float = 0.5,
-) -> Bill | None:
-    """Scrape a single BillStatus page and return a full Bill object."""
+) -> tuple[Bill | None, str]:
+    """Fetch a BillStatus page, parse metadata, return ``(Bill, raw_html)``.
+
+    Returns ``(None, "")`` on fetch failure.  The raw HTML is kept so
+    callers (e.g. ``scrape_bill_complete``) can pass it to
+    ``scrape_votes_from_html`` without a second HTTP request.
+    """
     sess = session or _build_session()
 
     try:
@@ -756,12 +770,12 @@ def scrape_bill_status(
         resp.raise_for_status()
     except requests.RequestException as exc:
         LOGGER.warning("Failed to fetch BillStatus %s: %s", bill_status_url, exc)
-        return None
+        return None, ""
 
+    raw_html = resp.text
     time.sleep(request_delay)
-    soup = BeautifulSoup(resp.text, "html.parser")
+    soup = BeautifulSoup(raw_html, "html.parser")
 
-    # Extract bill_number and leg_id from URL if not provided
     bill_number = ""
     leg_id = ""
     doc_type = ""
@@ -780,9 +794,8 @@ def scrape_bill_status(
 
     if not leg_id:
         LOGGER.warning("No leg_id for BillStatus URL, skipping: %s", bill_status_url)
-        return None
+        return None, ""
 
-    # Title/description from h5
     title_h5 = soup.find("h5", class_="fw-bold")
     description = ""
     if index_entry:
@@ -790,30 +803,23 @@ def scrape_bill_status(
     elif title_h5:
         description = title_h5.get_text(strip=True)
 
-    # Last action
     last_action_date, _la_chamber, last_action = _parse_last_action(soup)
-
-    # Sponsors
     primary_sponsor, senate_ids, house_ids = _parse_sponsors(soup)
 
-    # Chamber from doc_type
     dt_upper = doc_type.upper()
     if dt_upper.startswith("S"):
         chamber = "S"
     elif dt_upper.startswith("H"):
         chamber = "H"
     elif dt_upper in ("EO", "JSR", "AM"):
-        chamber = "J"  # Joint / Executive
+        chamber = "J"
     else:
-        chamber = "H"  # fallback
+        chamber = "H"
 
-    # Synopsis
     synopsis = _parse_synopsis(soup)
-
-    # Action history
     action_history = _parse_action_history(soup)
 
-    return Bill(
+    bill = Bill(
         bill_number=bill_number,
         leg_id=leg_id,
         description=description,
@@ -827,6 +833,138 @@ def scrape_bill_status(
         house_sponsor_ids=house_ids,
         action_history=action_history,
     )
+    return bill, raw_html
+
+
+def scrape_bill_status(
+    bill_status_url: str,
+    index_entry: BillIndexEntry | None = None,
+    session: requests.Session | None = None,
+    timeout: int = 20,
+    request_delay: float = 0.5,
+) -> Bill | None:
+    """Scrape a single BillStatus page and return a full Bill object."""
+    bill, _html = _scrape_bill_status_with_html(
+        bill_status_url, index_entry, session, timeout, request_delay
+    )
+    return bill
+
+
+_STALLED_ACTIONS = frozenset(
+    {
+        "filed with secretary",
+        "filed with the clerk",
+        "first reading",
+        "referred to assignments",
+        "referred to rules committee",
+        "added as co-sponsor",
+        "added as chief co-sponsor",
+        "chief co-sponsor changed",
+        "alternate chief co-sponsor changed",
+        "alternate chief sponsor changed",
+        "rule 19(a) / re-referred to rules committee",
+        "session sine die",
+    }
+)
+
+
+def _is_stalled_bill(bill: Bill) -> bool:
+    """Return True if a bill has only intro/assignment actions.
+
+    Bills stuck at these stages have never had a committee hearing or
+    floor vote, so votes/slips/fulltext work can be skipped.
+    """
+    if not bill.action_history:
+        return True
+    for entry in bill.action_history:
+        action_lower = entry.action.lower().strip()
+        if not any(action_lower.startswith(s) for s in _STALLED_ACTIONS):
+            return False
+    return True
+
+
+def scrape_bill_complete(
+    bill_status_url: str,
+    index_entry: BillIndexEntry | None = None,
+    session: requests.Session | None = None,
+    timeout: int = 20,
+    request_delay: float = 0.5,
+    include_votes: bool = True,
+    include_slips: bool = True,
+    include_fulltext: bool = False,
+) -> Bill | None:
+    """Scrape all data for a single bill in one pass.
+
+    Fetches the BillStatus page **once** and reuses the HTML for
+    metadata parsing *and* vote tab URL extraction.  This eliminates
+    the duplicate BillStatus fetch that the old pipeline performed.
+
+    Stalled bills (intro/assignments only) skip votes, slips, and
+    fulltext automatically.
+    """
+    from .full_text import scrape_bill_full_text
+    from .votes import scrape_votes_from_html
+    from .witness_slips import scrape_witness_slips
+
+    sess = session or _build_session()
+
+    # 1. Single BillStatus fetch → metadata + raw HTML
+    bill, bill_status_html = _scrape_bill_status_with_html(
+        bill_status_url,
+        index_entry=index_entry,
+        session=sess,
+        timeout=timeout,
+        request_delay=request_delay,
+    )
+    if bill is None:
+        return None
+
+    # 2. Stalled-bill shortcut — skip sub-scrapes
+    if _is_stalled_bill(bill):
+        return bill
+
+    # 3. Votes (reuse already-fetched HTML — no second BillStatus request)
+    if include_votes and bill_status_html:
+        try:
+            bill.vote_events = scrape_votes_from_html(
+                bill_status_html,
+                bill_status_url,
+                session=sess,
+                timeout=timeout,
+                request_delay=request_delay,
+            )
+        except Exception:
+            LOGGER.exception("Votes failed for %s", bill.bill_number)
+
+    # 4. Witness slips
+    if include_slips:
+        try:
+            bill.witness_slips = scrape_witness_slips(
+                bill_status_url,
+                session=sess,
+                timeout=timeout,
+                request_delay=request_delay,
+            )
+        except Exception:
+            LOGGER.exception("Slips failed for %s", bill.bill_number)
+
+    # 5. Full text (written to cache/fulltext/ immediately)
+    if include_fulltext:
+        try:
+            text = scrape_bill_full_text(
+                bill_status_url,
+                bill_number=bill.bill_number,
+                session=sess,
+                timeout=timeout,
+                request_delay=request_delay,
+            )
+            if text:
+                bill.full_text = text
+                save_fulltext(bill)
+        except Exception:
+            LOGGER.exception("Fulltext failed for %s", bill.bill_number)
+
+    return bill
 
 
 def scrape_all_bills(
@@ -898,14 +1036,7 @@ def scrape_all_bills(
                     bills[bill.leg_id] = bill
                     rate = completed / elapsed if elapsed > 0 else 0
                     eta = (total - completed) / rate if rate > 0 else 0
-                    if completed % 20 == 0 or completed == total:
-                        LOGGER.info(
-                            "  [%d/%d] %.0fs elapsed, ~%.0fs remaining",
-                            completed,
-                            total,
-                            elapsed,
-                            eta,
-                        )
+                    log_progress(LOGGER, completed, total, bill.bill_number, elapsed, eta)
                 else:
                     LOGGER.warning("  [%d/%d] Failed: %s", completed, total, entry.bill_number)
             except Exception:
@@ -937,9 +1068,14 @@ def scrape_all_bills(
 
 
 def _bill_to_dict(bill: Bill) -> dict:
-    """Serialize a Bill to a JSON-safe dict."""
+    """Serialize a Bill to a JSON-safe dict.
+
+    ``full_text`` is externalized to ``cache/fulltext/<bill_number>.txt``
+    and replaced with ``has_full_text: true/false`` in the JSON.
+    """
     d = asdict(bill)
-    # action_history is a list of ActionEntry dataclasses -- already dicts via asdict
+    has_ft = bool(d.pop("full_text", ""))
+    d["has_full_text"] = has_ft
     return d
 
 
@@ -1008,7 +1144,7 @@ def _bill_from_dict(d: dict) -> Bill:
                 )
             )
 
-    return Bill(
+    bill = Bill(
         bill_number=d["bill_number"],
         leg_id=d["leg_id"],
         description=d["description"],
@@ -1026,10 +1162,37 @@ def _bill_from_dict(d: dict) -> Bill:
         full_text=d.get("full_text", ""),
     )
 
+    # Externalized full text: load from cache/fulltext/<bill>.txt when the
+    # JSON has "has_full_text" but no inline text (new format).
+    if not bill.full_text and d.get("has_full_text"):
+        ft_path = FULLTEXT_DIR / f"{bill.bill_number}.txt"
+        if ft_path.exists():
+            bill.full_text = ft_path.read_text(encoding="utf-8")
+
+    return bill
+
+
+def save_fulltext(bill: Bill) -> None:
+    """Write a single bill's full_text to ``cache/fulltext/<bill_number>.txt``."""
+    if not bill.full_text:
+        return
+    FULLTEXT_DIR.mkdir(parents=True, exist_ok=True)
+    ft_path = FULLTEXT_DIR / f"{bill.bill_number}.txt"
+    ft_path.write_text(bill.full_text, encoding="utf-8")
+
 
 def save_bill_cache(bills: dict[str, Bill]) -> None:
-    """Save bills dict to cache/bills.json (atomic write)."""
+    """Save bills dict to cache/bills.json (atomic write).
+
+    Full text is written to individual files under ``cache/fulltext/``
+    and excluded from ``bills.json`` to keep checkpoint writes fast.
+    """
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Write externalized full-text files
+    for b in bills.values():
+        save_fulltext(b)
+
     data = {lid: _bill_to_dict(b) for lid, b in bills.items()}
     tmp_path = BILLS_CACHE_FILE.with_suffix(".json.tmp")
     with open(tmp_path, "w", encoding="utf-8") as f:
@@ -1159,11 +1322,15 @@ def incremental_bill_scrape(
     session: requests.Session | None = None,
     timeout: int = 20,
     request_delay: float = 0.5,
-    max_workers: int = 3,
+    max_workers: int = 10,
     rescrape_recent_days: int = 30,
     force_full: bool = False,
+    include_votes: bool = True,
+    include_slips: bool = True,
+    include_fulltext: bool = False,
+    checkpoint_interval: int = 50,
 ) -> dict[str, Bill]:
-    """Smart incremental scrape with tiered index scanning.
+    """Unified incremental scrape — metadata + votes + slips in one pass.
 
     Tier decision (based on metadata timestamps):
       - ``force_full=True``  → Full index walk (all 125 pages)
@@ -1171,10 +1338,11 @@ def incremental_bill_scrape(
       - >24h since last tail scan → Tail-only scan (last page per doc type)
       - <24h since last tail scan → Skip index, just re-scrape recent bills
 
-    After the index scan (or skip), newly discovered bills are scraped in
-    detail and merged into the cache.  Vote/slip data is always preserved.
+    Each bill is scraped via :func:`scrape_bill_complete` which fetches
+    the BillStatus page once and reuses the HTML for votes, slips, and
+    optional full text.  Checkpoints every *checkpoint_interval* bills.
     """
-    sess = session or _build_session()
+    sess = session or _build_session(request_delay=request_delay, pool_size=max_workers)
 
     # Load existing cache
     existing = load_bill_cache() or {}
@@ -1186,15 +1354,15 @@ def incremental_bill_scrape(
     hours_since_tail = _hours_since(meta.get("last_tail_scan"))
     highest_per_type = meta.get("highest_bill_per_type") or {}
 
-    # If we have bills but no highest_per_type in metadata, compute it
     if existing and not highest_per_type:
         highest_per_type = _extract_highest_bill_numbers(existing)
 
-    scan_type: str  # "full", "tail", or "skip"
+    scan_type: str
     index: list[BillIndexEntry] = []
 
+    t_index_start = time.perf_counter()
+
     if force_full or not existing or hours_since_full > FULL_SCAN_THRESHOLD_HOURS:
-        # Full scan: walk all index pages
         reason = (
             "forced"
             if force_full
@@ -1212,7 +1380,6 @@ def incremental_bill_scrape(
         )
         scan_type = "full"
     elif hours_since_tail > TAIL_SCAN_THRESHOLD_HOURS:
-        # Tail scan: only check last page per doc type for new bills
         LOGGER.info(
             "Index strategy: TAIL SCAN (last tail %.0fh ago, full %.0fh ago)",
             hours_since_tail,
@@ -1226,13 +1393,19 @@ def incremental_bill_scrape(
         )
         scan_type = "tail"
     else:
-        # Skip: index is fresh enough
         LOGGER.info(
             "Index strategy: SKIP (last tail %.1fh ago — within %dh threshold)",
             hours_since_tail,
             int(TAIL_SCAN_THRESHOLD_HOURS),
         )
         scan_type = "skip"
+
+    log_phase(
+        LOGGER,
+        "Phase 1: Index scan",
+        time.perf_counter() - t_index_start,
+        f"{len(index)} entries" if index else "skipped",
+    )
 
     # ── Identify new bills from index scan ────────────────────────────────
     fresh_ids = {e.leg_id for e in index}
@@ -1251,13 +1424,11 @@ def incremental_bill_scrape(
         for lid, bill in existing.items():
             if bill.last_action_date:
                 try:
-                    # Dates are normalized to ISO YYYY-MM-DD on load
                     parsed = datetime.strptime(bill.last_action_date, "%Y-%m-%d")
                     age_days = (cutoff - parsed).days
                     if age_days <= rescrape_recent_days:
                         rescrape_ids.add(lid)
                 except ValueError:
-                    # Fallback for old cache with MM/DD/YYYY format
                     try:
                         parsed = datetime.strptime(bill.last_action_date, "%m/%d/%Y")
                         age_days = (cutoff - parsed).days
@@ -1273,20 +1444,15 @@ def incremental_bill_scrape(
             )
 
     # ── Build scrape list ─────────────────────────────────────────────────
-    # For new bills from index, we have BillIndexEntry objects.
-    # For re-scrape bills, we need to build entries from cached data.
     to_scrape: list[BillIndexEntry] = []
 
-    # New bills come from the index
     to_scrape.extend(e for e in index if e.leg_id in new_ids)
 
-    # Re-scrape bills: build index entries from cached bills
     for lid in rescrape_ids:
         if lid in new_ids:
-            continue  # already in to_scrape from index
+            continue
         bill = existing.get(lid)
         if bill and bill.status_url:
-            # Extract doc type from bill number (e.g. "SB0042" → "SB")
             dt_match = re.match(r"([A-Z]+)", bill.bill_number)
             to_scrape.append(
                 BillIndexEntry(
@@ -1300,7 +1466,6 @@ def incremental_bill_scrape(
 
     if not to_scrape:
         LOGGER.info("Incremental: nothing to scrape, cache is up to date.")
-        # Still update metadata timestamps for the scan we did
         save_scrape_metadata(
             len(existing),
             scan_type=scan_type,
@@ -1309,52 +1474,101 @@ def incremental_bill_scrape(
         return existing
 
     LOGGER.info(
-        "Incremental: scraping %d BillStatus pages (%d new + %d re-check)...",
+        "Incremental: scraping %d bills (%d new + %d re-check) [votes=%s, slips=%s, fulltext=%s]",
         len(to_scrape),
         len(new_ids),
         len(rescrape_ids - new_ids),
+        include_votes,
+        include_slips,
+        include_fulltext,
     )
 
-    # Scrape only the delta
+    # ── Unified scrape loop ──────────────────────────────────────────────
     t_start = time.perf_counter()
+    total_to_scrape = len(to_scrape)
+    completed = 0
+    last_checkpoint = 0
+    total_votes = 0
+    total_slips = 0
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         future_to_entry = {
             pool.submit(
-                scrape_bill_status,
+                scrape_bill_complete,
                 entry.status_url,
                 entry,
                 sess,
                 timeout,
                 request_delay,
+                include_votes,
+                include_slips,
+                include_fulltext,
             ): entry
             for entry in to_scrape
         }
         for future in as_completed(future_to_entry):
             entry = future_to_entry[future]
+            completed += 1
             try:
                 bill = future.result()
                 if bill:
-                    # Preserve vote/slip data from cached version — these
-                    # are scraped separately and must not be overwritten.
+                    # For re-scraped bills, preserve data from sub-scrapes
+                    # that were not included in this run.
                     old = existing.get(bill.leg_id)
                     if old:
-                        bill.vote_events = old.vote_events
-                        bill.witness_slips = old.witness_slips
-                        bill.full_text = old.full_text
+                        if not include_votes and old.vote_events:
+                            bill.vote_events = old.vote_events
+                        if not include_slips and old.witness_slips:
+                            bill.witness_slips = old.witness_slips
+                        if not include_fulltext and old.full_text:
+                            bill.full_text = old.full_text
+
+                    total_votes += len(bill.vote_events)
+                    total_slips += len(bill.witness_slips)
                     existing[bill.leg_id] = bill
+
+                    elapsed = time.perf_counter() - t_start
+                    rate = completed / elapsed if elapsed > 0 else 0
+                    eta = (total_to_scrape - completed) / rate if rate > 0 else 0
+                    log_progress(
+                        LOGGER,
+                        completed,
+                        total_to_scrape,
+                        entry.bill_number,
+                        elapsed,
+                        eta,
+                    )
+                else:
+                    LOGGER.warning(
+                        "  [%d/%d] Failed: %s", completed, total_to_scrape, entry.bill_number
+                    )
             except Exception:
-                LOGGER.exception("Error scraping %s", entry.bill_number)
+                LOGGER.exception(
+                    "  [%d/%d] Error scraping %s", completed, total_to_scrape, entry.bill_number
+                )
+
+            # ── Checkpoint ────────────────────────────────────────────
+            if (
+                checkpoint_interval > 0
+                and completed - last_checkpoint >= checkpoint_interval
+                and existing
+            ):
+                LOGGER.info(
+                    "  Checkpoint: saving %d bills at %d/%d...",
+                    len(existing),
+                    completed,
+                    total_to_scrape,
+                )
+                save_bill_cache(existing)
+                last_checkpoint = completed
 
     elapsed = time.perf_counter() - t_start
-    LOGGER.info(
-        "Incremental scrape complete: %d bills updated in %.1fs. Total: %d.",
-        len(to_scrape),
-        elapsed,
-        len(existing),
-    )
+    detail = f"{len(to_scrape)} bills"
+    if include_votes or include_slips:
+        detail += f" ({total_votes} votes, {total_slips} slips)"
+    log_phase(LOGGER, "Phase 2: Bill scrape", elapsed, detail)
 
-    # Save merged cache + metadata with updated timestamps
+    # Final save + metadata
     save_bill_cache(existing)
     save_scrape_metadata(
         len(existing),

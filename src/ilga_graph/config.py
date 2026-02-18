@@ -40,6 +40,7 @@ _PROFILE_DEFAULTS: dict[str, dict[str, str]] = {
         "ILGA_INCREMENTAL": "0",
         "ILGA_CORS_ORIGINS": "*",
         "ILGA_MEMBER_LIMIT": "0",
+        "ILGA_DB_PATH": "data/ilga_dev.db",  # sandbox DB; mock outreach data when seeding
     },
     "prod": {
         "ILGA_DEV_MODE": "0",
@@ -47,6 +48,7 @@ _PROFILE_DEFAULTS: dict[str, dict[str, str]] = {
         "ILGA_INCREMENTAL": "0",
         "ILGA_CORS_ORIGINS": "",  # empty → must be explicitly set
         "ILGA_MEMBER_LIMIT": "0",
+        "ILGA_DB_PATH": "data/ilga.db",  # live DB; real backlog only when seeding
     },
 }
 
@@ -74,7 +76,9 @@ GA_NUMBER: int = GA_ID + 86
 BASE_URL: str = _env("ILGA_BASE_URL", "https://www.ilga.gov/").rstrip("/") + "/"
 
 # ── Directories ──────────────────────────────────────────────────────────────
-CACHE_DIR: Path = Path(_env("ILGA_CACHE_DIR", "cache"))
+# Dev uses cache/dev/ so it never touches the full scraped data in cache/.
+_CACHE_BASE: Path = Path(_env("ILGA_CACHE_DIR", "cache"))
+CACHE_DIR: Path = _CACHE_BASE / "dev" if PROFILE == "dev" else _CACHE_BASE
 MOCK_DEV_DIR: Path = Path(_env("ILGA_MOCK_DIR", "mocks/dev"))
 
 # ── Mode flags ───────────────────────────────────────────────────────────────
@@ -105,6 +109,21 @@ if PROFILE == "prod":
         LOGGER.warning(
             "ILGA_PROFILE=prod but ILGA_API_KEY is empty. GraphQL endpoint is unprotected."
         )
+
+# ── Auth + SMTP ──────────────────────────────────────────────────────────────
+# Session cookie signing key (generate a random string for prod).
+AUTH_SECRET: str = _env("ILGA_AUTH_SECRET", "dev-secret-change-me")
+# Cookie max-age in seconds (default 30 days).
+AUTH_COOKIE_MAX_AGE: int = int(_env("ILGA_AUTH_COOKIE_MAX_AGE", str(60 * 60 * 24 * 30)))
+AUTH_COOKIE_NAME: str = "ilga_session"
+
+# SMTP for sending auth codes.  When empty, codes are logged to console (dev).
+SMTP_HOST: str = _env("ILGA_SMTP_HOST", "").strip()
+SMTP_PORT: int = int(_env("ILGA_SMTP_PORT", "587"))
+SMTP_USER: str = _env("ILGA_SMTP_USER", "").strip()
+SMTP_PASS: str = _env("ILGA_SMTP_PASS", "").strip()
+SMTP_FROM: str = _env("ILGA_SMTP_FROM", "").strip() or SMTP_USER
+SMTP_USE_TLS: bool = _env("ILGA_SMTP_TLS", "1") == "1"
 
 # ── Bill status URLs (votes + witness slips) ─────────────────────────────────
 DEFAULT_BILL_STATUS_URLS: list[str] = [

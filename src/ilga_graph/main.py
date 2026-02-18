@@ -1,25 +1,26 @@
 from __future__ import annotations
 
-import functools
 import logging
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any
+from urllib.parse import urljoin
 
 import strawberry
-from fastapi import FastAPI, Form, Request, Response
+from fastapi import Depends, FastAPI, Form, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from strawberry.fastapi import GraphQLRouter
 
+from . import advocacy_helpers as ah
 from . import config as cfg
 from .analytics import (
-    CommitteeStats,
-    MemberScorecard,
     build_member_committee_roles,
     compute_advancement_analytics,
     compute_committee_stats,
@@ -27,6 +28,12 @@ from .analytics import (
     lobbyist_alignment,
 )
 from .analytics_cache import load_analytics_cache, save_analytics_cache
+from .app_state import state
+from .constants import CATEGORY_CHOICES, CATEGORY_COMMITTEES
+from .date_parse import parse_action_date, parse_bill_date, safe_parse_date
+from .db import get_db
+from .db_models import OutreachEvent, User
+from .dependencies import get_current_user_optional
 from .etl import (
     ScrapedData,
     _link_members_to_bills,
@@ -36,10 +43,12 @@ from .etl import (
     load_or_scrape_data,
     load_stale_cache_fallback,
 )
-from .metrics_definitions import MONEYBALL_ONE_LINER
+from .member_lookup import find_member_by_district
 from .ml.rule_engine import get_bill_to_law_process
-from .models import Bill, Committee, CommitteeMemberRole, Member, VoteEvent, WitnessSlip
-from .moneyball import MoneyballReport, build_cosponsor_edges, compute_power_badges
+from .models import Bill, Member, WitnessSlip
+from .moneyball import build_cosponsor_edges
+from .routers.auth import router as _auth_router
+from .routers.outreach import router as _outreach_router
 from .run_log import append_startup_run, get_log_path, load_recent_runs
 from .schema import (
     BillAdvancementAnalyticsType,
@@ -74,14 +83,18 @@ from .scrapers.bills import load_bill_cache
 from .search import EntityType as SearchEntityTypeEnum
 from .search import search_all
 from .seating import process_seating
+from .startup_banner import _Colors, format_startup_table, log_startup_timing
 from .vote_name_normalizer import normalize_vote_events
 from .vote_timeline import compute_bill_vote_timeline
 from .voting_record import (
-    VotingSummary,
     build_all_category_bill_sets,
     build_member_vote_index,
 )
-from .zip_crosswalk import ZipDistrictInfo, load_zip_crosswalk
+from .zip_crosswalk import load_zip_crosswalk
+
+# Backward compat for tests
+_parse_bill_date = parse_bill_date
+_safe_parse_date = safe_parse_date
 
 # ── Configure logging ────────────────────────────────────────────────────────
 # Ensure our application logs show up in the terminal
@@ -100,233 +113,6 @@ get_bill_status_urls = cfg.get_bill_status_urls
 # ── Startup timing log & summary table ──────────────────────────────────────
 
 from pathlib import Path  # noqa: E402
-
-
-class _Colors:
-    """ANSI color codes for terminal output."""
-
-    RESET = "\033[0m"
-    BOLD = "\033[1m"
-    DIM = "\033[2m"
-
-    # Colors
-    GREEN = "\033[32m"
-    YELLOW = "\033[33m"
-    BLUE = "\033[34m"
-    CYAN = "\033[36m"
-    WHITE = "\033[37m"
-    GRAY = "\033[90m"
-
-    # Bright colors
-    BRIGHT_GREEN = "\033[92m"
-    BRIGHT_YELLOW = "\033[93m"
-    BRIGHT_CYAN = "\033[96m"
-
-
-def _format_startup_table(
-    elapsed_total: float,
-    elapsed_load: float,
-    elapsed_analytics: float,
-    elapsed_seating: float,
-    elapsed_export: float,
-    elapsed_committee: float,
-    elapsed_votes: float,
-    elapsed_voting_records: float,
-    elapsed_slips: float,
-    elapsed_zip: float,
-    member_count: int,
-    committee_count: int,
-    bill_count: int,
-    exported_bill_count: int,
-    member_committee_role_count: int,
-    member_vote_record_count: int,
-    category_bill_set_count: int,
-    vote_event_count: int,
-    slip_count: int,
-    bills_with_votes: int,
-    bills_with_slips: int,
-    zcta_count: int,
-    load_only: bool,
-    dev_mode: bool,
-    seed_mode: bool,
-) -> str:
-    """Format a chronological ETL startup table with phase/time/detail."""
-    c = _Colors
-
-    def row(phase: str, label: str, sec: float, detail: str) -> str:
-        return (
-            f"{c.CYAN}{phase:<10}{c.RESET} "
-            f"{c.WHITE}{label:<32}{c.RESET}"
-            f"{c.BRIGHT_GREEN}{sec:>8.2f}s{c.RESET}  "
-            f"{c.WHITE}{detail}{c.RESET}"
-        )
-
-    mode_bits = [
-        f"load_only={load_only}",
-        f"dev_mode={dev_mode}",
-        f"seed_mode={seed_mode}",
-    ]
-    mode_line = ", ".join(mode_bits)
-
-    lines = [
-        "",
-        f"{c.BOLD}{c.CYAN}{'=' * 100}{c.RESET}",
-        f"{c.BOLD}{c.BRIGHT_CYAN}🚀 Application Startup Complete (chronological ETL view){c.RESET}",
-        f"{c.DIM}Mode: {mode_line}{c.RESET}",
-        f"{c.BOLD}{c.CYAN}{'=' * 100}{c.RESET}",
-        "",
-        f"{c.BOLD}{'Phase':<10} {'Step':<32} {'Time':>8}  {'Details'}{c.RESET}",
-        f"{c.GRAY}{'-' * 100}{c.RESET}",
-    ]
-
-    # 1) Extract / Load core data.
-    load_detail = f"{member_count} members, {committee_count} committees, {bill_count} bills"
-    if load_only:
-        load_detail += f" {c.DIM}(cache-only startup){c.RESET}"
-    elif seed_mode and elapsed_load < 0.5:
-        load_detail += f" {c.DIM}(seed fallback){c.RESET}"
-    else:
-        load_detail += f" {c.DIM}(cache/scrape){c.RESET}"
-    lines.append(row("Extract", "1) Load core data", elapsed_load, load_detail))
-
-    # 2) Transform analytics.
-    lines.append(
-        row(
-            "Transform",
-            "2) Compute analytics",
-            elapsed_analytics,
-            f"{member_count} scorecards + Moneyball profiles",
-        )
-    )
-
-    # 3) Transform seating enrichment.
-    lines.append(
-        row(
-            "Transform",
-            "3) Seating enrichment",
-            elapsed_seating,
-            "Senate seat blocks + seatmate affinity",
-        )
-    )
-
-    # 4) Load/export Obsidian artifacts.
-    export_detail = f"{exported_bill_count} bills exported ({bill_count} in memory)"
-    lines.append(
-        row(
-            "Load",
-            "4) Export vault artifacts",
-            elapsed_export,
-            export_detail,
-        )
-    )
-
-    # 5) Transform committee-level indexes.
-    committee_detail = (
-        f"{committee_count} committee stats, {member_committee_role_count} members with roles"
-    )
-    lines.append(
-        row(
-            "Transform",
-            "5) Committee indexes",
-            elapsed_committee,
-            committee_detail,
-        )
-    )
-
-    # 6) Transform vote events and bill-level vote lookup.
-    vote_detail = f"{vote_event_count} vote events"
-    if bills_with_votes > 0:
-        vote_detail += f" ({bills_with_votes} bills)"
-    if elapsed_votes < 0.1 and vote_event_count > 0:
-        vote_detail += f" {c.DIM}(cached){c.RESET}"
-    lines.append(
-        row(
-            "Transform",
-            "6) Vote event index + normalize",
-            elapsed_votes,
-            vote_detail,
-        )
-    )
-
-    # 7) Transform member voting records and policy category lookups.
-    voting_records_detail = (
-        f"{member_vote_record_count} members, {category_bill_set_count} category bill sets"
-    )
-    lines.append(
-        row(
-            "Transform",
-            "7) Member voting records",
-            elapsed_voting_records,
-            voting_records_detail,
-        )
-    )
-
-    # 8) Transform witness slips.
-    slip_detail = f"{slip_count} slips"
-    if bills_with_slips > 0:
-        slip_detail += f" ({bills_with_slips} bills)"
-    if elapsed_slips < 0.1 and slip_count > 0:
-        slip_detail += f" {c.DIM}(cached){c.RESET}"
-    lines.append(row("Transform", "8) Witness slip index", elapsed_slips, slip_detail))
-
-    # 9) Load reference crosswalk.
-    lines.append(
-        row(
-            "Reference",
-            "9) ZIP district crosswalk",
-            elapsed_zip,
-            f"{zcta_count} ZCTAs → IL Senate/House districts",
-        )
-    )
-
-    lines.extend(
-        [
-            f"{c.GRAY}{'-' * 100}{c.RESET}",
-            f"{c.BOLD}{'Total':<43}{c.BRIGHT_CYAN}{elapsed_total:>8.2f}s{c.RESET}  "
-            f"{c.DIM}{mode_line}{c.RESET}",
-            f"{c.BOLD}{c.CYAN}{'=' * 100}{c.RESET}",
-            "",
-        ]
-    )
-
-    return "\n".join(lines)
-
-
-def _log_startup_timing(
-    total_s: float,
-    load_s: float,
-    analytics_s: float,
-    seating_s: float,
-    export_s: float,
-    votes_s: float,
-    slips_s: float,
-    zip_s: float,
-    member_count: int,
-    bill_count: int,
-    vote_count: int,
-    slip_count: int,
-    zcta_count: int,
-    dev_mode: bool,
-    seed_mode: bool,
-) -> None:
-    """Append startup timing to .startup_timings.csv for historical tracking."""
-    log_file = Path(".startup_timings.csv")
-    is_new = not log_file.exists()
-
-    with open(log_file, "a", encoding="utf-8") as f:
-        if is_new:
-            f.write(
-                "timestamp,total_s,load_s,analytics_s,seating_s,export_s,votes_s,slips_s,zip_s,"
-                "members,bills,votes,slips,zctas,dev_mode,seed_mode\n"
-            )
-        f.write(
-            f"{datetime.now().isoformat()},{total_s:.2f},{load_s:.2f},{analytics_s:.2f},"
-            f"{seating_s:.2f},{export_s:.2f},{votes_s:.2f},{slips_s:.2f},{zip_s:.2f},"
-            f"{member_count},{bill_count},{vote_count},{slip_count},{zcta_count},"
-            f"{dev_mode},{seed_mode}\n"
-        )
-    LOGGER.debug("Startup timing logged to %s", log_file)
-
 
 # ── Mode flags (from config) ──────────────────────────────────────────────────
 DEV_MODE = cfg.DEV_MODE
@@ -347,46 +133,6 @@ else:
     _EXPORT_MEMBER_LIMIT = None
     _EXPORT_COMMITTEE_LIMIT = None
     _EXPORT_BILL_LIMIT = None
-
-
-# ── App state container ──────────────────────────────────────────────────────
-
-
-class AppState:
-    def __init__(self) -> None:
-        self.members: list[Member] = []
-        self.member_lookup: dict[str, Member] = {}  # name-keyed (for vote normalization, schema)
-        self.member_lookup_by_id: dict[
-            str, Member
-        ] = {}  # id-keyed (for influence, graph, deep-dives)
-        self.bills: list[Bill] = []
-        self.bill_lookup: dict[str, Bill] = {}
-        self.committees: list[Committee] = []
-        self.committee_lookup: dict[str, Committee] = {}
-        self.committee_rosters: dict[str, list[CommitteeMemberRole]] = {}
-        self.committee_bills: dict[str, list[str]] = {}
-        self.committee_stats: dict[str, CommitteeStats] = {}
-        self.member_committee_roles: dict[str, list[dict]] = {}
-        self.scorecards: dict[str, MemberScorecard] = {}
-        self.moneyball: MoneyballReport | None = None
-        self.vote_events: list[VoteEvent] = []
-        self.vote_lookup: dict[str, list[VoteEvent]] = {}  # bill_number -> votes
-        self.member_vote_records: dict[str, VotingSummary] = {}  # member_name -> voting summary
-        self.category_bill_sets: dict[str, set[str]] = {}  # category -> bill_numbers
-        self.witness_slips: list[WitnessSlip] = []
-        self.witness_slips_lookup: dict[str, list[WitnessSlip]] = {}  # bill_number -> slips
-        self.zip_to_district: dict[str, ZipDistrictInfo] = {}  # ZCTA -> district info
-        self.ml: object | None = None  # MLData from ml_loader (optional)
-        # ── Co-sponsorship graph (for /explore visualization) ──
-        self.cosponsor_adjacency: dict[str, set[str]] = {}  # member_id -> {peer_ids}
-        # ── Influence engine (computed after vote data + ML) ──
-        self.pivotality: dict = {}  # member_name -> MemberPivotality
-        self.sponsor_pull: dict = {}  # member_id -> SponsorPull
-        self.influence: dict = {}  # member_id -> InfluenceProfile
-        self.coalition_influence: list = []  # CoalitionInfluence per bloc
-
-
-state = AppState()
 
 
 def _collect_unique_bills_by_number(bills_lookup: dict[str, Bill]) -> dict[str, Bill]:
@@ -456,6 +202,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     elapsed_voting_records = 0.0
     elapsed_slips = 0.0
     elapsed_zip = 0.0
+    elapsed_graph = 0.0
+    elapsed_ml = 0.0
+    elapsed_influence = 0.0
     data: ScrapedData | None = None
 
     if DEV_MODE:
@@ -571,7 +320,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     # ── Step 2a: Build co-sponsorship adjacency for graph visualization ──
     try:
+        t_graph = _time.perf_counter()
         state.cosponsor_adjacency = build_cosponsor_edges(state.members)
+        elapsed_graph = _time.perf_counter() - t_graph
         LOGGER.info(
             "Co-sponsorship graph: %d nodes, %d total edges.",
             len(state.cosponsor_adjacency),
@@ -662,7 +413,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             bn_lookup,
         )
         state.category_bill_sets = build_all_category_bill_sets(
-            _CATEGORY_COMMITTEES,
+            CATEGORY_COMMITTEES,
             state.committee_bills,
         )
         elapsed_voting_records = _time.perf_counter() - t_vr
@@ -698,9 +449,11 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     # ── Step 7: Load ML intelligence data (optional) ────────────────────
     try:
+        t_ml = _time.perf_counter()
         from .ml_loader import load_ml_data
 
         state.ml = load_ml_data()
+        elapsed_ml = _time.perf_counter() - t_ml
         if state.ml and state.ml.available:
             LOGGER.info(
                 "ML intelligence loaded: %d predictions, %d coalitions, "
@@ -716,7 +469,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         LOGGER.exception("ML data loading failed (non-critical).")
 
     # ── Step 8: Compute influence engine (pivotality + sponsor pull + score)
-    elapsed_influence = 0.0
     try:
         t_inf = _time.perf_counter()
         from .influence import (
@@ -784,7 +536,13 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         if _EXPORT_BILL_LIMIT is None
         else min(len(state.bills), _EXPORT_BILL_LIMIT)
     )
-    summary = _format_startup_table(
+    graph_edge_count = (
+        sum(len(peers) for peers in state.cosponsor_adjacency.values()) // 2
+        if state.cosponsor_adjacency
+        else 0
+    )
+    ml_data = state.ml
+    summary = format_startup_table(
         elapsed_total,
         elapsed_load,
         elapsed_analytics,
@@ -795,6 +553,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         elapsed_voting_records,
         elapsed_slips,
         elapsed_zip,
+        elapsed_graph,
+        elapsed_ml,
+        elapsed_influence,
         len(state.members),
         len(data.committees),
         len(state.bills),
@@ -807,6 +568,14 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         len(state.vote_lookup),
         len(state.witness_slips_lookup),
         len(state.zip_to_district),
+        len(state.cosponsor_adjacency),
+        graph_edge_count,
+        len(ml_data.bill_scores) if ml_data and ml_data.available else 0,
+        len(ml_data.coalitions) if ml_data and ml_data.available else 0,
+        len(ml_data.anomalies) if ml_data and ml_data.available else 0,
+        len(state.pivotality),
+        len(state.sponsor_pull),
+        len(state.influence),
         LOAD_ONLY,
         DEV_MODE,
         SEED_MODE,
@@ -817,12 +586,23 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     if state.moneyball and state.moneyball.mvp_house_non_leadership:
         mvp = state.moneyball.profiles[state.moneyball.mvp_house_non_leadership]
         print(
-            f"  🏆 MVP (House, non-leadership): {mvp.member_name} (Score: {mvp.moneyball_score})\n",
+            f"  🏆 MVP (House, non-leadership): {mvp.member_name} (Score: {mvp.moneyball_score})",
             flush=True,
         )
 
+    # Show service URLs
+    c = _Colors
+    print(
+        f"\n  {c.BOLD}Services:{c.RESET}\n"
+        f"    {c.WHITE}Website    {c.BRIGHT_CYAN}http://127.0.0.1:8000{c.RESET}\n"
+        f"    {c.WHITE}GraphQL    {c.BRIGHT_CYAN}http://127.0.0.1:8000/graphql{c.RESET}\n"
+        f"    {c.WHITE}Docs       {c.BRIGHT_CYAN}http://127.0.0.1:8001{c.RESET}  "
+        f"{c.DIM}(make docs-serve){c.RESET}\n",
+        flush=True,
+    )
+
     # ── Log to timing file for historical tracking ──
-    _log_startup_timing(
+    log_startup_timing(
         elapsed_total,
         elapsed_load,
         elapsed_analytics,
@@ -831,6 +611,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         elapsed_votes,
         elapsed_slips,
         elapsed_zip,
+        elapsed_graph,
+        elapsed_ml,
+        elapsed_influence,
         len(state.members),
         len(state.bills),
         len(state.vote_events),
@@ -858,23 +641,15 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         SEED_MODE,
     )
 
+    # ── Step N: Initialize auth + outreach DB ────────────────────────────
+    from .db import init_db
+
+    await init_db()
+
     yield
 
 
 # ── GraphQL schema ───────────────────────────────────────────────────────────
-
-
-@functools.lru_cache(maxsize=16384)
-def _parse_bill_date(date_str: str) -> datetime:
-    """Parse 'M/D/YYYY' into a datetime for sorting.
-
-    Unparseable dates return ``datetime.max`` so they sort *after* valid dates
-    in ascending order rather than polluting the front of the list.
-    """
-    try:
-        return datetime.strptime(date_str, "%m/%d/%Y")
-    except (ValueError, TypeError):
-        return datetime.max
 
 
 def _member_career_start(member: Member) -> int:
@@ -896,27 +671,6 @@ def _resolve_chamber(chamber: Chamber | None) -> str | None:
     if chamber is None:
         return None
     return chamber.value
-
-
-def _safe_parse_date(date_str: str, param_name: str) -> datetime | None:
-    """Parse an ISO date string, returning None and logging on failure."""
-    try:
-        return datetime.strptime(date_str, "%Y-%m-%d")
-    except (ValueError, TypeError):
-        LOGGER.warning("Invalid date for %s: %r", param_name, date_str)
-        return None
-
-
-def _parse_action_date(date_str: str) -> datetime:
-    """Parse action date (YYYY-MM-DD or M/D/YYYY) for sorting. Unparseable -> datetime.min."""
-    if not date_str:
-        return datetime.min
-    try:
-        if "-" in date_str and len(date_str) == 10:
-            return datetime.strptime(date_str, "%Y-%m-%d")
-        return datetime.strptime(date_str, "%m/%d/%Y")
-    except (ValueError, TypeError):
-        return datetime.min
 
 
 @strawberry.type
@@ -1107,18 +861,18 @@ class Query:
         if date_from is not None:
             from_dt = _safe_parse_date(date_from, "dateFrom")
             if from_dt is not None:
-                result = [b for b in result if _parse_bill_date(b.last_action_date) >= from_dt]
+                result = [b for b in result if parse_bill_date(b.last_action_date) >= from_dt]
         if date_to is not None:
             to_dt = _safe_parse_date(date_to, "dateTo")
             if to_dt is not None:
-                result = [b for b in result if _parse_bill_date(b.last_action_date) <= to_dt]
+                result = [b for b in result if parse_bill_date(b.last_action_date) <= to_dt]
 
         # ── sorting ──
         if sort_by is not None:
             reverse = sort_order == SortOrder.DESC
             if sort_by == BillSortField.LAST_ACTION_DATE:
                 result.sort(
-                    key=lambda b: _parse_bill_date(b.last_action_date),
+                    key=lambda b: parse_bill_date(b.last_action_date),
                     reverse=reverse,
                 )
             elif sort_by == BillSortField.BILL_NUMBER:
@@ -1771,6 +1525,23 @@ _TEMPLATE_DIR = Path(__file__).parent / "templates"
 app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
 
+# Dev bar is available when running in dev profile (never rendered in prod)
+templates.env.globals["dev_available"] = DEV_MODE
+
+
+@app.get("/", include_in_schema=False)
+def _root() -> RedirectResponse:
+    """Redirect root to the advocacy page."""
+    return RedirectResponse(url="/advocacy", status_code=302)
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def _favicon() -> FileResponse:
+    """Serve theme-matching favicon (Kei truck SVG) at /favicon.ico."""
+    path = _STATIC_DIR / "favicon.svg"
+    return FileResponse(path, media_type="image/svg+xml")
+
+
 # ── CORS middleware ──────────────────────────────────────────────────────────
 _cors_origins = [o.strip() for o in cfg.CORS_ORIGINS.split(",") if o.strip()]
 app.add_middleware(
@@ -1790,13 +1561,17 @@ async def _api_key_middleware(request: Request, call_next) -> Response:  # type:
     Skips auth for the health endpoint and for OPTIONS (CORS preflight).
     """
     if cfg.API_KEY:
-        exempt = {"/health", "/docs", "/openapi.json", "/redoc"}
+        exempt = {"/", "/health", "/docs", "/openapi.json", "/redoc", "/favicon.ico"}
         path = request.url.path
         if (
             path not in exempt
             and not path.startswith("/advocacy")
+            and not path.startswith("/auth")
+            and not path.startswith("/outreach")
             and not path.startswith("/explore")
+            and not path.startswith("/intelligence")
             and not path.startswith("/api/graph")
+            and not path.startswith("/api/dev")
             and not path.startswith("/static")
             and request.method != "OPTIONS"
         ):
@@ -1874,596 +1649,266 @@ async def health() -> dict:
 
 # ── SSR Advocacy routes ──────────────────────────────────────────────────────
 
-# Policy categories mapped to Senate committee codes.  When the user picks a
-# category the Power Broker / Ally search is restricted to members who sit on
-# at least one of the listed committees.  "All" (empty string) = no filter.
-_CATEGORY_COMMITTEES: dict[str, list[str]] = {
-    "": [],  # No filter — default
-    "Transportation": ["STRN"],
-    "Agriculture": ["SAGR"],
-    "Commerce & Small Business": ["SCOM", "SBTE"],
-    "Criminal Justice": ["SCRL", "SHRJ"],
-    "Education": ["SESE", "SCHE"],
-    "Energy & Environment": ["SENE", "SNVR"],
-    "Healthcare & Human Services": ["SBMH", "SCHW", "SHUM"],
-    "Housing": ["SHOU"],
-    "Insurance & Finance": ["SINS", "SFIC"],
-    "Labor": ["SLAB"],
-    "Revenue & Pensions": ["SREV", "SPEN"],
-    "State Government": ["SGOA", "SHEE", "SEXC"],
-}
-
-# Labels in display order for the dropdown.
-CATEGORY_CHOICES: list[tuple[str, str]] = [
-    ("", "All categories"),
-    ("Transportation", "Transportation"),
-    ("Agriculture", "Agriculture"),
-    ("Commerce & Small Business", "Commerce & Small Business"),
-    ("Criminal Justice", "Criminal Justice"),
-    ("Education", "Education"),
-    ("Energy & Environment", "Energy & Environment"),
-    ("Healthcare & Human Services", "Healthcare & Human Services"),
-    ("Housing", "Housing"),
-    ("Insurance & Finance", "Insurance & Finance"),
-    ("Labor", "Labor"),
-    ("Revenue & Pensions", "Revenue & Pensions"),
-    ("State Government", "State Government"),
-]
-
-
-def _committee_member_ids(committee_codes: list[str]) -> set[str]:
-    """Return a set of member IDs that sit on any of the given committees."""
-    ids: set[str] = set()
-    for code in committee_codes:
-        for role in state.committee_rosters.get(code, []):
-            ids.add(role.member_id)
-    return ids
-
-
-def _build_influence_dict(member: Member) -> dict | None:
-    """Build influence data for a card from the influence engine state."""
-    ip = state.influence.get(member.id)
-    if not ip:
-        return None
-
-    piv = state.pivotality.get(member.name)
-    sp = state.sponsor_pull.get(member.id)
-
-    d: dict = {
-        "score": ip.influence_score,
-        "label": ip.influence_label,
-        "rank_overall": ip.rank_overall,
-        "rank_chamber": ip.rank_chamber,
-        "signals": ip.influence_signals,
-        # Component breakdowns
-        "moneyball_pct": round(ip.moneyball_normalized * 100, 1),
-        "betweenness_pct": round(ip.betweenness_normalized * 100, 1),
-        "pivotality_pct": round(ip.pivotality_normalized * 100, 1),
-        "pull_pct": round(ip.pull_normalized * 100, 1),
-    }
-
-    if piv:
-        d["close_votes"] = piv.close_votes_total
-        d["pivotal_winning"] = piv.pivotal_winning
-        d["swing_votes"] = piv.swing_votes
-
-    if sp:
-        d["sponsor_lift"] = round(sp.sponsor_lift, 3)
-        d["cosponsor_lift"] = round(sp.cosponsor_lift, 3)
-
-    return d
-
-
-def _member_to_card(member: Member, *, why: str = "", badges: list[str] | None = None) -> dict:
-    """Convert a Member to a template-friendly dict for card rendering.
-
-    Includes empirical stats first (laws passed, passage rate, cross-party %),
-    then Moneyball composite with a short explanation so derived metrics are clear.
-    A ``scorecard`` sub-dict is attached when scorecard data exists so the
-    template can render the full Legislative Scorecard (Lawmaking / Resolutions
-    / Overall).
-    ``script_hint`` is set to ``""`` here; callers populate it with an
-    evidence-based hint via the ``_build_script_hint_*`` helpers.
-    """
-    phone = None
-    for office in member.offices:
-        if office.phone:
-            phone = office.phone
-            break
-
-    mb = None
-    if state.moneyball:
-        mb = state.moneyball.profiles.get(member.id)
-
-    # Empirical (raw) stats — directly from data
-    laws_filed = mb.laws_filed if mb else None
-    laws_passed = mb.laws_passed if mb else None
-    passage_rate_pct = round((mb.effectiveness_rate * 100), 1) if mb and mb.laws_filed else None
-    bridge_pct = round((mb.bridge_score * 100), 1) if mb else None
-
-    # ── Full scorecard (Lawmaking / Resolutions / Overall) ──
-    sc = state.scorecards.get(member.id)
-    scorecard_dict = None
-    if sc is not None and (sc.primary_bill_count > 0 or sc.law_heat_score > 0):
-        scorecard_dict = {
-            # Lawmaking (HB/SB)
-            "laws_filed": sc.law_heat_score,
-            "laws_passed": sc.law_passed_count,
-            "law_pass_rate_pct": round(sc.law_success_rate * 100, 1),
-            "magnet_score": round(sc.magnet_score, 1),
-            "bridge_pct": round(sc.bridge_score * 100, 1),
-            # Resolutions (HR/SR/HJR/SJR)
-            "resolutions_filed": sc.resolutions_count,
-            "resolutions_passed": sc.resolutions_passed_count,
-            "resolution_pass_rate_pct": round(sc.resolution_pass_rate * 100, 1),
-            # Overall
-            "total_bills": sc.primary_bill_count,
-            "total_passed": sc.passed_count,
-            "overall_pass_rate_pct": round(sc.success_rate * 100, 1),
-            "vetoed_count": sc.vetoed_count,
-            "stuck_count": sc.stuck_count,
-            "in_progress_count": sc.in_progress_count,
-        }
-
-    # ── Moneyball component breakdown for template ──
-    moneyball_dict = None
-    if mb:
-        moneyball_dict = {
-            "effectiveness_rate_pct": round(mb.effectiveness_rate * 100, 1),
-            "pipeline_depth_avg": round(mb.pipeline_depth_avg, 2),
-            "magnet_score": round(mb.magnet_score, 1),
-            "bridge_pct": round(mb.bridge_score * 100, 1),
-            "network_centrality": round(mb.network_centrality, 3),
-            "institutional_weight": round(mb.institutional_weight, 2),
-        }
-
-    # ── Influence Network (human-readable power picture) ──
-    influence_dict = None
-    if mb and mb.unique_collaborators > 0:
-        # Determine bipartisan label based on party balance of collaborators
-        total_collab = (
-            mb.collaborator_republicans + mb.collaborator_democrats + mb.collaborator_other
-        )
-        minority_share = (
-            min(mb.collaborator_republicans, mb.collaborator_democrats) / total_collab
-            if total_collab > 0
-            else 0.0
-        )
-        if minority_share >= 0.3:
-            bipartisan_label = "high bipartisan reach"
-        elif minority_share >= 0.15:
-            bipartisan_label = "moderate bipartisan reach"
-        else:
-            bipartisan_label = ""
-
-        influence_dict = {
-            "unique_collaborators": mb.unique_collaborators,
-            "collaborator_republicans": mb.collaborator_republicans,
-            "collaborator_democrats": mb.collaborator_democrats,
-            "collaborator_other": mb.collaborator_other,
-            "bipartisan_label": bipartisan_label,
-            "magnet_score": round(mb.magnet_score, 1),
-            "magnet_vs_chamber": mb.magnet_vs_chamber,
-            "cosponsor_passage_rate_pct": round(mb.cosponsor_passage_rate * 100, 1),
-            "cosponsor_passage_multiplier": mb.cosponsor_passage_multiplier,
-            "chamber_median_cosponsor_rate_pct": round(
-                mb.chamber_median_cosponsor_rate * 100,
-                1,
-            ),
-            "passage_rate_vs_caucus": mb.passage_rate_vs_caucus,
-            "caucus_avg_passage_rate_pct": round(mb.caucus_avg_passage_rate * 100, 1),
-        }
-
-    # ── Committee assignments with roles and stats ──
-    committee_roles = state.member_committee_roles.get(member.id, [])
-
-    # ── Voting Record ──
-    # Always show the full voting record — category filtering would reduce it
-    # to only bills currently pending in those committees (a tiny subset) and
-    # make the section vanish for most members.
-    voting_record_dict: dict | None = None
-    vr = state.member_vote_records.get(member.name)
-    if vr and vr.total_votes > 0:
-        voting_record_dict = {
-            "total_votes": vr.total_votes,
-            "total_floor_votes": vr.total_floor_votes,
-            "total_committee_votes": vr.total_committee_votes,
-            "yes_count": vr.yes_count,
-            "no_count": vr.no_count,
-            "present_count": vr.present_count,
-            "nv_count": vr.nv_count,
-            "yes_rate_pct": vr.yes_rate_pct,
-            "party_alignment_pct": vr.party_alignment_pct,
-            "party_defection_count": vr.party_defection_count,
-            "is_persuadable": vr.party_defection_count > 0,
-            "records": [
-                {
-                    "bill_number": r.bill_number,
-                    "bill_description": r.bill_description,
-                    "date": r.date,
-                    "vote": r.vote,
-                    "bill_status": r.bill_status,
-                    "vote_type": r.vote_type,
-                    "bill_status_url": r.bill_status_url,
-                }
-                for r in vr.records
-            ],
-        }
-
-    # ── Institutional Power Badges ──
-    power_badges_list: list[dict] = []
-    chamber_size = 0
-    if mb:
-        chamber_size = (
-            (
-                len(state.moneyball.rankings_house)
-                if member.chamber == "House"
-                else len(state.moneyball.rankings_senate)
-            )
-            if state.moneyball
-            else 0
-        )
-        raw_badges = compute_power_badges(mb, committee_roles, chamber_size)
-        power_badges_list = [
-            {
-                "label": pb.label,
-                "icon": pb.icon,
-                "explanation": pb.explanation,
-                "css_class": pb.css_class,
-            }
-            for pb in raw_badges
-        ]
-
-    # ── Ranking context (human-readable power position) ──
-    rank_chamber = mb.rank_chamber if mb else None
-    rank_percentile = None
-    if mb and chamber_size > 0:
-        rank_percentile = round((1 - (mb.rank_chamber - 1) / chamber_size) * 100)
-
-    # ── Party abbreviation for compact display ──
-    if "republican" in (member.party or "").lower():
-        party_abbr = "R"
-    elif "democrat" in (member.party or "").lower():
-        party_abbr = "D"
-    elif member.party:
-        party_abbr = member.party[:1]
-    else:
-        party_abbr = ""
-
-    # ── Active bill count ──
-    active_count = 0
-    for bid in member.sponsored_bill_ids or []:
-        b = state.bill_lookup.get(bid)
-        if b and b.last_action:
-            action_lower = b.last_action.lower()
-            if not any(
-                kw in action_lower
-                for kw in (
-                    "public act",
-                    "effective date",
-                    "vetoed",
-                    "tabled",
-                    "postponed indefinitely",
-                    "session sine die",
-                )
-            ):
-                active_count += 1
-
-    return {
-        "name": member.name,
-        "id": member.id,
-        "district": member.district,
-        "party": member.party,
-        "party_abbr": party_abbr,
-        "chamber": member.chamber,
-        "role": member.role,
-        "phone": phone,
-        "email": member.email,
-        "laws_filed": laws_filed,
-        "laws_passed": laws_passed,
-        "passage_rate_pct": passage_rate_pct,
-        "bridge_score": round(mb.bridge_score, 4) if mb else None,
-        "bridge_pct": bridge_pct,
-        "moneyball_score": round(mb.moneyball_score, 2) if mb else None,
-        "moneyball_explanation": MONEYBALL_ONE_LINER,
-        "moneyball": moneyball_dict,
-        "influence_network": influence_dict,
-        "member_url": member.member_url,
-        "why": why,
-        "badges": badges or [],
-        "power_badges": power_badges_list,
-        "script_hint": "",
-        "scorecard": scorecard_dict,
-        "committee_roles": committee_roles,
-        "voting_record": voting_record_dict,
-        "rank_chamber": rank_chamber,
-        "chamber_size": chamber_size,
-        "rank_percentile": rank_percentile,
-        "active_bills": active_count,
-        # ── Influence engine ──
-        "influence": _build_influence_dict(member),
-    }
-
-
-# ── Evidence-based script hint builders ──────────────────────────────────────
-
-
-def _stats_sentence(card: dict) -> str:
-    """Build a short stats clause from the card's empirical fields.
-
-    Example: "They've passed 4 of 12 laws (33.3% passage rate) and 25.0% of
-    their bills have cross-party co-sponsors."
-    """
-    parts: list[str] = []
-    if card.get("laws_filed") and card.get("laws_passed") is not None:
-        parts.append(
-            f"they've passed {card['laws_passed']} of {card['laws_filed']} laws "
-            f"({card['passage_rate_pct'] or 0}% passage rate)"
-        )
-    if card.get("bridge_pct") is not None and card["bridge_pct"] > 0:
-        parts.append(f"{card['bridge_pct']}% of their bills have cross-party co-sponsors")
-    if parts:
-        return (
-            parts[0][0].upper()
-            + parts[0][1:]
-            + (" and " + parts[1] if len(parts) > 1 else "")
-            + "."
-        )
-    return ""
-
-
-def _build_script_hint_senator(card: dict, zip_code: str, district: str) -> str:
-    """Evidence-based script hint for Your Senator."""
-    stats = _stats_sentence(card)
-    stats_line = f" {stats}" if stats else ""
-    return (
-        f"This is YOUR state senator. Call their office, say you live in "
-        f"ZIP {zip_code} (District {district}), and tell them you support "
-        f"kei truck legalization in Illinois. Constituent calls are tracked "
-        f"\u2014 yours counts.{stats_line}"
-    )
-
-
-def _build_script_hint_rep(card: dict, zip_code: str, district: str) -> str:
-    """Evidence-based script hint for Your Representative."""
-    stats = _stats_sentence(card)
-    stats_line = f" {stats}" if stats else ""
-    return (
-        f"This is YOUR state representative. They vote on bills in the House "
-        f"before they reach the Senate. Call their office, reference ZIP "
-        f"{zip_code} (District {district}), and ask them to sponsor or support "
-        f"kei truck legislation.{stats_line}"
-    )
-
-
-def _build_script_hint_broker(card: dict, broker_why: str) -> str:
-    """Evidence-based script hint for Power Broker."""
-    # Determine if chosen as Chair or by Moneyball
-    is_chair = "Chair of the" in broker_why
-    stats = _stats_sentence(card)
-
-    if is_chair:
-        lead = (
-            "This legislator chairs the committee that controls whether your bill "
-            "gets a hearing \u2014 they are the institutional gatekeeper."
-        )
-    else:
-        lead = (
-            "This legislator has the highest overall influence score (Moneyball) "
-            "in the Senate outside your district."
-        )
-
-    evidence = f" {stats}" if stats else ""
-    action = (
-        " When you call, reference the bill, mention broad constituent support, "
-        "and ask for their co-sponsorship."
-    )
-    return lead + evidence + action
-
-
-def _build_script_hint_ally(card: dict) -> str:
-    """Evidence-based script hint for Potential Ally."""
-    bridge = card.get("bridge_pct")
-    if bridge and bridge > 0:
-        evidence = (
-            f" They have a {bridge}% cross-party co-sponsorship rate \u2014 "
-            "meaning they regularly work across the aisle."
-        )
-    else:
-        evidence = ""
-    return (
-        "This senator sits physically next to yours in the chamber."
-        + evidence
-        + " Ask your senator to partner with them on kei truck legislation "
-        "\u2014 proximity and bipartisan track record make them a natural ally."
-    )
-
-
-def _build_script_hint_super_ally(card: dict) -> str:
-    """Evidence-based script hint for Super Ally (merged Broker + Ally)."""
-    stats = _stats_sentence(card)
-    evidence = f" {stats}" if stats else ""
-    return (
-        "This legislator is both the most influential senator in the chamber "
-        "AND a physical neighbor of your senator \u2014 a uniquely powerful "
-        "advocacy target." + evidence + " Ask your senator to partner with "
-        "them directly. When you call their office, reference the bill and "
-        "the fact that they sit next to your senator. This is your "
-        "highest-value strategic target."
-    )
-
-
-def _find_member_by_district(chamber: str, district: str) -> Member | None:
-    """Find a member by chamber (case-insensitive) and district number."""
-    chamber_lower = chamber.lower()
-    for m in state.members:
-        if m.chamber.lower() == chamber_lower and m.district == district:
-            return m
-    return None
-
-
-def _find_power_broker(
-    exclude_district: str,
-    *,
-    committee_ids: set[str] | None = None,
-    committee_codes: list[str] | None = None,
-    category_name: str = "",
-) -> tuple[Member | None, str]:
-    """Find the top Senate Power Broker.
-
-    Selection priority:
-    1.  When a policy *committee_codes* filter is active, first look for the
-        **Committee Chair** of the relevant committee(s).  A Chair is the
-        strongest institutional voice on a topic — they control what bills
-        get heard.
-    2.  If no Chair is found (or no committee filter is active), fall back to
-        the Senate member with the **highest Moneyball score**.
-
-    Returns ``(Member | None, why_text)``.
-    """
-    member_lookup = {m.id: m for m in state.members}
-
-    # ── Priority 1: Committee Chair (when a policy category is selected) ──
-    if committee_codes:
-        for code in committee_codes:
-            for cmr in state.committee_rosters.get(code, []):
-                role_lower = cmr.role.lower()
-                # Match "Chairperson", "Chair" but NOT "Vice-Chair*"
-                if "chair" in role_lower and "vice" not in role_lower:
-                    chair_member = member_lookup.get(cmr.member_id)
-                    if (
-                        chair_member
-                        and chair_member.chamber == "Senate"
-                        and chair_member.district != exclude_district
-                    ):
-                        committee_name = ""
-                        cmt = state.committee_lookup.get(code)
-                        if cmt:
-                            committee_name = cmt.name
-                        parts = [f"Chair of the {committee_name or code} committee"]
-                        if category_name:
-                            parts.append(
-                                f"the institutional gatekeeper for {category_name} legislation"
-                            )
-                        mb = (
-                            state.moneyball.profiles.get(cmr.member_id) if state.moneyball else None
-                        )
-                        if mb:
-                            parts.append(
-                                f"Moneyball score: {mb.moneyball_score}, "
-                                f"effectiveness: {mb.effectiveness_rate:.0%}"
-                            )
-                        why = ". ".join(parts) + "."
-                        return chair_member, why
-
-    # ── Priority 2: Highest Moneyball score (fallback) ──
-    if not state.moneyball:
-        return None, ""
-
-    best_profile = None
-    for profile in state.moneyball.profiles.values():
-        if profile.chamber != "Senate":
-            continue
-        if profile.district == exclude_district:
-            continue
-        if committee_ids and profile.member_id not in committee_ids:
-            continue
-        if best_profile is None or profile.moneyball_score > best_profile.moneyball_score:
-            best_profile = profile
-
-    if best_profile is None:
-        return None, ""
-
-    member = member_lookup.get(best_profile.member_id)
-    if member is None:
-        return None, ""
-
-    parts = [
-        f"Highest Moneyball score ({best_profile.moneyball_score}) "
-        f"in the Senate outside your district",
-    ]
-    if category_name:
-        parts.append(f"sits on a {category_name} committee")
-    parts.append(
-        f"effectiveness: {best_profile.effectiveness_rate:.0%}, "
-        f"{best_profile.unique_collaborators} collaborators"
-    )
-    why = ". ".join(parts) + "."
-    return member, why
-
-
-def _find_ally(
-    senator: Member,
-    *,
-    committee_ids: set[str] | None = None,
-    category_name: str = "",
-) -> tuple[Member | None, str]:
-    """Find the best Ally from the senator's seatmates.
-
-    Returns ``(Member | None, why_text)``.
-    """
-    if not senator.seatmate_names:
-        return None, ""
-
-    best_member = None
-    best_bridge = -1.0
-
-    for seatmate_name in senator.seatmate_names:
-        member = state.member_lookup.get(seatmate_name)
-        if member is None:
-            continue
-        if committee_ids and member.id not in committee_ids:
-            continue
-
-        bridge = 0.0
-        if state.moneyball:
-            mb = state.moneyball.profiles.get(member.id)
-            if mb:
-                bridge = mb.bridge_score
-
-        if bridge > best_bridge:
-            best_bridge = bridge
-            best_member = member
-
-    # Fallback: if committee filter excluded everyone, try without it.
-    if best_member is None and committee_ids:
-        return _find_ally(senator, committee_ids=None, category_name="")
-
-    # Fallback: if no one has a bridge score, pick first resolved seatmate.
-    if best_member is None:
-        for seatmate_name in senator.seatmate_names:
-            member = state.member_lookup.get(seatmate_name)
-            if member is not None:
-                best_member = member
-                break
-
-    if best_member is None:
-        return None, ""
-
-    why_parts = ["Sits next to your senator in the chamber"]
-    if category_name and committee_ids and best_member.id in committee_ids:
-        why_parts.append(f"also on a {category_name} committee")
-    if state.moneyball:
-        mb = state.moneyball.profiles.get(best_member.id)
-        if mb and mb.bridge_score > 0:
-            why_parts.append(
-                f"bridge score of {mb.bridge_score:.0%} (cross-party co-sponsorship rate)"
-            )
-    if senator.seatmate_affinity > 0:
-        why_parts.append(f"{senator.seatmate_affinity:.0%} bill overlap with seatmates")
-    why = ". ".join(why_parts) + "."
-    return best_member, why
-
 
 @app.get("/advocacy")
-async def advocacy_index(request: Request):
-    """Render the advocacy search page."""
+async def advocacy_index(request: Request, zip: str = "", member_id: str = "", view: str = ""):
+    """Render the advocacy search page. Accepts dev deep-link params when ?dev is present."""
+    ctx: dict[str, Any] = {
+        "request": request,
+        "title": "Kei Truck Freedom",
+        "categories": CATEGORY_CHOICES,
+        "member_count": len(state.members),
+        "category": "Transportation",
+    }
+    # In seed mode, preload a "good" ZIP so dev testing shows all 4 cards (no red banners).
+    if zip:
+        ctx["zip"] = zip
+    elif SEED_MODE:
+        ctx["zip"] = "60601"
+    return templates.TemplateResponse("index.html", ctx)
+
+
+@app.get("/advocacy/test")
+async def advocacy_test(request: Request):
+    """Dev back door: jump to any advocacy feature without clicking through."""
+    test_members = ah.test_member_list(state)
+    default_zip = "60601"
     return templates.TemplateResponse(
-        "index.html",
+        "advocacy_test.html",
         {
             "request": request,
-            "title": "Kei Truck Freedom",
-            "categories": CATEGORY_CHOICES,
+            "test_members": test_members,
+            "default_zip": default_zip,
+        },
+    )
+
+
+# PDF letter template: place your file at src/ilga_graph/static/advocacy/letter-template.pdf
+_LETTER_PDF_PATH = Path(__file__).parent / "static" / "advocacy" / "letter-template.pdf"
+
+
+@app.get("/advocacy/letter-template")
+async def advocacy_letter_template(request: Request):
+    """Letter template HTML (print to PDF) — fallback if PDF not provided."""
+    return templates.TemplateResponse(
+        "letter_template.html",
+        {"request": request},
+    )
+
+
+@app.get("/advocacy/letter-template.pdf")
+async def advocacy_letter_template_pdf():
+    """Download constituent letter template PDF (static/advocacy/letter-template.pdf)."""
+    if not _LETTER_PDF_PATH.is_file():
+        return JSONResponse(
+            status_code=404,
+            content={
+                "detail": "Letter template PDF not found. Add static/advocacy/letter-template.pdf."
+            },
+        )
+    return FileResponse(
+        path=str(_LETTER_PDF_PATH),
+        media_type="application/pdf",
+        filename="letter-template.pdf",
+        headers={"Content-Disposition": "attachment; filename=letter-template.pdf"},
+    )
+
+
+@app.get("/advocacy/drawer")
+async def advocacy_drawer(
+    request: Request,
+    view: str = "call",
+    member_id: str = "",
+    db: AsyncSession = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+):
+    """Return drawer body: view=call (script + form) or view=email (template)."""
+    zip_code = (request.query_params.get("zip") or "").strip()
+    photo_url_param = (request.query_params.get("photo_url") or "").strip()
+    target_type_param = (request.query_params.get("target_type") or "").strip().upper()
+    member = ah.find_member_by_id(state, member_id.strip()) if member_id else None
+    legislator_name = member.name if member else ""
+    phone = None
+    if member:
+        for office in member.offices:
+            if office.phone:
+                phone = office.phone
+                break
+    has_public_email = bool(member and member.email)
+    recipient_email = (member.email or "") if member else ""
+
+    if view == "email":
+        # Hide "Pro tip: call first" if user has already recorded a call to this member
+        show_call_nudge = True
+        if user and member_id:
+            r = await db.execute(
+                select(func.count())
+                .select_from(OutreachEvent)
+                .where(
+                    OutreachEvent.user_id == user.id,
+                    OutreachEvent.member_id == member_id.strip(),
+                    OutreachEvent.kind == "call",
+                )
+            )
+            if (r.scalar() or 0) > 0:
+                show_call_nudge = False
+
+        target_type = "POWER_BROKER" if target_type_param == "POWER_BROKER" else "NON_COMMITTEE"
+        chamber = getattr(member, "chamber", None) if member else None
+        district = getattr(member, "district", None) if member else None
+        subject = ah.build_email_first_subject(zip_code)
+        body = ah.build_email_first_body(
+            legislator_name,
+            zip_code,
+            chamber=chamber,
+            district=district,
+            target_type=target_type,
+        )
+        return templates.TemplateResponse(
+            "_advocacy_drawer_email.html",
+            {
+                "request": request,
+                "drawer_view": "email_first",
+                "legislator_name": legislator_name,
+                "recipient_email": recipient_email,
+                "has_public_email": has_public_email,
+                "subject": subject,
+                "body": body,
+                "show_call_nudge": show_call_nudge,
+                "show_go_to_call": not has_public_email,
+            },
+        )
+
+    # Call view: kei/mini truck script + after-call mini-form
+    is_senate = member and (member.chamber or "").lower() == "senate"
+    title_label = "Senator" if is_senate else "Representative"
+    photo_url = photo_url_param or (getattr(member, "photo_url", "") or "" if member else "")
+    if photo_url and not photo_url.startswith(("http://", "https://")):
+        photo_url = urljoin("https://www.ilga.gov/", photo_url)
+    member_public_email = (member.email or "").strip() if member else ""
+    # Script variables: last name, office name, district label, target type for ASK block
+    legislator_last = (
+        legislator_name.split()[-1] if legislator_name else ""
+    ) or "[LEGISLATOR_LAST]"
+    short_title = "Sen." if (member and (member.chamber or "").lower() == "senate") else "Rep."
+    office_name = (
+        f"Office of {short_title} {legislator_last}"
+        if legislator_last and legislator_last != "[LEGISLATOR_LAST]"
+        else "[OFFICE_NAME]"
+    )
+    district_num = (member.district or "") if member else ""
+    district_label = ""
+    if member and (member.chamber or "").lower() == "senate" and district_num:
+        district_label = f"Senate District {district_num}"
+    elif member and district_num:
+        district_label = f"House District {district_num}"
+    else:
+        district_label = "[DISTRICT]"
+    target_type = "POWER_BROKER" if target_type_param == "POWER_BROKER" else "NON_COMMITTEE"
+    response = templates.TemplateResponse(
+        "_advocacy_drawer_call.html",
+        {
+            "request": request,
+            "legislator_name": legislator_name,
+            "legislator_last": legislator_last,
+            "title_label": title_label,
+            "office_name": office_name,
+            "district_label": district_label,
+            "zip_code": zip_code,
+            "phone": phone or "",
+            "member_id": member_id or "",
+            "photo_url": photo_url,
+            "member_public_email": member_public_email,
+            "target_type": target_type,
+        },
+    )
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    return response
+
+
+@app.post("/advocacy/call/{call_id}/wrapup")
+async def advocacy_call_wrapup(request: Request, call_id: str):
+    """Wrap-up from call: swap drawer to Email view (prefilled or copy-only)."""
+    form = await request.form()
+    zip_code = (form.get("zip") or "").strip()
+    staffer_name = (form.get("staffer_name") or "").strip()
+    email_address = (form.get("email_address") or "").strip()
+    next_step = (form.get("next_step") or "").strip()
+    member_id = call_id.strip()
+    member = ah.find_member_by_id(state, member_id) if member_id else None
+    legislator_name = member.name if member else ""
+    recipient = (email_address or "").strip() or (member.email if member else "") or ""
+
+    staffer = (staffer_name or "").strip() or ""
+    target_type_form = (form.get("target_type") or "").strip().upper()
+    target_type = "POWER_BROKER" if target_type_form == "POWER_BROKER" else "NON_COMMITTEE"
+    call_date = (form.get("call_date") or "").strip()
+    chamber = getattr(member, "chamber", None) if member else None
+    district = getattr(member, "district", None) if member else None
+    subject = ah.build_after_call_email_subject(zip_code)
+    body = ah.build_after_call_email_body(
+        staffer,
+        legislator_name,
+        zip_code,
+        chamber=chamber,
+        district=district,
+        target_type=target_type,
+        call_date=call_date,
+    )
+
+    if recipient:
+        return templates.TemplateResponse(
+            "_advocacy_drawer_email.html",
+            {
+                "request": request,
+                "drawer_view": "after_call",
+                "legislator_name": legislator_name,
+                "recipient_email": recipient,
+                "has_public_email": True,
+                "subject": subject,
+                "body": body,
+                "show_call_nudge": False,
+                "show_go_to_call": False,
+                "copy_only_mode": False,
+            },
+        )
+
+    # No email captured — copy-only mode: same template + reminder to ask for email next call
+    return templates.TemplateResponse(
+        "_advocacy_drawer_email.html",
+        {
+            "request": request,
+            "drawer_view": "after_call",
+            "legislator_name": legislator_name,
+            "recipient_email": "",
+            "has_public_email": False,
+            "subject": subject,
+            "body": body,
+            "instructions": next_step,
+            "show_call_nudge": False,
+            "show_go_to_call": True,
+            "copy_only_mode": True,
+        },
+    )
+
+
+@app.post("/advocacy/call/{call_id}/no-answer")
+async def advocacy_call_no_answer(request: Request, call_id: str):
+    """No-answer / voicemail outcome: return guidance partial with next-step CTAs."""
+    form = await request.form()
+    zip_code = (form.get("zip") or "").strip()
+    outcome = (form.get("outcome") or "no_answer").strip()
+    member_id = call_id.strip()
+    member = ah.find_member_by_id(state, member_id) if member_id else None
+    legislator_name = member.name if member else ""
+    return templates.TemplateResponse(
+        "_advocacy_drawer_no_answer.html",
+        {
+            "request": request,
+            "legislator_name": legislator_name,
+            "member_id": member_id,
+            "zip_code": zip_code,
+            "outcome": outcome,
         },
     )
 
@@ -2473,6 +1918,8 @@ async def advocacy_search(
     request: Request,
     zip_code: str = Form(...),
     category: str = Form(""),
+    db: AsyncSession = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
 ):
     """Look up advocacy targets for a given ZIP code and optional policy category.
 
@@ -2508,6 +1955,8 @@ async def advocacy_search(
                 "request": request,
                 "title": "Kei Truck Freedom",
                 "categories": CATEGORY_CHOICES,
+                "zip": zip_code,
+                "category": category or "Transportation",
                 "error": error,
             },
         )
@@ -2517,24 +1966,34 @@ async def advocacy_search(
     warnings: list[str] = []
 
     # ── Committee filter ──
-    committee_codes = _CATEGORY_COMMITTEES.get(category, [])
-    committee_ids = _committee_member_ids(committee_codes) if committee_codes else None
+    committee_codes = CATEGORY_COMMITTEES.get(category, [])
+    committee_ids = ah.committee_member_ids(state, committee_codes) if committee_codes else None
     category_label = category if category else ""
 
     # ── Find Your Senator ──
     senator_member = (
-        _find_member_by_district("senate", senate_district) if senate_district else None
+        ah.find_member_by_district(state, "senate", senate_district) if senate_district else None
     )
     senator_card = None
     if senator_member:
-        senator_card = _member_to_card(
+        senator_card = ah.member_to_card(
+            state,
             senator_member,
             why=f"Represents IL Senate District {senate_district}, which contains ZIP {zip_code}.",
         )
-        senator_card["script_hint"] = _build_script_hint_senator(
+        senator_card["script_hint"] = ah.build_script_hint_senator(
             senator_card,
             zip_code,
             senate_district,
+        )
+        senator_card["script_sections"] = ah.build_script_sections_senator(
+            senator_card, zip_code, senate_district
+        )
+        senator_card["email_subject"] = ah.build_email_subject(zip_code)
+        senator_card["email_body"] = ah.build_email_body(
+            senator_member.name,
+            senator_card["script_hint"],
+            has_public_email=bool(senator_member.email),
         )
     elif senate_district:
         warnings.append(
@@ -2543,17 +2002,29 @@ async def advocacy_search(
         )
 
     # ── Find Your Representative ──
-    rep_member = _find_member_by_district("house", house_district) if house_district else None
+    rep_member = (
+        ah.find_member_by_district(state, "house", house_district) if house_district else None
+    )
     rep_card = None
     if rep_member:
-        rep_card = _member_to_card(
+        rep_card = ah.member_to_card(
+            state,
             rep_member,
             why=f"Represents IL House District {house_district}, which contains ZIP {zip_code}.",
         )
-        rep_card["script_hint"] = _build_script_hint_rep(
+        rep_card["script_hint"] = ah.build_script_hint_rep(
             rep_card,
             zip_code,
             house_district,
+        )
+        rep_card["script_sections"] = ah.build_script_sections_rep(
+            rep_card, zip_code, house_district
+        )
+        rep_card["email_subject"] = ah.build_email_subject(zip_code)
+        rep_card["email_body"] = ah.build_email_body(
+            rep_member.name,
+            rep_card["script_hint"],
+            has_public_email=bool(rep_member.email),
         )
     elif house_district:
         warnings.append(
@@ -2561,9 +2032,24 @@ async def advocacy_search(
             "representative not in current data (dev/seed mode has limited members)."
         )
 
+    # ── Your Legislators: order by Moneyball score (higher first) ──
+    your_legislators: list[dict[str, Any]] = []
+    for card, role_label, role_class in [
+        (senator_card, "Your Senator", "role-senator"),
+        (rep_card, "Your Representative", "role-rep"),
+    ]:
+        if card is None:
+            continue
+        your_legislators.append({"card": card, "role_label": role_label, "role_class": role_class})
+    your_legislators.sort(
+        key=lambda x: x["card"].get("moneyball_score") or 0,
+        reverse=True,
+    )
+
     # ── Find Power Broker ──
     exclude_dist = senate_district or ""
-    broker_member, broker_why = _find_power_broker(
+    broker_member, broker_why = ah.find_power_broker(
+        state,
         exclude_dist,
         committee_ids=committee_ids,
         committee_codes=committee_codes or None,
@@ -2572,7 +2058,8 @@ async def advocacy_search(
 
     # ── Find Potential Ally ──
     ally_member, ally_why = (
-        _find_ally(
+        ah.find_ally(
+            state,
             senator_member,
             committee_ids=committee_ids,
             category_name=category_label,
@@ -2593,24 +2080,84 @@ async def advocacy_search(
             f"AND a physical neighbor of your senator — a uniquely powerful advocacy target. "
             f"{broker_why} {ally_why}"
         )
-        super_ally_card = _member_to_card(
+        super_ally_card = ah.member_to_card(
+            state,
             broker_member,
             why=merged_why,
             badges=["Power Broker", "Potential Ally"],
         )
-        super_ally_card["script_hint"] = _build_script_hint_super_ally(super_ally_card)
+        super_ally_card["script_hint"] = ah.build_script_hint_super_ally(super_ally_card)
+        super_ally_card["script_sections"] = ah.build_script_sections_super_ally(super_ally_card)
+        super_ally_card["email_subject"] = ah.build_email_subject(zip_code)
+        super_ally_card["email_body"] = ah.build_email_body(
+            broker_member.name,
+            super_ally_card["script_hint"],
+            has_public_email=bool(broker_member.email),
+        )
     else:
         if broker_member:
-            broker_card = _member_to_card(broker_member, why=broker_why)
-            broker_card["script_hint"] = _build_script_hint_broker(
+            broker_card = ah.member_to_card(state, broker_member, why=broker_why)
+            broker_card["script_hint"] = ah.build_script_hint_broker(
                 broker_card,
                 broker_why,
             )
+            broker_card["script_sections"] = ah.build_script_sections_broker(
+                broker_card, broker_why
+            )
+            broker_card["email_subject"] = ah.build_email_subject(zip_code)
+            broker_card["email_body"] = ah.build_email_body(
+                broker_member.name,
+                broker_card["script_hint"],
+                has_public_email=bool(broker_member.email),
+            )
         if ally_member:
-            ally_card = _member_to_card(ally_member, why=ally_why)
-            ally_card["script_hint"] = _build_script_hint_ally(ally_card)
+            ally_card = ah.member_to_card(state, ally_member, why=ally_why)
+            ally_card["script_hint"] = ah.build_script_hint_ally(ally_card)
+            ally_card["script_sections"] = ah.build_script_sections_ally(ally_card)
+            ally_card["email_subject"] = ah.build_email_subject(zip_code)
+            ally_card["email_body"] = ah.build_email_body(
+                ally_member.name,
+                ally_card["script_hint"],
+                has_public_email=bool(ally_member.email),
+            )
 
     error = "; ".join(warnings) if warnings else None
+
+    # Per-user outreach state for gamified "Called!" / "Emailed!" buttons
+    result_member_ids: list[str] = []
+    for item in your_legislators:
+        result_member_ids.append(item["card"]["id"])
+    for card in (senator_card, rep_card, broker_card, ally_card, super_ally_card):
+        if card is not None:
+            result_member_ids.append(card["id"])
+    result_member_ids = list(dict.fromkeys(result_member_ids))  # unique, order preserved
+
+    user_called_member_ids: set[str] = set()
+    user_emailed_member_ids: set[str] = set()
+    if user and result_member_ids:
+        outreach_result = await db.execute(
+            select(OutreachEvent.member_id, OutreachEvent.kind)
+            .where(OutreachEvent.user_id == user.id)
+            .where(OutreachEvent.member_id.in_(result_member_ids))
+            .where(OutreachEvent.kind.in_(["call", "email"]))
+        )
+        for mid, kind in outreach_result.all():
+            if kind == "call":
+                user_called_member_ids.add(mid)
+            elif kind == "email":
+                user_emailed_member_ids.add(mid)
+
+    # Unique advocate counts (all users aggregated) — drives the 🔥 heat pill
+    outreach_heat: dict[str, int] = {}
+    if result_member_ids:
+        heat_result = await db.execute(
+            select(OutreachEvent.member_id, func.count(func.distinct(OutreachEvent.user_id)))
+            .where(OutreachEvent.member_id.in_(result_member_ids))
+            .where(OutreachEvent.kind.in_(["call", "email"]))
+            .group_by(OutreachEvent.member_id)
+        )
+        # Keys as str so template member.id (string) matches even if DB returns int
+        outreach_heat = {str(mid): int(cnt) for mid, cnt in heat_result.all()}
 
     member_count = len(state.members)
     zip_count = len(state.zip_to_district)
@@ -2628,12 +2175,16 @@ async def advocacy_search(
             "category": category,
             "senate_district": senate_district,
             "house_district": house_district,
+            "your_legislators": your_legislators,
             "senator": senator_card,
             "representative": rep_card,
             "broker": broker_card,
             "ally": ally_card,
             "super_ally": super_ally_card,
             "error": error,
+            "user_called_member_ids": user_called_member_ids,
+            "user_emailed_member_ids": user_emailed_member_ids,
+            "outreach_heat": outreach_heat,
         },
     )
 
@@ -3703,7 +3254,7 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
             def _latest_action_date(b: Bill) -> datetime:
                 if not b.action_history:
                     return datetime.min
-                return max(_parse_action_date(ae.date) for ae in b.action_history)
+                return max(parse_action_date(ae.date) for ae in b.action_history)
 
             bill_obj = max(candidates, key=_latest_action_date)
     if bill_obj and bill_obj.action_history:
@@ -3721,12 +3272,12 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
                 }
             )
         # Sort by date ascending so last item is chronologically last
-        action_history.sort(key=lambda a: _parse_action_date(a["date"]))
+        action_history.sort(key=lambda a: parse_action_date(a["date"]))
         # Override last action and days_since from action history (fixes stale ML dates)
         last_act = action_history[-1]
         bill_ctx.last_action_date = last_act["date"]
         bill_ctx.last_action_text = last_act["action"]
-        last_dt = _parse_action_date(last_act["date"])
+        last_dt = parse_action_date(last_act["date"])
         if last_dt != datetime.min:
             today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             bill_ctx.days_since_action = max(0, (today - last_dt).days)
@@ -3858,6 +3409,17 @@ async def bill_explanation_fragment(request: Request, bill_id: str):
         )
 
 
+# ── Dev bar API ──────────────────────────────────────────────────────────────
+
+
+@app.get("/api/dev/members")
+async def dev_members():
+    """Return first 20 members as JSON for the dev bar member dropdown. Only active in DEV_MODE."""
+    if not DEV_MODE:
+        return JSONResponse(status_code=404, content={"detail": "Not available"})
+    return [{"id": m.id, "name": m.name} for m in state.members[:20]]
+
+
 # ── Legislative Power Map routes ──────────────────────────────────────────
 
 
@@ -3894,7 +3456,7 @@ async def graph_data(
     """
     # ── Resolve topic to committee codes and member IDs ──
     topic = topic.strip()
-    committee_codes = _CATEGORY_COMMITTEES.get(topic, [])
+    committee_codes = CATEGORY_COMMITTEES.get(topic, [])
     topic_member_ids: set[str] = set()
     topic_committees_list: list[dict] = []
     if committee_codes:
@@ -3921,11 +3483,11 @@ async def graph_data(
         district_info = state.zip_to_district.get(zip_code)
         if district_info:
             if district_info.il_senate:
-                sen = _find_member_by_district("senate", district_info.il_senate)
+                sen = find_member_by_district(state, "senate", district_info.il_senate)
                 if sen:
                     your_senator_id = sen.id
             if district_info.il_house:
-                rep = _find_member_by_district("house", district_info.il_house)
+                rep = find_member_by_district(state, "house", district_info.il_house)
                 if rep:
                     your_rep_id = rep.id
 
@@ -4075,3 +3637,7 @@ async def graph_data(
 
 
 app.include_router(graphql_app, prefix="/graphql")
+
+# ── Auth + outreach routers ──────────────────────────────────────────────────
+app.include_router(_auth_router)
+app.include_router(_outreach_router)

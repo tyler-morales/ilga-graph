@@ -10,6 +10,8 @@
 </div>
 
 <div class="member-profile">
+    {% set _name_parts = member.name.split() %}
+    {% set _first_name = _name_parts[0] if _name_parts else member.name %}
     {# ── Header ── #}
     <div class="member-profile-header">
         <h1>{{ member.name }}</h1>
@@ -38,7 +40,7 @@
     {# ── Influence Components ── #}
     {% if influence %}
     <div class="member-components">
-        <h2>Where Their Influence Comes From</h2>
+        <h2>Where {{ member.name }}'s Influence Comes From</h2>
         <div class="component-grid">
             <div class="component-card">
                 <div class="component-value">{{ "%.0f"|format(influence.moneyball_pct) }}%</div>
@@ -67,7 +69,7 @@
                 <div class="component-label">Sponsor Pull</div>
                 <div class="component-desc">
                     {% if influence.sponsor_lift > 0 %}
-                    Bills they sponsor are {{ "%.0f"|format(influence.sponsor_lift * 100) }}% more likely to advance
+                    Bills {{ _first_name }} sponsors are {{ "%.0f"|format(influence.sponsor_lift * 100) }}% more likely to advance
                     {% else %}
                     ML-predicted effect of sponsorship on bill success
                     {% endif %}
