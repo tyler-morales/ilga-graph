@@ -36,6 +36,20 @@ def _hash_code(code: str) -> str:
     return hashlib.sha256(code.encode()).hexdigest()
 
 
+def _verification_email_html(code: str) -> str:
+    """Return HTML body for the verification code email."""
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <body style="font-family: sans-serif;">
+        <p>Your verification code is: <strong>{code}</strong></p>
+        <p>This code expires in 10 minutes.</p>
+        <p>If you didn't request this, you can ignore this email.</p>
+    </body>
+    </html>
+    """
+
+
 async def _send_code_email(email: str, code: str) -> None:
     """Send the verification code via SMTP, or log it in dev."""
     if not cfg.SMTP_HOST:
@@ -55,11 +69,17 @@ async def _send_code_email(email: str, code: str) -> None:
     msg["Subject"] = f"Your ILGA Graph verification code: {code}"
     msg["From"] = cfg.SMTP_FROM
     msg["To"] = email
-    msg.set_content(
+    plain = (
         f"Your verification code is: {code}\n\n"
         f"This code expires in 10 minutes.\n\n"
         f"If you didn't request this, you can ignore this email."
     )
+    msg.set_content(plain)
+    msg.add_alternative(_verification_email_html(code), subtype="html")
+
+    # Port 587 = STARTTLS (plain then upgrade). Port 465 = immediate TLS (mutually exclusive).
+    use_tls = cfg.SMTP_USE_TLS and cfg.SMTP_PORT == 465
+    start_tls = cfg.SMTP_USE_TLS and cfg.SMTP_PORT == 587
 
     await aiosmtplib.send(
         msg,
@@ -67,7 +87,8 @@ async def _send_code_email(email: str, code: str) -> None:
         port=cfg.SMTP_PORT,
         username=cfg.SMTP_USER or None,
         password=cfg.SMTP_PASS or None,
-        use_tls=cfg.SMTP_USE_TLS,
+        use_tls=use_tls,
+        start_tls=start_tls,
     )
     LOGGER.info("Auth code sent to %s via %s:%d", email, cfg.SMTP_HOST, cfg.SMTP_PORT)
 
@@ -95,6 +116,12 @@ async def request_code(
         await _send_code_email(email, code)
     except Exception:
         LOGGER.exception("Failed to send auth code to %s", email)
+        # Help debug 535: Brevo needs SMTP login (username) from SMTP tab, not account email.
+        if cfg.SMTP_HOST and "brevo" in cfg.SMTP_HOST.lower():
+            LOGGER.info(
+                "Brevo SMTP: ILGA_SMTP_USER = SMTP login from Settings → SMTP & API; "
+                "ILGA_SMTP_PASS = SMTP key from same page."
+            )
         return JSONResponse(
             {"ok": False, "error": "Could not send email. Try again."},
             status_code=500,

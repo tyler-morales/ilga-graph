@@ -716,6 +716,29 @@ def _legislator_email_context(
     return title_label, legislator_last, legislator_full, office_name, district_label
 
 
+def legislator_drawer_context(member: Member | None) -> dict[str, str]:
+    """Return template context for call/email drawer: title_label, legislator_last, office_name, district_label.
+    Single source for Senator/Rep, district label, office name."""
+    if not member:
+        return {
+            "title_label": "Representative",
+            "legislator_last": "",
+            "office_name": "[OFFICE_NAME]",
+            "district_label": "[DISTRICT]",
+        }
+    title_label, legislator_last, _leg_full, office_name, district_label = (
+        _legislator_email_context(
+            member.name, getattr(member, "chamber", None), getattr(member, "district", None)
+        )
+    )
+    return {
+        "title_label": title_label,
+        "legislator_last": legislator_last,
+        "office_name": office_name,
+        "district_label": district_label,
+    }
+
+
 def build_after_call_email_subject(zip_code: str) -> str:
     return build_email_subject_line(zip_code, variant="default")
 
@@ -776,20 +799,6 @@ def build_email_first_body(
         staffer_name="",
         call_date="",
     )
-
-
-def find_member_by_id(state: Any, member_id: str) -> Member | None:
-    """Find a member by id."""
-    return state.member_lookup_by_id.get(member_id) if member_id else None
-
-
-def find_member_by_district(state: Any, chamber: str, district: str) -> Member | None:
-    """Find a member by chamber (case-insensitive) and district number."""
-    chamber_lower = chamber.lower()
-    for m in state.members:
-        if m.chamber.lower() == chamber_lower and m.district == district:
-            return m
-    return None
 
 
 def find_power_broker(
