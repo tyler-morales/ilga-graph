@@ -1,4 +1,4 @@
-.PHONY: scrape scrape-full dev serve dev-reset install test lint lint-fix clean help ml-setup ml-run ml-pipeline ml-resolve ml-predict ml-embed scrape-fulltext scrape-members scrape-full-members snapshot-mocks logs docs docs-serve
+.PHONY: scrape scrape-full dev serve dev-reset install test smoke-outreach lint lint-fix clean help ml-setup ml-run ml-pipeline ml-resolve ml-predict ml-embed scrape-fulltext scrape-members scrape-full-members snapshot-mocks logs docs docs-serve
 
 # ── Virtual environment ─────────────────────────────────────────────────────
 VENV ?= $(or $(wildcard .venv), $(wildcard venv), $(wildcard src/ilga_graph/.venv))
@@ -70,6 +70,9 @@ install: ## Install project with dev dependencies
 
 test: ## Run pytest
 	PYTHONPATH=src $(BIN)pytest
+
+smoke-outreach: ## Smoke test: auth + record call/email + visitor-visible stats (temp DB, no server)
+	PYTHONPATH=src $(PYTHON) scripts/smoke_test_outreach.py
 
 lint: ## Run ruff check + format check
 	$(BIN)ruff check .
