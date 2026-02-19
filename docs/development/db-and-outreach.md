@@ -56,3 +56,22 @@ This doc summarizes the DB implementation, potential issues, and how tests verif
 - **tests/test_auth_outreach.py** — Auth flow (request-code → verify-code → /me, logout), outreach record (unauthenticated 401, valid record, support_score/constituent/contact_name/notes), stats (empty and with data), my-history (401 when anonymous, list and ordering), parsing helpers for support_score and constituent.
 
 Run: `make test` or `pytest tests/test_db.py tests/test_auth_outreach.py -v`.
+
+---
+
+## Smoke test (terminal, no server)
+
+**scripts/smoke_test_outreach.py** runs an automated end-to-end flow in the terminal using a temp DB:
+
+1. Sign in (verify with a pre-seeded auth code).
+2. Record one call and one email.
+3. Assert public **GET /outreach/stats/{member_id}** (no auth) shows the new counts — i.e. a visitor would see the outreach.
+4. Assert **GET /outreach/my-history** returns both events.
+
+No Brevo or running server required. Use before deploy to confirm the outreach DB path works.
+
+```bash
+make smoke-outreach
+# or
+PYTHONPATH=src python scripts/smoke_test_outreach.py
+```

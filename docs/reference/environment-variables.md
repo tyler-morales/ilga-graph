@@ -35,6 +35,12 @@ The app loads `.env` from the project root via `python-dotenv`. Copy `.env.examp
 | `ILGA_CORS_ORIGINS` | *profile* | Comma-separated CORS origins. |
 | `ILGA_API_KEY` | *(empty)* | If set, non-exempt routes require `X-API-Key` header. |
 | `ILGA_VOTE_BILL_URLS` | *(built-in)* | Comma-separated bill status URLs for votes/slips. |
+| `ILGA_SMTP_HOST` | *(empty)* | SMTP server (e.g. `smtp-relay.brevo.com`). **If unset, verification codes are logged to the terminal only** — no email is sent. See [Email (Brevo)](email-brevo.md). |
+| `ILGA_SMTP_PORT` | `587` | SMTP port. |
+| `ILGA_SMTP_USER` | *(empty)* | SMTP login (Brevo: use the SMTP login from the SMTP tab, not your account email). |
+| `ILGA_SMTP_PASS` | *(empty)* | SMTP key or password. |
+| `ILGA_SMTP_FROM` | *(empty)* | Sender address for verification emails. |
+| `ILGA_SMTP_TLS` | `1` | Use TLS (1) or not (0). |
 
 ---
 

@@ -37,6 +37,7 @@ nav:
   - Reference:
     - CLI (Make): reference/cli-make.md
     - Deployment: reference/deployment.md
+    - Email (Brevo): reference/email-brevo.md
     - Environment variables: reference/environment-variables.md
     - GraphQL API: reference/graphql.md
     - Project structure: reference/project-structure.md

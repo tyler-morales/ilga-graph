@@ -52,7 +52,7 @@ A **Procfile** in the repo defines the web process (without `--port $PORT`); ove
 |----------|---------|
 | `ILGA_DB_PATH` | Path to SQLite DB (default: `data/ilga.db`). Use an absolute path if the process cwd is not the project root. |
 | `ILGA_CACHE_DIR` | Path to cache directory (default: `cache`). Use an absolute path if needed. |
-| `ILGA_SMTP_*` | SMTP settings so verification codes are emailed to users. If unset, codes are only logged to the console (not suitable for real users). |
+| `ILGA_SMTP_*` | SMTP settings so verification codes are emailed to users. **If unset, codes are logged to the terminal only** (no email sent) — fine for dev; set these in production. See [Email (Brevo)](email-brevo.md) for setup. |
 
 See [Environment variables](environment-variables.md) for the full list.
 

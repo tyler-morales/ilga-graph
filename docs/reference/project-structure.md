@@ -27,7 +27,8 @@ Where to find things in the repo.
 
 | Module / path | Purpose |
 |----------------|---------|
-| `main.py` | FastAPI app, routes (advocacy, intelligence, explore, GraphQL), ETL orchestration. |
+| `main.py` | FastAPI app, lifespan/ETL, routes (intelligence, explore, GraphQL, logs, health), mounts routers. |
+| `routers/advocacy.py` | SSR advocacy routes: landing, drawer (call/email), search, letter template; uses app state and get_db/get_current_user_optional. |
 | `scraper.py` | ILGA scraper: members, committees, bills, votes; caching. |
 | `models.py` | Dataclasses: Member, Bill, Committee, Office, etc. |
 | `schema.py` | Strawberry GraphQL types and queries. |
@@ -36,7 +37,7 @@ Where to find things in the repo.
 | `moneyball.py` | Moneyball profiles, power badges, cosponsor edges. |
 | `influence.py` | Influence scoring (betweenness, sponsor pull, etc.). |
 | `zip_crosswalk.py` | ZIP → district lookup for advocacy. |
-| `templates/` | Jinja2 HTML (advocacy, explore, intelligence, drawer partials). |
+| `templates/` | Jinja2 HTML (advocacy, explore, intelligence, drawer partials). Letter and logs are standalone (no base). |
 | `static/` | CSS, JS, static assets (e.g. advocacy). |
 | `ml/` | ML pipeline: features, bill predictor, coalitions, embeddings, etc. |
 
