@@ -75,7 +75,7 @@
                     <div class="hero-signin-code-row">
                         <input type="text" class="hero-signin-code-input" id="hero-signin-code-input"
                             placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code">
-                        <button type="button" class="hero-signin-btn" id="hero-signin-verify-btn">Verify</button>
+                        <button type="button" class="hero-signin-btn" id="hero-signin-verify-btn">Confirm</button>
                     </div>
                     <span class="hero-signin-error" id="hero-signin-error" hidden></span>
                     <button type="button" class="hero-signin-resend" id="hero-signin-resend">Resend code</button>
@@ -92,11 +92,8 @@
     <a href="/intelligence">ML Intelligence Dashboard &rarr;</a>
 </div> -->
 
-{% if error %}
-<div class="error-msg">{{ error }}</div>
-{% endif %}
-
 <div id="results">
+    {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
     {% block results %}{% endblock %}
 </div>
 
@@ -380,8 +377,16 @@
         var target = (targetType != null && targetType !== '') ? targetType : (drawer.getAttribute('data-drawer-target-type') || '');
         if (target) params.set('target_type', target);
         fetch('/advocacy/drawer?' + params.toString(), { headers: { Accept: 'text/html' } })
-            .then(function (r) { return r.text(); })
+            .then(function (r) {
+                if (!r.ok) {
+                    var msg = r.status === 404 ? 'Legislator not found.' : 'Something went wrong. Try again.';
+                    body.innerHTML = '<p class="drawer-error">' + msg + '</p>';
+                    return undefined;
+                }
+                return r.text();
+            })
             .then(function (html) {
+                if (html == null) return;
                 body.innerHTML = html;
                 if (typeof htmx !== 'undefined') htmx.process(body);
                 var photoUrl = drawer.getAttribute('data-drawer-photo-url') || '';
@@ -410,6 +415,14 @@
                 if (view === 'call_wrapup') showWrapupWithMockPoll(body);
             })
             .catch(function () { body.innerHTML = '<p class="drawer-error">Could not load. Try again.</p>'; });
+    }
+
+    /** Open drawer to another view using current drawer data (e.g. from no-answer or email partial). */
+    function openAdvocacyDrawerFromDrawer(view) {
+        var d = document.getElementById('advocacy-drawer');
+        if (!d || typeof openAdvocacyDrawer !== 'function') return;
+        openAdvocacyDrawer(view, d.getAttribute('data-member-id') || '', d.getAttribute('data-drawer-zip') || '',
+            d.getAttribute('data-drawer-photo-url') || '', d.getAttribute('data-drawer-target-type') || '');
     }
 
     function closeAdvocacyDrawer() {
@@ -872,6 +885,7 @@
             _pendingAuthEmail = '';
             if (fromInput) fromInput.value = '';
             showState('input');
+            setDrawerSendCodeEnabled();
             updateAuthStrip(false);
         }
 
@@ -880,6 +894,7 @@
             if (codeHint) codeHint.textContent = 'Code sent to ' + email;
             if (codeInput) { codeInput.value = ''; codeInput.focus(); }
             if (codeError) codeError.hidden = true;
+            if (codeSubmit) codeSubmit.disabled = true;
             showState('code');
         }
 
@@ -906,15 +921,25 @@
                 .catch(function () { _ilgaUserEmail = null; });
         }
 
+        function isDrawerEmailLike(val) {
+            var s = (val || '').trim();
+            return s.length > 0 && s.indexOf('@') >= 1 && s.indexOf('@') < s.length - 1;
+        }
+        function setDrawerSendCodeEnabled() {
+            if (fromVerifyBtn) fromVerifyBtn.disabled = !isDrawerEmailLike(fromInput && fromInput.value);
+        }
+
         fromVerifyBtn.onclick = function () {
             var email = (fromInput.value || '').trim().toLowerCase();
             if (!email || email.indexOf('@') === -1) { fromInput.focus(); return; }
             fromVerifyBtn.disabled = true;
+            fromVerifyBtn.classList.add('gmail-from-verify-btn--sending');
             fromVerifyBtn.textContent = 'Sending\u2026';
             sendCode(email)
                 .then(function (data) {
-                    fromVerifyBtn.disabled = false;
-                    fromVerifyBtn.textContent = 'Verify';
+                    fromVerifyBtn.classList.remove('gmail-from-verify-btn--sending');
+                    fromVerifyBtn.textContent = 'Send code';
+                    setDrawerSendCodeEnabled();
                     if (data.ok) {
                         goCode(email);
                     } else {
@@ -922,10 +947,23 @@
                     }
                 })
                 .catch(function () {
-                    fromVerifyBtn.disabled = false;
-                    fromVerifyBtn.textContent = 'Verify';
+                    fromVerifyBtn.classList.remove('gmail-from-verify-btn--sending');
+                    fromVerifyBtn.textContent = 'Send code';
+                    setDrawerSendCodeEnabled();
                 });
         };
+
+        if (fromInput) {
+            fromInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (fromVerifyBtn && !fromVerifyBtn.disabled) fromVerifyBtn.click();
+                }
+            });
+            fromInput.addEventListener('input', setDrawerSendCodeEnabled);
+            fromInput.addEventListener('change', setDrawerSendCodeEnabled);
+        }
+        setDrawerSendCodeEnabled();
 
         function doVerifyCode() {
             var code = (codeInput.value || '').trim();
@@ -960,6 +998,7 @@
         if (codeInput) {
             codeInput.addEventListener('input', function () {
                 this.value = this.value.replace(/\D/g, '').slice(0, 6);
+                if (codeSubmit) codeSubmit.disabled = this.value.length !== 6;
                 if (this.value.length === 6) doVerifyCode();
             });
         }
@@ -983,7 +1022,7 @@
                 .catch(function () {
                     resendBtn.disabled = false;
                     resendBtn.textContent = 'Resend code';
-                    if (codeError) { codeError.textContent = 'Network error'; codeError.hidden = false; }
+                    if (codeError) { codeError.textContent = 'Network error \u2014 try again'; codeError.hidden = false; }
                 });
         };
 
@@ -1112,6 +1151,12 @@
         if (emailInput) {
             emailInput.addEventListener('input', setSendCodeEnabled);
             emailInput.addEventListener('change', setSendCodeEnabled);
+            emailInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (requestBtn && !requestBtn.disabled) requestBtn.click();
+                }
+            });
         }
 
         cancelBtn && (cancelBtn.onclick = closeInline);
@@ -1120,12 +1165,14 @@
             var email = (emailInput && emailInput.value || '').trim().toLowerCase();
             if (!email || email.indexOf('@') === -1) { if (emailInput) emailInput.focus(); return; }
             requestBtn.disabled = true;
+            requestBtn.classList.add('hero-signin-btn--sending');
             requestBtn.textContent = 'Sending\u2026';
             var body = new FormData();
             body.append('email', email);
             fetch('/auth/request-code', { method: 'POST', body: body, credentials: 'same-origin' })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
+                    requestBtn.classList.remove('hero-signin-btn--sending');
                     requestBtn.disabled = false;
                     requestBtn.textContent = 'Send code';
                     if (data.ok) {
@@ -1142,9 +1189,10 @@
                     }
                 })
                 .catch(function () {
+                    requestBtn.classList.remove('hero-signin-btn--sending');
                     requestBtn.disabled = false;
                     requestBtn.textContent = 'Send code';
-                    if (codeError) { codeError.textContent = 'Network error'; codeError.hidden = false; }
+                    if (codeError) { codeError.textContent = 'Network error \u2014 try again'; codeError.hidden = false; }
                 });
         });
 
@@ -1161,7 +1209,7 @@
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
                     verifyBtn.disabled = false;
-                    verifyBtn.textContent = 'Verify';
+                    verifyBtn.textContent = 'Confirm';
                     if (data.ok && data.email) {
                         _ilgaUserEmail = data.email;
                         if (_inlineCloseTimer) { clearTimeout(_inlineCloseTimer); _inlineCloseTimer = null; }
@@ -1175,14 +1223,14 @@
                         if (codeError) { codeError.textContent = ''; codeError.hidden = true; }
                         updateAuthStrip(true, data.email);
                     } else {
-                        if (codeError) { codeError.textContent = data.error || 'Invalid or expired code.'; codeError.hidden = false; }
+                        if (codeError) { codeError.textContent = data.error || 'Invalid or expired code. Try again or resend.'; codeError.hidden = false; }
                         if (codeInput) { codeInput.value = ''; codeInput.focus(); }
                     }
                 })
                 .catch(function () {
                     verifyBtn.disabled = false;
-                    verifyBtn.textContent = 'Verify';
-                    if (codeError) { codeError.textContent = 'Network error'; codeError.hidden = false; }
+                    verifyBtn.textContent = 'Confirm';
+                    if (codeError) { codeError.textContent = 'Network error \u2014 try again'; codeError.hidden = false; }
                 });
         }
 
@@ -1225,6 +1273,7 @@
                 .catch(function () {
                     resendBtn.disabled = false;
                     resendBtn.textContent = 'Resend code';
+                    if (codeError) { codeError.textContent = 'Network error \u2014 try again'; codeError.hidden = false; }
                 });
         });
     })();
@@ -1615,8 +1664,19 @@
                         if (span) span.textContent = 'Sent!';
                         guide.complete();
                     } else if (span) {
-                        span.textContent = 'Recorded!';
-                        setTimeout(function () { span.textContent = 'I sent'; }, 1500);
+                        var isAuthError = data && data.error && String(data.error).toLowerCase().indexOf('authentic') !== -1;
+                        if (isAuthError) {
+                            sentBtn.classList.add('sent-signin-nudge');
+                            span.textContent = 'Sign in to save this outreach';
+                            guide.setStep(0);
+                            setTimeout(function () {
+                                sentBtn.classList.remove('sent-signin-nudge');
+                                span.textContent = 'I sent';
+                            }, 3000);
+                        } else {
+                            span.textContent = 'Couldn\'t save. Try again.';
+                            setTimeout(function () { if (span) span.textContent = 'I sent'; }, 3000);
+                        }
                     }
                 });
             };
@@ -1836,14 +1896,30 @@
         if (targetTypeVal) formData.append('target_type', targetTypeVal);
         formData.append('call_date', callDateVal);
         link.classList.add('drawer-draft-followup-link-loading');
+        function showWrapupError() {
+            link.classList.remove('drawer-draft-followup-link-loading');
+            var existing = body.querySelector('.drawer-error-banner');
+            if (existing) return;
+            var banner = document.createElement('div');
+            banner.className = 'drawer-error-banner';
+            banner.textContent = 'Couldn\'t load follow-up. Try again.';
+            body.insertBefore(banner, body.firstChild);
+        }
         fetch('/advocacy/call/' + encodeURIComponent(memberId) + '/wrapup', {
             method: 'POST',
             body: formData,
             credentials: 'same-origin',
             headers: { 'Accept': 'text/html' }
         })
-            .then(function (r) { return r.text(); })
+            .then(function (r) {
+                if (!r.ok) {
+                    showWrapupError();
+                    return undefined;
+                }
+                return r.text();
+            })
             .then(function (html) {
+                if (html == null) return;
                 body.innerHTML = html;
                 var titleEl = document.getElementById('advocacy-drawer-title');
                 if (titleEl && body.querySelector('.gmail-compose')) titleEl.textContent = 'Follow-up email';
@@ -1856,9 +1932,7 @@
                 }
                 recordOutreach(memberId, 'call', zip, '', nextStepVal, stafferVal, supportVal);
             })
-            .catch(function () {
-                link.classList.remove('drawer-draft-followup-link-loading');
-            });
+            .catch(showWrapupError);
     });
 
     document.body.addEventListener('htmx:afterSwap', function (e) {

@@ -37,8 +37,7 @@
         <span class="gmail-banner-icon">💡</span>
         <div class="gmail-banner-text">
             <strong>Pro tip:</strong> Calling is more effective — use the
-            <button type="button" class="gmail-banner-link"
-                onclick="var d=document.getElementById('advocacy-drawer'); if(d && window.openAdvocacyDrawer) openAdvocacyDrawer('call', d.getAttribute('data-member-id')||'', d.getAttribute('data-drawer-zip')||'', d.getAttribute('data-drawer-photo-url')||'', d.getAttribute('data-drawer-target-type')||'');">Call
+            <button type="button" class="gmail-banner-link" onclick="openAdvocacyDrawerFromDrawer('call')">Call
                 tab</button>
             to get the right email, then come back here to send the follow-up.
         </div>
@@ -82,7 +81,7 @@
                             placeholder="Your email — so we can track your outreach" autocomplete="email"
                             inputmode="email">
                         <button type="button" class="gmail-from-verify-btn" id="gmail-from-verify-btn"
-                            title="Verify your email">Verify</button>
+                            title="Send a one-time code to this email">Send code</button>
                     </div>
                 </div>
 
@@ -96,8 +95,8 @@
                                 placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code">
                             <button type="button" class="gmail-from-code-submit"
                                 id="gmail-from-code-submit">Confirm</button>
+                            <span class="gmail-from-code-error" id="gmail-from-code-error" hidden></span>
                         </div>
-                        <span class="gmail-from-code-error" id="gmail-from-code-error" hidden></span>
                         <button type="button" class="gmail-from-resend-btn" id="gmail-from-resend-btn">Resend
                             code</button>
                     </div>
@@ -119,8 +118,8 @@
         <div class="gmail-field-row gmail-to-row">
             <span class="gmail-field-label">To</span>
             <input type="email" class="gmail-field-input gmail-to-input" id="gmail-to-input"
-                value="{{ recipient_email or '' }}" placeholder="Recipient email address"
-                autocomplete="email" inputmode="email">
+                value="{{ recipient_email or '' }}" placeholder="Recipient email address" autocomplete="email"
+                inputmode="email">
         </div>
         <div class="gmail-field-row gmail-subject-row" id="gmail-subject-row">
             <span class="gmail-field-label">Subject</span>
@@ -140,14 +139,15 @@
     {# ── Compose body: Mad Libs container (JS-rendered) + hidden textarea for data ── #}
     <div class="gmail-body-area" id="gmail-body-area">
         <div class="madlib-body" id="gmail-madlib-body"></div>
-        <textarea class="gmail-body-text" id="gmail-body-text" placeholder="Email body..."
-            rows="8" hidden>{{ body }}</textarea>
+        <textarea class="gmail-body-text" id="gmail-body-text" placeholder="Email body..." rows="8"
+            hidden>{{ body }}</textarea>
     </div>
 
     {# ── Attachment bar ── #}
     <div class="gmail-attachment-bar" id="gmail-attachment-bar">
-        <a href="/advocacy/letter-template.pdf" download="letter-template.pdf" rel="noopener"
-            class="gmail-attachment" id="gmail-attachment-link">
+        <a href="/advocacy/IL_Kei_Vehicle_Registration_Fix_Brief.pdf"
+            download="IL_Kei_Vehicle_Registration_Fix_Brief.pdf" rel="noopener" class="gmail-attachment"
+            id="gmail-attachment-link">
             <span class="gmail-attachment-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
@@ -159,7 +159,7 @@
                 </svg>
             </span>
             <span class="gmail-attachment-info">
-                <span class="gmail-attachment-name">letter-template.pdf</span>
+                <span class="gmail-attachment-name">IL_Kei_Vehicle_Registration_Fix_Brief.pdf</span>
                 <span class="gmail-attachment-desc">Constituent letter template — attach when you send</span>
             </span>
         </a>
@@ -194,8 +194,7 @@
 
     {% if show_go_to_call is defined and show_go_to_call and not (show_call_nudge is defined and show_call_nudge) %}
     <div class="gmail-footer-link">
-        <button type="button" class="gmail-go-to-call-btn"
-            onclick="var d=document.getElementById('advocacy-drawer'); if(d && window.openAdvocacyDrawer) window.openAdvocacyDrawer('call', d.getAttribute('data-member-id')||'', d.getAttribute('data-drawer-zip')||'', d.getAttribute('data-drawer-photo-url')||'', d.getAttribute('data-drawer-target-type')||'');">
+        <button type="button" class="gmail-go-to-call-btn" onclick="openAdvocacyDrawerFromDrawer('call')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
                 <path

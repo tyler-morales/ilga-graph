@@ -371,8 +371,12 @@
         }
 
         .hero-signin-inline .hero-signin-btn:disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
+        }
+
+        .hero-signin-inline .hero-signin-btn.hero-signin-btn--sending:disabled {
+            cursor: wait;
         }
 
         .hero-signin-code-hint {
@@ -391,6 +395,7 @@
             font-size: 0.9em;
             display: block;
             margin-top: 6px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
         .hero-signin-resend {
@@ -406,6 +411,11 @@
 
         .hero-signin-resend:hover {
             color: #1765cc;
+        }
+
+        .hero-signin-resend:disabled {
+            opacity: 0.5;
+            cursor: wait;
         }
 
         .hero-signin-cancel {
@@ -636,6 +646,7 @@
             border: 1px solid #e0e0e0;
         }
 
+        /* Advocacy drawer: chrome = phone-overlay / phone-panel; body content = drawer-* classes. */
         /* ── Phone script slide-over panel ── */
         .phone-overlay {
             position: fixed;
@@ -823,6 +834,15 @@
         .drawer-error {
             color: #666;
             padding: 1em 0;
+        }
+
+        .drawer-error-banner {
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            background: #fef2f2;
+            color: #991b1b;
+            border-radius: 4px;
+            font-size: 0.9em;
         }
 
         /* iMessage-style call header: light gray bar, centered photo circle then name then number */
@@ -2856,6 +2876,10 @@
 
         .gmail-from-verify-btn:disabled {
             opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .gmail-from-verify-btn.gmail-from-verify-btn--sending:disabled {
             cursor: wait;
         }
 
@@ -2941,7 +2965,7 @@
         .gmail-from-code-submit {
             font-size: 0.78em;
             font-weight: 600;
-            background: #137333;
+            background: #1a73e8;
             color: #fff;
             border: none;
             border-radius: 4px;
@@ -2950,7 +2974,7 @@
         }
 
         .gmail-from-code-submit:hover {
-            background: #0d5c28;
+            background: #1765cc;
         }
 
         .gmail-from-code-submit:disabled {
@@ -2961,7 +2985,7 @@
         .gmail-from-code-error {
             font-size: 0.8em;
             color: #d93025;
-            width: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
         .gmail-from-resend-btn {
@@ -3429,6 +3453,16 @@
 
         .gmail-sent-btn.sent-done svg {
             stroke: #137333;
+        }
+
+        .gmail-sent-btn.sent-signin-nudge {
+            background: #fef3c7;
+            border-color: #d97706;
+            color: #92400e;
+        }
+
+        .gmail-sent-btn.sent-signin-nudge svg {
+            stroke: #92400e;
         }
 
         @media (max-width: 480px) {
@@ -5077,6 +5111,15 @@
             border: 1px solid #c99;
             background: #fff0f0;
             margin: 12px 0;
+        }
+
+        .results-empty {
+            color: #666;
+            padding: 16px;
+            margin: 12px 0;
+            text-align: center;
+            background: #f5f5f5;
+            border-radius: 6px;
         }
 
         /* ── Footer ── */

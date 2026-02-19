@@ -14,7 +14,7 @@
     </div>
     <div class="drawer-no-answer-actions">
         <button type="button" class="drawer-btn drawer-btn-primary drawer-no-answer-cta"
-            onclick="var d=document.getElementById('advocacy-drawer'); if(d && window.openAdvocacyDrawer) openAdvocacyDrawer('email', d.getAttribute('data-member-id')||'', d.getAttribute('data-drawer-zip')||'', d.getAttribute('data-drawer-photo-url')||'', d.getAttribute('data-drawer-target-type')||'');">
+            onclick="openAdvocacyDrawerFromDrawer('email')">
             Send email instead
         </button>
         <button type="button" class="drawer-btn drawer-btn-secondary" onclick="closeAdvocacyDrawer()">

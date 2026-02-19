@@ -43,8 +43,6 @@
                 net.passage_rate_vs_caucus >= 1.2 %}
                 {% set bipartisan_reach = net and net.bipartisan_label %}
                 {% set big_network = net and net.unique_collaborators is not none and net.unique_collaborators >= 40 %}
-                {% set has_signals = cosponsor_lift or outperforms_caucus or bipartisan_reach or big_network or
-                has_chair or high_rank or is_persuadable or high_passage or productive or cross_party %}
 
                 {# ── Card header: [photo] | [name then badges on desktop]; mobile keeps badges full width below ── #}
                 <div class="card-header">
@@ -175,8 +173,8 @@
                             <p class="why-picked-prose">{{ ns.why_picked[:3]|join(" ") | safe }}</p>
                         </div>
 
-                        {# ── Quick snaps: "wow" stats that make callers want to reach out ── #}
-                        {% if has_signals %}
+                        {# ── Quick snaps: "wow" stats (from precomputed recommendation_chip_order) ── #}
+                        {% if member.get('recommendation_chip_order') %}
                         <p class="chips-label">Why we recommend them</p>
                         <div class="power-signals">
                             {% for chip_key in member.get('recommendation_chip_order', []) %}
@@ -737,4 +735,7 @@
                 {% if your_legislators or broker or ally or super_ally %}
             </main>
         </div>
+        {% endif %}
+        {% if not error and not (your_legislators or broker or ally or super_ally) %}
+        <div class="results-empty">No targets found for this ZIP. Try another Illinois ZIP or policy area.</div>
         {% endif %}
