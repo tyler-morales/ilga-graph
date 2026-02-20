@@ -6,7 +6,7 @@
     z-index: 9998;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.25s;
+    transition: opacity 0.45s ease;
 }
 
 .phone-overlay.open {
@@ -24,9 +24,10 @@
     background: #fff;
     z-index: 9999;
     transform: translateX(100%);
-    transition: transform 0.3s ease;
+    transition: transform 0.5s ease;
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
 }
 
 /* Email drawer only: 50% viewport width */
@@ -121,8 +122,10 @@
 .drawer-step-link.drawer-step-link-active {
     font-weight: 600;
     color: #111;
-    text-decoration: underline;
-    text-underline-offset: 3px;
+}
+
+.drawer-step-link:not(.drawer-step-link-active) {
+    color: #9ca3af;
 }
 
 .drawer-step-sep {
@@ -134,9 +137,11 @@
 .phone-panel-body {
     flex: 1;
     min-height: 0;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     padding: 0 24px 20px 24px;
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
@@ -284,6 +289,9 @@
     margin: 0 -24px 0 -24px;
     border-bottom: 1px solid #c6c6c8;
     text-align: center;
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .drawer-call-header-inner {
@@ -879,6 +887,7 @@
 
 .drawer-call-content {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-width: 0;
 }
 
 .chat-bubble {
@@ -1598,7 +1607,10 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: #999;
-    white-space: nowrap;
+    flex-shrink: 1;
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 /* iOS-style Wrap Up card */
