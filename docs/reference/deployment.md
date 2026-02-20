@@ -109,6 +109,24 @@ The tracker script URL defaults to `https://cloud.umami.is/script.js`. For self-
 
 ---
 
+## Troubleshooting
+
+### OG image "invalid or unreachable" when sharing links
+
+Social crawlers (Facebook, Twitter, LinkedIn, etc.) fetch the `og:image` URL from your page. The app builds that URL as `ILGA_APP_BASE_URL/static/og-image.png`. If `ILGA_APP_BASE_URL` is not set in production, it defaults to `http://127.0.0.1:8000`, so the meta tag points to localhost and crawlers cannot reach it.
+
+**Fix:** In your production environment (e.g. `.env` on the server or platform env vars), set:
+
+```bash
+ILGA_APP_BASE_URL=https://landofkei.org
+```
+
+Use your actual public HTTPS URL (no trailing slash). Restart the app, then re-run your share-preview tool or clear the platform’s link cache so it refetches the image.
+
+If the validator shows **127.0.0.1** in the "Open Graph tags found" list, the app is still using the default base URL—confirm `ILGA_APP_BASE_URL` is set where the app runs (and that the process was restarted after changing env).
+
+---
+
 ## Checklist before go-live
 
 1. Set `ILGA_PROFILE=prod`, `ILGA_LOAD_ONLY=1`.
