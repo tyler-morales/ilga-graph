@@ -80,11 +80,11 @@ APP_BASE_URL: str = _env("ILGA_APP_BASE_URL", "http://127.0.0.1:8000").rstrip("/
 DOCS_BASE_URL: str = _env("ILGA_DOCS_BASE_URL", "").strip().rstrip("/")
 
 # ── SEO & share (Open Graph, canonical, meta description) ─────────────────────
-SITE_NAME: str = _env("ILGA_SITE_NAME", "Kei Truck Freedom").strip() or "Kei Truck Freedom"
+SITE_NAME: str = _env("ILGA_SITE_NAME", "The Land of Kei").strip() or "The Land of Kei"
 META_DESCRIPTION: str = _env(
     "ILGA_META_DESCRIPTION",
-    "Find your Illinois legislators and advocate for a statutory fix so highway-built Kei vehicles "
-    "can be titled and registered. 625 ILCS 5/3-401(c-1).",
+    "Find your Illinois legislators and advocate with The Land of Kei for a statutory fix so "
+    "highway-built Kei vehicles can be titled and registered. 625 ILCS 5/3-401(c-1).",
 ).strip()
 # Optional absolute URL for share card image (1200×630). Unset → APP_BASE_URL/static/og-image.png.
 _OG_IMAGE_OVERRIDE: str = _env("ILGA_OG_IMAGE_URL", "").strip()

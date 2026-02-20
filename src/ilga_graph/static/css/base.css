@@ -64,12 +64,42 @@ border-radius: 6px;
 }
 /* ── Footer ── */
 .footer {
-margin-top: 24px;
-padding-top: 10px;
-border-top: 1px solid #ccc;
-font-size: 0.85em;
-color: #777;
-text-align: center;
+  margin-top: 24px;
+  padding-top: 12px;
+  padding-bottom: 8px;
+  border-top: 1px solid #ccc;
+  font-size: 0.9em;
+  color: #555;
+  text-align: center;
+}
+.footer p {
+  margin: 0.35em 0;
+}
+.footer-brand {
+  font-weight: 600;
+  color: #333;
+}
+.footer-links a {
+  color: var(--link-color, #5a2d82);
+  text-decoration: underline;
+}
+.footer-links a:hover {
+  text-decoration: none;
+}
+.footer-links a:focus {
+  outline: 2px solid var(--link-color, #5a2d82);
+  outline-offset: 2px;
+}
+.footer-disclaimer {
+  font-size: 0.8em;
+  color: #888;
+  text-align: center;
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .footer-disclaimer {
+    white-space: normal;
+  }
 }
 /* ── HTMX indicator ── */
 .htmx-indicator {
