@@ -56,9 +56,9 @@ def load_analytics_cache(
 ) -> tuple[dict[str, MemberScorecard], MoneyballReport] | None:
     """Load scorecards and moneyball from disk if present and not stale.
 
-    Staleness: analytics cache is valid only if both scorecards.json and
-    moneyball.json exist and are newer than the member data file. Returns
-    None if any file is missing or stale.
+    Reads from cache_dir first. When seed_mode and cache_dir does not have
+    both files, falls back to mock_dir (mocks/dev/) so dev can use
+    snapshot analytics without recomputing.
     """
     source_mtime = _source_data_mtime(cache_dir, mock_dir, seed_mode)
     if source_mtime <= 0:
@@ -66,6 +66,10 @@ def load_analytics_cache(
 
     sc_path = _scorecards_path(cache_dir)
     mb_path = _moneyball_path(cache_dir)
+    # Seed mode: if cache_dir is missing analytics, try mocks/dev/
+    if seed_mode and (not sc_path.exists() or not mb_path.exists()):
+        sc_path = mock_dir / _SCORECARDS_FILE
+        mb_path = mock_dir / _MONEYBALL_FILE
     if not sc_path.exists() or not mb_path.exists():
         return None
     try:
