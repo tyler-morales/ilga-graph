@@ -35,10 +35,7 @@
   - Recommendation chips: results partial uses precomputed `member.recommendation_chip_order` for visibility; chip list comes only from Python (`member_to_card`).
   - Legislator context: `legislator_drawer_context(member)` in advocacy_helpers; call drawer uses it instead of inline title_label/office_name/district_label in main.
 - **Snapshot mocks (2026-02-19):** `make snapshot-mocks` samples all cache JSON types the app uses from mocks: members, bills, committees, vote_events, witness_slips, scorecards, moneyball, zip_to_district. zip_to_district is subset so only ZIPs mapping to the 40 mock members' districts are included—so dev ZIP search can show all 40 members (Your Senator/Rep + Power Broker/Ally vary by ZIP). Seed mode loads zip crosswalk from mocks/dev/ when present, else hardcoded seed. Not snapshot: house/senate_committees (unified committees.json), scrape_metadata (scrape state only).
-- **Backlog:**
-  - **base.html CSS** — Done: multi-file layout in `static/css/`: `variables.css` (design tokens), `base.css`, `advocacy.css`, `intelligence.css`; base template links all four in order (2026-02-20).
-  - **Intelligence routes** — Done (2026-02-20): `routers/intelligence.py`.
-  - **main.py** — Done: intelligence and explore extracted. Remaining routes (/, health, logs, dev, SHAP, GraphQL) stay in main.
+- **Refactor completed (2026-02-20):** base.html CSS → `static/css/` (variables.css, base.css, advocacy.css, intelligence.css); intelligence routes → `routers/intelligence.py`; explore routes → `routers/explore.py`. main.py holds remaining routes: /, health, logs, dev, SHAP, GraphQL.
 
 - **Legacy purge (2026-02-18, 2026-02-20):**
   - **2026-02-20:** Removed ~1110 lines of intelligence routes + helpers to `routers/intelligence.py`; ~220 lines explore/graph to `routers/explore.py`; ~7700 lines inline CSS to `static/css/base.css`. Dropped unused main imports (datetime, parse_action_date, get_bill_to_law_process, CATEGORY_CHOICES, find_member_by_district).
