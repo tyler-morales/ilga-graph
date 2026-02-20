@@ -65,7 +65,7 @@ See `config.py` for the full registry and `get_client_features()`.
 
 ```bash
 ILGA_PROFILE=prod
-ILGA_CORS_ORIGINS=https://your-app.example.com
+ILGA_CORS_ORIGINS=https://landofkei.org
 ILGA_API_KEY=your-secret-key
 ```
 

@@ -16,6 +16,54 @@ This doc summarizes the DB implementation, potential issues, and how tests verif
 
 ---
 
+## Data flow: how the DB gets full and how it's read
+
+**Single SQLite file** per process. Path: `ILGA_DB_PATH` (profile default: dev → `data/ilga_dev.db`, prod → `data/ilga.db`). One async engine in `db.py`; all app code uses `get_db()`.
+
+### Write paths (how the DB gets data)
+
+| Source | Tables | When |
+|--------|--------|------|
+| **Auth** | `auth_codes`, then `users` (and `auth_codes.used`) | POST /auth/request-code → POST /auth/verify-code |
+| **Outreach (in-app)** | `outreach_events` | Logged-in user records call/email/no_answer via POST /outreach/record |
+| **Seed script** | `users`, `outreach_events` | `make seed-outreach` or `python scripts/seed_outreach.py` |
+
+- **Auth:** request-code inserts one `AuthCode`; verify-code finds it, marks used, and gets-or-creates `User`, updates `last_login_at`.
+- **Outreach:** POST /outreach/record (requires auth) inserts one `OutreachEvent` per call/email/no_answer.
+- **Seed:** `scripts/seed_outreach.py` uses the same profile/env as the app; runs `init_db()`, then gets-or-creates user for the backlog email and inserts many `OutreachEvent` rows (real backlog + in dev, mock advocate data). Use the same `ILGA_PROFILE` (or same `ILGA_DB_PATH`) for app and seed so they point at the same file.
+
+### Read paths (where DB data is used)
+
+- **Auth:** verify-code and GET /auth/me read `auth_codes` and `users`.
+- **Outreach:** GET /outreach/stats/{member_id}, GET /outreach/interest-poll/{member_id} (public), GET /outreach/my-history (auth required).
+- **Advocacy:** Drawer checks whether the current user has called this member (count from `outreach_events`). Results page builds `user_called_member_ids` / `user_emailed_member_ids` (for "Reached out" pill) and **outreach_heat** (count of distinct users who reached out per member) for the **fire pill** on each card.
+
+### Fire pill on member cards (data-driven)
+
+The **fire pill** (🔥 N) in the corner of each advocacy member card is **data-driven** from the database. It shows *N unique outreach advocate(s)* — the count of distinct users who have recorded a call or email for that legislator. Data comes from `outreach_events`: the advocacy results endpoint queries `COUNT(DISTINCT user_id)` per `member_id` and passes `outreach_heat` into the template. The pill is rendered only when `heat_count > 0` (see `_results_partial.html` macro `member_card` and class `heat-score-pill`). Seeded or live outreach events are what make the number appear; if app and seed use different DB paths (e.g. dev vs prod), the pill will not show seeded data.
+
+---
+
+## Double-check checklist (verify DB setup and pull/push)
+
+1. **Startup log** — Run the app (e.g. `make dev`). In logs you should see: `Database ready at data/ilga_dev.db` (or your path). Confirms `init_db()` ran and path is correct.
+
+2. **Tables exist** — `sqlite3 data/ilga_dev.db` then `SELECT name FROM sqlite_master WHERE type='table';` — expect `users`, `auth_codes`, `outreach_events`.
+
+3. **Auth write + read** — Request a code (POST /auth/request-code), then in DB: `SELECT * FROM auth_codes ORDER BY id DESC LIMIT 1;` — one new row. Verify code (POST /auth/verify-code); then `SELECT * FROM users;` — one user; that `auth_codes.used` = 1. GET /auth/me returns that email.
+
+4. **Outreach write + read** — While logged in, record one call (POST /outreach/record). Then `SELECT * FROM outreach_events ORDER BY id DESC LIMIT 1;` — one new row. GET /outreach/stats/{that_member_id} shows calls: 1. GET /outreach/my-history shows the event.
+
+5. **Seed and app same DB** — Run app and seed with the same profile (e.g. both `ILGA_PROFILE=dev`). Open advocacy results for a ZIP that has seeded data; the **fire pill** (🔥 N) and "Reached out" state on cards should reflect seeded events. If you seed prod DB but run app in dev (different files), the pill won’t show seeded data.
+
+6. **Automated tests** — `pytest tests/test_db.py tests/test_auth_outreach.py -v` — temp DB, init_db, auth and outreach flows, schema.
+
+7. **Smoke test** — `make smoke-outreach` — in-process app, temp DB, sign-in, record call + email, assert GET /outreach/stats and GET /outreach/my-history.
+
+**Dev mode: advocacy ZIP codes** — In dev/seed mode the app uses `mocks/dev/zip_to_district.json`, which only contains ZIPs that map to the 40 mock members’ districts (~148 ZIPs). If you enter a ZIP that isn’t in that file (e.g. 60608), you’ll see “ZIP code not found”. The error message in dev suggests sample ZIPs to try (e.g. 60007, 60104, 60107). Use any of those or run `make snapshot-mocks` after a scrape to refresh the mock ZIP list.
+
+---
+
 ## Scan: potential issues and mitigations
 
 1. **Migration idempotency**  
