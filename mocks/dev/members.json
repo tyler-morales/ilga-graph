@@ -1,8 +1,450 @@
 [
   {
+    "id": "3264",
+    "name": "Kimberly A. Lightford",
+    "member_url": "https://www.ilga.gov/Senate/Members/Details/3264",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B7FBA8DB0-281E-406F-BF9F-ABEB75B7B38E%7D.jpg",
+    "chamber": "Senate",
+    "party": "Democrat",
+    "district": "4",
+    "bio_text": "B.A. in Communications, Western Illinois University; M.A. in Public Administration, University of Illinois Springfield; former Village of Maywood trustee; former employee at Secretary of State, Department of Corrections and Central Management Services; longtime champion in the Senate for education, working families and women's issues; lives in Maywood with her family.",
+    "role": "Senate Majority Leader",
+    "career_timeline_text": "1998 - Present",
+    "career_ranges": [
+      {
+        "start_year": 1998,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "SCOA",
+      "SEXC-SCAN",
+      "SESE",
+      "SEXC-SELI",
+      "SEXC",
+      "SEXC-ESSI",
+      "HHSR",
+      "SCHE"
+    ],
+    "associated_members": "Emanuel \"Chris\" Welch, La Shawn K. Ford",
+    "email": null,
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "325-E Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-8505",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "High Point Plaza, 4415 Harrison St.\nSuite 550\nHillside, IL 60162",
+        "phone": "(708) 632-4500",
+        "fax": "(708) 632-4515"
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "162462",
+      "166839"
+    ],
+    "co_sponsor_bill_ids": [
+      "157217",
+      "161199",
+      "161950",
+      "157202",
+      "163147"
+    ]
+  },
+  {
+    "id": "3265",
+    "name": "Dave Syverson",
+    "member_url": "https://www.ilga.gov/Senate/Members/Details/3265",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B6FD168B8-C34B-4399-8E39-7373F7600882%7D.jpg",
+    "chamber": "Senate",
+    "party": "Republican",
+    "district": "35",
+    "bio_text": "Born June 29 in Chicago. Raised and attended schools in Rockford. Lives in Boone County. Works as independent financial & benefits broker in Rockford.  Member of numerous Chambers of Commerce, the National Federation of Independent Business, National Association of Financial Planners, National Conference of State Legislators, Rockford Area Economic Council.   Married (wife, Lori),4 children, 2 grandchildren.",
+    "role": "Senator",
+    "career_timeline_text": "1993 - Present",
+    "career_ranges": [
+      {
+        "start_year": 1993,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "APHH",
+      "HHSR",
+      "SHUM",
+      "SINS",
+      "SLIC",
+      "PBHE",
+      "SSCT"
+    ],
+    "associated_members": "Joe C. Sosnowski, Jeff Keicher",
+    "email": null,
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "108 Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-5413",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "527 Colman Center Drive\nCherry Valley, IL 61108",
+        "phone": "(815) 987-7555",
+        "fax": "(815) 987-7563"
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [],
+    "co_sponsor_bill_ids": [
+      "157217",
+      "159024",
+      "159065"
+    ]
+  },
+  {
+    "id": "3268",
+    "name": "Don Harmon",
+    "member_url": "https://www.ilga.gov/Senate/Members/Details/3268",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7BCF3F6473-4E6D-4E84-A0A4-4FF7335132E2%7D.jpg",
+    "chamber": "Senate",
+    "party": "Democrat",
+    "district": "39",
+    "bio_text": "Attorney; born 1966, in Oak Park; graduated St. Ignatius High School; B.A., Knox College; J.D. and M.B.A., University of Chicago; married (wife, Teresa), has three children:  Don, Frances, and Margaret.",
+    "role": "President of the Senate",
+    "career_timeline_text": "2003 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2003,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "SEXC-SSCA",
+      "SEXC-SSEL",
+      "SEXC",
+      "SJUD"
+    ],
+    "associated_members": "Norma Hernandez, Camille Y. Lilly",
+    "email": null,
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "323 Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-8176",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "6941 W. North Ave.\nOak Park, IL 60302",
+        "phone": "(708) 848-2002",
+        "fax": "(708) 848-2022"
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "157823",
+      "157964",
+      "158157",
+      "158173",
+      "158261",
+      "158274",
+      "158285",
+      "158442",
+      "158508",
+      "158580",
+      "164187"
+    ],
+    "co_sponsor_bill_ids": [
+      "161199",
+      "157202"
+    ]
+  },
+  {
+    "id": "3269",
+    "name": "Mattie Hunter",
+    "member_url": "https://www.ilga.gov/Senate/Members/Details/3269",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7BF4630DDB-11F0-417E-8C0A-B4ED6426116F%7D.jpg",
+    "chamber": "Senate",
+    "party": "Democrat",
+    "district": "3",
+    "bio_text": "Full-time state legislator; B.A., government and Doctor of Humane Letters degree, Monmouth College; M.A., sociology, Jackson State University; certified drug and alcohol counselor and prevention specialist; co-chair of the Task Force on Missing and Murdered Chicago Women, Health and Human Services Task Force, Kidney Disease Prevention and Education Task Force, and Medicaid Managed Care Oversight Commission; member of Alpha Kappa Alpha Sorority Inc., the National Conference of State Legislatures, Women in Government and Durban Sister Cities International; single.",
+    "role": "Assistant Majority Leader",
+    "career_timeline_text": "2003 - Present (Senate)",
+    "career_ranges": [
+      {
+        "start_year": 2003,
+        "end_year": 2026,
+        "chamber": "Senate"
+      }
+    ],
+    "committees": [
+      "APHH",
+      "APSI",
+      "SEXC-CONS",
+      "SEXC-SSCA",
+      "SENE",
+      "SEXC-SETH",
+      "SEXC",
+      "SEXA",
+      "SPEN",
+      "SEXC-ESPR",
+      "PBHE",
+      "STRN"
+    ],
+    "associated_members": "Kimberly Du Buclet, Sonya M. Harper",
+    "email": null,
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "417-C Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-5966",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "2929 S. Wabash Ave.\nSuite 102\nChicago, IL 60616",
+        "phone": "(312) 949-1908",
+        "fax": null
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "162581",
+      "163147"
+    ],
+    "co_sponsor_bill_ids": [
+      "157662",
+      "161199",
+      "162387",
+      "157202",
+      "157775",
+      "160197",
+      "163700"
+    ]
+  },
+  {
+    "id": "3270",
+    "name": "Linda Holmes",
+    "member_url": "https://www.ilga.gov/Senate/Members/Details/3270",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B9A39C8B9-4B06-4BF7-85CE-4C6F4FD07769%7D.jpg",
+    "chamber": "Senate",
+    "party": "Democrat",
+    "district": "42",
+    "bio_text": "Elected to the Senate in 2006. She received her bachelor's degree from the National College of Education (now National-Lewis University) and a Doctor of Humane Letters from Aurora University; First woman president of the National Association of the Remodeling Industry; Full-time state legislator.",
+    "role": "Assistant Majority Leader",
+    "career_timeline_text": "2007 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2007,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "SAGR",
+      "SEXC-SELI",
+      "SEXC",
+      "SEXC-ESSI",
+      "SLAB",
+      "SEXC-EXSL",
+      "SLGV",
+      "SEXC-ESPL",
+      "SPEN",
+      "SEXC-ESTO"
+    ],
+    "associated_members": "Matt Hanson, Stephanie A. Kifowit",
+    "email": null,
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "505 Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-0422",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "4255 Westbrook Dr.\nSuite 216\nAurora, IL 60504",
+        "phone": "(630) 820-8650",
+        "fax": null
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "162036"
+    ],
+    "co_sponsor_bill_ids": [
+      "157217",
+      "162145",
+      "157202"
+    ]
+  },
+  {
+    "id": "3271",
+    "name": "David Koehler",
+    "member_url": "https://www.ilga.gov/Senate/Members/Details/3271",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B2C57E551-D82A-4C7D-8746-3F83913F0D7D%7D.jpg",
+    "chamber": "Senate",
+    "party": "Democrat",
+    "district": "46",
+    "bio_text": "Former staff member, National Farm Worker Ministry; Former community organizer and program manager, Peoria Friendship House; Former executive director, Peoria Area Labor Management Council; Former president, Labor Management Cooperative Health Programs Inc.; Peoria County Board member, 1982-88; Peoria City Council member, 1989-97 (mayor pro tem, 1993-94); Former Member of the NCSL Natural Resources and Infrastructure Committee; member of NCSL Task Force on Energy Supply; first elected to Senate in November 2006; appointed to Senate in December 2006 to fill term of retiring Senator George Shadid; married with three daughters, two sons-in-law, one daughter-in-law, three granddaughters and one grandson.",
+    "role": "Assistant Majority Leader",
+    "career_timeline_text": "Elected November 2006, Appointed December 2006 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2006,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "SAGR",
+      "APHH",
+      "SENE",
+      "HHSR",
+      "SCHE",
+      "PBHE"
+    ],
+    "associated_members": "Sharon Chung, Jehan Gordon-Booth",
+    "email": null,
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "325-C Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-8250",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "1203 E. Kingman Ave.\nPeoria Heights, IL 61616",
+        "phone": "(309) 677-0120",
+        "fax": null
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "162387",
+      "163735"
+    ],
+    "co_sponsor_bill_ids": [
+      "162555",
+      "164255",
+      "164613",
+      "166358",
+      "157202"
+    ]
+  },
+  {
+    "id": "3276",
+    "name": "Emil Jones, III",
+    "member_url": "https://www.ilga.gov/Senate/Members/Details/3276",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B2C0EE719-E9D8-4625-990D-69FCE146BC0F%7D.jpg",
+    "chamber": "Senate",
+    "party": "Democrat",
+    "district": "14",
+    "bio_text": "born May 16th, 1978, in Chicago; son of former Senate President Emil Jones Jr. and the late Patricia Jones; graduated from Chicago Christian High School in Palos Heights; attended Chicago State University and Robert Morris College in Chicago; former administrator at the Illinois Department of Commerce and Economic Opportunity.",
+    "role": "Senator",
+    "career_timeline_text": "2009 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2009,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "APED",
+      "SHUM",
+      "SLIC",
+      "SLGV",
+      "SSCT"
+    ],
+    "associated_members": "Justin Slaughter, Robert \"Bob\" Rita",
+    "email": null,
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "119-A Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-9573",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "845 W. 115th St.\nChicago, IL 60643",
+        "phone": "(773) 995-7748",
+        "fax": null
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [],
+    "co_sponsor_bill_ids": [
+      "157662",
+      "157202",
+      "157775",
+      "163700"
+    ]
+  },
+  {
+    "id": "3281",
+    "name": "Sue Rezin",
+    "member_url": "https://www.ilga.gov/Senate/Members/Details/3281",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B45666230-B77D-4162-A45E-6AC5587C4E56%7D.jpg",
+    "chamber": "Senate",
+    "party": "Republican",
+    "district": "38",
+    "bio_text": "Deputy Minority Leader Sue Rezin has served as the Senator for the 38th Senate District in the Illinois State Senate since 2010. In 2021, she was chosen as Deputy Minority Leader for the Illinois Senate Republican Caucus. Deputy Minority Leader Rezin helped establish the Grundy County summer internship program. Teaming up with the Grundy Area Vocational Center, the Grundy Economic Development Council, and several local employers, Senator Rezin has helped dozens of students obtain high quality internships. Deputy Minority Leader Rezin also established the Illinois Valley Flood Resiliency Alliance (IVFRA). The IVFRA brings communities, local governments, and emergency personnel together to help them prepare for extreme weather events, especially floods, through education, communication, and the purchasing of flood prevention materials. On the national level, Deputy Minority Leader serves on the Chair of the National Foundation for Women Legislator. She is also an active member of the National Conference of State Legislatures (NCSL), currently serving on the Task Force on Energy Supply. Deputy Minority Leader Rezin is a graduate of Augustana College, where she earned a degree in International Business and Political Science with a minor in Hispanic Studies. She is also a graduate of Harvard University’s Kennedy School of Government's Senior Executives in State and Local Government Program.",
+    "role": "Deputy Republican Leader",
+    "career_timeline_text": "Elected to the (House November 2010) Appointed to the (Senate December 2010)",
+    "career_ranges": [],
+    "committees": [
+      "SEXC-AISM",
+      "SEXC-CONS",
+      "SEXC-SELI",
+      "SENE",
+      "SEXC",
+      "SEXC-ESSI",
+      "SHUM",
+      "SEXC-ESPR",
+      "SEXC-ESTO"
+    ],
+    "associated_members": "Jed Davis, Amy Briel",
+    "email": null,
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "309-H Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-3840",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "1802 North Division Street\nSuite 314\nMorris, IL 60450",
+        "phone": "(815) 220-8720",
+        "fax": null
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "159144",
+      "161992",
+      "166409"
+    ],
+    "co_sponsor_bill_ids": [
+      "157217",
+      "159333"
+    ]
+  },
+  {
     "id": "3291",
     "name": "Bill Cunningham",
     "member_url": "https://www.ilga.gov/Senate/Members/Details/3291",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B402F0454-4EAF-4721-993D-53C7459BA35B%7D.jpg",
     "chamber": "Senate",
     "party": "Democrat",
     "district": "18",
@@ -49,89 +491,499 @@
         "fax": null
       }
     ],
+    "roles": [],
     "sponsored_bill_ids": [
-      "167568",
-      "167569",
-      "167570",
-      "167574",
-      "167582",
-      "167619"
+      "160274"
     ],
-    "co_sponsor_bill_ids": [],
-    "photo_url": "https://ui-avatars.com/api/?name=Bill%20Cunningham&size=200&background=4b5563&color=fff"
+    "co_sponsor_bill_ids": [
+      "157124",
+      "157202"
+    ]
   },
   {
-    "id": "3329",
-    "name": "John F. Curran",
-    "member_url": "https://www.ilga.gov/Senate/Members/Details/3329",
+    "id": "3292",
+    "name": "Napoleon Harris, III",
+    "member_url": "https://www.ilga.gov/Senate/Members/Details/3292",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B87402198-6E85-4CFE-BDD2-B9DC58948869%7D.jpg",
     "chamber": "Senate",
-    "party": "Republican",
-    "district": "41",
-    "bio_text": "John Curran was sworn in to represent the 41st District in the Illinois Senate in July of 2017. Prior to the General Assembly, he served as the Vice-Chairman of the DuPage County Board, and was a board member from 2008 to 2017. Following 19 years working as an Assistant State's Attorney in the Cook County State's Attorney's Office, Curran now works as an attorney at a private law firm in Oak Brook. He received his Juris Doctor Degree from Northern Illinois University College of Law and Bachelor of Science Degree from the University of Illinois at Urbana-Champaign. Curran and his wife, Sue, have four daughters and live in Downers Grove.",
-    "role": "Minority Leader",
-    "career_timeline_text": "2017 - Present",
+    "party": "Democrat",
+    "district": "15",
+    "bio_text": "Entrepreneur and legislator; from Dixmoor; B.A. in Communications, Northwestern University; Postgraduate certificate, Northwestern Kellogg School of Business Management; former NFL linebacker; married (wife, Nicole); two sons, Napoleon Harris IV, Noah and one daughter, Nahla.",
+    "role": "Assistant Majority Leader",
+    "career_timeline_text": "2013 - Present",
     "career_ranges": [
       {
-        "start_year": 2017,
+        "start_year": 2013,
         "end_year": 2026,
         "chamber": null
       }
     ],
     "committees": [
-      "SEXC-SCAN",
+      "SEXC-CONS",
+      "SENE",
       "SEXC",
-      "SJUD"
+      "SEXC-ESFA",
+      "SINS",
+      "SLGV",
+      "SPEN"
     ],
-    "associated_members": "Anne Stava, Nicole La Ha",
+    "associated_members": "Thaddeus Jones, William \"Will\" Davis",
     "email": null,
     "offices": [
       {
         "name": "Springfield Office",
-        "address": "110 D Capitol Building\nSpringfield, IL 62706",
-        "phone": "(217) 782-9407",
+        "address": "413 Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-8066",
         "fax": null
       },
       {
         "name": "District Office",
-        "address": "1011 State St.\nSuite 205\nLemont, IL 60439",
-        "phone": "(630) 914-5733",
-        "fax": "(630) 796-2658"
+        "address": "930 W. 175th St.\nSuite 3W\nHomewood, IL 60430",
+        "phone": "(708) 893-0552",
+        "fax": "(708) 566-4108"
       }
     ],
-    "sponsored_bill_ids": [
-      "167262",
-      "167263",
-      "167264",
-      "167265",
-      "167266",
-      "167268",
-      "167272",
-      "167275",
-      "167278",
-      "167279",
-      "167280",
-      "167281",
-      "167282",
-      "167285",
-      "167288",
-      "167289",
-      "167291",
-      "167292",
-      "167293",
-      "167294",
-      "167295",
-      "167296",
-      "167297",
-      "167298",
-      "167299"
+    "roles": [],
+    "sponsored_bill_ids": [],
+    "co_sponsor_bill_ids": [
+      "159065",
+      "157202"
+    ]
+  },
+  {
+    "id": "3293",
+    "name": "Michael E. Hastings",
+    "member_url": "https://www.ilga.gov/Senate/Members/Details/3293",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7BC6E534EB-7243-4687-8A65-04BD4DA5DF72%7D.jpg",
+    "chamber": "Senate",
+    "party": "Democrat",
+    "district": "19",
+    "bio_text": "Practicing Attorney; Former US Army Captain; Served in Operation Iraqi Freedom, Bronze Star recipient; Former Vice President of High School District #230; Holds B.S. in Leadership and Management, Civil Engineering from the United States Military Academy at West Point; MBA with Honors, University of Illinois at Urbana - Champaign; and J.D., The John Marshall Law School.",
+    "role": "Senator",
+    "career_timeline_text": "2013 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2013,
+        "end_year": 2026,
+        "chamber": null
+      }
     ],
-    "co_sponsor_bill_ids": [],
-    "photo_url": "https://ui-avatars.com/api/?name=John%20F.%20Curran&size=200&background=4b5563&color=fff"
+    "committees": [
+      "SAGR",
+      "SAPP",
+      "SCOM",
+      "SCPR",
+      "SJUD",
+      "SLIC"
+    ],
+    "associated_members": "Patrick Sheehan, Debbie Meyers-Martin",
+    "email": null,
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "121-C Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-9595",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "20855 S. LaGrange Rd.\nSuite 102\nFrankfort, IL 60423",
+        "phone": "(815) 464-5431",
+        "fax": null
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "167198"
+    ],
+    "co_sponsor_bill_ids": [
+      "157217",
+      "164613",
+      "157202",
+      "157775"
+    ]
+  },
+  {
+    "id": "3294",
+    "name": "Julie A. Morrison",
+    "member_url": "https://www.ilga.gov/Senate/Members/Details/3294",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B0E6BF8A6-C5C8-4F54-977B-D5FD11707FA5%7D.jpg",
+    "chamber": "Senate",
+    "party": "Democrat",
+    "district": "29",
+    "bio_text": "Elected to the Senate in 2012; born in Beardstown; received a bachelor's degree from Knox College; served as supervisor of West Deerfield Township, married to husband Joe with three grown children.",
+    "role": "Majority Caucus Whip",
+    "career_timeline_text": "2013 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2013,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "APHH",
+      "SAPP",
+      "SNVR",
+      "HHSR",
+      "SINS",
+      "SVET"
+    ],
+    "associated_members": "Tracy Katz Muhl, Bob Morgan",
+    "email": null,
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "311  Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-3650",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "400 Lake Cook Rd.\nSuite 100B\nDeerfield, IL 60015",
+        "phone": "(847) 945-5200",
+        "fax": null
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "163661"
+    ],
+    "co_sponsor_bill_ids": [
+      "157217",
+      "165337",
+      "156549",
+      "157202",
+      "159333"
+    ]
+  },
+  {
+    "id": "3295",
+    "name": "Chapin Rose",
+    "member_url": "https://www.ilga.gov/Senate/Members/Details/3295",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7BBA95E1D1-0570-4492-B739-D1F593F183FD%7D.jpg",
+    "chamber": "Senate",
+    "party": "Republican",
+    "district": "51",
+    "bio_text": "Born December 27, 1973; B.S., University of Illinois; J.D., University of Illinois Law School; selected to inaugural class of the 2012 Edgar Fellows Leadership Program; married (wife, Camille), has one son and three daughters.",
+    "role": "Senator",
+    "career_timeline_text": "2003 - 2012 (House); 2013 - Present (Senate)",
+    "career_ranges": [
+      {
+        "start_year": 2003,
+        "end_year": 2012,
+        "chamber": "House"
+      },
+      {
+        "start_year": 2013,
+        "end_year": 2026,
+        "chamber": "Senate"
+      }
+    ],
+    "committees": [
+      "APED",
+      "SAPP",
+      "SESE",
+      "SFIC",
+      "SINS"
+    ],
+    "associated_members": "Chris Miller, Adam M. Niemerg",
+    "email": null,
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "108 Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 558-1006",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "510 S. Staley Road\nSuite D\nChampaign, IL 61822",
+        "phone": "(217) 607-1853",
+        "fax": null
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "157436",
+      "160987",
+      "166582"
+    ],
+    "co_sponsor_bill_ids": [
+      "157217"
+    ]
+  },
+  {
+    "id": "3296",
+    "name": "Steve Stadelman",
+    "member_url": "https://www.ilga.gov/Senate/Members/Details/3296",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B47906765-AB0A-48BF-8C14-B5443B8F27C4%7D.jpg",
+    "chamber": "Senate",
+    "party": "Democrat",
+    "district": "34",
+    "bio_text": "Elected to the Senate in 2012; received a bachelor's degree from the University of Wisconsin-Madison; former news anchor/reporter in Rockford; full-time state legislator.",
+    "role": "Senator",
+    "career_timeline_text": "2013 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2013,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "SCOM",
+      "SENE",
+      "SFIC",
+      "SCHE",
+      "SGOA",
+      "STRN"
+    ],
+    "associated_members": "Maurice A. West, II, Dave Vella",
+    "email": null,
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "121-B  Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-8022",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "Zeke Giorgi Center\n200 S. Wyman, Suite 301\nRockford, IL 61101",
+        "phone": "(815) 987-7557",
+        "fax": null
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "157124",
+      "157367"
+    ],
+    "co_sponsor_bill_ids": [
+      "157217",
+      "157202"
+    ]
+  },
+  {
+    "id": "3312",
+    "name": "Neil Anderson",
+    "member_url": "https://www.ilga.gov/Senate/Members/Details/3312",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B90CDA259-1DEA-4D18-AE97-30051E03D154%7D.jpg",
+    "chamber": "Senate",
+    "party": "Republican",
+    "district": "47",
+    "bio_text": "State Senator Neil Anderson, a professional firefighter and paramedic for the City of Moline, was first elected in 2015 and represents Illinois’ 47th District, spanning 15 counties. Raised in the Quad Cities, he worked in his family’s flooring business and walked on to the University of Nebraska football team, becoming the only walk-on to make the roster. After college, Senator Anderson pursued his passion for public service, joining the Moline Fire Department in 2006. In 2023, he was appointed Senate Republican Caucus Chair. He lives in Andalusia with his wife, Brandi, and their two children, Steel and Sophia.",
+    "role": "Senator",
+    "career_timeline_text": "2015 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2015,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "SAGR",
+      "SENE",
+      "SEXC",
+      "SEXC-ESFA",
+      "SEXC-SGWR",
+      "SEXC-EGOP",
+      "HHSR",
+      "SINS",
+      "SEXC-EXSL",
+      "SEXC-ESPL",
+      "SPEN"
+    ],
+    "associated_members": "Travis Weaver, Norine K. Hammond",
+    "email": null,
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "208 Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-5957",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "103 North College Avenue\n#201\nAledo, IL 61231",
+        "phone": "(309) 230-7584",
+        "fax": null
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "159024",
+      "165605",
+      "165770",
+      "167334",
+      "164164"
+    ],
+    "co_sponsor_bill_ids": [
+      "157217",
+      "159065",
+      "159063"
+    ]
+  },
+  {
+    "id": "3313",
+    "name": "Laura M. Murphy",
+    "member_url": "https://www.ilga.gov/Senate/Members/Details/3313",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7BE8C6FBF1-611C-4DD5-A81D-F0FF8917556D%7D.jpg",
+    "chamber": "Senate",
+    "party": "Democrat",
+    "district": "28",
+    "bio_text": "Park Ridge native; B.S. in Political Science from Illinois State University; former Des Plaines alderman; currently lives in Des Plaines with her husband and son.",
+    "role": "Assistant Majority Leader",
+    "career_timeline_text": "2015 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2015,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "SAPP",
+      "SCOA",
+      "SCPR",
+      "SEXC",
+      "SEXA",
+      "SEXC-ESFA",
+      "SEXC-EGOP",
+      "SLGV",
+      "SEXC-ESTO",
+      "STRN"
+    ],
+    "associated_members": "Justin Cochran, Michelle Mussman",
+    "email": null,
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "307 Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-3875",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "1645 S. River Rd.\nSuite 7\nDes Plaines, IL 60018",
+        "phone": "(847) 718-1110",
+        "fax": null
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "167618",
+      "157872"
+    ],
+    "co_sponsor_bill_ids": [
+      "157436",
+      "157442",
+      "162145",
+      "162387",
+      "166358",
+      "157202"
+    ]
+  },
+  {
+    "id": "3315",
+    "name": "Dan McConchie",
+    "member_url": "https://www.ilga.gov/Senate/Members/Details/3315",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7BB3DB61E4-CBA1-4E2C-9DC7-4EEE9F52BCD7%7D.jpg",
+    "chamber": "Senate",
+    "party": "Republican",
+    "district": "26",
+    "bio_text": "Elected Senate Republican Leader (January 2021- January 2023); appointed to the Illinois Senate in 2016; supports policies that promote job growth, encourage smaller and smarter government, and root out corruption; championed legislation to reduce property taxes, ensure visitation rights for patients in hospitals and nursing homes, protect sexual assault victims, increase government transparency, provide for a non-partisan redistricting process, and empower voters to take a more active role in their state government. Energy consultant with Verde Solutions; served nine years in the Army National Guard in the infantry and military police; lives in Hawthorn Woods; married (Milena); two daughters.",
+    "role": "Senator",
+    "career_timeline_text": "2016 - 2/2/2025",
+    "career_ranges": [],
+    "committees": [
+      "Committees are currently not available."
+    ],
+    "associated_members": "Nabeela Syed, Martin McLaughlin",
+    "email": null,
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "208 C Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-8010",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "795 Ela Road\nSuite 208\nLake Zurich, IL 60047",
+        "phone": "(224) 662-4544",
+        "fax": null
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [],
+    "co_sponsor_bill_ids": []
+  },
+  {
+    "id": "3316",
+    "name": "Omar Aquino",
+    "member_url": "https://www.ilga.gov/Senate/Members/Details/3316",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B79A5CDE2-DD9F-423E-83F0-4643FDB13ABB%7D.jpg",
+    "chamber": "Senate",
+    "party": "Democrat",
+    "district": "2",
+    "bio_text": "Born and raised on the Northwest Side of Chicago; B.A. in Criminal Justice and Sociology, Loyola University Chicago; Bilingual Case Manager at Central West Case Management Unit at the Jane Addams School of Social Work; Legislative Assistant in the Illinois House of Representatives; Outreach Coordinator for Congresswoman Tammy Duckworth; Devoted to improving education, aging services and human services.",
+    "role": "Majority Caucus Chair",
+    "career_timeline_text": "2016- Present",
+    "career_ranges": [
+      {
+        "start_year": 2016,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "APHH",
+      "SAPP",
+      "SCOA",
+      "SEXC-SSEL",
+      "SEXC",
+      "SEXA",
+      "SEXC-EGOP",
+      "SLAB",
+      "SEXC-ESPR",
+      "STRN"
+    ],
+    "associated_members": "Eva-Dina Delgado, Lilian Jiménez",
+    "email": null,
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "325-D Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-5652",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "4053 W. Armitage Ave.\nChicago, IL 60639",
+        "phone": "(773) 292-0202",
+        "fax": "(773) 292-1903"
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "157387",
+      "162555",
+      "165979"
+    ],
+    "co_sponsor_bill_ids": [
+      "157662",
+      "157202",
+      "160197"
+    ]
   },
   {
     "id": "3317",
     "name": "Cristina Castro",
     "member_url": "https://www.ilga.gov/Senate/Members/Details/3317",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7BF09EB558-EB8D-48B1-91F0-EF47A07632F5%7D.jpg",
     "chamber": "Senate",
     "party": "Democrat",
     "district": "22",
@@ -173,232 +1025,24 @@
         "fax": "(847) 214-8867"
       }
     ],
+    "roles": [],
     "sponsored_bill_ids": [
-      "167185",
-      "167365",
-      "167603"
+      "162126",
+      "163559"
     ],
-    "co_sponsor_bill_ids": [],
-    "photo_url": "https://ui-avatars.com/api/?name=Cristina%20Castro&size=200&background=4b5563&color=fff"
-  },
-  {
-    "id": "3312",
-    "name": "Neil Anderson",
-    "member_url": "https://www.ilga.gov/Senate/Members/Details/3312",
-    "chamber": "Senate",
-    "party": "Republican",
-    "district": "47",
-    "bio_text": "State Senator Neil Anderson, a professional firefighter and paramedic for the City of Moline, was first elected in 2015 and represents Illinois’ 47th District, spanning 15 counties. Raised in the Quad Cities, he worked in his family’s flooring business and walked on to the University of Nebraska football team, becoming the only walk-on to make the roster. After college, Senator Anderson pursued his passion for public service, joining the Moline Fire Department in 2006. In 2023, he was appointed Senate Republican Caucus Chair. He lives in Andalusia with his wife, Brandi, and their two children, Steel and Sophia.",
-    "role": "Republican Caucus Chair",
-    "career_timeline_text": "2015 - Present",
-    "career_ranges": [
-      {
-        "start_year": 2015,
-        "end_year": 2026,
-        "chamber": null
-      }
-    ],
-    "committees": [
-      "SAGR",
-      "SCOA",
-      "SENE",
-      "SEXC",
-      "SEXC-ESFA",
-      "SEXC-SGWR",
-      "SEXC-EGOP",
-      "HHSR",
-      "SINS",
-      "SEXC-EXSL",
-      "SEXC-ESPL",
-      "SPEN"
-    ],
-    "associated_members": "Travis Weaver, Norine K. Hammond",
-    "email": null,
-    "offices": [
-      {
-        "name": "Springfield Office",
-        "address": "208 A Capitol Building\nSpringfield, IL 62706",
-        "phone": "(217) 782-5957",
-        "fax": null
-      },
-      {
-        "name": "District Office",
-        "address": "103 North College Avenue\n#201\nAledo, IL 61231",
-        "phone": "(309) 230-7584",
-        "fax": null
-      }
-    ],
-    "sponsored_bill_ids": [
-      "167225",
-      "167334",
-      "167335"
-    ],
-    "co_sponsor_bill_ids": [],
-    "photo_url": "https://ui-avatars.com/api/?name=Neil%20Anderson&size=200&background=4b5563&color=fff"
-  },
-  {
-    "id": "3337",
-    "name": "Christopher Belt",
-    "member_url": "https://www.ilga.gov/Senate/Members/Details/3337",
-    "chamber": "Senate",
-    "party": "Democrat",
-    "district": "57",
-    "bio_text": "Lifelong resident of the Metro East; Graduate of Lincoln Sr. High School in East St. Louis. Bachelor's degree in history from Illinois State University; Master's Degrees in Public Administration from Southern Illinois University Edwardsville and in Professional Counseling from Lindenwood-Belleville; Former law enforcement officer and school board president of Cahokia Unit School District 187; Resides in Swansea with his wife, Stephanie, and two children, Christianna and Stephon.",
-    "role": "Senator",
-    "career_timeline_text": "2019 - Present",
-    "career_ranges": [
-      {
-        "start_year": 2019,
-        "end_year": 2026,
-        "chamber": null
-      }
-    ],
-    "committees": [
-      "APED",
-      "APSI",
-      "SESE",
-      "SENE",
-      "SLAB",
-      "SLIC"
-    ],
-    "associated_members": "Jay Hoffman, Kevin Schmidt",
-    "email": null,
-    "offices": [
-      {
-        "name": "Springfield Office",
-        "address": "417-B Capitol Building\nSpringfield, IL 62706",
-        "phone": "(217) 782-5399",
-        "fax": null
-      },
-      {
-        "name": "District Office",
-        "address": "Kenneth Hall Bldg, 10 Collinsville Ave.\nSuite 201A\nEast St. Louis, IL 62201",
-        "phone": "(618) 875-1212",
-        "fax": "(618) 274-3010"
-      }
-    ],
-    "sponsored_bill_ids": [
-      "167577",
-      "167578"
-    ],
-    "co_sponsor_bill_ids": [],
-    "photo_url": "https://ui-avatars.com/api/?name=Christopher%20Belt&size=200&background=4b5563&color=fff"
-  },
-  {
-    "id": "3386",
-    "name": "Terri Bryant",
-    "member_url": "https://www.ilga.gov/Senate/Members/Details/3386",
-    "chamber": "Senate",
-    "party": "Republican",
-    "district": "58",
-    "bio_text": "Senator Terri Bryant was first elected to the Illinois House of Representatives in 2014, and then elected to the Illinois Senate in 2020. Senator Bryant represents the 58th Senate District which includes all or parts of Edwards, Franklin, Hamilton, Jackson, Jefferson, Marion, Monroe, Perry, Randolph, St. Claire, Wabash, Washington, Wayne, and White counties. She was chosen as Assistant Republican Leader for the Senate Republican Caucus in 2023. Senator Bryant’s commitment to public service began in 1994 at the Illinois Department of Corrections (IDOC). After 20 years of service, she retired from the IDOC in 2014. Throughout the years, Senator Bryant remained dedicated to political pursuits, including serving as a Precinct Committee Woman, Vice-President of the Jackson County Republican Women’s Club and as Second Vice-Chair of the Jackson County Republican Central Committee. Senator Bryant balances her duties as a State Senator with her responsibilities in the private sector. Bryant has experience in the farming industry and in the service industry, including owning the successful Bluebell Restaurant in Murphysboro, Illinois. Terri Bryant resides in Murphysboro with her husband Rick and have been married since 1981. They have one son Tyler (Elaina) Bryant, one Daughter Tara (Tyler) Heinzmann, and 6 grandchildren.",
-    "role": "Assistant Republican Leader",
-    "career_timeline_text": "2015 - 2021 (House), 2021 -Present (Senate)",
-    "career_ranges": [
-      {
-        "start_year": 2015,
-        "end_year": 2021,
-        "chamber": "House"
-      }
-    ],
-    "committees": [
-      "SAGR",
-      "APED",
-      "APSI",
-      "SBMH",
-      "SCRL",
-      "SENE",
-      "SCHE"
-    ],
-    "associated_members": "David Friess, Dave Severin",
-    "email": null,
-    "offices": [
-      {
-        "name": "Springfield Office",
-        "address": "Stratton Office Building\nSection A, Office H\nSpringfield, IL 62706",
-        "phone": "(217) 782-8137",
-        "fax": null
-      },
-      {
-        "name": "District Office",
-        "address": "1032 W. Industrial Park Road\nMurphysboro, IL 62966",
-        "phone": "(618) 684-1100",
-        "fax": null
-      }
-    ],
-    "sponsored_bill_ids": [
-      "167254",
-      "167305",
-      "167306",
-      "167448",
-      "167391",
-      "167450",
-      "167595",
-      "167596",
-      "167597"
-    ],
-    "co_sponsor_bill_ids": [],
-    "photo_url": "https://ui-avatars.com/api/?name=Terri%20Bryant&size=200&background=4b5563&color=fff"
-  },
-  {
-    "id": "3338",
-    "name": "Laura Fine",
-    "member_url": "https://www.ilga.gov/Senate/Members/Details/3338",
-    "chamber": "Senate",
-    "party": "Democrat",
-    "district": "9",
-    "bio_text": "Full-time legislator in her second term; B.A. in telecommunications, Indiana University; M.A. in political science, Northeastern Illinois University; graduate of the Illinois Women's Institute for Leadership; the Bowhay Institute for Legislative Leadership Development; an Edgar Fellow, Milbank Fellow, and a Henry Toll Fellow; member, Legislative Committee of the Interstate Insurance Product Regulation Commission, Executive Committee member of the Great Lakes Legislative Caucus, Emerging Adult Justice Learning Community, Kiwanis Club of Glenview-Northbrook, Rotary Club of Glenview Sunrise, Glenview/Glencoe League of Women Voters; former journalist; former instructor, Northeastern Illinois University; former Northfield Township Clerk; married, has two children.",
-    "role": "Senator",
-    "career_timeline_text": "2013 - 2018 (House); 2018 - Present (Senate)",
-    "career_ranges": [
-      {
-        "start_year": 2013,
-        "end_year": 2018,
-        "chamber": "House"
-      },
-      {
-        "start_year": 2018,
-        "end_year": 2026,
-        "chamber": "Senate"
-      }
-    ],
-    "committees": [
-      "SBMH",
-      "SNVR",
-      "HHSR",
-      "SINS",
-      "SJUD",
-      "PBHE",
-      "SJUD-WKCO"
-    ],
-    "associated_members": "Jennifer Gong-Gershowitz, Robyn Gabel",
-    "email": null,
-    "offices": [
-      {
-        "name": "Springfield Office",
-        "address": "121-A Capitol Building\nSpringfield, IL 62706",
-        "phone": "(217) 782-2119",
-        "fax": null
-      },
-      {
-        "name": "District Office",
-        "address": "1812 Waukegan Rd.\nSuite A\nGlenview, IL 60025",
-        "phone": "(847) 998-1717",
-        "fax": null
-      }
-    ],
-    "sponsored_bill_ids": [
-      "167375",
-      "167376",
-      "167526"
-    ],
-    "co_sponsor_bill_ids": [],
-    "photo_url": "https://ui-avatars.com/api/?name=Laura%20Fine&size=200&background=4b5563&color=fff"
+    "co_sponsor_bill_ids": [
+      "161199",
+      "162387",
+      "162555",
+      "162676",
+      "157202"
+    ]
   },
   {
     "id": "3318",
     "name": "Dale Fowler",
     "member_url": "https://www.ilga.gov/Senate/Members/Details/3318",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B1E60CA94-7006-4CAB-841D-C9D99569D9D3%7D.jpg",
     "chamber": "Senate",
     "party": "Republican",
     "district": "59",
@@ -413,6 +1057,7 @@
       }
     ],
     "committees": [
+      "SCOA",
       "SCOM",
       "SESE",
       "SENE",
@@ -426,7 +1071,7 @@
     "offices": [
       {
         "name": "Springfield Office",
-        "address": "208 Capitol Building\nSpringfield, IL 62706",
+        "address": "309-J Capitol Building\nSpringfield, IL 62706",
         "phone": "(217) 782-5509",
         "fax": null
       },
@@ -437,211 +1082,827 @@
         "fax": "(618) 294-8950"
       }
     ],
+    "roles": [],
     "sponsored_bill_ids": [],
-    "co_sponsor_bill_ids": [],
-    "photo_url": "https://ui-avatars.com/api/?name=Dale%20Fowler&size=200&background=4b5563&color=fff"
+    "co_sponsor_bill_ids": [
+      "157217",
+      "160317",
+      "162377",
+      "162387",
+      "162555"
+    ]
   },
   {
-    "id": "3443",
-    "name": "Lakesia Collins",
-    "member_url": "https://www.ilga.gov/Senate/Members/Details/3443",
-    "chamber": "Senate",
-    "party": "Democrat",
-    "district": "5",
-    "bio_text": "State Elected Official 2020; Chicago native; mother of three boys; served as a Certified Nursing Assistant in nursing homes; served as a labor advocate and organizer for working families and Fight for 15 spokesperson; served as the chair of the Illinois House Black Caucus; awarded by several organizations; Lawndale Christian Development Cooperation 2021, Champion of North Lawndale 2024, ACLU Champion of the year 2024 and more. A strong advocate for seniors, working class families, youth in care, education, public safety, affordable housing, and mental health. Focused on development without displacement and creating more opportunities for families across the 5th senate district.",
-    "role": "Senator",
-    "career_timeline_text": "2020 - 2023 (House), 2023 - Present (Senate)",
-    "career_ranges": [
-      {
-        "start_year": 2020,
-        "end_year": 2023,
-        "chamber": "House"
-      }
-    ],
-    "committees": [
-      "APED",
-      "APHH",
-      "SBMH",
-      "SCHW",
-      "SCPR",
-      "SCRL",
-      "SHUM"
-    ],
-    "associated_members": "Yolonda Morris, Jawaharial Williams",
-    "email": null,
-    "offices": [
-      {
-        "name": "Springfield Office",
-        "address": "Stratton Office Building, 401 S. Spring\nSection F, Room G\nSpringfield, IL 62706",
-        "phone": "(217) 782-6252",
-        "fax": null
-      },
-      {
-        "name": "District Office",
-        "address": "2165 S. Millard Ave.\nChicago, IL 60623",
-        "phone": "(312) 298-9181",
-        "fax": null
-      }
-    ],
-    "sponsored_bill_ids": [
-      "167341",
-      "167342",
-      "167343",
-      "167386"
-    ],
-    "co_sponsor_bill_ids": [],
-    "photo_url": "https://ui-avatars.com/api/?name=Lakesia%20Collins&size=200&background=4b5563&color=fff"
-  },
-  {
-    "id": "3413",
-    "name": "Chris Balkema",
-    "member_url": "https://www.ilga.gov/Senate/Members/Details/3413",
-    "chamber": "Senate",
-    "party": "Republican",
-    "district": "53",
-    "bio_text": "Senator Chris Balkema was sworn into office in January 2025. Before joining the Senate, he served on the Grundy County Board, chairing since 2016. With 31 years at Caterpillar, Senator Balkema has held leadership roles in Human Resources, Operations, Logistics, and Purchasing. He also serves on the Grundy County Economic Development Council and has advised Taylor University’s Business Advisory Council. A graduate of Taylor University (B.S. in Business Systems) and Bradley University (MBA), he lives in Channahon with his wife of 26 years. They have two sons in college.",
-    "role": "Senator",
-    "career_timeline_text": "Senate 2025 - Present",
-    "career_ranges": [
-      {
-        "start_year": 2025,
-        "end_year": 2026,
-        "chamber": null
-      }
-    ],
-    "committees": [
-      "SAGR",
-      "APED",
-      "SBMH",
-      "SESE",
-      "SLAB",
-      "SPEN",
-      "SREV"
-    ],
-    "associated_members": "Dennis Tipsword, Jason R. Bunting",
-    "email": null,
-    "offices": [
-      {
-        "name": "Springfield Office",
-        "address": "Stratton Office Building\nSection A, Office E\nSpringfield, IL 62706",
-        "phone": "(217) 782-6597",
-        "fax": null
-      },
-      {
-        "name": "District Office",
-        "address": "305 W. Madison St.\nPontiac, IL 61764",
-        "phone": "(815) 844-9179",
-        "fax": null
-      }
-    ],
-    "sponsored_bill_ids": [
-      "167398",
-      "167399",
-      "167401"
-    ],
-    "co_sponsor_bill_ids": [],
-    "photo_url": "https://ui-avatars.com/api/?name=Chris%20Balkema&size=200&background=4b5563&color=fff"
-  },
-  {
-    "id": "3366",
-    "name": "Kam Buckner",
-    "member_url": "https://www.ilga.gov/House/Members/Details/3366",
+    "id": "3266",
+    "name": "William \"Will\" Davis",
+    "member_url": "https://www.ilga.gov/House/Members/Details/3266",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B6012DCA8-7486-49F9-A387-8703A2CF469C%7D.jpg",
     "chamber": "House",
     "party": "Democrat",
-    "district": "26",
-    "bio_text": "Vice president of governmental affairs, Outfront Media; former executive director of World Sport Chicago, a youth development nonprofit; former manager of neighborhood and government relations for the Chicago Cubs; former aide to United States Senator Richard J. Durbin and New Orleans Mayor Mitch Landrieu; former member, Chicago State University Board of Trustees; member, Economic Club of Chicago; B.A., University of Illinois Urbana-Champaign; J.D., DePaul University College of Law.",
-    "role": "Speaker Pro Tempore",
-    "career_timeline_text": "January 2019 - Present",
+    "district": "30",
+    "bio_text": "Davis was born on July 2, 1968, in Harvey, IL. He graduated from Southern Illinois University in Carbondale in 1989, earning a Bachelor of Arts Degree in Political Science and received his Master of Public Administration Degree at Governors State University in 2009.  He is a member of Kappa Alpha Psi Fraternity and a founding member of the Better Funding for Better Schools Coalition. Davis has been recognized as the \"Legislator of the Year\" by the Illinois Association of Code Enforcement, the Illinois Primary Healthcare Association and the Illinois Association of Park Districts.",
+    "role": "Representative",
+    "career_timeline_text": "January 2003 - Present",
     "career_ranges": [
       {
-        "start_year": 2019,
+        "start_year": 2003,
         "end_year": 2026,
         "chamber": null
       }
     ],
     "committees": [
-      "HCON",
+      "HAPE",
+      "HAPP",
+      "HCEC",
+      "HENG",
+      "HAPP-WFIS",
+      "SHOU",
+      "HLBR",
+      "HLBR-HMWB"
+    ],
+    "associated_members": "Napoleon Harris, III",
+    "email": "williamd@ilga.gov",
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "262-W Stratton Office Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-8197",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "1912 W. 174th Street\nEast Hazel Crest, IL 60429",
+        "phone": "(708) 799-7300",
+        "fax": "(708) 799-7377"
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [],
+    "co_sponsor_bill_ids": [
+      "163892"
+    ]
+  },
+  {
+    "id": "3267",
+    "name": "Robert \"Bob\" Rita",
+    "member_url": "https://www.ilga.gov/House/Members/Details/3267",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7BAC16F1E8-0988-4A08-A2E5-EF4D06371A24%7D.jpg",
+    "chamber": "House",
+    "party": "Democrat",
+    "district": "28",
+    "bio_text": "Born October 2, 1969; graduate, Eisenhower High School; attended Governors State University; comes from a family dedicated to public service; father of one daughter (Ashley).",
+    "role": "Deputy Majority Leader",
+    "career_timeline_text": "January 2003 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2003,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "HAPG",
       "SHEE",
-      "HJUA",
-      "HPDA",
-      "HREF-HRPT",
+      "HEXC",
+      "HOGC",
+      "SHOU",
+      "HOGC-HGAM"
+    ],
+    "associated_members": "Emil Jones, III",
+    "email": null,
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "109 Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 558-1000",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "2355 West York Street\nSuite 1\nBlue Island, IL 60406",
+        "phone": "(708) 396-2822",
+        "fax": "(708) 396-2898"
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "161029",
+      "161072",
+      "162571",
+      "167397"
+    ],
+    "co_sponsor_bill_ids": [
+      "163892"
+    ]
+  },
+  {
+    "id": "3272",
+    "name": "La Shawn K. Ford",
+    "member_url": "https://www.ilga.gov/House/Members/Details/3272",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7BBCC3C8D6-5728-4A69-8A3B-F203314DD563%7D.jpg",
+    "chamber": "House",
+    "party": "Democrat",
+    "district": "8",
+    "bio_text": "B.S., Loyola University Chicago. Former Chicago Public Schools teacher, still certified. Licensed real estate broker and insurance agent. Chair of House Democratic Task Force to Increase State Government Business Opportunities for Minority-Owned Enterprises and Small Businesses. Chair of Firearm Public Awareness Task Force. Co-founder of West Side Heroin Task Force. 2018 Nelson Mandela Award for Justice Honoree from Westside Health Authority, in recognition of tireless service and outstanding contributions in fostering peace and fighting for justice on the West Side of Chicago. Representative since 2007.",
+    "role": "Representative",
+    "career_timeline_text": "January  2007 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2007,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "HAPI",
+      "HOGC",
+      "HLBR",
+      "HMEH",
+      "HMAC",
+      "HLBR-HOLS"
+    ],
+    "associated_members": "Kimberly A. Lightford",
+    "email": "repford@lashawnford.com",
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "239-E Stratton Office Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-5962",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "5500 W. Madison Street\nChicago, IL 60644",
+        "phone": "(773) 750-0866",
+        "fax": null
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "160723",
+      "167615",
+      "164493"
+    ],
+    "co_sponsor_bill_ids": [
+      "163892"
+    ]
+  },
+  {
+    "id": "3273",
+    "name": "Elizabeth \"Lisa\" Hernandez",
+    "member_url": "https://www.ilga.gov/House/Members/Details/3273",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B4E4C2A21-FDC2-48CA-9BA8-462A62E7A33B%7D.jpg",
+    "chamber": "House",
+    "party": "Democrat",
+    "district": "2",
+    "bio_text": "Full-time state legislator; former Senior Policy Advisor to Lt. Governor Patrick Quinn; worked in Cicero Public Schools for 17 years; community volunteer and current member of Children's Center of Cicero and Berwyn, Cicero Youth Services; founder of Cicero Youth Commission; former UFCW member; AA in Liberal Arts, Morton College (2001), BA in Public Administration, Northeastern University; married (Charlie) and mother of two daughters and one son.",
+    "role": "Deputy Majority Leader",
+    "career_timeline_text": "January 2007 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2007,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "HAPE",
+      "HAPI",
+      "HCON",
+      "HEXC",
+      "HOGC",
+      "SIHR",
+      "HLBR",
       "HREF",
       "HRUL",
-      "HREF-HRTF",
-      "HREF-HRTT",
-      "HREF-HRTS"
+      "HREF-HTCI",
+      "HREF-HRTI",
+      "HLBR-HWPS"
     ],
-    "associated_members": "Robert Peters",
-    "email": "Buckner@illinois26.com",
+    "associated_members": "Javier L. Cervantes",
+    "email": "office@repehernandez.com",
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "109 Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-8173",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "6117 West Cermak Road\nCicero, IL 60804",
+        "phone": "(708) 222-5240",
+        "fax": "(708) 222-5241"
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "162021",
+      "166969"
+    ],
+    "co_sponsor_bill_ids": [
+      "157202",
+      "157775",
+      "160197",
+      "167397",
+      "163892"
+    ]
+  },
+  {
+    "id": "3274",
+    "name": "Fred Crespo",
+    "member_url": "https://www.ilga.gov/House/Members/Details/3274",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7BB92F7A2F-6517-4A3F-87B3-56FAA240285F%7D.jpg",
+    "chamber": "House",
+    "party": "Democrat",
+    "district": "44",
+    "bio_text": "Full-time state legislator; graduate of Loyola University-Chicago; leadership board, Women In Need Growing Stronger (WINGS), which provides services and housing to victims of domestic violence; 2012 National Association on Mental Illness Legislator of the Year; former Hoffman Estates trustee; Chairman of the Legislative Audit Commission: married, has two children.",
+    "role": "Representative",
+    "career_timeline_text": "January  2007 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2007,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "HELM",
+      "HIRT",
+      "HPUB"
+    ],
+    "associated_members": "Cristina Castro",
+    "email": "fred@fredcrespo.com",
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "261-S Stratton Office Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-0347",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "1014 E. Schaumburg Road\nStreamwood, IL 60107",
+        "phone": "(630) 372-3340",
+        "fax": "(630) 372-3342"
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [],
+    "co_sponsor_bill_ids": []
+  },
+  {
+    "id": "3275",
+    "name": "Jehan Gordon-Booth",
+    "member_url": "https://www.ilga.gov/House/Members/Details/3275",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7BA81D0C01-0A50-446D-B796-3A5A6D046EB1%7D.jpg",
+    "chamber": "House",
+    "party": "Democrat",
+    "district": "92",
+    "bio_text": "Full-time state legislator; B.A., University of Illinois at Urbana-Champaign; former local school board member; former staff member, Illinois Central College; 2013 Edgar Fellow; resides in Peoria with husband, Derrick, and daughter, Jianna.",
+    "role": "Assistant Majority Leader",
+    "career_timeline_text": "January 2009 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2009,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "HEXC",
+      "HOGC",
+      "HPHE"
+    ],
+    "associated_members": "David Koehler",
+    "email": "repjgordon@gmail.com",
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "632 Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-3186",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "300 E. War Memorial Drive\nSuite 303\nPeoria, IL 61614",
+        "phone": "(309) 681-1992",
+        "fax": null
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [],
+    "co_sponsor_bill_ids": []
+  },
+  {
+    "id": "3277",
+    "name": "Anthony DeLuca",
+    "member_url": "https://www.ilga.gov/House/Members/Details/3277",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B64399002-8B14-4D8E-80A4-54A77F25421C%7D.jpg",
+    "chamber": "House",
+    "party": "Democrat",
+    "district": "80",
+    "bio_text": "Businessman; 2012-Present-- Residential, commercial, and industrial sales, Republic Services; 1987-2012 director of operations at Skyline Disposal Company, a third-generation family-owned business; member of the International Brotherhood of Teamsters Local 731; Chicago Heights Mayor, 2003-2009; former member and President of Bloom Township High School District 206 Board of Education 1995-2003; Director, Chicago Heights Small Fry Basketball League; graduate of Homewood-Flossmoor High School and Elmhurst College; married (wife, Sarah), father of three.",
+    "role": "Representative",
+    "career_timeline_text": "March 2009 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2009,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "HCDA-HAIE",
+      "HCIV",
+      "HCDA",
+      "HCDA-HDPA",
+      "HOGC",
+      "HINS",
+      "HCDA-HSMC"
+    ],
+    "associated_members": "Patrick J. Joyce",
+    "email": "repdeluca@sbcglobal.net",
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "267-S Stratton Office Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-1719",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "195 W. Joe Orr Rd.\nSuite 201\nChicago Heights, IL 60411",
+        "phone": "(708) 754-7900",
+        "fax": "(708) 754-7904"
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "165708"
+    ],
+    "co_sponsor_bill_ids": [
+      "162676"
+    ]
+  },
+  {
+    "id": "3278",
+    "name": "Robyn Gabel",
+    "member_url": "https://www.ilga.gov/House/Members/Details/3278",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B739CC8F9-E9E4-40A1-AB86-883EF9A5E313%7D.jpg",
+    "chamber": "House",
+    "party": "Democrat",
+    "district": "18",
+    "bio_text": "Full-time legislator. Throughout her career, Robyn Gabel  has maintained a strong commitment to serving the people of Illinois as an advocate for women, children and families. As majority leader, her priorities include advocating for a racial equity agenda, ethics reform, expanding affordability and access to quality health care, comprehensive clean energy policy, and increasing safety net funding for our most vulnerable residents.  Currently Robyn serves as the Chair of the Rules committee and co-chair of the Medicaid Working Group. Robyn previously served as the Chair of the Great Lakes Legislative Caucus of the Council of State Governments and has been an active member since 2010.  She  served as the Executive Director of Everthrive, a non profit advocacy organization, from 1988 to 2010.   Robyn has a B.A. from Beloit College, an M.S.P.H. from the University of Illinois at Chicago, School of Public Health and an M.J. in Health Law from Loyola University Chicago. She is married and has one daughter.",
+    "role": "Majority Leader",
+    "career_timeline_text": "April 2010 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2010,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "HRUL"
+    ],
+    "associated_members": "Laura Fine",
+    "email": "Contact@robyngabel.com",
     "offices": [
       {
         "name": "Springfield Office",
         "address": "300 Capitol Building\nSpringfield, IL 62706",
-        "phone": "(217) 782-2023",
+        "phone": "(217) 782-8052",
         "fax": null
       },
       {
         "name": "District Office",
-        "address": "449 E. 35th Street\nChicago, IL 60616",
-        "phone": "(773) 924-1755",
-        "fax": "(773) 924-1775"
+        "address": "909 Davis St\n2nd floor\nEvanston, IL 60201",
+        "phone": "(847) 424-5401",
+        "fax": null
       }
     ],
-    "sponsored_bill_ids": [],
-    "co_sponsor_bill_ids": [],
-    "photo_url": "https://ui-avatars.com/api/?name=Kam%20Buckner&size=200&background=4b5563&color=fff"
+    "roles": [],
+    "sponsored_bill_ids": [
+      "162849",
+      "162850",
+      "162859",
+      "162867",
+      "162876",
+      "162874",
+      "163739",
+      "165709"
+    ],
+    "co_sponsor_bill_ids": [
+      "157202",
+      "163775"
+    ]
   },
   {
-    "id": "3430",
-    "name": "John M. Cabello",
-    "member_url": "https://www.ilga.gov/House/Members/Details/3430",
+    "id": "3279",
+    "name": "Camille Y. Lilly",
+    "member_url": "https://www.ilga.gov/House/Members/Details/3279",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B84D8FB64-9F82-405A-9376-A69ADFB46E53%7D.jpg",
     "chamber": "House",
-    "party": "Republican",
-    "district": "90",
-    "bio_text": "State Representative John Cabello (R-Machesney Park) was appointed to fill a vacancy in the 68th District and sworn into office in August of 2012. He was then elected to that seat in November of 2012 and re-elected in 2014, 2016 and 2018. In 2022, John was elected State Representative for the new 90th District which starts in Boone County and cuts across the top of Winnebago County out to Stephenson County and Freeport. Originally from Texas, John and his family moved to Machesney Park when he was a young child. He is a graduate of Harlem High School in Machesney Park. He was also a member of the acclaimed Phantom Regiment Drum and Bugle Corps. John began serving his community after graduation from the police academy by becoming a police officer for South Beloit. He later worked for the Rockford Police Department and in a short period of time, he became a detective. John has served nearly three decades as a police officer and is currently on the roster of the Rockford Police Department. Representative Cabello previously served on Appropriations-Capital; Appropriations-Public Safety (Republican Spokesperson); Transportation: Regulation, Roads; Labor & Commerce; Judiciary – Criminal committees. His expertise in law enforcement was utilized during his terms in office and was especially needed during the riots and the rise of the anti-police movement that has fueled a resurgence in violent crime. John has been elected, and served, as a Harlem Township Trustee and a Winnebago County Board member for District 8. In those positions, he declined pay and benefits further demonstrating his commitment to public service. He resides in Machesney Park. John is a conservative Republican who has opposed the tax and fee increases and believes that government should live within its means. In Illinois, state policies and taxation have driven people and businesses out leaving the remaining to pay the bills for the state spending. John is going back to Springfield to fight for the principles that will make our state great again.",
-    "role": "Assistant Minority Leader",
-    "career_timeline_text": "August 2012 - January 2021; January 2023 - Present",
+    "party": "Democrat",
+    "district": "78",
+    "bio_text": "Lifelong resident of Chicago's Greater West Side; graduated from Oak Park-River Forest High School; bachelor's degree in management from Drake University; master's degree in Healthcare Administration from Oklahoma University;  Northwestern University's Kellogg Executive MBA ; serves on the boards of Westside Health Authority, Columbus Park Advisory Council, and Chicago Park District.",
+    "role": "Assistant Majority Leader",
+    "career_timeline_text": "April 2010 - Present",
     "career_ranges": [
       {
-        "start_year": 2023,
+        "start_year": 2010,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "HAPH",
+      "HAPP",
+      "HHCA",
+      "SHOU",
+      "HINS",
+      "HMEH",
+      "HMAC"
+    ],
+    "associated_members": "Don Harmon",
+    "email": "staterepcamilleylilly@gmail.com",
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "632 Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-6400",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "6937 W. North Ave.\nOak Park, IL 60302",
+        "phone": "(773) 473-7300",
+        "fax": null
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "160685",
+      "163161"
+    ],
+    "co_sponsor_bill_ids": [
+      "157662",
+      "157202",
+      "157771",
+      "157775",
+      "158793",
+      "159252",
+      "160723",
+      "161298",
+      "162058",
+      "163892"
+    ]
+  },
+  {
+    "id": "3280",
+    "name": "Rita Mayfield",
+    "member_url": "https://www.ilga.gov/House/Members/Details/3280",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B3A2DAB8B-B5F8-48EE-85D3-05894ED42A5D%7D.jpg",
+    "chamber": "House",
+    "party": "Democrat",
+    "district": "60",
+    "bio_text": "M.B.A. from Benedictine University,  M.S. in Management and Organization Behavior with an emphasis in Organization Development from Benedictine University;  B.S. in Computer Science from Columbia College; former vice-president of the Waukegan Board of Education, former member of the Waukegan Schools Foundation Board, member of the Harbor Lites Chapter of The Links, Incorporated, volunteer financial instructor for Habitat for Humanity; Mayfield is the first African American Female State Representative elected to the 60th District.",
+    "role": "Representative",
+    "career_timeline_text": "July 2010 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2010,
         "end_year": 2026,
         "chamber": null
       }
     ],
     "committees": [
       "HAPP",
-      "HEXC",
-      "HAPP-WFIS",
-      "HOGC",
+      "HCON",
+      "HCDA",
+      "HREF-HRFS",
+      "HFIN",
       "HINS",
-      "HJUC",
-      "SHPF",
-      "HJUC-HSPC"
+      "HPUB",
+      "HREF",
+      "HREF-HTCI",
+      "HREF-HRTS"
     ],
-    "associated_members": "Andrew S. Chesney",
-    "email": "cabello@ilhousegop.org",
+    "associated_members": "Adriane Johnson",
+    "email": null,
     "offices": [
       {
         "name": "Springfield Office",
-        "address": "217-N Stratton Office Building\nSpringfield, IL 62706",
-        "phone": "(217) 782-8186",
+        "address": "229-E Stratton Office Building\nSpringfield, IL 62706",
+        "phone": "(217) 558-1012",
         "fax": null
       },
       {
         "name": "District Office",
-        "address": "1700 Hutchins Road\nUnit B\nMachesney Park, IL 61115",
-        "phone": "(815) 974-0090",
-        "fax": null
+        "address": "120 S. Genesee St.\nWaukegan, IL 60085",
+        "phone": "(847) 599-2800",
+        "fax": "(224) 214-3733"
       }
     ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "156938",
+      "167017"
+    ],
+    "co_sponsor_bill_ids": [
+      "157202",
+      "166635",
+      "163892"
+    ]
+  },
+  {
+    "id": "3283",
+    "name": "Thaddeus Jones",
+    "member_url": "https://www.ilga.gov/House/Members/Details/3283",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B6EE82A11-2CC6-48E9-9DE6-61D83EBCAB6B%7D.jpg",
+    "chamber": "House",
+    "party": "Democrat",
+    "district": "29",
+    "bio_text": "Graduate of Bloom Trail High School and holds a bachelor's degree in Criminal Justice from Loyola University; first African-American alderman of Calumet City's Third Ward; founder and Chief Executive Officer of the Jones Foundation; formerly served as Student Trustee at South Suburban College, member of the Calumet City Library Board; proud father of two sons.",
+    "role": "Representative",
+    "career_timeline_text": "January 2011 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2011,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "HINS",
+      "HINS-HIMS",
+      "HINS-HIPS",
+      "HJUA",
+      "HLBR",
+      "HPDA",
+      "HLBR-HWPS"
+    ],
+    "associated_members": "Napoleon Harris, III",
+    "email": "repjones.jones@gmail.com",
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "241-E Stratton Office Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-8087",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "15525 South Park Ave.\nSuite 104\nSouth Holland, IL 60473",
+        "phone": "(708) 825-1174",
+        "fax": "(708) 596-7062"
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "161834",
+      "161836"
+    ],
+    "co_sponsor_bill_ids": [
+      "157662",
+      "158351",
+      "160197"
+    ]
+  },
+  {
+    "id": "3284",
+    "name": "Michelle Mussman",
+    "member_url": "https://www.ilga.gov/House/Members/Details/3284",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B63BBD5DE-333E-4015-8658-4F7B2D45E1B7%7D.jpg",
+    "chamber": "House",
+    "party": "Democrat",
+    "district": "56",
+    "bio_text": "Full-time legislator; IL Congress of Women Legislators, Legislative Accessibility Task Force, Board Member: Women In Need Growing Stronger (WINGS), Children's Advocacy Center of North and Northwest Cook County; member: Schaumburg Business Association, Education Commission of the States, 2022 Public Leaders for Inclusion Council, Illinois Housing Council, League of Women Voters. B.S. in Design from the University of Cincinnati; married, has three young adult children.",
+    "role": "Representative",
+    "career_timeline_text": "January 2011 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2011,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "HACW",
+      "HELM",
+      "SHOU",
+      "SIHR",
+      "HMEH",
+      "HPHE"
+    ],
+    "associated_members": "Laura M. Murphy",
+    "email": "staterepmussman@gmail.com",
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "257-S Stratton Office Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-3725",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "11 N. Roselle Road\nSchaumburg, IL 60194",
+        "phone": "(847) 923-9104",
+        "fax": "(847) 923-9105"
+      }
+    ],
+    "roles": [],
     "sponsored_bill_ids": [],
-    "co_sponsor_bill_ids": [],
-    "photo_url": "https://ui-avatars.com/api/?name=John%20M.%20Cabello&size=200&background=4b5563&color=fff"
+    "co_sponsor_bill_ids": [
+      "162145",
+      "156422",
+      "157117",
+      "157202",
+      "159252",
+      "159333",
+      "160077",
+      "161261",
+      "163892"
+    ]
+  },
+  {
+    "id": "3285",
+    "name": "Joe C. Sosnowski",
+    "member_url": "https://www.ilga.gov/House/Members/Details/3285",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B7DEBF89C-D2BA-4952-94A2-40F564A00144%7D.jpg",
+    "chamber": "House",
+    "party": "Republican",
+    "district": "69",
+    "bio_text": "Former Director of Institutional Advancement, Rockford Christian Schools; Illinois Licensed Real Estate Salesperson; born April 13, 1977, in Hanover Park, IL; graduated, West Chicago High School, 1995; B.A., English, Northern Illinois University, 1999; former Alderman, City of DeKalb, 1999-2003; former Alderman, City of Rockford, 2005-2010; member of Stateline Community Church; member of Next Rockford (young professionals); recipient of the Rockford Chamber of Commerce's 40 Under 40 Award; married (wife, Roxanne), has two sons, Aidan and Roman, and daughter, Ellie. To learn more, or to contact Rep. Sosnowski, please visit www.joesosnowski.org",
+    "role": "Representative",
+    "career_timeline_text": "January 2011 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2011,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "HCIV",
+      "HELO",
+      "HREF-HRFS",
+      "HREF-HRIT",
+      "HIRT",
+      "HIRT-INRS",
+      "HMEH",
+      "HREF-HRPT",
+      "HREF",
+      "HREF-HRST",
+      "HREF-HTCI",
+      "HREF-HRTF",
+      "HREF-HRTI",
+      "HREF-HRTT",
+      "HREF-HRTS",
+      "HIRT-ITSC",
+      "HIRT-IRTS",
+      "HTRR"
+    ],
+    "associated_members": "Dave Syverson",
+    "email": "sosnowski@ilhousegop.org",
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "215-N Stratton Office Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-0548",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "1700 Hutchins Road\nUnit B\nMachesney Park , IL 61115",
+        "phone": "(815) 547-3436",
+        "fax": "(815) 516-8434"
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [],
+    "co_sponsor_bill_ids": [
+      "157267",
+      "158897"
+    ]
+  },
+  {
+    "id": "3286",
+    "name": "Ann M. Williams",
+    "member_url": "https://www.ilga.gov/House/Members/Details/3286",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7BC45B418C-4848-4467-ADC2-739B2D1E4418%7D.jpg",
+    "chamber": "House",
+    "party": "Democrat",
+    "district": "11",
+    "bio_text": "Attorney; received a B.A. in Journalism from University of Iowa and a J.D. from Drake University; former Assistant Attorney General and Legislative Director for Attorney General Lisa Madigan; chair of the Illinois Green (Environmental) Caucus; lives in Chicago’s West Lakeview neighborhood.  Please visit www.repannwilliams.com for updates on district events, legislative issues and to sign up for an e-newsletter.",
+    "role": "Assistant Majority Leader",
+    "career_timeline_text": "January 2011 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2011,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "HENG-HCES",
+      "HJUA-HJCZ",
+      "HENG",
+      "SHEE",
+      "HEXC",
+      "HOGC",
+      "HJUA",
+      "HOGC-HGAM"
+    ],
+    "associated_members": "Sara Feigenholtz",
+    "email": "ann@repannwilliams.com",
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "263-S Stratton Office Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-2458",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "3505 N Ashland Ave\nUnit B\nChicago, IL 60657",
+        "phone": "(773) 880-9082",
+        "fax": "(773) 880-9083"
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "157117"
+    ],
+    "co_sponsor_bill_ids": [
+      "157124",
+      "157202",
+      "160077",
+      "160197"
+    ]
+  },
+  {
+    "id": "3287",
+    "name": "Norine K. Hammond",
+    "member_url": "https://www.ilga.gov/House/Members/Details/3287",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B07D3914D-440A-4891-99AE-256F657BBFFF%7D.jpg",
+    "chamber": "House",
+    "party": "Republican",
+    "district": "94",
+    "bio_text": "Born in Berwyn and attended Western Illinois University, Macomb. Served as Legislative Aide to the late Rep. Rich Myers 1997-2010; Emmet Township Trustee 2002-2006 and Township Supervisor 2006-2014; and member of Macomb Planning Commission. Deputy Leader Hammond serves as the chief budget negotiator for the House Republican Caucus, is President of the Board of State Agriculture and Rural Leaders (SARL), and represents Illinois on the Council of State Governments Agriculture Committee. Married (husband, Leonard), one daughter, Trish. To learn more, please visit norinehammond.org.",
+    "role": "Deputy Minority Leader",
+    "career_timeline_text": "December 2010 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2010,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "HHSV-HBUD",
+      "HCON",
+      "HCDA",
+      "HEXC",
+      "HGVP",
+      "HHSV",
+      "HPUB-HNAT",
+      "HPUB",
+      "HRUL"
+    ],
+    "associated_members": "Neil Anderson",
+    "email": "rephammond@macomb.com",
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "314 Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-0416",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "325 E Washington St\nMacomb, IL 61455",
+        "phone": "(309) 836-2707",
+        "fax": "(309) 836-2231"
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "158622",
+      "167315"
+    ],
+    "co_sponsor_bill_ids": [
+      "156784",
+      "157522",
+      "163178"
+    ]
   },
   {
     "id": "3288",
     "name": "Kelly M. Cassidy",
     "member_url": "https://www.ilga.gov/House/Members/Details/3288",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B3EFBDD50-41FF-4677-AA47-FB35B70C4667%7D.jpg",
     "chamber": "House",
     "party": "Democrat",
     "district": "14",
@@ -686,125 +1947,34 @@
         "fax": null
       }
     ],
-    "sponsored_bill_ids": [],
-    "co_sponsor_bill_ids": [],
-    "photo_url": "https://ui-avatars.com/api/?name=Kelly%20M.%20Cassidy&size=200&background=4b5563&color=fff"
+    "roles": [],
+    "sponsored_bill_ids": [
+      "161797",
+      "163759"
+    ],
+    "co_sponsor_bill_ids": [
+      "162145",
+      "162555",
+      "162676",
+      "156422",
+      "157202",
+      "159252",
+      "159333",
+      "160077",
+      "163892"
+    ]
   },
   {
-    "id": "3414",
-    "name": "Jed Davis",
-    "member_url": "https://www.ilga.gov/House/Members/Details/3414",
-    "chamber": "House",
-    "party": "Republican",
-    "district": "75",
-    "bio_text": "Born and raised in Lisbon. Received B.S. in Civil Engineering from Valparaiso University. Past Chair of the Zoning and Planning Commission of Newark. Past Trustee of Village of Newark. Current School Board President of Parkview Christian Academy. Married (wife, Melissa) with four children.",
-    "role": "Representative",
-    "career_timeline_text": "January 2023 - Present",
-    "career_ranges": [
-      {
-        "start_year": 2023,
-        "end_year": 2026,
-        "chamber": null
-      }
-    ],
-    "committees": [
-      "HACW",
-      "HAPG",
-      "HAPH",
-      "HLBR-HDIC",
-      "HENG",
-      "HLBR-HJWD",
-      "HJUA",
-      "HLBR",
-      "HMEH"
-    ],
-    "associated_members": "Sue Rezin",
-    "email": "davis@ilhousegop.org",
-    "offices": [
-      {
-        "name": "Springfield Office",
-        "address": "220-N Stratton Office Building\nSpringfield, IL 62706",
-        "phone": "(217) 782-5997",
-        "fax": null
-      },
-      {
-        "name": "District Office",
-        "address": "1925 S. Bridge St.\nYorkville, IL 60560",
-        "phone": "(331) 867-8200",
-        "fax": null
-      }
-    ],
-    "sponsored_bill_ids": [],
-    "co_sponsor_bill_ids": [],
-    "photo_url": "https://ui-avatars.com/api/?name=Jed%20Davis&size=200&background=4b5563&color=fff"
-  },
-  {
-    "id": "3391",
-    "name": "Dagmara Avelar",
-    "member_url": "https://www.ilga.gov/House/Members/Details/3391",
+    "id": "3289",
+    "name": "Marcus C. Evans, Jr.",
+    "member_url": "https://www.ilga.gov/House/Members/Details/3289",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7BBFD8B13A-CD65-452C-8F20-9D32C3A013BF%7D.jpg",
     "chamber": "House",
     "party": "Democrat",
-    "district": "85",
-    "bio_text": "Full-time legislator; B.A. in Justice Studies and minor in Political Science, Northeastern Illinois University; Masters candidate in Urban Planning and Policy, University of Illinois at Chicago; board member, Southwest Suburban Immigrant Project; former director of programs, Illinois Coalition for Immigrant and Refugee Rights.",
+    "district": "33",
+    "bio_text": "Born and resides in Chicago; Graduate, Chicago Public Schools, Morgan Park High School; B.S., Business Administration, Chicago State University; Former Chicago City Council Deputy Chief of Staff (8th Ward); Speaker and Advocate for Cancer Awareness and Health Care Equity (Cancer Survivor); licensed real estate appraiser; Illinois High School Association Sports Official",
     "role": "Assistant Majority Leader",
-    "career_timeline_text": "January 2021 - Present",
-    "career_ranges": [
-      {
-        "start_year": 2021,
-        "end_year": 2026,
-        "chamber": null
-      }
-    ],
-    "committees": [
-      "HAPS",
-      "HECO",
-      "HHCA",
-      "HLBR-HJWD",
-      "HLBR",
-      "HPPN",
-      "HHCA-HPBM",
-      "HPDA",
-      "HREF",
-      "HREF-HRST",
-      "HREF-HRTF",
-      "HTRR"
-    ],
-    "associated_members": "Rachel Ventura",
-    "email": "info@repdagmara.org",
-    "offices": [
-      {
-        "name": "Springfield Office",
-        "address": "265-S Stratton Office Building\nSpringfield, IL 62706",
-        "phone": "(217) 782-4179",
-        "fax": null
-      },
-      {
-        "name": "District Office",
-        "address": "1050 W. Romeo Rd.\nRomeoville, IL 60446",
-        "phone": "(815) 372-0085",
-        "fax": null
-      }
-    ],
-    "sponsored_bill_ids": [
-      "165737",
-      "165795",
-      "165828",
-      "165905",
-      "166045"
-    ],
-    "co_sponsor_bill_ids": [],
-    "photo_url": "https://ui-avatars.com/api/?name=Dagmara%20Avelar&size=200&background=4b5563&color=fff"
-  },
-  {
-    "id": "3304",
-    "name": "Christopher \"C.D.\" Davidsmeyer",
-    "member_url": "https://www.ilga.gov/House/Members/Details/3304",
-    "chamber": "House",
-    "party": "Republican",
-    "district": "100",
-    "bio_text": "Born and raised in Jacksonville, attended Jacksonville High School. B.A. in Political Science, Miami University of Ohio. Served on the Jacksonville City Council from 2008-2012, chairing the public protection and finance committees, and was an officer in the local Chamber of Commerce, Rotary and Library Board, and Vice President of I.R.C., Inc.  Married (wife Kristen) with two sons.",
-    "role": "Assistant Minority Leader",
-    "career_timeline_text": "December 2012 - Present",
+    "career_timeline_text": "April 2012 - Present",
     "career_ranges": [
       {
         "start_year": 2012,
@@ -813,218 +1983,223 @@
       }
     ],
     "committees": [
-      "HAPH",
-      "HECO",
-      "HEXC",
-      "HFIN",
-      "HGVP",
+      "HCEC",
+      "HLBR-HDIC",
+      "HLBR-HJWD",
+      "HLBR",
+      "HLBR-HMWB",
+      "HLBR-HOLS",
+      "HPHE",
+      "HTRR",
+      "HLBR-HWPS",
+      "HLBR-HWCA"
+    ],
+    "associated_members": "Elgie R. Sims, Jr.",
+    "email": "office@repevans.com",
+    "offices": [
+      {
+        "name": "Springfield Office",
+        "address": "268-S Stratton Office Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-8272",
+        "fax": null
+      },
+      {
+        "name": "District Office",
+        "address": "8500 S. Stony Island Ave.\nChicago, IL 60617",
+        "phone": "(773) 783-8492",
+        "fax": null
+      }
+    ],
+    "roles": [],
+    "sponsored_bill_ids": [
+      "157596",
+      "163042"
+    ],
+    "co_sponsor_bill_ids": [
+      "162555",
+      "160077",
+      "165861"
+    ]
+  },
+  {
+    "id": "3290",
+    "name": "Lawrence \"Larry\" Walsh, Jr.",
+    "member_url": "https://www.ilga.gov/House/Members/Details/3290",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7BF11DA3BE-D8FF-48F0-8450-43231B4DD28F%7D.jpg",
+    "chamber": "House",
+    "party": "Democrat",
+    "district": "86",
+    "bio_text": "Born and raised in Elwood; former trustee, Jackson Township; Full-time legislator; married, has three adult children. Representative since 2012. Committees: Public Utilities, Chair; Counties & Townships; Energy & Environment; Gaming; Int. Relations, Tourism, & Trade; Prescription Drug Affordability & Accessibility.",
+    "role": "Representative",
+    "career_timeline_text": "April 2012 - Present",
+    "career_ranges": [
+      {
+        "start_year": 2012,
+        "end_year": 2026,
+        "chamber": null
+      }
+    ],
+    "committees": [
+      "HCOT",
+      "HENG",
+      "HOGC",
+      "HIRT",
+      "HIRT-INRS",
+      "HENG-HLGS",
+      "HPDA",
       "HPUB",
       "HPUB-HWAT"
     ],
-    "associated_members": "Jil Tracy",
-    "email": "davidsmeyer@ilhousegop.org",
+    "associated_members": "Rachel Ventura",
+    "email": "statereplarrywalshjr@gmail.com",
     "offices": [
       {
         "name": "Springfield Office",
-        "address": "202-N Stratton Office Building\nSpringfield, IL 62706",
-        "phone": "(217) 782-1840",
+        "address": "200-9S Stratton Office Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-8090",
         "fax": null
       },
       {
         "name": "District Office",
-        "address": "325 W. State Street, Suite 102\nP.O. Box 160\nJacksonville, IL 62650",
-        "phone": "(217) 243-6221",
-        "fax": "(217) 245-2071"
+        "address": "3141 W. Jefferson Street\nJoliet, IL 60435",
+        "phone": "(815) 730-8600",
+        "fax": null
       }
     ],
-    "sponsored_bill_ids": [],
-    "co_sponsor_bill_ids": [],
-    "photo_url": "https://ui-avatars.com/api/?name=Christopher%20%22C.D.%22%20Davidsmeyer&size=200&background=4b5563&color=fff"
+    "roles": [],
+    "sponsored_bill_ids": [
+      "157115"
+    ],
+    "co_sponsor_bill_ids": [
+      "163892"
+    ]
   },
   {
-    "id": "3431",
-    "name": "Sharon Chung",
-    "member_url": "https://www.ilga.gov/House/Members/Details/3431",
+    "id": "3298",
+    "name": "Emanuel \"Chris\" Welch",
+    "member_url": "https://www.ilga.gov/House/Members/Details/3298",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B5D419B94-66B4-4F3B-86F1-BFF37B3FA55C%7D.jpg",
     "chamber": "House",
     "party": "Democrat",
-    "district": "91",
-    "bio_text": "Teacher and professional musician; member of American Federation of Musicians Local 301; B.M., Illinois Wesleyan University; M.M., Northwestern University; former member, McLean County Board; has two daughters.",
-    "role": "Representative",
-    "career_timeline_text": "January 2023 - Present",
+    "district": "7",
+    "bio_text": "Attorney; B.A., Northwestern University; J.D., John Marshall Law School; former member and president, Proviso Township High Schools District 209 Board of Education; partner, Ancel, Glink, Diamond, Bush, DiCianni and Krafthefer PC; married, has two children.",
+    "role": "Speaker of the House",
+    "career_timeline_text": "January 2013 - Present",
     "career_ranges": [
       {
-        "start_year": 2023,
+        "start_year": 2013,
         "end_year": 2026,
         "chamber": null
       }
     ],
     "committees": [
-      "HAGC",
-      "HAPI",
-      "HECO",
-      "HHCL",
-      "HHCL-HCAI",
-      "HHED",
-      "HMAC",
-      "HVET"
+      "Committees are currently not available."
     ],
-    "associated_members": "David Koehler",
-    "email": "info@repchung.com",
+    "associated_members": "Kimberly A. Lightford",
+    "email": null,
     "offices": [
       {
         "name": "Springfield Office",
-        "address": "231-E Stratton Office Building\nSpringfield, IL 62706",
-        "phone": "(217) 782-5199",
+        "address": "300 Capitol Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-5350",
         "fax": null
       },
       {
         "name": "District Office",
-        "address": "216 N. Center St\nBloomington, IL 61701",
-        "phone": "(309) 808-2351",
-        "fax": null
+        "address": "10055 W. Roosevelt Rd.\nSuite E\nWestchester, IL 60154",
+        "phone": "(708) 450-1000",
+        "fax": "(708) 450-1104"
       }
     ],
-    "sponsored_bill_ids": [],
-    "co_sponsor_bill_ids": [],
-    "photo_url": "https://ui-avatars.com/api/?name=Sharon%20Chung&size=200&background=4b5563&color=fff"
+    "roles": [],
+    "sponsored_bill_ids": [
+      "155761",
+      "155823",
+      "155885",
+      "155906",
+      "155912",
+      "155930",
+      "155940",
+      "155958",
+      "155967",
+      "155984",
+      "156042",
+      "156066",
+      "156079",
+      "156088",
+      "156095",
+      "156111",
+      "156109",
+      "156150",
+      "156163",
+      "156165",
+      "156216",
+      "156235",
+      "156285",
+      "156289",
+      "156296",
+      "156311",
+      "156345",
+      "156419",
+      "156447",
+      "156473",
+      "156491",
+      "156521",
+      "156557",
+      "156575",
+      "156585",
+      "156584",
+      "156643",
+      "157202",
+      "164444"
+    ],
+    "co_sponsor_bill_ids": [
+      "157775",
+      "163892"
+    ]
   },
   {
-    "id": "3437",
-    "name": "Michael J. Coffey, Jr.",
-    "member_url": "https://www.ilga.gov/House/Members/Details/3437",
-    "chamber": "House",
-    "party": "Republican",
-    "district": "95",
-    "bio_text": "Small business owner Mike Coffey was sworn into office as State Representative of the 95th District in January 2023. He brings years of experience running successful businesses, promoting tourism and shepherding economic growth to the Sangamon County area. Rep. Coffey has served on the Springfield Metropolitan Exposition and Auditorium Authority (SMEAA) board, which governs the Bank of Springfield Center since 1997. He has chaired SMEAA Since 2005. Additionally, he managed his family's Springfield restaurant Saputo's before founding Papa Frank's. His legislative priorities include retaining and growing jobs in the 95th District, ensuring Springfield remains the seat of Illinois government, reducing the tax burden on hardworking residents, protecting those in care of the state and enhancing public safety. He has been married over 30 years. He has three children and one grandchild.",
-    "role": "Representative",
-    "career_timeline_text": "January 2023 - Present",
-    "career_ranges": [
-      {
-        "start_year": 2023,
-        "end_year": 2026,
-        "chamber": null
-      }
-    ],
-    "committees": [
-      "HAPI",
-      "HFIN",
-      "SHOU",
-      "HMAC",
-      "HPUB",
-      "HSGA",
-      "HPUB-HUTL"
-    ],
-    "associated_members": "Doris Turner",
-    "email": "coffey@ilhousegop.org",
-    "offices": [
-      {
-        "name": "Springfield Office",
-        "address": "E-1 Stratton Office Building\nSpringfield, IL 62706",
-        "phone": "(217) 782-0053",
-        "fax": null
-      },
-      {
-        "name": "District Office",
-        "address": "E-1 Stratton Office Building\n401 S. Spring St.\nSpringfield, IL 62706",
-        "phone": "(217) 782-0053",
-        "fax": null
-      }
-    ],
-    "sponsored_bill_ids": [],
-    "co_sponsor_bill_ids": [],
-    "photo_url": "https://ui-avatars.com/api/?name=Michael%20J.%20Coffey%2C%20Jr.&size=200&background=4b5563&color=fff"
-  },
-  {
-    "id": "3451",
-    "name": "Amy Briel",
-    "member_url": "https://www.ilga.gov/House/Members/Details/3451",
+    "id": "3300",
+    "name": "Martin J. Moylan",
+    "member_url": "https://www.ilga.gov/House/Members/Details/3300",
+    "photo_url": "https://cdn.ilga.gov/assets/img/members/%7B3E365092-6B37-486C-996B-C140284F8723%7D.jpg",
     "chamber": "House",
     "party": "Democrat",
-    "district": "76",
-    "bio_text": "Born and raised in La Salle county; Full-time legislator; Chief of Staff for former state representative Lance Yednock; Caseworker for Domestic Violence and Sexual Assault survivors; attended Illinois State University; lives in Ottawa on her family farm with her husband and has three children.",
+    "district": "55",
+    "bio_text": "Full-time legislator; attended the University of Illinois; member, Support Your Neighbor Commission; former Des Plaines mayor and alderman; former electrician and electrical inspector; former business representative, IBEW Local 134; married, has one son.",
     "role": "Representative",
-    "career_timeline_text": "January 2025- Present",
+    "career_timeline_text": "January 2013 - 2025",
     "career_ranges": [
       {
-        "start_year": 2025,
-        "end_year": 2026,
+        "start_year": 2013,
+        "end_year": 2025,
         "chamber": null
       }
     ],
     "committees": [
-      "HAGC",
-      "HAPI",
-      "HCOT",
-      "HENG",
-      "HHSV",
-      "HTRR",
-      "HVET"
+      "Committees are currently not available."
     ],
-    "associated_members": "Sue Rezin",
-    "email": "contact@staterepbriel.com",
+    "associated_members": "Laura M. Murphy",
+    "email": "marty@staterepmoylan55.com",
     "offices": [
       {
         "name": "Springfield Office",
-        "address": "244-W Stratton Building\nSpringfield, IL 62706",
-        "phone": "(217) 782-0140",
+        "address": "233-E Stratton Office Building\nSpringfield, IL 62706",
+        "phone": "(217) 782-8007",
         "fax": null
       },
       {
         "name": "District Office",
-        "address": "628 Columbus Street\nSuite 408\nOttawa, IL",
-        "phone": "(815) 587-7912",
-        "fax": null
+        "address": "24 S. Des Plaines River Rd.\nSte. 400\nDes Plaines, IL 60016",
+        "phone": "(847) 635-6821",
+        "fax": "(847) 635-8565"
       }
     ],
+    "roles": [],
     "sponsored_bill_ids": [],
-    "co_sponsor_bill_ids": [],
-    "photo_url": "https://ui-avatars.com/api/?name=Amy%20Briel&size=200&background=4b5563&color=fff"
-  },
-  {
-    "id": "3439",
-    "name": "Jason R. Bunting",
-    "member_url": "https://www.ilga.gov/House/Members/Details/3439",
-    "chamber": "House",
-    "party": "Republican",
-    "district": "106",
-    "bio_text": "Rep. Bunting served previously in elected office as Highway Commissioner of Broughton Township and a Livingston County Board member. Until 2023, Rep. Bunting served as President of the Livingston County Farm Bureau and a Director for the Illinois Corn Growers’ Association. He received his Associates Degree from Joliet Junior College and is a graduate of Dwight Township High School. Rep. Bunting lives in Emington with his wife, Tasha, and their three children.",
-    "role": "Representative",
-    "career_timeline_text": "February 2023 - Present",
-    "career_ranges": [
-      {
-        "start_year": 2023,
-        "end_year": 2026,
-        "chamber": null
-      }
-    ],
-    "committees": [
-      "HAPH",
-      "HAPP",
-      "HCOT",
-      "HENG",
-      "HLBR",
-      "HLBR-HOLS",
-      "HPUB",
-      "HLBR-HWCA"
-    ],
-    "associated_members": "Chris Balkema",
-    "email": "bunting@ilhousegop.org",
-    "offices": [
-      {
-        "name": "Springfield Office",
-        "address": "209-N Stratton Office Building\nSpringfield, IL 62706",
-        "phone": "(217) 558-1039",
-        "fax": null
-      },
-      {
-        "name": "District Office",
-        "address": "342 W. Walnut St\nSuite 2\nWatseka, IL 60970",
-        "phone": "(779) 218-3070",
-        "fax": null
-      }
-    ],
-    "sponsored_bill_ids": [],
-    "co_sponsor_bill_ids": [],
-    "photo_url": "https://ui-avatars.com/api/?name=Jason%20R.%20Bunting&size=200&background=4b5563&color=fff"
+    "co_sponsor_bill_ids": [
+      "158897",
+      "163892"
+    ]
   }
 ]
