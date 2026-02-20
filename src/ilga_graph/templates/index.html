@@ -89,12 +89,6 @@
     </div>
 </div>
 
-{# ── Nav row (compact) ── #}
-<!-- <div class="intel-nav" style="margin-top:12px;">
-    <a href="/explore">&larr; Power Map</a> &middot;
-    <a href="/intelligence">ML Intelligence Dashboard &rarr;</a>
-</div> -->
-
 <div id="results" role="region" aria-label="Search results" {% if your_legislators is defined %}
     data-has-initial-results="true" {% endif %}>
     {% if error and your_legislators is not defined %}<div class="error-msg" role="alert">{{ error }}</div>{% endif %}
@@ -256,10 +250,6 @@
             }));
         }
     }
-    function initRecommendationChipTooltips(container) {
-        initAdvocacyTooltips(container);
-    }
-
     /* ── Auto-submit on 5-digit ZIP ── */
     document.getElementById('zip_code').addEventListener('input', function () {
         if (this.value.replace(/\D/g, '').length === 5) {
@@ -311,7 +301,6 @@
                 el.setAttribute('aria-expanded', 'false');
             });
         }
-        /* ── Close Moneyball definition when clicking outside (Tippy handles chip tooltips) ── */
     });
 
     /* ── Moneyball definition: keyboard toggle (Enter/Space) ── */
@@ -361,11 +350,11 @@
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () {
             applyCardBioOverflow();
-            initRecommendationChipTooltips();
+            initAdvocacyTooltips();
         });
     } else {
         applyCardBioOverflow();
-        initRecommendationChipTooltips();
+        initAdvocacyTooltips();
     }
 
     /* ── ZIP search loading: truck animation (gameified), then inject results ── */
@@ -395,7 +384,7 @@
         if (typeof htmx !== 'undefined') htmx.process(results);
         applyCardEnterAnimation(results);
         applyCardBioOverflow();
-        initRecommendationChipTooltips(results);
+        initAdvocacyTooltips(results);
         var drawer = document.getElementById('advocacy-drawer');
         if (!(drawer && drawer.classList.contains('open')) && !shouldSkipResultsScroll()) results.scrollIntoView({ behavior: 'smooth', block: 'start' });
         __advocacyStoredResponse = null;
@@ -475,7 +464,7 @@
             applyCardEnterAnimation(e.detail.target);
             setTimeout(function () {
                 applyCardBioOverflow();
-                initRecommendationChipTooltips(e.detail.target);
+                initAdvocacyTooltips(e.detail.target);
                 var drawer = document.getElementById('advocacy-drawer');
                 if ((drawer && drawer.classList.contains('open')) || shouldSkipResultsScroll()) return;
                 e.detail.target.scrollIntoView({ behavior: 'smooth', block: 'start' });
