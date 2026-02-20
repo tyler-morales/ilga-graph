@@ -66,16 +66,22 @@ class TestHealthEndpoint:
 
 
 class TestCORS:
-    def test_cors_headers_present(self, client: TestClient) -> None:
-        resp = client.options(
+    def test_cors_headers_present(self) -> None:
+        # Use a client with the request origin allowed; otherwise prod profile
+        # leaves CORS_ORIGINS empty and OPTIONS returns 400 without the header.
+        c = _make_client(
+            ILGA_API_KEY="",
+            ILGA_CORS_ORIGINS="http://localhost:3000",
+        )
+        resp = c.options(
             "/graphql",
             headers={
                 "Origin": "http://localhost:3000",
                 "Access-Control-Request-Method": "POST",
             },
         )
-        # CORSMiddleware should add access-control-allow-origin
-        assert "access-control-allow-origin" in resp.headers
+        assert resp.status_code == 200
+        assert resp.headers.get("access-control-allow-origin") == "http://localhost:3000"
 
 
 # ── API key authentication ────────────────────────────────────────────────────

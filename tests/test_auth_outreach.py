@@ -45,6 +45,7 @@ def client(test_db_path: Path) -> TestClient:
     env = {
         "ILGA_DB_PATH": str(test_db_path),
         "ILGA_AUTH_SECRET": "test-secret-for-pytest",
+        "ILGA_PROFILE": "dev",
     }
     with patch.dict(os.environ, env, clear=False):
         importlib.reload(cfg_mod)

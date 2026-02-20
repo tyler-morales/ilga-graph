@@ -16,9 +16,10 @@ env/
 .env.*
 !.env.example
 
-# IDE
+# IDE / editor
 .idea/
 .vscode/
+.cursor/debug-*.log
 *.swp
 *.swo
 *~
