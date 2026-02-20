@@ -48,10 +48,11 @@ ILGA_LOAD_ONLY=1 ILGA_PROFILE=prod uvicorn ilga_graph.main:app --app-dir src --h
 
 | Variable | Purpose |
 |----------|---------|
-| `ILGA_APP_BASE_URL` | Public URL of the app (e.g. `https://landofkei.org`). When set, the startup banner and logs show this URL instead of `http://127.0.0.1:8000`. |
+| `ILGA_APP_BASE_URL` | Public URL of the app (e.g. `https://landofkei.org`). Used for the startup banner, logs, canonical URLs, and Open Graph share cards. Set in production. |
 | `ILGA_DB_PATH` | Path to SQLite DB (default: `data/ilga.db`). Use an absolute path if the process cwd is not the project root. |
 | `ILGA_CACHE_DIR` | Path to cache directory (default: `cache`). Use an absolute path if needed. |
 | `ILGA_SMTP_*` | SMTP settings so verification codes are emailed to users. **If unset, codes are logged to the terminal only** (no email sent) — fine for dev; set these in production. See [Email (Brevo)](email-brevo.md) for setup. |
+| `ILGA_UMAMI_WEBSITE_ID` | Optional. When set, the base template injects the [Umami](https://umami.is) analytics script (Cloud or self-hosted). Sign up at umami.is → Add website → copy the website ID into this variable. See [Environment variables](environment-variables.md). |
 
 See [Environment variables](environment-variables.md) for the full list.
 
@@ -94,13 +95,29 @@ The advocacy flow is self-contained and works in production with the same env as
 
 ---
 
+## Connecting Umami (analytics)
+
+To enable lightweight analytics with [Umami Cloud](https://umami.is) (free tier: 100k events/month, 3 websites, 6 months retention):
+
+1. Sign up at **https://umami.is** and log in.
+2. In the dashboard, go to **Websites** → **Add website**. Enter your site name and domain (e.g. `landofkei.org`).
+3. Copy the **website ID** (a UUID) from the setup instructions or the website settings.
+4. Set in your production environment (e.g. in `.env` on the server): `ILGA_UMAMI_WEBSITE_ID=your-website-id-here`
+5. Redeploy or restart the app. The base template injects the script only when `ILGA_UMAMI_WEBSITE_ID` is set, so dev stays untracked unless you set it there too.
+
+The tracker script URL defaults to `https://cloud.umami.is/script.js`. For self-hosted Umami, set `ILGA_UMAMI_SCRIPT_URL` to your instance's script URL.
+
+---
+
 ## Checklist before go-live
 
 1. Set `ILGA_PROFILE=prod`, `ILGA_LOAD_ONLY=1`.
 2. Set `ILGA_CORS_ORIGINS` to your public URL(s) (e.g. `https://landofkei.org`).
-3. Set `ILGA_AUTH_SECRET` to a new random value.
-4. (Recommended) Set `ILGA_API_KEY` and protect non-exempt routes.
-5. Populate `cache/` (or `ILGA_CACHE_DIR`) with full or seed data.
-6. Ensure `data/` (or `ILGA_DB_PATH`’s directory) is writable and, on PaaS, on a persistent volume.
-7. Configure SMTP if you want email verification for advocates.
-8. Use HTTPS in production (reverse proxy or platform-managed TLS).
+3. Set `ILGA_APP_BASE_URL` to your public URL (e.g. `https://landofkei.org`) so canonical URLs and Open Graph share cards use the correct domain.
+4. Set `ILGA_AUTH_SECRET` to a new random value.
+5. (Recommended) Set `ILGA_API_KEY` and protect non-exempt routes.
+6. Populate `cache/` (or `ILGA_CACHE_DIR`) with full or seed data.
+7. Ensure `data/` (or `ILGA_DB_PATH`’s directory) is writable and, on PaaS, on a persistent volume.
+8. Configure SMTP if you want email verification for advocates.
+9. (Optional) Set `ILGA_UMAMI_WEBSITE_ID` for analytics; see **Connecting Umami** above.
+10. Use HTTPS in production (reverse proxy or platform-managed TLS).

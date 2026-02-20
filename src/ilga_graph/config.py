@@ -79,6 +79,29 @@ APP_BASE_URL: str = _env("ILGA_APP_BASE_URL", "http://127.0.0.1:8000").rstrip("/
 # Optional; docs site URL for startup banner when different from app (e.g. same host).
 DOCS_BASE_URL: str = _env("ILGA_DOCS_BASE_URL", "").strip().rstrip("/")
 
+# ── SEO & share (Open Graph, canonical, meta description) ─────────────────────
+SITE_NAME: str = _env("ILGA_SITE_NAME", "Kei Truck Freedom").strip() or "Kei Truck Freedom"
+META_DESCRIPTION: str = _env(
+    "ILGA_META_DESCRIPTION",
+    "Find your Illinois legislators and see who has the most influence. Advocate with confidence.",
+).strip()
+# Optional absolute URL for share card image (1200×630). Unset → APP_BASE_URL/static/og-image.png.
+_OG_IMAGE_OVERRIDE: str = _env("ILGA_OG_IMAGE_URL", "").strip()
+OG_IMAGE_URL: str = (
+    _OG_IMAGE_OVERRIDE if _OG_IMAGE_OVERRIDE else f"{APP_BASE_URL}/static/og-image.png"
+)
+
+# ── Analytics (Umami) ───────────────────────────────────────────────────────
+# When set (e.g. in prod), base template injects the script. Get ID from Umami Cloud → Add website.
+UMAMI_WEBSITE_ID: str = _env("ILGA_UMAMI_WEBSITE_ID", "").strip()
+UMAMI_SCRIPT_URL: str = (
+    _env(
+        "ILGA_UMAMI_SCRIPT_URL",
+        "https://cloud.umami.is/script.js",
+    ).strip()
+    or "https://cloud.umami.is/script.js"
+)
+
 # ── Directories ──────────────────────────────────────────────────────────────
 # Dev uses cache/dev/ so it never touches the full scraped data in cache/.
 _CACHE_BASE: Path = Path(_env("ILGA_CACHE_DIR", "cache"))

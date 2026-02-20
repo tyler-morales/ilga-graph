@@ -6,6 +6,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="/favicon.ico" type="image/svg+xml">
     <title>{% block title %}Kei Truck Freedom{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}{{ meta_description }}{% endblock %}">
+    <link rel="canonical" href="{{ app_base_url }}{{ request.url.path }}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ site_name }}">
+    <meta property="og:title" content="{% block og_title %}{{ site_name }}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ meta_description }}{% endblock %}">
+    <meta property="og:url" content="{{ app_base_url }}{{ request.url.path }}">
+    <meta property="og:image" content="{{ og_image_url }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block twitter_title %}{{ site_name }}{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}{{ meta_description }}{% endblock %}">
+    <meta name="twitter:image" content="{{ og_image_url }}">
+    {% block meta_extra %}{% endblock %}
+    {% if umami_website_id %}
+    <script async src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>
+    {% endif %}
     <style>
         /* ── 2005 Functional CSS ── */
         * {

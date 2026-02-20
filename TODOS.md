@@ -47,6 +47,13 @@
 
 ## Current
 
+- **Post-prod: share cards, analytics, security (2026-02-20):**
+  - **Open Graph + Twitter Card:** base.html now has og:title, og:description, og:image, og:url, og:site_name and twitter:card/title/description/image. Defaults use `APP_BASE_URL`, `SITE_NAME`, `META_DESCRIPTION`, `OG_IMAGE_URL` from config; child templates can override `{% block og_title %}`, `{% block meta_description %}`, etc. `{% block meta_extra %}` for future per-page meta.
+  - **Canonical + meta description:** `<link rel="canonical" href="{{ app_base_url }}{{ request.url.path }}">` and `<meta name="description">` with block override.
+  - **Umami analytics:** When `ILGA_UMAMI_WEBSITE_ID` is set, base template injects `<script async src="{{ umami_script_url }}" data-website-id="...">`. Default script URL is Umami Cloud; override with `ILGA_UMAMI_SCRIPT_URL` for self-hosted. Config: `config.py` (SITE_NAME, META_DESCRIPTION, OG_IMAGE_URL, UMAMI_WEBSITE_ID, UMAMI_SCRIPT_URL); main.py template globals; .env.example and environment-variables.md; deployment.md has **Connecting Umami** section and checklist items for APP_BASE_URL and Umami.
+  - **Security headers middleware:** X-Content-Type-Options: nosniff, X-Frame-Options: DENY, Referrer-Policy: strict-origin-when-cross-origin on every response.
+  - **Docs:** app-overview.md (share cards + Umami bullet), deployment checklist (APP_BASE_URL, Umami optional step).
+
 - **Deployment prep (2026-02-19):**
   - **Lint:** Fixed remaining E501 in `scripts/snapshot_mocks.py` (docstring + 2 log messages) and `routers/advocacy.py` (kei fact string). `make lint` passes.
   - **Procfile:** Uses `scripts/start_web.sh` so the web process binds to `$PORT` when set (Railway, Render) and defaults to 8000 locally. No dashboard override needed for port.

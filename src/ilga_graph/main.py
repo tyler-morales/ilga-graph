@@ -1531,6 +1531,13 @@ templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
 
 # Dev bar is available when running in dev profile (never rendered in prod)
 templates.env.globals["dev_available"] = DEV_MODE
+# SEO, share cards, and analytics (base template uses these)
+templates.env.globals["app_base_url"] = cfg.APP_BASE_URL
+templates.env.globals["site_name"] = cfg.SITE_NAME
+templates.env.globals["meta_description"] = cfg.META_DESCRIPTION
+templates.env.globals["og_image_url"] = cfg.OG_IMAGE_URL
+templates.env.globals["umami_website_id"] = cfg.UMAMI_WEBSITE_ID
+templates.env.globals["umami_script_url"] = cfg.UMAMI_SCRIPT_URL
 
 
 @app.get("/", include_in_schema=False)
@@ -1586,6 +1593,18 @@ async def _api_key_middleware(request: Request, call_next) -> Response:  # type:
                     content={"detail": "Invalid or missing API key"},
                 )
     return await call_next(request)
+
+
+# ── Security headers middleware ──────────────────────────────────────────────
+@app.middleware("http")
+async def _security_headers_middleware(request: Request, call_next) -> Response:  # type: ignore[no-untyped-def]
+    """Add security headers to every response."""
+    response: Response = await call_next(request)
+    if hasattr(response, "headers"):
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
 
 
 # ── Request logging middleware ───────────────────────────────────────────────

@@ -34,8 +34,13 @@ The app loads `.env` from the project root via `python-dotenv`. Copy `.env.examp
 | `ILGA_TEST_MEMBER_CHAMBER` | `Senate` | Chamber for the test member URL. |
 | `ILGA_CORS_ORIGINS` | *profile* | Comma-separated CORS origins. |
 | `ILGA_API_KEY` | *(empty)* | If set, non-exempt routes require `X-API-Key` header. |
-| `ILGA_APP_BASE_URL` | `http://127.0.0.1:8000` | Public URL of this app; used in the startup banner and logs. Set in production (e.g. `https://landofkei.org`) so logs show your domain. |
+| `ILGA_APP_BASE_URL` | `http://127.0.0.1:8000` | Public URL of this app; used in the startup banner, logs, canonical URL, and Open Graph tags. Set in production (e.g. `https://landofkei.org`). |
 | `ILGA_DOCS_BASE_URL` | *(empty)* | Optional docs site URL for the startup banner when different from the app. |
+| `ILGA_SITE_NAME` | `Kei Truck Freedom` | Site name for Open Graph and Twitter cards. |
+| `ILGA_META_DESCRIPTION` | *(short default)* | Default meta description and OG/Twitter description. |
+| `ILGA_OG_IMAGE_URL` | *(empty)* | Optional absolute URL for share card image (1200×630). If unset, defaults to `APP_BASE_URL/static/og-image.png`. |
+| `ILGA_UMAMI_WEBSITE_ID` | *(empty)* | When set, the base template injects the Umami analytics script. Get the ID from [Umami Cloud](https://umami.is) → Add website. |
+| `ILGA_UMAMI_SCRIPT_URL` | `https://cloud.umami.is/script.js` | Tracker script URL; override for self-hosted Umami. |
 | `ILGA_VOTE_BILL_URLS` | *(built-in)* | Comma-separated bill status URLs for votes/slips. |
 | `ILGA_SMTP_HOST` | *(empty)* | SMTP server (e.g. `smtp-relay.brevo.com`). **If unset, verification codes are logged to the terminal only** — no email is sent. See [Email (Brevo)](email-brevo.md). |
 | `ILGA_SMTP_PORT` | `587` | SMTP port. |
