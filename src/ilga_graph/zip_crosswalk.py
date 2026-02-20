@@ -274,8 +274,22 @@ def load_zip_crosswalk(
     if cache_dir is None:
         cache_dir = cfg.CACHE_DIR
 
-    # Seed mode: instant, no network.
+    # Seed mode: try mocks/dev/ first (snapshot covers all 40 mock members' districts).
     if seed_mode:
+        mock_path = cfg.MOCK_DEV_DIR / _CACHE_FILE
+        if mock_path.exists():
+            try:
+                with open(mock_path, encoding="utf-8") as f:
+                    data = json.load(f)
+                result = {zcta: ZipDistrictInfo(**info) for zcta, info in data.items()}
+                if result:
+                    LOGGER.info(
+                        "ZIP crosswalk: using mocks/dev (%d ZIPs covering mock districts).",
+                        len(result),
+                    )
+                    return result
+            except Exception:
+                pass
         LOGGER.info("ZIP crosswalk: using seed-mode fallback (%d ZIPs).", len(_SEED_CROSSWALK))
         return dict(_SEED_CROSSWALK)
 

@@ -88,6 +88,39 @@ INCREMENTAL: bool = _env("ILGA_INCREMENTAL") == "1"
 # When true, API startup only loads from cache (no scraping). Set for fast start.
 LOAD_ONLY: bool = _env("ILGA_LOAD_ONLY") == "1"
 
+# ── Feature flags (single source of truth; profile defaults, ILGA_FEATURE_* overrides) ─
+# Each entry: key (JS/template), env_var, dev_default, prod_default, expose_to_client.
+_FEATURE_REGISTRY: list[dict[str, str | bool]] = [
+    {
+        "key": "zip_loading_animation",
+        "env_var": "ILGA_FEATURE_ZIP_LOADING_ANIMATION",
+        "dev_default": "1",
+        "prod_default": "0",
+        "expose_to_client": True,
+    },
+]
+
+
+def _feature_value(entry: dict[str, str | bool]) -> bool:
+    """Resolve one flag: env override else profile default."""
+    env_var = str(entry["env_var"])
+    raw = os.getenv(env_var)
+    if raw is not None:
+        return raw.strip() == "1"
+    key = "prod_default" if PROFILE == "prod" else "dev_default"
+    default = str(entry.get(key, "0"))
+    return default == "1"
+
+
+def get_client_features() -> dict[str, bool]:
+    """Return { key: value } for all flags with expose_to_client=True (for templates/JS)."""
+    return {
+        str(e["key"]): _feature_value(e)
+        for e in _FEATURE_REGISTRY
+        if e.get("expose_to_client") is True
+    }
+
+
 # ── Scrape / export limits ───────────────────────────────────────────────────
 MEMBER_LIMIT: int = int(_env("ILGA_MEMBER_LIMIT", "0"))
 TEST_MEMBER_URL: str = _env("ILGA_TEST_MEMBER_URL").strip()

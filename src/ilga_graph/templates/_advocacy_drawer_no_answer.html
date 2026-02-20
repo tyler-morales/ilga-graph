@@ -4,7 +4,7 @@
         <p class="drawer-no-answer-headline">No problem — offices get busy.</p>
         <ul class="drawer-no-answer-steps">
             <li>Try calling again during <strong>office hours</strong> (weekdays, 9 AM – 5 PM).</li>
-            <li><strong>Send an email instead</strong> — it still counts as constituent contact.</li>
+            <li><strong>Send an email instead</strong> — it still counts as contact.</li>
             {% if outcome == 'voicemail' %}
             <li>You left a voicemail — that's still contact. Follow up with an email when you can.</li>
             {% else %}
@@ -14,7 +14,7 @@
     </div>
     <div class="drawer-no-answer-actions">
         <button type="button" class="drawer-btn drawer-btn-primary drawer-no-answer-cta"
-            onclick="var d=document.getElementById('advocacy-drawer'); if(d && window.openAdvocacyDrawer) openAdvocacyDrawer('email', d.getAttribute('data-member-id')||'', d.getAttribute('data-drawer-zip')||'', d.getAttribute('data-drawer-photo-url')||'', d.getAttribute('data-drawer-target-type')||'');">
+            onclick="openAdvocacyDrawerFromDrawer('email')">
             Send email instead
         </button>
         <button type="button" class="drawer-btn drawer-btn-secondary" onclick="closeAdvocacyDrawer()">

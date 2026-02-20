@@ -26,13 +26,11 @@ ILGA_LOAD_ONLY=1 ILGA_PROFILE=prod uvicorn ilga_graph.main:app --app-dir src --h
 - `--app-dir src` — so uvicorn finds the `ilga_graph` package.
 - `--host 0.0.0.0` — bind to all interfaces (needed when the host is remote or in a container).
 
-**Port:** Uvicorn defaults to port **8000**. If your platform sets a `PORT` environment variable (e.g. Railway, Render), add `--port $PORT` to the command, for example:
+**Port:** The repo **Procfile** runs `scripts/start_web.sh`, which uses `$PORT` when set (Railway, Render) and defaults to 8000 otherwise. No need to override the start command for port. For a custom start command, use:
 
 ```bash
-ILGA_LOAD_ONLY=1 ILGA_PROFILE=prod uvicorn ilga_graph.main:app --app-dir src --host 0.0.0.0 --port $PORT
+ILGA_LOAD_ONLY=1 ILGA_PROFILE=prod uvicorn ilga_graph.main:app --app-dir src --host 0.0.0.0 --port ${PORT:-8000}
 ```
-
-A **Procfile** in the repo defines the web process (without `--port $PORT`); override the start command in your platform’s dashboard to use `$PORT` when required.
 
 ---
 
@@ -42,7 +40,7 @@ A **Procfile** in the repo defines the web process (without `--port $PORT`); ove
 |----------|---------|
 | `ILGA_PROFILE` | `prod` |
 | `ILGA_LOAD_ONLY` | `1` |
-| `ILGA_CORS_ORIGINS` | Your front-end origin(s), e.g. `https://yourdomain.com` (comma-separated if multiple). The app warns at startup if this is missing in prod. |
+| `ILGA_CORS_ORIGINS` | Your front-end origin(s), e.g. `https://landofkei.org` (comma-separated if multiple). The app warns at startup if this is missing in prod. |
 | `ILGA_AUTH_SECRET` | A strong random string for signing session cookies. Change from the default in production. |
 | `ILGA_API_KEY` | (Recommended.) If set, non-exempt API routes require the `X-API-Key` header. The app warns if empty in prod. |
 
@@ -52,7 +50,7 @@ A **Procfile** in the repo defines the web process (without `--port $PORT`); ove
 |----------|---------|
 | `ILGA_DB_PATH` | Path to SQLite DB (default: `data/ilga.db`). Use an absolute path if the process cwd is not the project root. |
 | `ILGA_CACHE_DIR` | Path to cache directory (default: `cache`). Use an absolute path if needed. |
-| `ILGA_SMTP_*` | SMTP settings so verification codes are emailed to users. If unset, codes are only logged to the console (not suitable for real users). |
+| `ILGA_SMTP_*` | SMTP settings so verification codes are emailed to users. **If unset, codes are logged to the terminal only** (no email sent) — fine for dev; set these in production. See [Email (Brevo)](email-brevo.md) for setup. |
 
 See [Environment variables](environment-variables.md) for the full list.
 
@@ -97,7 +95,7 @@ The advocacy flow is self-contained and works in production with the same env as
 ## Checklist before go-live
 
 1. Set `ILGA_PROFILE=prod`, `ILGA_LOAD_ONLY=1`.
-2. Set `ILGA_CORS_ORIGINS` to your public URL(s).
+2. Set `ILGA_CORS_ORIGINS` to your public URL(s) (e.g. `https://landofkei.org`).
 3. Set `ILGA_AUTH_SECRET` to a new random value.
 4. (Recommended) Set `ILGA_API_KEY` and protect non-exempt routes.
 5. Populate `cache/` (or `ILGA_CACHE_DIR`) with full or seed data.

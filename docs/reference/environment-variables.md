@@ -35,6 +35,29 @@ The app loads `.env` from the project root via `python-dotenv`. Copy `.env.examp
 | `ILGA_CORS_ORIGINS` | *profile* | Comma-separated CORS origins. |
 | `ILGA_API_KEY` | *(empty)* | If set, non-exempt routes require `X-API-Key` header. |
 | `ILGA_VOTE_BILL_URLS` | *(built-in)* | Comma-separated bill status URLs for votes/slips. |
+| `ILGA_SMTP_HOST` | *(empty)* | SMTP server (e.g. `smtp-relay.brevo.com`). **If unset, verification codes are logged to the terminal only** — no email is sent. See [Email (Brevo)](email-brevo.md). |
+| `ILGA_SMTP_PORT` | `587` | SMTP port. |
+| `ILGA_SMTP_USER` | *(empty)* | SMTP login (Brevo: use the SMTP login from the SMTP tab, not your account email). |
+| `ILGA_SMTP_PASS` | *(empty)* | SMTP key or password. |
+| `ILGA_SMTP_FROM` | *(empty)* | Sender address for verification emails. |
+| `ILGA_SMTP_TLS` | `1` | Use TLS (1) or not (0). |
+
+---
+
+## Feature flags
+
+Client-side UX toggles (e.g. ZIP search loading animation) use a **single registry** in `src/ilga_graph/config.py` (`_FEATURE_REGISTRY`). Each flag has:
+
+- **Profile default** — In `dev`, flags default on where it makes sense; in `prod`, they default off so production stays conservative until you opt in.
+- **Env override** — Set `ILGA_FEATURE_<NAME>=1` or `0` in `.env` to override the profile default.
+
+The app exposes only **client-facing** flags (those with `expose_to_client: True`) to templates as `features`; the advocacy index passes them to JS as `window.__ILGA_FEATURES`. Adding a new flag = one entry in the registry (no need to wire it in each route).
+
+| Variable | Dev default | Prod default | Description |
+|----------|-------------|--------------|-------------|
+| `ILGA_FEATURE_ZIP_LOADING_ANIMATION` | `1` | `0` | ZIP search: show truck loading animation before member cards. `1` = on, `0` = off. |
+
+See `config.py` for the full registry and `get_client_features()`.
 
 ---
 
@@ -42,7 +65,7 @@ The app loads `.env` from the project root via `python-dotenv`. Copy `.env.examp
 
 ```bash
 ILGA_PROFILE=prod
-ILGA_CORS_ORIGINS=https://your-app.example.com
+ILGA_CORS_ORIGINS=https://landofkei.org
 ILGA_API_KEY=your-secret-key
 ```
 

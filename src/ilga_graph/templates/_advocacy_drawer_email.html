@@ -1,46 +1,52 @@
 {# Partial: drawer body for EMAIL view — Gmail-style compose UI with guided flow. #}
-<div class="gmail-compose" data-recipient="{{ recipient_email|e }}" data-subject="{{ subject|e }}"
-    data-body="{{ body|e }}">
+<div class="gmail-compose" data-is-constituent="{{ 'true' if is_constituent else 'false' }}"
+    data-recipient="{{ recipient_email|e }}" data-party-abbr="{{ party_abbr|default('')|e }}"
+    data-subject="{{ subject|e }}" data-subject-constituent="{{ subject_constituent|e }}"
+    data-subject-general="{{ subject_general|e }}" data-body="{{ body|e }}"
+    data-contact-name="{{ (contact_name or '')|e }}" data-legislator-name="{{ (legislator_display_name or '')|e }}"
+    data-drawer-zip="{{ zip_code or '' }}"
+    data-email-mode="{% if drawer_view == 'after_call' %}followup{% else %}first{% endif %}">
 
-    {# ── Toolbar: Gmail-style top bar + guide step dots ── #}
+    {# ── Toolbar: New Message (left); dots + step label (right-aligned) ── #}
     <div class="gmail-toolbar">
-        <div class="gmail-toolbar-left">
-            <span class="gmail-toolbar-title">New Message</span>
-        </div>
-        <div class="guide-step-dots" id="guide-step-dots">
-            <span class="guide-dot" data-step="0" title="Sign in"></span>
-            <span class="guide-dot" data-step="1" title="Subject"></span>
-            <span class="guide-dot" data-step="2" title="Fill details"></span>
-            <span class="guide-dot" data-step="3" title="Download PDF"></span>
-            <span class="guide-dot" data-step="4" title="Send"></span>
-            <span class="guide-dot" data-step="5" title="Confirm"></span>
+        <span class="gmail-toolbar-title">New Message</span>
+        <div class="gmail-toolbar-steps">
+            <div class="guide-step-dots" id="guide-step-dots">
+                <span class="guide-dot" data-step="0" title="Sign in"></span>
+                <span class="guide-dot" data-step="1" title="Subject"></span>
+                <span class="guide-dot" data-step="2" title="Fill in your details"></span>
+                <span class="guide-dot" data-step="3" title="Grab the PDF"></span>
+                <span class="guide-dot" data-step="4" title="Send"></span>
+                <span class="guide-dot" data-step="5" title="Confirm"></span>
+            </div>
+            <span class="guide-step-counter" id="guide-step-counter">Sign in · Step 1 of 6</span>
         </div>
     </div>
+
+    {# ── Friendly reminder: call first if they haven’t already ── #}
+    {% if show_call_nudge is defined and show_call_nudge %}
+    <div class="gmail-banner gmail-banner-tip">
+        <span class="gmail-banner-icon">📞</span>
+        <div class="gmail-banner-text">
+            <strong>Call first when you can.</strong> It often gets a faster response and you can ask for their best
+            email. Switch to
+            <button type="button" class="gmail-banner-link" onclick="openAdvocacyDrawerFromDrawer('call')">Call</button>
+            above, then come back here to send your email.
+        </div>
+    </div>
+    {% endif %}
 
     {# ── Status banners (contextual) ── #}
     {% if drawer_view == 'call_only' %}
     <div class="gmail-banner gmail-banner-warning">
         <span class="gmail-banner-icon">📋</span>
         <div class="gmail-banner-text">
-            <strong>No email from the office this time.</strong>
-            Copy this template and send it when you get an address. You can also call again and ask for the best email
-            for constituent correspondence.
+            <strong>No email from the office this time — no worries.</strong>
+            Copy the template below and send it once you have an address. You can also call again and ask for the best
+            email for constituent mail.
             {% if instructions %}
             <p class="gmail-banner-note"><strong>Your notes:</strong> {{ instructions }}</p>
             {% endif %}
-        </div>
-    </div>
-    {% endif %}
-
-    {% if show_call_nudge %}
-    <div class="gmail-banner gmail-banner-tip">
-        <span class="gmail-banner-icon">💡</span>
-        <div class="gmail-banner-text">
-            <strong>Pro tip:</strong> Calling is more effective — use the
-            <button type="button" class="gmail-banner-link"
-                onclick="var d=document.getElementById('advocacy-drawer'); if(d && window.openAdvocacyDrawer) openAdvocacyDrawer('call', d.getAttribute('data-member-id')||'', d.getAttribute('data-drawer-zip')||'', d.getAttribute('data-drawer-photo-url')||'', d.getAttribute('data-drawer-target-type')||'');">Call
-                tab</button>
-            to get the right email, then come back here to send the follow-up.
         </div>
     </div>
     {% endif %}
@@ -49,8 +55,9 @@
     <div class="gmail-banner gmail-banner-warning">
         <span class="gmail-banner-icon">🔍</span>
         <div class="gmail-banner-text">
-            This legislator's email isn't publicly listed. <strong>Call the office</strong> and ask for the best email
-            address, then paste it here.
+            This legislator's email isn't publicly listed. Switch to
+            <button type="button" class="gmail-banner-link" onclick="openAdvocacyDrawerFromDrawer('call')">Call</button>
+            above to get the right email, then come back here to send.
         </div>
     </div>
     {% endif %}
@@ -59,8 +66,8 @@
     <div class="gmail-banner gmail-banner-warning">
         <span class="gmail-banner-icon">📋</span>
         <div class="gmail-banner-text">
-            <strong>Copy the email below</strong> — ask for an email address on your next call, then paste it into your
-            email client and send.
+            <strong>Copy the email below.</strong> On your next call, ask for their best email — then paste it into your
+            email and send.
             {% if instructions %}
             <p class="gmail-banner-note"><strong>Your note:</strong> {{ instructions }}</p>
             {% endif %}
@@ -70,7 +77,7 @@
 
     {# ── Compose fields: From / To / Subject ── #}
     <div class="gmail-fields">
-        {# From: three mutually exclusive states managed by JS #}
+        {# From: three mutually exclusive states + constituent checkbox on same row ── #}
         <div class="gmail-field-row gmail-from-row" id="gmail-from-row">
             <span class="gmail-field-label">From</span>
             <div class="gmail-field-value gmail-from-value" id="gmail-from-value">
@@ -79,25 +86,25 @@
                 <div class="gmail-from-state" id="gmail-from-state-input">
                     <div class="gmail-from-input-wrap">
                         <input type="email" class="gmail-field-input gmail-from-input" id="gmail-from-input"
-                            placeholder="Your email — so we can track your outreach" autocomplete="email"
+                            placeholder="Your email — we use it to track your outreach" autocomplete="email"
                             inputmode="email">
                         <button type="button" class="gmail-from-verify-btn" id="gmail-from-verify-btn"
-                            title="Verify your email">Verify</button>
+                            title="Send a one-time code to this email">Send code</button>
                     </div>
                 </div>
 
                 {# State 2: code entry (shown after Verify clicked) #}
                 <div class="gmail-from-state" id="gmail-from-state-code" hidden>
                     <div class="gmail-from-code-wrap">
-                        <span class="gmail-from-code-hint" id="gmail-from-code-hint">Check your email for a 6-digit
+                        <span class="gmail-from-code-hint" id="gmail-from-code-hint">Check your inbox for a 6-digit
                             code</span>
                         <div class="gmail-from-code-inputs">
                             <input type="text" class="gmail-from-code-input" id="gmail-from-code-input"
                                 placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code">
                             <button type="button" class="gmail-from-code-submit"
                                 id="gmail-from-code-submit">Confirm</button>
+                            <span class="gmail-from-code-error" id="gmail-from-code-error" hidden></span>
                         </div>
-                        <span class="gmail-from-code-error" id="gmail-from-code-error" hidden></span>
                         <button type="button" class="gmail-from-resend-btn" id="gmail-from-resend-btn">Resend
                             code</button>
                     </div>
@@ -118,9 +125,22 @@
 
         <div class="gmail-field-row gmail-to-row">
             <span class="gmail-field-label">To</span>
-            <input type="email" class="gmail-field-input gmail-to-input" id="gmail-to-input"
-                value="{{ recipient_email or '' }}" placeholder="Recipient email address"
-                autocomplete="email" inputmode="email">
+            <div class="gmail-field-value gmail-to-value" id="gmail-to-value">
+                <div class="gmail-to-state" id="gmail-to-state-input">
+                    <input type="email" class="gmail-field-input gmail-to-input" id="gmail-to-input"
+                        value="{{ recipient_email or '' }}" placeholder="Email of the office" autocomplete="email"
+                        inputmode="email">
+                </div>
+                <div class="gmail-to-state" id="gmail-to-state-chip" hidden>
+                    <span
+                        class="gmail-from-chip gmail-to-recipient-chip{% if party_abbr == 'D' %} gmail-to-recipient-chip--dem{% elif party_abbr == 'R' %} gmail-to-recipient-chip--rep{% endif %}">
+                        <span class="gmail-from-chip-check" aria-hidden="true">&#10003;</span>
+                        <span class="gmail-to-chip-email" id="gmail-to-email-text"></span>
+                    </span>
+                    <button type="button" class="gmail-to-clear-btn" id="gmail-to-clear-btn"
+                        title="Clear recipient">&#215;</button>
+                </div>
+            </div>
         </div>
         <div class="gmail-field-row gmail-subject-row" id="gmail-subject-row">
             <span class="gmail-field-label">Subject</span>
@@ -137,17 +157,24 @@
         </div>
     </div>
 
-    {# ── Compose body: Mad Libs container (JS-rendered) + hidden textarea for data ── #}
+    {# ── Compose body: editable textarea (madlib pre-filled by JS then hidden) ── #}
     <div class="gmail-body-area" id="gmail-body-area">
-        <div class="madlib-body" id="gmail-madlib-body"></div>
-        <textarea class="gmail-body-text" id="gmail-body-text" placeholder="Email body..."
-            rows="8" hidden>{{ body }}</textarea>
+        <div class="madlib-body" id="gmail-madlib-body" aria-hidden="true"></div>
+        <textarea class="gmail-body-text" id="gmail-body-text" placeholder="Email body..." rows="8"
+            spellcheck="true">{{ body }}</textarea>
+        {% if body_followup is defined and body_first is defined %}
+        <textarea id="gmail-body-followup-store" class="gmail-body-store" aria-hidden="true"
+            readonly>{{ body_followup }}</textarea>
+        <textarea id="gmail-body-first-store" class="gmail-body-store" aria-hidden="true"
+            readonly>{{ body_first }}</textarea>
+        {% endif %}
     </div>
 
     {# ── Attachment bar ── #}
     <div class="gmail-attachment-bar" id="gmail-attachment-bar">
-        <a href="/advocacy/letter-template.pdf" download="letter-template.pdf" rel="noopener"
-            class="gmail-attachment" id="gmail-attachment-link">
+        <a href="/advocacy/IL_Kei_Vehicle_Registration_Fix_Brief.pdf"
+            download="IL_Kei_Vehicle_Registration_Fix_Brief.pdf" rel="noopener" class="gmail-attachment"
+            id="gmail-attachment-link">
             <span class="gmail-attachment-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
@@ -159,18 +186,12 @@
                 </svg>
             </span>
             <span class="gmail-attachment-info">
-                <span class="gmail-attachment-name">letter-template.pdf</span>
-                <span class="gmail-attachment-desc">Constituent letter template — attach when you send</span>
+                <span class="gmail-attachment-name">IL_Kei_Vehicle_Registration_Fix_Brief.pdf</span>
+                <span class="gmail-attachment-desc">One-pager to attach when you send</span>
             </span>
         </a>
     </div>
 
-    {# ── Copy utility ── #}
-    <div class="gmail-copy-row">
-        <button type="button" class="gmail-copy-link gmail-copy-btn" data-copy="all" title="Copy subject and body">
-            <span>Copy subject &amp; body</span>
-        </button>
-    </div>
 
     {# ── Bottom action bar: Open client + I sent ── #}
     <div class="gmail-action-bar">
@@ -181,28 +202,15 @@
                 <line x1="22" y1="2" x2="11" y2="13" />
                 <polygon points="22 2 15 22 11 13 2 9 22 2" />
             </svg>
-            <span>Open in email client</span>
+            <span>Open in your email app</span>
         </button>
-        <button type="button" id="gmail-sent-email-btn" class="gmail-sent-btn" title="Mark that you sent this email">
+        <button type="button" id="gmail-sent-email-btn" class="gmail-sent-btn" disabled
+            title="Open your email client first, then mark that you sent this email">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12" />
             </svg>
-            <span>I sent</span>
+            <span>I sent it!</span>
         </button>
     </div>
-
-    {% if show_go_to_call is defined and show_go_to_call and not (show_call_nudge is defined and show_call_nudge) %}
-    <div class="gmail-footer-link">
-        <button type="button" class="gmail-go-to-call-btn"
-            onclick="var d=document.getElementById('advocacy-drawer'); if(d && window.openAdvocacyDrawer) window.openAdvocacyDrawer('call', d.getAttribute('data-member-id')||'', d.getAttribute('data-drawer-zip')||'', d.getAttribute('data-drawer-photo-url')||'', d.getAttribute('data-drawer-target-type')||'');">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path
-                    d="M22 16.92v3a2 2 0 01-2.18 2 19.86 19.86 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.86 19.86 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.362 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0122 16.92z" />
-            </svg>
-            Switch to Call tab
-        </button>
-    </div>
-    {% endif %}
 </div>

@@ -4,6 +4,15 @@
 Reads from cache/ (prod) and writes a subset to mocks/dev/ so that:
 - New contributors can run make dev without scraping (use mocks).
 - Mocks stay in sync with schema and a recent subset of real data.
+- All cache JSON types the app can use from mocks are represented.
+
+Cache files and whether they go to mocks:
+- members.json, bills.json, committees.json  -> yes (core seed data)
+- vote_events.json, witness_slips.json       -> yes, when present in cache
+- scorecards.json, moneyball.json            -> yes, subset by member id (dev uses these)
+- house_committees.json, senate_committees.json -> no; app uses unified committees.json
+- scrape_metadata.json                       -> no; scrape state only
+- zip_to_district.json                       -> yes; subset for mock districts (ZIP search works)
 
 Run after a full scrape when you want to refresh the committed mocks:
   make snapshot-mocks
@@ -135,6 +144,117 @@ def main() -> int:
             MOCKS_TARGET / "committees.json",
             len(subset_committees),
         )
+
+    # Vote events: subset by bill numbers we kept (standalone cache used when seed_fallback)
+    vote_events_path = CACHE_SOURCE / "vote_events.json"
+    if vote_events_path.exists():
+        with open(vote_events_path, encoding="utf-8") as f:
+            all_vote_events = json.load(f)
+        subset_vote_events = [
+            v for v in all_vote_events if v.get("bill_number") in subset_bill_numbers
+        ]
+        with open(MOCKS_TARGET / "vote_events.json", "w", encoding="utf-8") as f:
+            json.dump(subset_vote_events, f, indent=2, ensure_ascii=False)
+        logger.info(
+            "Wrote %s: %d vote events",
+            MOCKS_TARGET / "vote_events.json",
+            len(subset_vote_events),
+        )
+    else:
+        logger.info("No %s in cache; skipping vote_events.json", vote_events_path)
+
+    # Witness slips: subset by bill numbers we kept
+    witness_slips_path = CACHE_SOURCE / "witness_slips.json"
+    if witness_slips_path.exists():
+        with open(witness_slips_path, encoding="utf-8") as f:
+            all_witness_slips = json.load(f)
+        subset_witness_slips = [
+            s for s in all_witness_slips if s.get("bill_number") in subset_bill_numbers
+        ]
+        with open(MOCKS_TARGET / "witness_slips.json", "w", encoding="utf-8") as f:
+            json.dump(subset_witness_slips, f, indent=2, ensure_ascii=False)
+        logger.info(
+            "Wrote %s: %d witness slips",
+            MOCKS_TARGET / "witness_slips.json",
+            len(subset_witness_slips),
+        )
+    else:
+        logger.info("No %s in cache; skipping witness_slips.json", witness_slips_path)
+
+    # Scorecards: subset by member ids we kept (dev loads from mocks when seed_mode)
+    sc_path = CACHE_SOURCE / "scorecards.json"
+    mb_path = CACHE_SOURCE / "moneyball.json"
+    if sc_path.exists() and mb_path.exists():
+        with open(sc_path, encoding="utf-8") as f:
+            all_scorecards = json.load(f)
+        with open(mb_path, encoding="utf-8") as f:
+            mb_raw = json.load(f)
+        subset_sc = {mid: all_scorecards[mid] for mid in member_ids if mid in all_scorecards}
+        subset_profiles = {
+            mid: mb_raw["profiles"][mid] for mid in member_ids if mid in mb_raw.get("profiles", {})
+        }
+
+        # Filter ranking lists to subset only, preserve order
+        def filter_ranking(rank_list: list) -> list:
+            return [x for x in rank_list if x in member_ids]
+
+        mb_subset = {
+            "profiles": subset_profiles,
+            "rankings_overall": filter_ranking(mb_raw.get("rankings_overall", [])),
+            "rankings_house": filter_ranking(mb_raw.get("rankings_house", [])),
+            "rankings_senate": filter_ranking(mb_raw.get("rankings_senate", [])),
+            "rankings_house_non_leadership": filter_ranking(
+                mb_raw.get("rankings_house_non_leadership", [])
+            ),
+            "rankings_senate_non_leadership": filter_ranking(
+                mb_raw.get("rankings_senate_non_leadership", [])
+            ),
+            "mvp_house_non_leadership": mb_raw.get("mvp_house_non_leadership")
+            if mb_raw.get("mvp_house_non_leadership") in member_ids
+            else None,
+            "mvp_senate_non_leadership": mb_raw.get("mvp_senate_non_leadership")
+            if mb_raw.get("mvp_senate_non_leadership") in member_ids
+            else None,
+            "weights_used": mb_raw.get("weights_used", {}),
+        }
+        with open(MOCKS_TARGET / "scorecards.json", "w", encoding="utf-8") as f:
+            json.dump(subset_sc, f, indent=0, ensure_ascii=False)
+        with open(MOCKS_TARGET / "moneyball.json", "w", encoding="utf-8") as f:
+            json.dump(mb_subset, f, indent=0, ensure_ascii=False)
+        logger.info(
+            "Wrote %s: %d scorecards; %s: %d profiles",
+            MOCKS_TARGET / "scorecards.json",
+            len(subset_sc),
+            MOCKS_TARGET / "moneyball.json",
+            len(subset_profiles),
+        )
+    else:
+        logger.info("No scorecards.json or moneyball.json in cache; skipping (dev will recompute).")
+
+    # ZIP crosswalk: keep only ZIPs that map to (il_senate, il_house) pairs in our mock members,
+    # so every ZIP search can resolve to Your Senator + Your Rep from the 40 members.
+    senate_districts = {m["district"] for m in subset_members if m.get("chamber") == "Senate"}
+    house_districts = {m["district"] for m in subset_members if m.get("chamber") == "House"}
+    zip_path = CACHE_SOURCE / "zip_to_district.json"
+    if zip_path.exists():
+        with open(zip_path, encoding="utf-8") as f:
+            all_zip = json.load(f)
+        subset_zip = {
+            zcta: info
+            for zcta, info in all_zip.items()
+            if info.get("il_senate") in senate_districts and info.get("il_house") in house_districts
+        }
+        with open(MOCKS_TARGET / "zip_to_district.json", "w", encoding="utf-8") as f:
+            json.dump(subset_zip, f, indent=2, ensure_ascii=False)
+        logger.info(
+            "Wrote %s: %d ZIPs (districts covered: %d Senate, %d House)",
+            MOCKS_TARGET / "zip_to_district.json",
+            len(subset_zip),
+            len(senate_districts),
+            len(house_districts),
+        )
+    else:
+        logger.info("No zip_to_district.json in cache; skipping (dev uses hardcoded seed ZIPs).")
 
     logger.info("Done. Commit mocks/dev/ to refresh the dev seed for everyone.")
     return 0
