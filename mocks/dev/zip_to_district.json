@@ -1,0 +1,742 @@
+{
+  "60007": {
+    "il_house": "56",
+    "il_senate": "28",
+    "us_house": "8"
+  },
+  "60016": {
+    "il_house": "56",
+    "il_senate": "28",
+    "us_house": "5"
+  },
+  "60033": {
+    "il_house": "69",
+    "il_senate": "35",
+    "us_house": "16"
+  },
+  "60034": {
+    "il_house": "69",
+    "il_senate": "35",
+    "us_house": "10"
+  },
+  "60068": {
+    "il_house": "55",
+    "il_senate": "28",
+    "us_house": "5"
+  },
+  "60071": {
+    "il_house": "69",
+    "il_senate": "35",
+    "us_house": "10"
+  },
+  "60097": {
+    "il_house": "69",
+    "il_senate": "35",
+    "us_house": "10"
+  },
+  "60098": {
+    "il_house": "69",
+    "il_senate": "35",
+    "us_house": "11"
+  },
+  "60104": {
+    "il_house": "7",
+    "il_senate": "4",
+    "us_house": "7"
+  },
+  "60107": {
+    "il_house": "44",
+    "il_senate": "22",
+    "us_house": "8"
+  },
+  "60130": {
+    "il_house": "7",
+    "il_senate": "4",
+    "us_house": "7"
+  },
+  "60133": {
+    "il_house": "56",
+    "il_senate": "28",
+    "us_house": "8"
+  },
+  "60141": {
+    "il_house": "7",
+    "il_senate": "4",
+    "us_house": "7"
+  },
+  "60142": {
+    "il_house": "69",
+    "il_senate": "35",
+    "us_house": "11"
+  },
+  "60152": {
+    "il_house": "69",
+    "il_senate": "35",
+    "us_house": "11"
+  },
+  "60153": {
+    "il_house": "7",
+    "il_senate": "4",
+    "us_house": "7"
+  },
+  "60154": {
+    "il_house": "7",
+    "il_senate": "4",
+    "us_house": "7"
+  },
+  "60155": {
+    "il_house": "7",
+    "il_senate": "4",
+    "us_house": "7"
+  },
+  "60162": {
+    "il_house": "7",
+    "il_senate": "4",
+    "us_house": "7"
+  },
+  "60163": {
+    "il_house": "7",
+    "il_senate": "4",
+    "us_house": "4"
+  },
+  "60169": {
+    "il_house": "44",
+    "il_senate": "22",
+    "us_house": "8"
+  },
+  "60173": {
+    "il_house": "56",
+    "il_senate": "28",
+    "us_house": "8"
+  },
+  "60180": {
+    "il_house": "69",
+    "il_senate": "35",
+    "us_house": "11"
+  },
+  "60193": {
+    "il_house": "56",
+    "il_senate": "28",
+    "us_house": "8"
+  },
+  "60194": {
+    "il_house": "44",
+    "il_senate": "22",
+    "us_house": "8"
+  },
+  "60195": {
+    "il_house": "44",
+    "il_senate": "22",
+    "us_house": "8"
+  },
+  "60301": {
+    "il_house": "78",
+    "il_senate": "39",
+    "us_house": "7"
+  },
+  "60302": {
+    "il_house": "78",
+    "il_senate": "39",
+    "us_house": "7"
+  },
+  "60304": {
+    "il_house": "78",
+    "il_senate": "39",
+    "us_house": "7"
+  },
+  "60305": {
+    "il_house": "78",
+    "il_senate": "39",
+    "us_house": "7"
+  },
+  "60401": {
+    "il_house": "29",
+    "il_senate": "15",
+    "us_house": "2"
+  },
+  "60406": {
+    "il_house": "28",
+    "il_senate": "14",
+    "us_house": "1"
+  },
+  "60417": {
+    "il_house": "29",
+    "il_senate": "15",
+    "us_house": "2"
+  },
+  "60419": {
+    "il_house": "30",
+    "il_senate": "15",
+    "us_house": "2"
+  },
+  "60422": {
+    "il_house": "30",
+    "il_senate": "15",
+    "us_house": "2"
+  },
+  "60425": {
+    "il_house": "29",
+    "il_senate": "15",
+    "us_house": "2"
+  },
+  "60426": {
+    "il_house": "30",
+    "il_senate": "15",
+    "us_house": "2"
+  },
+  "60428": {
+    "il_house": "30",
+    "il_senate": "15",
+    "us_house": "2"
+  },
+  "60430": {
+    "il_house": "30",
+    "il_senate": "15",
+    "us_house": "2"
+  },
+  "60445": {
+    "il_house": "30",
+    "il_senate": "15",
+    "us_house": "1"
+  },
+  "60452": {
+    "il_house": "30",
+    "il_senate": "14",
+    "us_house": "1"
+  },
+  "60461": {
+    "il_house": "30",
+    "il_senate": "15",
+    "us_house": "2"
+  },
+  "60468": {
+    "il_house": "29",
+    "il_senate": "15",
+    "us_house": "1"
+  },
+  "60469": {
+    "il_house": "28",
+    "il_senate": "14",
+    "us_house": "1"
+  },
+  "60472": {
+    "il_house": "28",
+    "il_senate": "14",
+    "us_house": "1"
+  },
+  "60473": {
+    "il_house": "29",
+    "il_senate": "15",
+    "us_house": "2"
+  },
+  "60476": {
+    "il_house": "29",
+    "il_senate": "15",
+    "us_house": "2"
+  },
+  "60525": {
+    "il_house": "8",
+    "il_senate": "4",
+    "us_house": "6"
+  },
+  "60526": {
+    "il_house": "7",
+    "il_senate": "4",
+    "us_house": "4"
+  },
+  "60644": {
+    "il_house": "8",
+    "il_senate": "4",
+    "us_house": "7"
+  },
+  "60707": {
+    "il_house": "78",
+    "il_senate": "39",
+    "us_house": "3"
+  },
+  "60827": {
+    "il_house": "28",
+    "il_senate": "14",
+    "us_house": "2"
+  },
+  "61012": {
+    "il_house": "69",
+    "il_senate": "35",
+    "us_house": "16"
+  },
+  "61038": {
+    "il_house": "69",
+    "il_senate": "35",
+    "us_house": "11"
+  },
+  "61065": {
+    "il_house": "69",
+    "il_senate": "35",
+    "us_house": "16"
+  },
+  "61231": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61232": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61237": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61259": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61260": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61263": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61272": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61276": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61279": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61284": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61410": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61411": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61415": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61418": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61420": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61425": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61427": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61431": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61432": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61433": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61437": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61440": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61441": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61442": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61447": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61450": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61452": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61453": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61454": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61455": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61459": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61460": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61469": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61471": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61474": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61475": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61476": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61477": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61478": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61480": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61482": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61484": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61486": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61501": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61519": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61520": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61524": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61531": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61532": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61534": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61542": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61543": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61544": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61553": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61563": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "17"
+  },
+  "61567": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "61602": {
+    "il_house": "92",
+    "il_senate": "46",
+    "us_house": "17"
+  },
+  "61603": {
+    "il_house": "92",
+    "il_senate": "46",
+    "us_house": "17"
+  },
+  "61604": {
+    "il_house": "92",
+    "il_senate": "46",
+    "us_house": "17"
+  },
+  "61605": {
+    "il_house": "92",
+    "il_senate": "46",
+    "us_house": "17"
+  },
+  "61606": {
+    "il_house": "92",
+    "il_senate": "46",
+    "us_house": "17"
+  },
+  "61614": {
+    "il_house": "92",
+    "il_senate": "46",
+    "us_house": "17"
+  },
+  "61615": {
+    "il_house": "92",
+    "il_senate": "46",
+    "us_house": "16"
+  },
+  "61616": {
+    "il_house": "92",
+    "il_senate": "46",
+    "us_house": "17"
+  },
+  "61625": {
+    "il_house": "92",
+    "il_senate": "46",
+    "us_house": "17"
+  },
+  "62311": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62313": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62316": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62319": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62321": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62326": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62330": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62334": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62336": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62339": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62341": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62344": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62346": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62348": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62349": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62354": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62358": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62367": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62373": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62374": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62379": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62380": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62617": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62633": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62644": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62655": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62664": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  },
+  "62682": {
+    "il_house": "94",
+    "il_senate": "47",
+    "us_house": "15"
+  }
+}

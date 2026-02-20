@@ -57,7 +57,9 @@
         "role": "Member"
       }
     ],
-    "bill_numbers": []
+    "bill_numbers": [
+      "SB1657"
+    ]
   },
   {
     "code": "APHH",
@@ -190,27 +192,33 @@
       }
     ],
     "bill_numbers": [
-      "SB1210",
-      "SB1244",
-      "SB1245",
-      "SB1284",
-      "SB1572",
-      "SB1834",
-      "SB2232",
-      "SB2262",
-      "SB2299",
-      "SB2386",
-      "SB2423",
-      "SB2480",
-      "SB2712",
-      "SB3136",
-      "SB3655",
-      "SB3812",
-      "SB3891",
-      "SB4041",
-      "HB1081",
-      "HB1724",
-      "HB1843"
+      "SB1235",
+      "SB1355",
+      "SB1372",
+      "SB1632",
+      "SB1691",
+      "SB1700",
+      "SB1839",
+      "SB1869",
+      "SB1904",
+      "SB2043",
+      "SB2065",
+      "SB2146",
+      "SB2222",
+      "SB2231",
+      "SB2234",
+      "SB2416",
+      "SB2473",
+      "SB3271",
+      "SB3731",
+      "SB4020",
+      "SB4048",
+      "HB1411",
+      "HB1540",
+      "HB2493",
+      "HB2696",
+      "HB2980",
+      "HB3527"
     ]
   },
   {
@@ -442,7 +450,14 @@
       }
     ],
     "bill_numbers": [
-      "SB2653"
+      "SB1435",
+      "SB2653",
+      "SB2749",
+      "SB2795",
+      "SB3030",
+      "SB3061",
+      "SB3120",
+      "SB3160"
     ]
   },
   {
@@ -716,7 +731,9 @@
         "role": "Member"
       }
     ],
-    "bill_numbers": []
+    "bill_numbers": [
+      "SB2795"
+    ]
   },
   {
     "code": "SEXC-EXSL",
@@ -859,7 +876,9 @@
         "role": "Member"
       }
     ],
-    "bill_numbers": []
+    "bill_numbers": [
+      "AM1030332"
+    ]
   },
   {
     "code": "SFIC",
@@ -919,9 +938,7 @@
         "role": "Member"
       }
     ],
-    "bill_numbers": [
-      "SB3239"
-    ]
+    "bill_numbers": []
   },
   {
     "code": "SCHE",
@@ -1060,7 +1077,7 @@
       }
     ],
     "bill_numbers": [
-      "SB2748"
+      "SB2648"
     ]
   },
   {
@@ -1115,10 +1132,7 @@
         "role": "Member"
       }
     ],
-    "bill_numbers": [
-      "SB2940",
-      "SB3421"
-    ]
+    "bill_numbers": []
   },
   {
     "code": "SLGV",
@@ -1211,7 +1225,9 @@
         "role": "Member"
       }
     ],
-    "bill_numbers": []
+    "bill_numbers": [
+      "SB2790"
+    ]
   },
   {
     "code": "SREV",
@@ -1227,8 +1243,7 @@
       }
     ],
     "bill_numbers": [
-      "SB2382",
-      "SB3541"
+      "SB3216"
     ]
   }
 ]
