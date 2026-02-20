@@ -18,7 +18,7 @@ Snapshot of what’s broken, buggy, missing, and what to do before deployment.
 
 ## Broken / buggy
 
-- **Nothing known.** Lint passes; docs nav includes status-report and db-and-outreach. Tests pass; app starts.
+- **Nothing known.** Lint passes; docs nav includes status-report and db-and-outreach. Tests pass; app starts. Routes are split into `routers/` (advocacy, intelligence, explore, auth, outreach); main.py mounts them and serves `/`, health, logs, dev, SHAP, GraphQL.
 
 ---
 

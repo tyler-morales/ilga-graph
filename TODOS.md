@@ -13,10 +13,13 @@
   - **date_parse.py** — `parse_bill_date`, `parse_action_date`, `safe_parse_date` for GraphQL and intelligence bill detail. Main re-exports `_parse_bill_date` / `_safe_parse_date` for test backward compat.
   - **member_lookup.py** — `find_member_by_id(state, id)`, `find_member_by_district(state, chamber, district)`; single implementation used by advocacy router, explore, and intelligence (advocacy_helpers imports and re-exports for callers that use `ah.find_member_by_*`).
   - **routers/advocacy.py (2026-02-19):** SSR advocacy routes extracted from main: GET `/advocacy`, `/advocacy/test`, `/advocacy/letter-template`, `/advocacy/drawer`, POST `/advocacy/call/{id}/wrapup`, `/advocacy/call/{id}/no-answer`, POST `/advocacy/search`. State and deps unchanged (app_state.state, get_db, get_current_user_optional). Main mounts router with prefix `/advocacy`.
-  - **routers/** — Advocacy wired; intelligence and explore still in main.
+  - **routers/** — Advocacy, intelligence, and explore extracted. Main mounts advocacy (prefix `/advocacy`), intelligence (prefix `/intelligence`), explore (no prefix; routes `/explore`, `/api/graph`), auth, outreach.
+  - **routers/intelligence.py (2026-02-20):** All `/intelligence` and `/intelligence/*` routes plus witness-slip/org helpers moved from main. Main mounts with prefix `/intelligence`. SHAP endpoint `GET /api/bills/{bill_id}/explanation` remains in main.
+  - **routers/explore.py (2026-02-20):** `GET /explore` and `GET /api/graph` (Legislative Power Map) moved from main. Router mounted with no prefix.
+  - **base.html CSS (2026-02-20):** Embedded `<style>` moved to `static/css/`: `variables.css` (design tokens), `base.css`, `advocacy.css`, `intelligence.css`; base template links all four. Split script: `scripts/split_css.py`.
   - **Cursor skill: extract-route-group-to-router (2026-02-18):** `.cursor/skills/extract-route-group-to-router/SKILL.md` — guides extracting route groups from main.py into `routers/` with state/deps preserved and TODOS updated.
   - **Cursor skill: graphql-resolver-and-loaders (2026-02-18):** `.cursor/skills/graphql-resolver-and-loaders/SKILL.md` — implements/updates Strawberry resolvers with batch loaders and state-from-context; documents new API in `docs/reference/graphql.md`; post-ship TODOS + docs.
-  - main.py reduced from ~4780 to ~3560 lines. Next: extract `/intelligence/*` and `/explore` into routers to shrink main further.
+  - main.py reduced from ~4780 to ~1800 lines after intelligence + explore extraction and CSS externalization.
 - **Advocacy helpers extracted from main.py (2026-02-18):**
   - Moved all advocacy-specific logic into `src/ilga_graph/advocacy_helpers.py`: card building (`member_to_card`), recommendation chip order, influence dict, script/email builders, `find_power_broker`, `find_ally`, `committee_member_ids`, `test_member_list`, `legislator_drawer_context`. Member lookup: single source in `member_lookup.py`; advocacy_helpers imports and re-exports `find_member_by_id` / `find_member_by_district`. Each helper that needs app state takes `state` as first argument; advocacy router calls `advocacy_helpers.*(state, ...)`. Reduces main.py size and keeps advocacy logic in one place.
 - **Unified outreach drawer with step strip (2026-02-19):**
@@ -32,12 +35,10 @@
   - Recommendation chips: results partial uses precomputed `member.recommendation_chip_order` for visibility; chip list comes only from Python (`member_to_card`).
   - Legislator context: `legislator_drawer_context(member)` in advocacy_helpers; call drawer uses it instead of inline title_label/office_name/district_label in main.
 - **Snapshot mocks (2026-02-19):** `make snapshot-mocks` samples all cache JSON types the app uses from mocks: members, bills, committees, vote_events, witness_slips, scorecards, moneyball, zip_to_district. zip_to_district is subset so only ZIPs mapping to the 40 mock members' districts are included—so dev ZIP search can show all 40 members (Your Senator/Rep + Power Broker/Ally vary by ZIP). Seed mode loads zip crosswalk from mocks/dev/ when present, else hardcoded seed. Not snapshot: house/senate_committees (unified committees.json), scrape_metadata (scrape state only).
-- **Backlog:**
-  - **base.html CSS** — Move embedded CSS (~6k lines) to `static/css/` (e.g. `base.css`, `advocacy.css`, `intelligence.css`) and link from base template. TODOS already noted: "move embedded CSS to static/style.css when it grows."
-  - **Intelligence routes** — Extract `/intelligence/*` handlers into a FastAPI `APIRouter` and mount in main to shrink main.py further.
-  - **main.py** — Consider splitting remaining route groups (e.g. `/api/*`, `/explore`) into routers once advocacy + intelligence are extracted.
+- **Refactor completed (2026-02-20):** base.html CSS → `static/css/` (variables.css, base.css, advocacy.css, intelligence.css); intelligence routes → `routers/intelligence.py`; explore routes → `routers/explore.py`. main.py holds remaining routes: /, health, logs, dev, SHAP, GraphQL.
 
-- **Legacy purge (2026-02-18):**
+- **Legacy purge (2026-02-18, 2026-02-20):**
+  - **2026-02-20:** Removed ~1110 lines of intelligence routes + helpers to `routers/intelligence.py`; ~220 lines explore/graph to `routers/explore.py`; ~7700 lines inline CSS to `static/css/base.css`. Dropped unused main imports (datetime, parse_action_date, get_bill_to_law_process, CATEGORY_CHOICES, find_member_by_district).
   - **Removed** `POST /advocacy/drawer/after-call` — all flows use `/advocacy/call/<id>/wrapup`; no templates or JS referenced the old endpoint.
   - **Removed** dead ML code in `ml/features.py`: `build_full_text_features()`, `_RE_LEGISLATIVE_BOILERPLATE`, and `FULLTEXT_MAX_FEATURES` / `FULLTEXT_MAX_TOKENS` (full-text TF-IDF was already disabled for leakage; the function was never called).
   - **Removed** unused CSS in `base.html`: `.drawer-after-call`, `.drawer-after-call-title` (replaced by Wrap Up card styles).
@@ -47,10 +48,21 @@
 
 ## Current
 
+- **Refactor round (2026-02-20):** Intelligence router (`routers/intelligence.py`), explore router (`routers/explore.py`), base CSS moved to `static/css/base.css`. main.py ~1800 lines; lint and 301 tests pass. See Refactor and Legacy purge above.
+- **Post-prod: share cards, analytics, security (2026-02-20):**
+  - **Open Graph + Twitter Card:** base.html now has og:title, og:description, og:image, og:url, og:site_name and twitter:card/title/description/image. Defaults use `APP_BASE_URL`, `SITE_NAME`, `META_DESCRIPTION`, `OG_IMAGE_URL` from config; child templates can override `{% block og_title %}`, `{% block meta_description %}`, etc. `{% block meta_extra %}` for future per-page meta. **SEO cause-tailored (2026-02-20):** Default `META_DESCRIPTION` in config.py updated for Kei vehicle registration advocacy—find legislators, statutory fix, 625 ILCS 5/3-401(c-1); .env.example and environment-variables.md aligned.
+  - **Canonical + meta description:** `<link rel="canonical" href="{{ app_base_url }}{{ request.url.path }}">` and `<meta name="description">` with block override.
+  - **Umami analytics:** When `ILGA_UMAMI_WEBSITE_ID` is set, base template injects `<script async src="{{ umami_script_url }}" data-website-id="...">`. Default script URL is Umami Cloud; override with `ILGA_UMAMI_SCRIPT_URL` for self-hosted. Config: `config.py` (SITE_NAME, META_DESCRIPTION, OG_IMAGE_URL, UMAMI_WEBSITE_ID, UMAMI_SCRIPT_URL); main.py template globals; .env.example and environment-variables.md; deployment.md has **Connecting Umami** section and checklist items for APP_BASE_URL and Umami.
+  - **Security headers middleware:** X-Content-Type-Options: nosniff, X-Frame-Options: DENY, Referrer-Policy: strict-origin-when-cross-origin on every response.
+  - **Advocacy router SEO globals (2026-02-20):** Advocacy router uses its own Jinja2 env; added same template globals as main (app_base_url, site_name, meta_description, og_image_url, umami_*) so `/advocacy` and drawer/partials that extend base get correct share cards, canonical URL, and Umami when enabled.
+  - **Docs:** app-overview.md (share cards + Umami bullet), deployment checklist (APP_BASE_URL, Umami optional step).
+
 - **Deployment prep (2026-02-19):**
   - **Lint:** Fixed remaining E501 in `scripts/snapshot_mocks.py` (docstring + 2 log messages) and `routers/advocacy.py` (kei fact string). `make lint` passes.
   - **Procfile:** Uses `scripts/start_web.sh` so the web process binds to `$PORT` when set (Railway, Render) and defaults to 8000 locally. No dashboard override needed for port.
   - **Docs:** `docs/reference/status-report.md` updated (lint ✅, Procfile ✅, nav ✅); `docs/reference/deployment.md` updated to describe Procfile/start_web.sh. TODOS updated here.
+  - **Vultr deployment guide (2026-02-20):** Added `docs/reference/vultr-deployment-guide.md` — step-by-step Vultr/Ubuntu deploy with corrections: SSH username from dashboard (not root), system Python on Ubuntu 24.04 (not python3.11), activate venv before `pip install -e .`, wait for app startup (~2 min) before curl, UFW allow 80/443 before Certbot, Certbot for HTTPS. Linked from deployment.md and nav.
+  - **Startup banner URLs (2026-02-20):** Service URLs in the startup banner (Website, GraphQL, Docs) now use `ILGA_APP_BASE_URL` (default `http://127.0.0.1:8000`). Set `ILGA_APP_BASE_URL=https://landofkei.org` (or your domain) in production so server logs show your public URL. Optional `ILGA_DOCS_BASE_URL` for docs when different from app. Config: `APP_BASE_URL`, `DOCS_BASE_URL`; main.py banner; .env, deployment.md, environment-variables.md.
 
 - **Accessibility pass — advocacy drawer and results (2026-02-19):**
   - **Drawer:** Advocacy drawer is a modal dialog: `role="dialog"`, `aria-modal="true"`, `aria-label="Outreach: call script and email template"`. When closed, `aria-hidden="true"`; when open, `aria-hidden="false"`. Overlay has `aria-hidden="true"` so it is ignored by screen readers.
@@ -270,7 +282,7 @@
 
 - **Startup summary table + service URLs (2026-02-17):**
   - **Missing ETL steps added to summary table:** The startup banner previously showed only 9 steps (Load → ZIP crosswalk) but omitted three phases that ran after: co-sponsorship graph, ML intelligence loading, and influence engine computation. All three now appear as steps 10–12 with timing and counts. Co-sponsorship graph and ML loading now have `elapsed_graph` and `elapsed_ml` timing variables; influence already had `elapsed_influence` but wasn't passed to the table.
-  - **Service URLs in banner:** After the MVP line, the startup banner now prints a "Services" block with clickable URLs: Website (http://127.0.0.1:8000), GraphQL (http://127.0.0.1:8000/graphql), Docs (http://127.0.0.1:8001, via `make docs-serve`).
+  - **Service URLs in banner:** After the MVP line, the startup banner prints a "Services" block (Website, GraphQL, Docs). URLs come from `ILGA_APP_BASE_URL` (default `http://127.0.0.1:8000`); set in production so logs show your domain. Optional `ILGA_DOCS_BASE_URL` for docs.
   - **CSV timing log extended:** `.startup_timings.csv` now includes `graph_s`, `ml_s`, `influence_s` columns.
 
 - **Advocacy page overhaul — outreach-first redesign (2026-02-17):**

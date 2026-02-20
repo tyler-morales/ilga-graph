@@ -1,0 +1,4589 @@
+/* ── Form ── */
+/* ── Advocacy Hero (matches page: light, serif, bordered) ── */
+.advocacy-hero {
+background: #fff;
+color: #222;
+padding: 24px 0 32px;
+margin-bottom: 4px;
+text-align: center;
+border-bottom: 1px solid #ccc;
+}
+.hero-inner {
+max-width: 680px;
+margin: 0 auto;
+}
+.hero-eyebrow {
+text-transform: uppercase;
+letter-spacing: 0.1em;
+font-size: 0.78em;
+color: #555;
+margin: 0 0 8px;
+}
+.hero-headline {
+font-size: 1.6em;
+font-weight: normal;
+margin: 0 0 8px;
+padding-bottom: 6px;
+border-bottom: 2px solid #333;
+line-height: 1.3;
+}
+.hero-image {
+display: block;
+max-width: 100%;
+height: auto;
+margin-left: auto;
+margin-right: auto;
+}
+.hero-subhead {
+font-size: 1em;
+color: #444;
+margin: 0 0 20px;
+line-height: 1.55;
+}
+.hero-subhead strong {
+color: #222;
+}
+.hero-form {
+background: #fafafa;
+border: 1px solid #ccc;
+padding: 20px 24px;
+margin: 0 auto 16px;
+max-width: 600px;
+}
+.hero-form label {
+display: block;
+font-weight: bold;
+margin-bottom: 5px;
+font-size: 0.88em;
+text-align: left;
+color: #333;
+}
+.label-optional {
+font-weight: normal;
+color: #666;
+}
+.hero-form-row {
+display: flex;
+gap: 12px;
+align-items: flex-end;
+flex-wrap: wrap;
+}
+.hero-field {
+flex: 1;
+min-width: 140px;
+}
+.hero-field-btn {
+flex: 0 0 auto;
+}
+.hero-form input[type="text"] {
+width: 100%;
+box-sizing: border-box;
+font-size: 1em;
+padding: 8px 12px;
+border: 1px solid #ccc;
+background: #fff;
+color: #222;
+}
+.hero-form select {
+width: 100%;
+box-sizing: border-box;
+font-size: 1em;
+padding: 8px 10px;
+border: 1px solid #ccc;
+background: #fff;
+color: #222;
+}
+.hero-form button {
+font-size: 1em;
+padding: 8px 20px;
+background: #333;
+color: #fff;
+border: 1px solid #333;
+font-weight: bold;
+cursor: pointer;
+white-space: nowrap;
+}
+.hero-form button:hover {
+background: #222;
+}
+.hero-trust {
+font-size: 0.78em;
+color: #666;
+margin-top: 4px;
+}
+.trust-sep {
+margin: 0 6px;
+}
+.hero-meta {
+font-size: 0.78em;
+color: #666;
+margin-top: 12px;
+text-align: center;
+}
+.hero-meta-line {
+display: flex;
+flex-wrap: wrap;
+align-items: center;
+justify-content: center;
+gap: 2px 6px;
+}
+.hero-meta-item {
+margin: 0;
+}
+.hero-meta-sep {
+color: #999;
+user-select: none;
+}
+.hero-meta-auth {
+margin: 0;
+}
+.auth-strip {
+font-size: 0.8em;
+color: #555;
+margin-top: 8px;
+}
+.auth-strip-signed-in {
+color: #059669;
+margin-top: 12px;
+transition: opacity 0.55s ease, transform 0.55s ease;
+}
+.auth-strip-signed-in:not([hidden]) {
+opacity: 0;
+transform: translateY(8px);
+}
+.auth-strip-signed-in.auth-strip-signed-in--visible {
+opacity: 1;
+transform: translateY(0);
+}
+.hero-verified-icon {
+display: inline-block;
+vertical-align: middle;
+margin-right: 4px;
+color: #059669;
+}
+.hero-verified-icon svg {
+display: block;
+}
+.auth-strip-signout {
+background: none;
+border: none;
+color: #1a73e8;
+cursor: pointer;
+padding: 0;
+text-decoration: underline;
+font-size: inherit;
+}
+.auth-strip-signout:hover {
+color: #1765cc;
+}
+.auth-strip-signin-btn {
+background: none;
+border: none;
+color: #1a73e8;
+cursor: pointer;
+padding: 0;
+text-decoration: underline;
+font-size: inherit;
+}
+.auth-strip-signin-btn:hover {
+color: #1765cc;
+}
+.hero-signin-inline {
+margin-top: 22px;
+font-size: inherit;
+display: flex;
+flex-direction: column;
+align-items: center;
+text-align: center;
+transition: opacity 0.55s ease, transform 0.55s ease;
+}
+.hero-signin-inline:not([hidden]) {
+opacity: 0;
+transform: translateY(8px);
+}
+.hero-signin-inline.hero-signin-inline--open {
+opacity: 1;
+transform: translateY(0);
+}
+.hero-signin-inline[hidden] {
+display: none !important;
+}
+.hero-signin-inline .hero-signin-state {
+display: flex;
+flex-wrap: wrap;
+align-items: center;
+justify-content: center;
+gap: 12px;
+transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.hero-signin-inline .hero-signin-state:not([hidden]) {
+opacity: 0;
+transform: translateY(8px);
+}
+.hero-signin-inline .hero-signin-state.hero-signin-state-visible {
+opacity: 1;
+transform: translateY(0);
+align-items: center;
+}
+.hero-signin-inline .hero-signin-state[hidden] {
+display: none !important;
+}
+.hero-signin-inline .hero-signin-input {
+padding: 4px 8px;
+border: 1px solid #ccc;
+border-radius: 4px;
+font-size: inherit;
+min-width: 180px;
+}
+.hero-signin-inline .hero-signin-code-input {
+padding: 6px 12px;
+border: 1px solid #ccc;
+border-radius: 4px;
+font-size: 2em;
+letter-spacing: 0.2em;
+min-width: 14ch;
+width: 14ch;
+height: 1.4em;
+line-height: 1.2;
+text-align: center;
+box-sizing: border-box;
+}
+.hero-signin-inline .hero-signin-btn {
+padding: 4px 12px;
+background: #1a73e8;
+color: #fff;
+border: none;
+border-radius: 4px;
+cursor: pointer;
+font-size: inherit;
+}
+.hero-signin-inline .hero-signin-btn:hover {
+background: #1765cc;
+}
+.hero-signin-inline .hero-signin-btn:disabled {
+opacity: 0.5;
+cursor: not-allowed;
+}
+.hero-signin-inline .hero-signin-btn.hero-signin-btn--sending:disabled {
+cursor: wait;
+}
+.hero-signin-code-hint {
+font-size: 0.95em;
+color: #555;
+}
+.hero-signin-code-row {
+display: flex;
+align-items: center;
+gap: 8px;
+}
+.hero-signin-error {
+color: #c00;
+font-size: 0.9em;
+display: block;
+margin-top: 6px;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.hero-signin-resend {
+background: none;
+border: none;
+color: #1a73e8;
+cursor: pointer;
+padding: 0;
+text-decoration: underline;
+font-size: 0.9em;
+margin-top: 8px;
+}
+.hero-signin-resend:hover {
+color: #1765cc;
+}
+.hero-signin-resend:disabled {
+opacity: 0.5;
+cursor: wait;
+}
+.hero-signin-cancel {
+background: none;
+border: none;
+color: #555;
+cursor: pointer;
+padding: 0;
+text-decoration: underline;
+font-size: 0.9em;
+margin-top: 24px;
+margin-left: 0;
+display: inline-block;
+}
+.hero-signin-cancel:hover {
+color: #333;
+}
+/* ── Outreach action buttons ── */
+.outreach-row {
+display: flex;
+flex-wrap: wrap;
+gap: 8px;
+margin-top: 12px;
+padding: 10px 0;
+border-top: 1px solid #ddd;
+}
+.outreach-row>.outreach-btn {
+flex: 1 1 0;
+min-width: 0;
+}
+.outreach-btn {
+min-height: 2.5rem;
+}
+.outreach-cell {
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 4px;
+flex: 1 1 0;
+min-width: 0;
+}
+.outreach-count {
+font-size: 0.8em;
+color: #555;
+}
+.outreach-btn {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+gap: 6px;
+flex: 1 1 0;
+min-width: 0;
+padding: 10px 12px;
+font-size: 0.9em;
+font-weight: 600;
+border: none;
+border-radius: 6px;
+cursor: pointer;
+text-decoration: none;
+color: #fff;
+transition: filter 0.15s, transform 0.1s;
+}
+.outreach-btn:hover {
+filter: brightness(1.1);
+}
+.outreach-btn:active {
+transform: scale(0.98);
+}
+.outreach-icon {
+display: inline-flex;
+align-items: center;
+color: inherit;
+}
+.outreach-icon svg {
+width: 1.15em;
+height: 1.15em;
+flex-shrink: 0;
+}
+.outreach-phone {
+background: #1a6b3c;
+}
+.outreach-phone:hover {
+background: #1a6b3c;
+}
+.outreach-btn.outreach-primary {
+background: #1a6b3c;
+min-width: 120px;
+}
+.outreach-btn.outreach-primary:hover {
+background: #1a6b3c;
+}
+.outreach-done-text {
+display: inline-flex;
+align-items: center;
+padding: 10px 12px;
+font-size: 0.9em;
+font-weight: 600;
+color: #6b7280;
+}
+.outreach-email {
+background: #2a5aad;
+}
+.outreach-email:hover {
+background: #2a5aad;
+}
+/* When no email on file: Call = primary (emphasize), Email = secondary */
+.outreach-row-no-email .outreach-phone {
+box-shadow: 0 0 0 2px rgba(26, 107, 60, 0.4);
+}
+.outreach-row-no-email .outreach-email {
+background: #6b7280;
+color: #fff;
+}
+.outreach-row-no-email .outreach-email:hover {
+background: #4b5563;
+}
+/* Email button cell (legacy): same flex when two buttons */
+.outreach-email-wrap {
+flex: 1 1 0;
+min-width: 0;
+}
+.outreach-email-wrap .outreach-email {
+width: 100%;
+}
+/* Hint on its own row below buttons, right-aligned (no collision) */
+.outreach-row-hint {
+padding: 0;
+width: 100%;
+font-size: 0.8em;
+color: #6b7280;
+line-height: 1.35;
+text-align: right;
+}
+/* Gamified "Called!" / "Emailed!" — gold metallic done state */
+.outreach-btn.outreach-done {
+cursor: default;
+pointer-events: none;
+background: linear-gradient(145deg, #c9a227 0%, #b8860b 30%, #daa520 50%, #b8860b 70%, #8b6914 100%);
+color: #1a1a0a;
+font-weight: 700;
+box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -1px 0 rgba(0, 0, 0, 0.2), 0 2px 6px rgba(184, 134, 11, 0.4);
+text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.outreach-btn.outreach-done .outreach-icon {
+filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.3));
+}
+@media (prefers-reduced-motion: no-preference) {
+.outreach-btn.outreach-done {
+animation: outreach-done-shine 3s ease-in-out infinite;
+}
+}
+@keyframes outreach-done-shine {
+0%,
+100% {
+filter: brightness(1);
+}
+50% {
+filter: brightness(1.12);
+}
+}
+/* ── Power signal chips ── */
+.chips-label {
+font-size: 0.85em;
+font-weight: 600;
+color: #555;
+margin: 10px 0 4px 0;
+letter-spacing: 0.02em;
+}
+.power-signals {
+display: flex;
+flex-wrap: wrap;
+align-items: flex-start;
+gap: 6px 8px;
+margin: 8px 0;
+}
+/* Chip text: full on desktop, abbreviated on mobile */
+.chip-text-mobile {
+display: none;
+}
+/* Signal chips: flow as compact pills; size to content */
+.signal-chip {
+display: inline-flex;
+align-items: center;
+flex: 0 1 auto;
+gap: 6px;
+font-size: 0.88em;
+font-weight: 500;
+color: #111;
+padding: 4px 10px;
+border-radius: 6px;
+max-width: 100%;
+overflow-wrap: break-word;
+word-break: break-word;
+background: #f5f5f5;
+border: 1px solid #e0e0e0;
+}
+.signal-chip .signal-emoji {
+flex-shrink: 0;
+font-style: normal;
+}
+/* All signal types use same neutral style; emoji differentiates in template */
+.signal-chair,
+.signal-rank,
+.signal-passage,
+.signal-bridge,
+.signal-persuadable,
+.signal-wow {
+background: #f5f5f5;
+color: #111;
+border: 1px solid #e0e0e0;
+}
+/* Advocacy drawer: chrome = phone-overlay / phone-panel; body content = drawer-* classes. */
+/* ── Phone script slide-over panel ── */
+.phone-overlay {
+position: fixed;
+inset: 0;
+background: rgba(0, 0, 0, 0.35);
+z-index: 9998;
+opacity: 0;
+pointer-events: none;
+transition: opacity 0.25s;
+}
+.phone-overlay.open {
+opacity: 1;
+pointer-events: auto;
+}
+.phone-panel {
+position: fixed;
+top: 0;
+right: 0;
+bottom: 0;
+width: min(520px, 92vw);
+max-width: min(520px, 92vw);
+background: #fff;
+z-index: 9999;
+transform: translateX(100%);
+transition: transform 0.3s ease;
+display: flex;
+flex-direction: column;
+}
+/* Email drawer only: 50% viewport width */
+.phone-panel.phone-panel--email {
+width: 50vw;
+max-width: 50vw;
+}
+.phone-panel.open {
+transform: translateX(0);
+}
+.phone-panel-close {
+position: absolute;
+top: 12px;
+right: 14px;
+font-size: 1.6em;
+background: none;
+border: none;
+cursor: pointer;
+color: #666;
+line-height: 1;
+}
+/* Drag handle: hidden on desktop, shown on mobile for bottom sheet */
+.phone-panel-handle {
+display: none;
+}
+.phone-panel-handle-pill {
+width: 40px;
+height: 4px;
+border-radius: 2px;
+background: #ccc;
+}
+.phone-panel.dragging {
+transition: none;
+}
+.phone-panel-title-row {
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 12px;
+padding: 10px 12px 6px;
+border-bottom: 1px solid #e0e0e0;
+}
+.phone-panel-title {
+padding: 0;
+margin: 0;
+font-size: 1.15em;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.phone-panel-title-extra {
+flex-shrink: 0;
+}
+.drawer-header-constituent .drawer-constituent-checkbox-wrap {
+white-space: nowrap;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.drawer-step-strip {
+display: flex;
+align-items: center;
+gap: 8px;
+padding: 0;
+margin: 0 4px;
+flex-shrink: 0;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.drawer-step-link {
+background: none;
+border: none;
+padding: 0;
+font-size: 0.95em;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+color: #9ca3af;
+cursor: pointer;
+text-decoration: none;
+transition: color 0.15s, font-weight 0.15s;
+}
+.drawer-step-link:hover {
+color: #6b7280;
+}
+.drawer-step-link.drawer-step-link-active {
+font-weight: 600;
+color: #111;
+text-decoration: underline;
+text-underline-offset: 3px;
+}
+.drawer-step-sep {
+color: #c0c0c0;
+font-weight: 300;
+user-select: none;
+}
+.phone-panel-body {
+flex: 1;
+min-height: 0;
+display: flex;
+flex-direction: column;
+padding: 0 24px 20px 24px;
+overflow-y: auto;
+font-size: 0.95em;
+line-height: 1.7;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+/* Email drawer: single scroll (textarea only); prevent panel scrollbar */
+.phone-panel-body.drawer-email-open {
+overflow: hidden;
+}
+.phone-script-to {
+margin-bottom: 8px;
+}
+.phone-script-number {
+margin-bottom: 16px;
+font-size: 1.3em;
+}
+.phone-script-number a {
+color: #1a6b3c;
+font-weight: bold;
+text-decoration: none;
+}
+.phone-script-body {
+background: #f8faf8;
+border: 1px solid #d0e0d0;
+border-radius: 6px;
+padding: 16px;
+line-height: 1.7;
+}
+.phone-script-sections {
+margin-top: 12px;
+}
+.script-section {
+margin-bottom: 14px;
+padding: 10px 12px;
+background: #f8faf8;
+border: 1px solid #d0e0d0;
+border-radius: 6px;
+}
+.script-section strong {
+display: block;
+font-size: 0.8em;
+text-transform: uppercase;
+letter-spacing: 0.04em;
+color: #2a5a2a;
+margin-bottom: 4px;
+}
+.script-section p {
+margin: 0;
+line-height: 1.6;
+}
+.email-notice {
+padding: 12px 14px;
+margin-bottom: 16px;
+background: #fff8e1;
+border: 1px solid #ffca28;
+border-radius: 6px;
+font-size: 0.9em;
+line-height: 1.5;
+}
+.email-template label {
+display: block;
+font-weight: bold;
+font-size: 0.85em;
+margin: 10px 0 4px;
+}
+.email-subject {
+font-size: 0.95em;
+padding: 8px;
+background: #f5f5f5;
+border-radius: 4px;
+margin-bottom: 8px;
+word-break: break-word;
+}
+.email-body {
+white-space: pre-wrap;
+word-break: break-word;
+font-family: inherit;
+font-size: 0.9em;
+padding: 12px;
+background: #f5f5f5;
+border: 1px solid #ddd;
+border-radius: 4px;
+margin: 0 0 12px;
+line-height: 1.6;
+}
+.email-pdf {
+margin-top: 12px;
+font-size: 0.9em;
+}
+.email-pdf a {
+color: #2a5aad;
+}
+.phone-panel-done {
+padding: 8px 24px;
+background: #333;
+color: #fff;
+border: none;
+border-radius: 4px;
+cursor: pointer;
+font-size: 0.92em;
+}
+.phone-panel-done:hover {
+background: #555;
+}
+/* ── Advocacy drawer content (call script + after-call form, email template) ── */
+.drawer-loading,
+.drawer-error {
+color: #666;
+padding: 1em 0;
+}
+.drawer-error-banner {
+padding: 8px 12px;
+margin-bottom: 8px;
+background: #fef2f2;
+color: #991b1b;
+border-radius: 4px;
+font-size: 0.9em;
+}
+/* iMessage-style call header: light gray bar, centered photo circle then name then number */
+.drawer-call-header {
+background: #f2f2f7;
+padding: 20px 24px 14px;
+margin: 0 -24px 0 -24px;
+border-bottom: 1px solid #c6c6c8;
+text-align: center;
+}
+.drawer-call-header-inner {
+margin-bottom: 12px;
+}
+.drawer-call-photo {
+width: 72px;
+height: 72px;
+border-radius: 50%;
+object-fit: cover;
+display: block;
+margin: 0 auto 12px;
+background: #e5e5ea;
+}
+.drawer-call-title {
+margin: 0 0 2px;
+font-size: 0.8em;
+font-weight: 600;
+color: #6d6d72;
+text-transform: uppercase;
+letter-spacing: 0.04em;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.drawer-call-photo-placeholder {
+width: 72px;
+height: 72px;
+margin-left: auto;
+margin-right: auto;
+}
+.drawer-call-name {
+margin: 0 0 8px;
+font-size: 1.15em;
+font-weight: 700;
+color: #1c1c1e;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.drawer-call-number {
+margin: 0;
+font-size: 1em;
+line-height: 1.3;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.drawer-call-number-pill {
+display: inline-block;
+padding: 8px 18px;
+background: #248a3d;
+color: #fff;
+font-weight: 600;
+text-decoration: none;
+border-radius: 9999px;
+position: relative;
+animation: phone-pill-ring 2s ease-in-out infinite, phone-pill-pulse 2s ease-in-out infinite;
+}
+.drawer-call-number-pill:hover {
+background: #1e7a33;
+color: #fff;
+animation: phone-pill-ring 2s ease-in-out infinite, phone-pill-pulse 1.2s ease-in-out infinite;
+}
+/* Stop ring/pulse once user has ended the call (Wrap Up visible) */
+.drawer-call-number-pill.drawer-call-number-pill-ended {
+animation: none;
+box-shadow: none;
+}
+.drawer-call-header .drawer-script-intro {
+margin: 0;
+padding: 0;
+font-size: 0.8em;
+line-height: 1.4;
+color: #8e8e93;
+font-weight: 400;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+/* Minimal no-answer hint: below header, above script — visible but not alarming */
+.drawer-no-answer-hint {
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 8px;
+padding: 10px 24px;
+margin: 0 -24px;
+background: #fafafa;
+border-bottom: 1px solid #eee;
+font-size: 0.8em;
+color: #8e8e93;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.drawer-no-answer-hint-text {
+font-weight: 400;
+}
+.drawer-no-answer-hint-btn {
+background: none;
+border: none;
+padding: 0;
+font-size: inherit;
+font-family: inherit;
+color: #248a3d;
+font-weight: 500;
+text-decoration: underline;
+text-underline-offset: 2px;
+cursor: pointer;
+}
+.drawer-no-answer-hint-btn:hover {
+color: #1e7a33;
+}
+/* Constituent checkbox: same component on call and email drawer — one size, centered */
+.drawer-constituent-hint {
+padding: 6px 0;
+color: #3a3a3c;
+justify-self: center;
+font-size: 1em;
+}
+/* Match height of Send code button (32px) so checkbox row aligns in email drawer and call script */
+.drawer-constituent-checkbox-wrap {
+display: inline-flex;
+align-items: center;
+gap: 8px;
+cursor: pointer;
+font-size: 1em;
+min-height: 32px;
+box-sizing: border-box;
+}
+.drawer-constituent-checkbox {
+width: 20px;
+height: 20px;
+accent-color: #1a73e8;
+flex-shrink: 0;
+}
+.drawer-constituent-label {
+font-size: .9em;
+font-weight: 500;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.gmail-constituent-row {
+margin-bottom: 8px;
+display: flex;
+align-items: center;
+gap: 12px;
+flex-wrap: wrap;
+padding: 10px 20px;
+}
+/* Voicemail script view (toggled in place; same bubble styles) */
+.drawer-voicemail {
+display: flex;
+flex-direction: column;
+gap: 8px;
+margin-top: 4px;
+}
+.drawer-voicemail[hidden] {
+display: none !important;
+}
+.drawer-voicemail-single {
+max-width: 95%;
+}
+.drawer-voicemail-single p {
+margin: 0 0 0.75em 0;
+}
+.drawer-voicemail-single p:last-child {
+margin-bottom: 0;
+}
+.drawer-voicemail-reminder-bubble {
+margin-top: 8px;
+background: #ebebf0 !important;
+}
+.drawer-voicemail-reminder-bubble[hidden] {
+display: none !important;
+}
+.drawer-voicemail-reminder-bubble .drawer-reminder-link {
+color: #1a5fb4;
+}
+.drawer-voicemail-reminder-bubble .drawer-reminder-link:hover {
+color: #0d4a8f;
+}
+.drawer-voicemail-reminder-bubble .drawer-reminder-or {
+color: #8e8e93;
+}
+/* In-chat reminder (iMessage-style): date/time + Add to Calendar in the conversation */
+.drawer-reminder-inline {
+margin-top: 8px;
+background: #ebebf0 !important;
+max-width: 92%;
+}
+.drawer-reminder-inline[hidden] {
+display: none !important;
+}
+.drawer-reminder-inline-copy {
+margin: 0 0 12px 0;
+font-size: 0.95em;
+line-height: 1.45;
+color: #1c1c1e;
+}
+.drawer-reminder-inline-fields {
+margin-bottom: 10px;
+}
+.drawer-reminder-inline-row {
+display: flex;
+flex-direction: column;
+gap: 4px;
+}
+.drawer-reminder-inline-label {
+font-size: 0.8em;
+font-weight: 600;
+color: #3a3a3c;
+}
+.drawer-reminder-inline-inputs {
+display: flex;
+gap: 8px;
+align-items: center;
+}
+.drawer-reminder-inline-date,
+.drawer-reminder-inline-time {
+flex: 1;
+min-width: 0;
+padding: 8px 10px;
+border: 1px solid #c6c6c8;
+border-radius: 10px;
+font-size: 0.9em;
+font-family: inherit;
+background: #fff;
+}
+.drawer-reminder-inline-link {
+font-size: 0.75em;
+color: #8e8e93;
+margin: 0 0 12px 0;
+word-break: break-all;
+line-height: 1.35;
+}
+.drawer-reminder-inline-ctas {
+display: flex;
+flex-wrap: nowrap;
+gap: 8px;
+align-items: center;
+justify-content: space-between;
+}
+.drawer-reminder-inline-btn {
+padding: 10px 16px;
+border-radius: 20px;
+font-size: 0.9em;
+font-weight: 600;
+cursor: pointer;
+border: none;
+font-family: inherit;
+transition: transform 0.12s ease, opacity 0.15s ease;
+}
+.drawer-reminder-inline-btn:active {
+transform: scale(0.98);
+}
+.drawer-reminder-inline-btn-primary {
+background: #34c759;
+color: #fff;
+}
+.drawer-reminder-inline-btn-primary:hover {
+background: #2db84e;
+}
+.drawer-reminder-inline-btn-ghost {
+background: transparent;
+color: #1a5fb4;
+}
+.drawer-reminder-inline-btn-ghost:hover {
+text-decoration: underline;
+}
+.drawer-reminder-inline-just-in {
+animation: drawer-reminder-in 0.35s ease;
+}
+/* In-chat wrap up (iMessage-style) when they answered */
+.drawer-wrapup-inline {
+margin-top: 8px;
+display: flex;
+flex-direction: column;
+gap: 8px;
+}
+.drawer-wrapup-inline[hidden] {
+display: none !important;
+}
+.drawer-wrapup-inline-intro {
+font-size: 0.95em;
+line-height: 1.45;
+color: #1c1c1e;
+}
+.drawer-wrapup-inline-form-bubble {
+background: #ebebf0 !important;
+width: 100%;
+max-width: 100%;
+padding: 14px 16px;
+}
+.drawer-wrapup-form-inline {
+display: flex;
+flex-direction: column;
+gap: 12px;
+}
+.drawer-wrapup-inline-rows {
+display: flex;
+flex-direction: column;
+gap: 10px;
+}
+.drawer-wrapup-inline-row,
+.drawer-wrapup-inline-note-row {
+display: flex;
+flex-direction: column;
+gap: 4px;
+}
+.drawer-wrapup-inline-label {
+font-size: 0.8em;
+font-weight: 600;
+color: #3a3a3c;
+}
+.drawer-wrapup-inline-input {
+padding: 8px 12px;
+border: 1px solid #c6c6c8;
+border-radius: 10px;
+font-size: 0.9em;
+font-family: inherit;
+background: #fff;
+}
+.drawer-wrapup-inline-input:focus {
+outline: none;
+border-color: #1a5fb4;
+}
+.drawer-wrapup-inline-textarea {
+padding: 8px 12px;
+border: 1px solid #c6c6c8;
+border-radius: 10px;
+font-size: 0.9em;
+font-family: inherit;
+background: #fff;
+resize: vertical;
+min-height: 56px;
+}
+.drawer-wrapup-inline-textarea:focus {
+outline: none;
+border-color: #1a5fb4;
+}
+.drawer-wrapup-inline-cta {
+padding: 12px 20px;
+border-radius: 22px;
+font-size: 0.95em;
+font-weight: 600;
+cursor: pointer;
+border: none;
+font-family: inherit;
+background: #34c759;
+color: #fff;
+transition: transform 0.12s ease, background 0.15s ease;
+align-self: flex-start;
+}
+.drawer-wrapup-inline-cta:hover {
+background: #2db84e;
+}
+.drawer-wrapup-inline-cta:active {
+transform: scale(0.98);
+}
+.drawer-wrapup-inline-just-in {
+animation: drawer-reminder-in 0.35s ease;
+}
+.drawer-bubble-delayed[hidden] {
+display: none !important;
+}
+.drawer-bubble-just-in {
+animation: drawer-reminder-in 0.35s ease;
+}
+.drawer-draft-followup-wrap {
+margin-top: 16px;
+}
+.drawer-draft-followup-note-block {
+display: flex;
+justify-content: flex-end;
+margin-bottom: 16px;
+}
+.drawer-note-sticky-input {
+display: block;
+position: relative;
+width: 100%;
+max-width: 280px;
+padding: 18px 20px 22px;
+background: linear-gradient(180deg, #fffde7 0%, #fff9c4 45%, #fff59d 100%);
+border-radius: 2px;
+box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.06);
+transform: rotate(0.8deg);
+}
+.drawer-note-sticky-input::before {
+content: '';
+position: absolute;
+top: 0;
+left: 50%;
+transform: translateX(-50%);
+width: 50%;
+height: 14px;
+background: rgba(255, 255, 255, 0.65);
+border-radius: 1px;
+box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+.drawer-note-sticky-label {
+display: block;
+font-size: 0.8em;
+font-weight: 600;
+color: #5d4037;
+margin-bottom: 8px;
+position: relative;
+z-index: 1;
+}
+.drawer-note-sticky-textarea {
+display: block;
+width: 100%;
+min-height: 100px;
+padding: 10px 12px;
+border: none;
+border-radius: 2px;
+background: rgba(255, 255, 255, 0.5);
+font-size: 0.95em;
+font-family: inherit;
+line-height: 1.4;
+resize: vertical;
+color: #3e2723;
+position: relative;
+z-index: 1;
+}
+.drawer-note-sticky-textarea::placeholder {
+color: #6d4c41;
+opacity: 0.8;
+}
+.drawer-note-sticky-textarea:focus {
+outline: none;
+background: rgba(255, 255, 255, 0.85);
+box-shadow: 0 0 0 2px rgba(93, 64, 55, 0.25);
+}
+.drawer-draft-followup-cta-block {
+display: flex;
+justify-content: flex-start;
+}
+.drawer-draft-followup-cta-block.drawer-draft-followup-cta-staggered {
+opacity: 0;
+transition: opacity 0.35s ease;
+}
+.drawer-draft-followup-cta-block.drawer-draft-followup-cta-staggered.drawer-draft-followup-cta-visible {
+opacity: 1;
+}
+.drawer-draft-followup-btn {
+padding: 12px 20px;
+border-radius: 22px;
+font-size: 0.95em;
+font-weight: 600;
+cursor: pointer;
+border: none;
+font-family: inherit;
+background: #34c759;
+color: #fff;
+transition: transform 0.12s ease, background 0.15s ease;
+}
+.drawer-draft-followup-btn:hover {
+background: #2db84e;
+}
+.drawer-draft-followup-btn:active {
+transform: scale(0.98);
+}
+.drawer-draft-followup-btn.drawer-draft-followup-link-loading {
+opacity: 0.8;
+pointer-events: none;
+}
+.drawer-voicemail-reminder-just-in {
+animation: drawer-reminder-in 0.35s ease;
+}
+@keyframes drawer-reminder-in {
+from {
+opacity: 0;
+transform: translateY(6px);
+}
+to {
+opacity: 1;
+transform: translateY(0);
+}
+}
+.drawer-voicemail-reminder {
+margin-top: 12px;
+padding: 10px 14px;
+background: #f5f5f7;
+border-radius: 12px;
+font-size: 0.9em;
+color: #333;
+}
+.drawer-reminder-link {
+color: #1a5fb4;
+font-weight: 500;
+text-decoration: underline;
+text-underline-offset: 2px;
+}
+.drawer-reminder-link:hover {
+color: #0d4a8f;
+}
+.drawer-reminder-or {
+color: #8e8e93;
+margin: 0 4px;
+}
+.drawer-voicemail-outcome {
+margin-top: 8px;
+}
+/* iMessage-style chat bubbles */
+.drawer-chat {
+display: flex;
+flex-direction: column;
+gap: 8px;
+margin-top: 4px;
+}
+.drawer-chat[hidden] {
+display: none !important;
+}
+.drawer-call-content {
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.chat-bubble {
+max-width: 88%;
+padding: 10px 14px;
+border-radius: 18px;
+font-size: 0.92em;
+line-height: 1.55;
+position: relative;
+word-break: break-word;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.chat-bubble strong {
+font-weight: 700;
+}
+.chat-label {
+display: block;
+font-size: 0.7em;
+font-weight: 700;
+text-transform: uppercase;
+letter-spacing: 0.04em;
+margin-bottom: 3px;
+}
+/* You = single blue for all your bubbles, high contrast white text */
+.chat-you {
+background: #0070e0;
+color: #fff;
+align-self: flex-end;
+border-bottom-right-radius: 4px;
+}
+.chat-you .chat-label {
+color: #fff;
+opacity: 0.9;
+}
+.chat-you strong {
+color: #fff;
+font-weight: 700;
+}
+/* Staffer = gray bubble, dark text for readability */
+.chat-them {
+background: #ebebf0;
+color: #1a1a1a;
+align-self: flex-start;
+border-bottom-left-radius: 4px;
+}
+.chat-them .chat-label {
+color: #333;
+}
+.chat-branch {
+font-style: italic;
+font-size: 0.88em;
+}
+.chat-branch .chat-label {
+font-style: normal;
+}
+/* Wrap Up panel — centered modal overlay over everything */
+.drawer-wrapup-panel {
+position: fixed;
+inset: 0;
+z-index: 10001;
+display: flex;
+align-items: center;
+justify-content: center;
+padding: 20px;
+box-sizing: border-box;
+opacity: 0;
+visibility: hidden;
+pointer-events: none;
+transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+.drawer-wrapup-panel.drawer-wrapup-panel-visible {
+opacity: 1;
+visibility: visible;
+pointer-events: auto;
+}
+.drawer-wrapup-backdrop {
+position: absolute;
+inset: 0;
+background: rgba(0, 0, 0, 0.45);
+}
+.drawer-wrapup-panel-inner {
+position: relative;
+z-index: 1;
+width: 100%;
+max-width: 380px;
+transform: translateY(10px);
+transition: transform 0.3s ease;
+}
+.drawer-wrapup-panel.drawer-wrapup-panel-visible .drawer-wrapup-panel-inner {
+transform: translateY(0);
+}
+/* End Call button — full-width red with phone icon */
+.drawer-end-call-btn {
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 8px;
+width: 100%;
+padding: 14px 20px;
+margin-top: 20px;
+border: none;
+border-radius: 14px;
+background: #ff3b30;
+color: #fff;
+font-size: 1em;
+font-weight: 600;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+cursor: pointer;
+transition: background 0.15s ease;
+}
+.drawer-end-call-btn:hover {
+background: #e0332b;
+}
+.drawer-end-call-btn:active {
+background: #cc2d27;
+}
+.drawer-end-call-btn svg {
+flex-shrink: 0;
+transform: rotate(135deg);
+}
+/* Wrap-up CTA area */
+.drawer-wrapup-ctas {
+display: flex;
+flex-direction: column;
+gap: 10px;
+}
+.drawer-wrapup-alt-ctas[hidden] {
+display: none !important;
+}
+.drawer-wrapup-alt-ctas {
+display: flex;
+flex-direction: column;
+gap: 10px;
+}
+.drawer-wrapup-cta-reminder {
+text-decoration: none;
+text-align: center;
+background: #248a3d !important;
+}
+.drawer-wrapup-cta-reminder:hover {
+background: #1e7a33 !important;
+}
+.drawer-wrapup-cta-secondary {
+width: 100%;
+padding: 13px 20px;
+border: 1px solid #c6c6c8;
+border-radius: 12px;
+background: #f2f2f7;
+color: #1c1c1e;
+font-size: 0.95em;
+font-weight: 600;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+cursor: pointer;
+transition: background 0.15s ease;
+}
+.drawer-wrapup-cta-secondary:hover {
+background: #e5e5ea;
+}
+/* Reminder modal: date/time + Google Calendar / email / copy link */
+.reminder-modal {
+position: fixed;
+inset: 0;
+z-index: 10002;
+display: flex;
+align-items: center;
+justify-content: center;
+padding: 20px;
+}
+.reminder-modal[hidden] {
+display: none !important;
+}
+.reminder-modal-backdrop {
+position: absolute;
+inset: 0;
+background: rgba(0, 0, 0, 0.4);
+}
+.reminder-modal-card {
+position: relative;
+background: #fff;
+border-radius: 16px;
+box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+padding: 24px;
+max-width: 400px;
+width: 100%;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.reminder-modal-title {
+font-size: 1.25em;
+margin: 0 0 8px;
+color: #1c1c1e;
+}
+.reminder-modal-hint {
+font-size: 0.9em;
+color: #8e8e93;
+margin: 0 0 18px;
+line-height: 1.4;
+}
+.reminder-modal-fields {
+display: flex;
+flex-direction: column;
+gap: 14px;
+margin-bottom: 16px;
+}
+.reminder-modal-row {
+display: flex;
+flex-direction: column;
+gap: 4px;
+}
+.reminder-modal-label {
+font-size: 0.85em;
+font-weight: 600;
+color: #3a3a3c;
+}
+.reminder-modal-input {
+padding: 10px 12px;
+border: 1px solid #c6c6c8;
+border-radius: 10px;
+font-size: 1em;
+}
+.reminder-link-preview {
+font-size: 0.8em;
+color: #8e8e93;
+margin: 0 0 18px;
+word-break: break-all;
+}
+.reminder-modal-ctas {
+display: flex;
+flex-direction: column;
+gap: 10px;
+}
+.reminder-modal-btn {
+padding: 12px 18px;
+border-radius: 12px;
+font-size: 0.95em;
+font-weight: 600;
+cursor: pointer;
+border: none;
+font-family: inherit;
+transition: background 0.15s ease;
+}
+.reminder-modal-btn-primary {
+background: #248a3d;
+color: #fff;
+}
+.reminder-modal-btn-primary:hover {
+background: #1e7a33;
+}
+.reminder-modal-btn-secondary {
+background: #f2f2f7;
+color: #1c1c1e;
+}
+.reminder-modal-btn-secondary:hover {
+background: #e5e5ea;
+}
+.reminder-modal-btn-ghost {
+background: transparent;
+color: #8e8e93;
+}
+.reminder-modal-btn-ghost:hover {
+background: #f2f2f7;
+}
+/* Outcome step (legacy — kept for voicemail outcome if needed) */
+.drawer-outcome-step {
+margin-top: 20px;
+padding: 16px;
+background: #fff;
+border: 1px solid #c6c6c8;
+border-radius: 14px;
+box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+text-align: center;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.drawer-outcome-step.drawer-outcome-chosen {
+opacity: 0.5;
+pointer-events: none;
+transition: opacity 0.3s ease;
+}
+.drawer-outcome-question {
+margin: 0 0 14px;
+font-size: 0.95em;
+font-weight: 600;
+color: #1c1c1e;
+}
+.drawer-outcome-btns {
+display: flex;
+gap: 10px;
+}
+.drawer-outcome-btn {
+flex: 1;
+padding: 12px 10px;
+border: none;
+border-radius: 12px;
+font-size: 0.9em;
+font-weight: 600;
+cursor: pointer;
+transition: background-color 0.2s ease, opacity 0.2s ease;
+-webkit-appearance: none;
+appearance: none;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.drawer-outcome-btn-yes {
+background: #25D366;
+/* WhatsApp-style light green */
+color: #fff;
+}
+.drawer-outcome-btn-yes:hover {
+background: #20bd5a;
+}
+.drawer-outcome-btn-no {
+background: #f2f2f7;
+color: #1c1c1e;
+border: 1px solid #c6c6c8;
+}
+.drawer-outcome-btn-no:hover {
+background: #e5e5ea;
+}
+/* No-answer screen */
+.drawer-no-answer-content {
+padding: 8px 0;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.drawer-no-answer-card {
+padding: 16px;
+background: #fff;
+border: 1px solid #c6c6c8;
+border-radius: 14px;
+box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+margin-bottom: 16px;
+}
+.drawer-no-answer-headline {
+margin: 0 0 12px;
+font-size: 1.05em;
+font-weight: 600;
+color: #1c1c1e;
+}
+.drawer-no-answer-steps {
+margin: 0;
+padding-left: 20px;
+font-size: 0.92em;
+line-height: 1.6;
+color: #3c3c43;
+}
+.drawer-no-answer-steps li {
+margin-bottom: 8px;
+}
+.drawer-no-answer-steps li:last-child {
+margin-bottom: 0;
+}
+.drawer-no-answer-actions {
+display: flex;
+flex-direction: column;
+gap: 10px;
+}
+.drawer-no-answer-cta {
+width: 100%;
+padding: 14px 20px;
+border-radius: 12px;
+font-size: 1em;
+font-weight: 600;
+}
+.drawer-no-answer-actions .drawer-btn-secondary {
+width: 100%;
+padding: 12px 20px;
+border-radius: 12px;
+font-size: 0.95em;
+}
+/* Fade in/out blue border to indicate "type here" — only one field pulses at a time (see JS) */
+@keyframes drawer-capture-pulse {
+0%,
+100% {
+box-shadow: 0 0 0 2px rgba(0, 112, 224, 0);
+}
+50% {
+box-shadow: 0 0 0 2px rgba(0, 112, 224, 0.55);
+}
+}
+/* Phone pill: ring + pulse to draw attention without words */
+@keyframes phone-pill-ring {
+0%,
+100% {
+transform: scale(1);
+}
+15% {
+transform: scale(1.04);
+}
+30% {
+transform: scale(1);
+}
+45% {
+transform: scale(1.03);
+}
+60%,
+100% {
+transform: scale(1);
+}
+}
+@keyframes phone-pill-pulse {
+0%,
+100% {
+box-shadow: 0 0 0 0 rgba(36, 138, 61, 0.45);
+}
+50% {
+box-shadow: 0 0 0 12px rgba(36, 138, 61, 0);
+}
+}
+.drawer-capture-input.drawer-capture-pulse {
+animation: drawer-capture-pulse 2.25s ease-in-out infinite;
+}
+.drawer-capture-input:focus,
+.drawer-capture-input.drawer-capture-pulse:focus {
+animation: none;
+box-shadow: 0 0 0 2px rgba(34, 197, 94, var(--drawer-focus-green-opacity, 0.45));
+transition: box-shadow 0.4s ease, background 0.25s ease;
+}
+/* iOS/iMessage-style email capture — right-aligned, ~75% width */
+.drawer-email-capture-wrap {
+margin: 10px 0 12px;
+padding: 0 4px;
+margin-left: auto;
+width: 75%;
+max-width: 75%;
+}
+.drawer-email-capture {
+width: 100%;
+box-sizing: border-box;
+padding: 12px 16px;
+font-size: 0.95em;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+color: #1c1c1e;
+background: #ebebf0;
+border: none;
+border-radius: 20px;
+outline: none;
+-webkit-appearance: none;
+appearance: none;
+transition: box-shadow 0.4s ease, background 0.25s ease;
+}
+.drawer-email-capture::placeholder {
+color: #8e8e93;
+}
+.drawer-email-capture:focus {
+background: #ebebf0;
+}
+/* Name capture under "wrap up" — right-aligned, ~75% width */
+.drawer-name-capture-wrap {
+margin: 10px 0 12px;
+padding: 0 4px;
+margin-left: auto;
+width: 75%;
+max-width: 75%;
+}
+.drawer-name-capture {
+width: 100%;
+box-sizing: border-box;
+padding: 12px 16px;
+font-size: 0.95em;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+color: #1c1c1e;
+background: #ebebf0;
+border: none;
+border-radius: 20px;
+outline: none;
+-webkit-appearance: none;
+appearance: none;
+transition: box-shadow 0.4s ease, background 0.25s ease;
+}
+.drawer-name-capture::placeholder {
+color: #8e8e93;
+}
+.drawer-name-capture:focus {
+background: #ebebf0;
+}
+/* Email saved — blue pill with checkmark (replaces input once typed); click to edit */
+.drawer-email-saved {
+display: none;
+margin: 10px 0 12px;
+padding: 0 4px;
+cursor: pointer;
+text-align: right;
+}
+.drawer-email-capture-wrap.drawer-email-saved-visible .drawer-email-capture {
+display: none;
+}
+.drawer-email-capture-wrap.drawer-email-saved-visible .drawer-email-saved {
+display: block;
+}
+.drawer-email-saved-pill {
+display: inline-flex;
+align-items: center;
+gap: 8px;
+padding: 10px 16px 10px 14px;
+background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+color: #0d47a1;
+border-radius: 20px;
+font-size: 0.95em;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+border: 1px solid rgba(13, 71, 161, 0.25);
+}
+.drawer-email-saved-check {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 20px;
+height: 20px;
+background: #1565c0;
+color: #fff;
+border-radius: 50%;
+font-size: 0.75em;
+font-weight: 700;
+line-height: 1;
+}
+.drawer-email-saved-text {
+font-weight: 500;
+word-break: break-all;
+}
+/* Name saved — minimal contact card (replaces input once typed); click to edit */
+.drawer-name-saved {
+display: none;
+margin: 10px 0 12px;
+padding: 0 4px;
+cursor: pointer;
+text-align: right;
+}
+.drawer-name-capture-wrap.drawer-name-saved-visible .drawer-name-capture {
+display: none;
+}
+.drawer-name-capture-wrap.drawer-name-saved-visible .drawer-name-saved {
+display: block;
+}
+.drawer-contact-card {
+display: inline-flex;
+align-items: center;
+gap: 12px;
+padding: 10px 14px 10px 12px;
+background: linear-gradient(180deg, #f4f4f7 0%, #e8e8ec 28%, #e0e0e5 50%, #e4e4e9 78%, #ebebef 100%);
+border: 1px solid rgba(0, 0, 0, 0.08);
+border-radius: 12px;
+box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 1px 3px rgba(0, 0, 0, 0.08);
+max-width: 100%;
+}
+.drawer-contact-card-icon {
+font-size: 1.25em;
+line-height: 1;
+opacity: 0.75;
+}
+.drawer-contact-card-body {
+display: flex;
+flex-direction: column;
+gap: 2px;
+min-width: 0;
+}
+.drawer-contact-card-label {
+font-size: 0.7em;
+font-weight: 600;
+text-transform: uppercase;
+letter-spacing: 0.05em;
+color: #8e8e93;
+}
+.drawer-contact-card-name {
+font-size: 0.95em;
+font-weight: 500;
+color: #1c1c1e;
+}
+/* Sticky note — reserved for user notes (actual notes the user wants to take). Reuse .drawer-note-sticky when adding a notes feature. */
+.drawer-note-sticky {
+display: inline-block;
+position: relative;
+padding: 14px 20px 18px;
+background: linear-gradient(180deg, #fffde7 0%, #fff9c4 50%, #fff59d 100%);
+color: #5d4037;
+font-family: "Caveat", "Comic Sans MS", "Segoe Print", cursive;
+font-size: 1.35em;
+font-weight: 600;
+line-height: 1.3;
+border-radius: 2px;
+box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.06);
+transform: rotate(-1.2deg);
+max-width: 100%;
+}
+.drawer-note-sticky::before {
+content: '';
+position: absolute;
+top: 0;
+left: 50%;
+transform: translateX(-50%);
+width: 40%;
+height: 12px;
+background: rgba(255, 255, 255, 0.7);
+border-radius: 1px;
+box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+.drawer-note-sticky-text {
+position: relative;
+z-index: 1;
+}
+/* Divider line between sections */
+.chat-divider {
+display: flex;
+align-items: center;
+gap: 10px;
+margin: 6px 0;
+}
+.chat-divider::before,
+.chat-divider::after {
+content: '';
+flex: 1;
+border-top: 1px solid #ddd;
+}
+.chat-divider span {
+font-size: 0.72em;
+font-weight: 700;
+text-transform: uppercase;
+letter-spacing: 0.06em;
+color: #999;
+white-space: nowrap;
+}
+/* iOS-style Wrap Up card */
+.drawer-wrapup-card {
+position: relative;
+margin-top: 0;
+padding: 16px;
+background: #fff;
+border: 1px solid #c6c6c8;
+border-radius: 14px;
+box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.drawer-wrapup-title {
+margin: 0 0 12px;
+font-size: 0.85em;
+font-weight: 600;
+color: #6d6d72;
+text-transform: uppercase;
+letter-spacing: 0.04em;
+}
+.drawer-interest-row {
+margin-bottom: 14px;
+}
+.drawer-interest-question {
+margin: 0 0 8px;
+font-size: 1em;
+color: #1c1c1e;
+}
+.drawer-interest-pills {
+display: flex;
+flex-direction: column;
+gap: 6px;
+}
+.drawer-interest-pill {
+display: flex;
+align-items: center;
+justify-content: space-between;
+width: 100%;
+padding: 12px 14px;
+border-radius: 12px;
+border: 1px solid transparent;
+border-right: none;
+font-size: 1.05em;
+font-weight: 600;
+cursor: pointer;
+transition: background 0.35s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+text-align: left;
+position: relative;
+overflow: hidden;
+}
+.drawer-interest-pill:not(.poll-voted):hover {
+box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.drawer-interest-pill-label {
+flex: 1;
+position: relative;
+z-index: 1;
+}
+.drawer-interest-pill-dot {
+width: 22px;
+height: 22px;
+border-radius: 50%;
+border: 2px solid currentColor;
+opacity: 0.9;
+flex-shrink: 0;
+margin-left: 10px;
+transition: background 0.2s, border-color 0.2s, opacity 0.2s;
+position: relative;
+z-index: 1;
+}
+.drawer-interest-pill[aria-pressed="true"] .drawer-interest-pill-dot {
+background: currentColor;
+opacity: 1;
+border-color: transparent;
+background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+background-size: 14px;
+background-position: center;
+background-repeat: no-repeat;
+}
+/* Poll results mode: pills become bar chart bars; fill animates via ::after */
+.drawer-interest-pill.poll-voted {
+cursor: default;
+pointer-events: none;
+transition: background 0.2s ease;
+background: rgba(0, 0, 0, 0.03);
+}
+.drawer-interest-pill.poll-voted::after {
+content: '';
+position: absolute;
+left: 0;
+top: 0;
+bottom: 0;
+width: var(--pill-fill-pct, 0);
+background: var(--pill-fill, transparent);
+border-radius: inherit;
+z-index: 0;
+transition: width 1.2s ease-out 0.25s;
+}
+@media (prefers-reduced-motion: reduce) {
+.drawer-interest-pill.poll-voted::after {
+transition-duration: 0.2s;
+transition-delay: 0.1s;
+}
+}
+.drawer-interest-pill.poll-voted[aria-pressed="true"] {
+border: 2px solid currentColor;
+border-right: none;
+}
+.drawer-interest-pill-stats {
+display: none;
+align-items: center;
+gap: 8px;
+font-size: 1.05em;
+font-weight: 700;
+opacity: 0.95;
+margin-left: 10px;
+flex-shrink: 0;
+position: relative;
+z-index: 1;
+border: none;
+}
+.drawer-interest-pill.poll-voted .drawer-interest-pill-stats {
+display: flex;
+}
+.drawer-interest-pill.poll-voted .drawer-interest-pill-dot {
+display: none;
+}
+.drawer-interest-pill-pct {
+min-width: 2.5em;
+text-align: right;
+}
+.drawer-interest-pill-count {
+opacity: 0.7;
+}
+/* Interest poll pills: same semantic colors as results, full opacity; default and poll-voted use dark accent text */
+.drawer-interest-pill-score-1 {
+background: rgba(230, 57, 70, 0.28);
+color: #C1121F;
+}
+.drawer-interest-pill-score-1:not(.poll-voted):hover {
+background: rgba(230, 57, 70, 0.38);
+}
+.drawer-interest-pill-score-1[aria-pressed="true"]:not(.poll-voted) {
+background: rgba(230, 57, 70, 0.28);
+color: #C1121F;
+border-color: #E63946;
+}
+.drawer-interest-pill-score-1.poll-voted {
+color: #C1121F;
+}
+.drawer-interest-pill-score-1.poll-voted[aria-pressed="true"] {
+color: #C1121F;
+}
+.drawer-interest-pill-score-2 {
+background: rgba(249, 115, 22, 0.28);
+color: #EA580C;
+}
+.drawer-interest-pill-score-2:not(.poll-voted):hover {
+background: rgba(249, 115, 22, 0.38);
+}
+.drawer-interest-pill-score-2[aria-pressed="true"]:not(.poll-voted) {
+background: rgba(249, 115, 22, 0.28);
+color: #EA580C;
+border-color: #F97316;
+}
+.drawer-interest-pill-score-2.poll-voted {
+color: #EA580C;
+}
+.drawer-interest-pill-score-2.poll-voted[aria-pressed="true"] {
+color: #EA580C;
+}
+.drawer-interest-pill-score-3 {
+background: rgba(107, 114, 128, 0.22);
+color: #4B5563;
+}
+.drawer-interest-pill-score-3:not(.poll-voted):hover {
+background: rgba(107, 114, 128, 0.32);
+}
+.drawer-interest-pill-score-3[aria-pressed="true"]:not(.poll-voted) {
+background: rgba(107, 114, 128, 0.22);
+color: #4B5563;
+border-color: #6B7280;
+}
+.drawer-interest-pill-score-3.poll-voted {
+color: #4B5563;
+}
+.drawer-interest-pill-score-3.poll-voted[aria-pressed="true"] {
+color: #4B5563;
+}
+.drawer-interest-pill-score-4 {
+background: rgba(34, 197, 94, 0.28);
+color: #15803D;
+}
+.drawer-interest-pill-score-4:not(.poll-voted):hover {
+background: rgba(34, 197, 94, 0.38);
+}
+.drawer-interest-pill-score-4[aria-pressed="true"]:not(.poll-voted) {
+background: rgba(34, 197, 94, 0.28);
+color: #15803D;
+border-color: #22C55E;
+}
+.drawer-interest-pill-score-4.poll-voted {
+color: #15803D;
+}
+.drawer-interest-pill-score-4.poll-voted[aria-pressed="true"] {
+color: #15803D;
+}
+.drawer-interest-pill-score-5 {
+background: rgba(234, 179, 8, 0.32);
+color: #A16207;
+}
+.drawer-interest-pill-score-5:not(.poll-voted):hover {
+background: rgba(234, 179, 8, 0.42);
+}
+.drawer-interest-pill-score-5[aria-pressed="true"]:not(.poll-voted) {
+background: rgba(234, 179, 8, 0.32);
+color: #A16207;
+border-color: #EAB308;
+text-shadow: none;
+}
+.drawer-interest-pill-score-5[aria-pressed="true"]:not(.poll-voted) .drawer-interest-pill-dot {
+background-color: #92400E;
+background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+}
+.drawer-interest-pill-score-5.poll-voted {
+color: #A16207;
+text-shadow: none;
+}
+.drawer-interest-pill-score-5.poll-voted[aria-pressed="true"] {
+color: #A16207;
+text-shadow: none;
+}
+/* 0% bars: slightly subdued so they're visible but clearly empty */
+.drawer-interest-pill.poll-voted.poll-bar-zero {
+opacity: 0.78;
+}
+.drawer-wrapup-interest.drawer-interest-row {
+margin-bottom: 16px;
+}
+/* Interest poll: bubble styling and results area (reference: clean question + stacked pills) */
+.drawer-interest-poll-bubble .chat-label {
+font-size: 0.75em;
+color: #6d6d72;
+text-transform: uppercase;
+letter-spacing: 0.04em;
+display: block;
+margin-bottom: 4px;
+}
+.drawer-interest-poll-bubble .drawer-interest-question {
+margin-bottom: 12px;
+font-size: 0.95em;
+color: #1c1c1e;
+line-height: 1.35;
+}
+.drawer-interest-poll-results {
+margin-top: 12px;
+padding: 10px 12px;
+border-radius: 10px;
+font-size: 0.88em;
+line-height: 1.4;
+min-height: 2.5em;
+}
+.drawer-interest-poll-results[hidden] {
+display: none !important;
+}
+.drawer-interest-poll-results.poll-zero {
+background: #f0f9ff;
+border: 1px solid #bae6fd;
+color: #0369a1;
+}
+.drawer-interest-poll-results.poll-has-results {
+background: #f8fafc;
+border: 1px solid #e2e8f0;
+color: #334155;
+}
+.drawer-interest-poll-results .poll-zero-title {
+font-weight: 700;
+display: block;
+margin-bottom: 2px;
+}
+.drawer-interest-poll-results .poll-breakdown {
+margin-top: 6px;
+display: flex;
+flex-wrap: wrap;
+gap: 8px;
+align-items: center;
+}
+.drawer-interest-poll-results .poll-breakdown-item {
+display: inline-flex;
+align-items: center;
+gap: 4px;
+font-size: 0.95em;
+}
+.drawer-interest-poll-results .poll-breakdown-count {
+font-weight: 700;
+color: #1e293b;
+}
+.drawer-wrapup-rows {
+display: flex;
+flex-direction: column;
+gap: 0;
+margin-bottom: 16px;
+background: #f2f2f7;
+border-radius: 10px;
+overflow: hidden;
+border: 1px solid #e5e5ea;
+}
+.drawer-wrapup-row {
+display: flex;
+align-items: center;
+justify-content: space-between;
+min-height: 44px;
+padding: 0 14px;
+gap: 12px;
+cursor: text;
+background: #fff;
+border-bottom: 1px solid #e5e5ea;
+transition: background-color 0.2s ease;
+}
+.drawer-wrapup-row:last-child {
+border-bottom: none;
+}
+.drawer-wrapup-row:focus-within {
+background: #f9f9f9;
+}
+.drawer-wrapup-label {
+font-size: 0.92em;
+color: #1c1c1e;
+flex-shrink: 0;
+}
+.drawer-wrapup-input {
+flex: 1;
+min-width: 0;
+border: none;
+background: transparent;
+font-size: 0.92em;
+color: #1c1c1e;
+text-align: right;
+padding: 10px 0;
+}
+.drawer-wrapup-input::placeholder {
+color: #8e8e93;
+}
+.drawer-wrapup-input:focus {
+outline: none;
+}
+.drawer-wrapup-note-block {
+margin-bottom: 16px;
+}
+.drawer-wrapup-note-label {
+display: block;
+font-size: 0.92em;
+color: #1c1c1e;
+margin-bottom: 6px;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.drawer-wrapup-textarea {
+width: 100%;
+min-height: 72px;
+padding: 10px 12px;
+border: 1px solid #e5e5ea;
+border-radius: 10px;
+background: #f2f2f7;
+font-size: 0.92em;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+color: #1c1c1e;
+resize: vertical;
+box-sizing: border-box;
+}
+.drawer-wrapup-textarea::placeholder {
+color: #8e8e93;
+}
+.drawer-wrapup-textarea:focus {
+outline: none;
+border-color: #0070e0;
+background: #fff;
+}
+.drawer-wrapup-cta {
+width: 100%;
+padding: 14px 20px;
+border-radius: 12px;
+font-size: 1em;
+font-weight: 600;
+border: none;
+background: #0070e0;
+color: #fff;
+cursor: pointer;
+transition: background-color 0.2s ease, opacity 0.2s ease;
+-webkit-appearance: none;
+appearance: none;
+}
+.drawer-wrapup-cta:hover {
+background: #005bb5;
+}
+.drawer-wrapup-cta:active {
+opacity: 0.9;
+}
+/* ── Gmail-style email compose drawer ── */
+.gmail-compose {
+font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+background: #fff;
+border: 1px solid #dadce0;
+overflow: visible;
+flex: 1 1 0;
+min-height: 0;
+display: flex;
+flex-direction: column;
+border-radius: 12px;
+margin-top: 10px;
+}
+.gmail-toolbar {
+flex-shrink: 0;
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 8px 16px;
+background: #404040;
+color: #fff;
+border-radius: 12px 12px 0 0;
+}
+.gmail-toolbar-title {
+font-size: 0.9em;
+font-weight: 500;
+}
+.gmail-toolbar-steps {
+display: flex;
+flex-direction: row;
+flex-wrap: nowrap;
+align-items: center;
+gap: 6px;
+margin-left: auto;
+flex-shrink: 0;
+}
+.gmail-toolbar-btn {
+background: none;
+border: none;
+color: #b0b0b0;
+cursor: pointer;
+padding: 4px;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+transition: background 0.15s;
+}
+.gmail-toolbar-btn:hover {
+background: rgba(255, 255, 255, 0.15);
+color: #fff;
+}
+.gmail-banner {
+flex-shrink: 0;
+display: flex;
+gap: 10px;
+padding: 10px 16px;
+font-size: 0.85em;
+line-height: 1.5;
+border-bottom: 1px solid #dadce0;
+}
+.gmail-banner-icon {
+flex-shrink: 0;
+font-size: 1.1em;
+margin-top: 1px;
+}
+.gmail-banner-text {
+flex: 1;
+color: #3c4043;
+}
+.gmail-banner-text strong {
+color: #202124;
+}
+.gmail-banner-warning {
+background: #fef7e0;
+}
+.gmail-banner-tip {
+background: #e8f5e9;
+}
+.gmail-banner-note {
+margin-top: 6px;
+font-size: 0.92em;
+color: #5f6368;
+}
+.gmail-banner-link {
+background: none;
+border: none;
+padding: 0;
+font: inherit;
+color: #1a73e8;
+text-decoration: underline;
+cursor: pointer;
+font-weight: 600;
+}
+.gmail-banner-link:hover {
+color: #1557b0;
+}
+.gmail-fields {
+flex-shrink: 0;
+border-bottom: 1px solid #dadce0;
+}
+.gmail-field-row {
+display: flex;
+align-items: center;
+gap: 8px;
+padding: 8px 16px;
+border-bottom: 1px solid #ebebeb;
+min-height: 36px;
+}
+.gmail-field-row:last-child {
+border-bottom: none;
+}
+.gmail-from-row-constituent {
+flex-shrink: 0;
+margin-left: 12px;
+}
+.gmail-from-row-constituent .drawer-constituent-checkbox-wrap {
+white-space: nowrap;
+}
+.gmail-field-label {
+font-size: 0.85em;
+color: #5f6368;
+flex-shrink: 0;
+min-width: 52px;
+}
+.gmail-field-value {
+flex: 1;
+font-size: 0.9em;
+color: #202124;
+overflow-wrap: break-word;
+word-break: break-word;
+}
+.gmail-field-input {
+flex: 1;
+font-size: 0.9em;
+color: #202124;
+border: none;
+outline: none;
+background: transparent;
+padding: 2px 0;
+font-family: inherit;
+}
+.gmail-field-input:focus {
+border-bottom: 2px solid #1a73e8;
+margin-bottom: -2px;
+}
+.gmail-to-chip {
+display: inline-flex;
+align-items: center;
+gap: 6px;
+background: #e8eaed;
+border-radius: 16px;
+padding: 2px 10px 2px 2px;
+font-size: 0.9em;
+}
+.gmail-to-chip-copy {
+cursor: pointer;
+}
+.gmail-to-chip-copy:hover {
+background: #dadce0;
+}
+.gmail-to-chip-copy.gmail-to-chip-copied {
+background: #e6f4ea;
+}
+.gmail-to-chip-copy.gmail-to-chip-copied .gmail-to-chip-text {
+color: #137333;
+}
+.gmail-to-chip-avatar {
+width: 24px;
+height: 24px;
+border-radius: 50%;
+background: #1a73e8;
+color: #fff;
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 0.75em;
+font-weight: 600;
+text-transform: uppercase;
+flex-shrink: 0;
+}
+.gmail-to-chip-text {
+color: #3c4043;
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+}
+.gmail-to-placeholder {
+color: #9aa0a6;
+font-style: italic;
+font-size: 0.88em;
+}
+/* ── From field: auth verify UI ── */
+.gmail-from-row {
+background: #fafcff;
+}
+.gmail-from-input-wrap {
+display: flex;
+align-items: center;
+gap: 6px;
+flex: 1;
+}
+.gmail-from-input {
+flex: 1;
+font-size: 0.9em;
+color: #202124;
+border: none;
+outline: none;
+background: transparent;
+padding: 2px 0;
+font-family: inherit;
+}
+.gmail-from-verify-btn {
+font-size: 0.78em;
+font-weight: 600;
+background: #1a73e8;
+color: #fff;
+border: none;
+border-radius: 4px;
+padding: 0 12px;
+height: 32px;
+line-height: 32px;
+cursor: pointer;
+white-space: nowrap;
+box-sizing: border-box;
+}
+.gmail-from-verify-btn:hover {
+background: #1765cc;
+}
+.gmail-from-verify-btn:disabled {
+opacity: 0.5;
+cursor: not-allowed;
+}
+.gmail-from-verify-btn.gmail-from-verify-btn--sending:disabled {
+cursor: wait;
+}
+.gmail-from-verified {
+display: flex;
+align-items: center;
+gap: 6px;
+flex: 1;
+}
+.gmail-from-chip {
+display: inline-flex;
+align-items: center;
+gap: 4px;
+background: #e6f4ea;
+color: #137333;
+border-radius: 16px;
+padding: 3px 10px;
+font-size: 0.85em;
+font-weight: 500;
+}
+.gmail-from-chip-check {
+font-weight: 700;
+}
+.gmail-from-signout-btn {
+background: none;
+border: none;
+color: #9aa0a6;
+font-size: 1.1em;
+cursor: pointer;
+padding: 0 4px;
+line-height: 1;
+}
+.gmail-from-signout-btn:hover {
+color: #d93025;
+}
+.gmail-from-code-row {
+display: flex;
+align-items: flex-start;
+gap: 8px;
+}
+.gmail-from-code-wrap {
+display: flex;
+flex-wrap: wrap;
+flex-direction: row;
+align-items: center;
+gap: 8px;
+flex: 1;
+}
+.gmail-from-code-hint {
+font-size: 0.8em;
+color: #5f6368;
+}
+.gmail-from-code-inputs {
+display: flex;
+align-items: center;
+gap: 6px;
+}
+.gmail-from-code-input {
+width: 90px;
+font-size: 0.95em;
+font-family: monospace;
+letter-spacing: 3px;
+text-align: center;
+border: 1px solid #dadce0;
+border-radius: 4px;
+padding: 4px 8px;
+outline: none;
+}
+.gmail-from-code-input:focus {
+border-color: #1a73e8;
+}
+.gmail-from-code-submit {
+font-size: 0.78em;
+font-weight: 600;
+background: #1a73e8;
+color: #fff;
+border: none;
+border-radius: 4px;
+padding: 4px 12px;
+cursor: pointer;
+}
+.gmail-from-code-submit:hover {
+background: #1765cc;
+}
+.gmail-from-code-submit:disabled {
+opacity: 0.5;
+cursor: wait;
+}
+.gmail-from-code-error {
+font-size: 0.8em;
+color: #d93025;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.gmail-from-resend-btn {
+font-size: 0.78em;
+color: #1a73e8;
+background: none;
+border: none;
+cursor: pointer;
+padding: 0;
+text-decoration: underline;
+margin-left: auto;
+}
+.gmail-from-resend-btn:hover {
+color: #1765cc;
+}
+.gmail-from-resend-btn:disabled {
+opacity: 0.5;
+cursor: wait;
+}
+.gmail-from-state {
+display: flex;
+align-items: center;
+flex: 1;
+}
+.gmail-from-state[hidden] {
+display: none !important;
+}
+/* To field: pill when recipient is set (same look as From chip) */
+.gmail-to-value {
+display: flex;
+align-items: center;
+flex: 1;
+}
+.gmail-to-state {
+display: flex;
+align-items: center;
+flex: 1;
+}
+.gmail-to-state[hidden] {
+display: none !important;
+}
+.gmail-to-state .gmail-to-input {
+flex: 1;
+}
+.gmail-to-clear-btn {
+background: none;
+border: none;
+color: #9aa0a6;
+font-size: 1.1em;
+cursor: pointer;
+padding: 0 4px;
+line-height: 1;
+}
+.gmail-to-clear-btn:hover {
+color: #d93025;
+}
+/* To chip party colors (same saturation as From green: light bg + darker text) */
+.gmail-to-recipient-chip--dem {
+background: #e8f0fe;
+color: #1967d2;
+}
+.gmail-to-recipient-chip--rep {
+background: #fce8e6;
+color: #c5221f;
+}
+.gmail-subject-row {
+font-weight: 500;
+}
+.gmail-subject-input {
+font-weight: 500;
+color: #202124;
+}
+.gmail-body-area {
+flex: 1 1 0;
+min-height: 0;
+padding: 16px;
+overflow-y: auto;
+display: flex;
+flex-direction: column;
+}
+.gmail-body-text {
+flex: 1 1 0;
+min-height: 0;
+width: 100%;
+box-sizing: border-box;
+white-space: pre-wrap;
+word-break: break-word;
+font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+font-size: 0.88em;
+line-height: 1.65;
+color: #3c4043;
+margin: 0;
+padding: 0;
+background: transparent;
+border: none;
+outline: none;
+resize: none;
+}
+.gmail-body-text::placeholder {
+color: #9aa0a6;
+}
+.gmail-body-store {
+position: absolute;
+left: -9999px;
+width: 1px;
+height: 1px;
+overflow: hidden;
+opacity: 0;
+pointer-events: none;
+}
+.gmail-attachment-bar {
+flex-shrink: 0;
+padding: 8px 16px;
+border-top: 1px solid #dadce0;
+}
+.gmail-attachment {
+display: flex;
+align-items: center;
+gap: 10px;
+padding: 8px 12px;
+background: #f8f9fa;
+border: 1px solid #dadce0;
+border-radius: 8px;
+text-decoration: none;
+color: #3c4043;
+transition: background 0.15s, border-color 0.15s;
+}
+.gmail-attachment:hover {
+background: #e8eaed;
+border-color: #c0c4c9;
+}
+.gmail-attachment-icon {
+flex-shrink: 0;
+color: #d93025;
+display: flex;
+align-items: center;
+}
+.gmail-attachment-info {
+display: flex;
+flex-direction: column;
+gap: 1px;
+min-width: 0;
+}
+.gmail-attachment-name {
+font-size: 0.85em;
+font-weight: 500;
+color: #202124;
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+}
+.gmail-attachment-desc {
+font-size: 0.75em;
+color: #5f6368;
+}
+.gmail-action-bar {
+flex-shrink: 0;
+display: flex;
+align-items: center;
+gap: 12px;
+padding: 12px 16px;
+border-top: 1px solid #dadce0;
+background: #f8f9fa;
+flex-wrap: wrap;
+}
+.gmail-send-btn {
+display: inline-flex;
+align-items: center;
+gap: 8px;
+padding: 9px 22px;
+background: #1a73e8;
+color: #fff;
+border: none;
+border-radius: 20px;
+cursor: pointer;
+font-size: 0.88em;
+font-weight: 500;
+font-family: inherit;
+transition: background 0.15s, box-shadow 0.15s;
+white-space: nowrap;
+}
+.gmail-send-btn:hover {
+background: #1765cc;
+box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.gmail-send-btn:active {
+background: #1558b3;
+}
+.gmail-send-btn svg {
+flex-shrink: 0;
+}
+.gmail-copy-link {
+background: none !important;
+border: none !important;
+padding: 4px 0 !important;
+font-size: 0.8em !important;
+color: #5f6368 !important;
+min-height: 0;
+}
+.gmail-copy-link:hover {
+background: none !important;
+color: #1a73e8 !important;
+}
+.gmail-copy-link.gmail-copied {
+background: none !important;
+color: #137333 !important;
+border: none !important;
+}
+.gmail-sent-btn {
+display: inline-flex;
+align-items: center;
+gap: 8px;
+padding: 9px 18px;
+background: #fff;
+color: #1a73e8;
+border: 1px solid #dadce0;
+border-radius: 20px;
+cursor: pointer;
+font-size: 0.9em;
+font-family: inherit;
+font-weight: 500;
+transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.gmail-sent-btn:disabled {
+color: #9aa0a6;
+background: #f1f3f4;
+border-color: #dadce0;
+cursor: not-allowed;
+}
+.gmail-sent-btn:disabled:hover {
+background: #f1f3f4;
+border-color: #dadce0;
+color: #9aa0a6;
+}
+.gmail-sent-btn:hover {
+background: #e8f0fe;
+border-color: #1a73e8;
+}
+.gmail-sent-btn:active {
+background: #d2e3fc;
+}
+.gmail-sent-btn svg {
+flex-shrink: 0;
+}
+.gmail-secondary-actions {
+display: flex;
+gap: 4px;
+margin-left: auto;
+}
+.gmail-copy-btn {
+display: inline-flex;
+align-items: center;
+gap: 5px;
+padding: 6px 12px;
+background: #fff;
+color: #5f6368;
+border: 1px solid #dadce0;
+border-radius: 16px;
+cursor: pointer;
+font-size: 0.8em;
+font-family: inherit;
+transition: background 0.15s, color 0.15s, border-color 0.15s;
+white-space: nowrap;
+}
+.gmail-copy-btn:hover {
+background: #e8eaed;
+color: #3c4043;
+border-color: #c0c4c9;
+}
+.gmail-copy-btn:active {
+background: #dadce0;
+}
+.gmail-copy-btn svg {
+flex-shrink: 0;
+}
+.gmail-copy-btn.gmail-copied {
+background: #e6f4ea;
+color: #137333;
+border-color: #81c995;
+}
+.gmail-go-to-call-btn {
+display: inline-flex;
+align-items: center;
+gap: 6px;
+padding: 8px 20px;
+background: transparent;
+color: #1a73e8;
+border: 1px solid #dadce0;
+border-radius: 20px;
+cursor: pointer;
+font-size: 0.85em;
+font-family: inherit;
+font-weight: 500;
+transition: background 0.15s;
+}
+.gmail-go-to-call-btn:hover {
+background: #e8f0fe;
+}
+.gmail-go-to-call-btn svg {
+flex-shrink: 0;
+color: #1a73e8;
+}
+/* ── Guide pulse: traveling outline (outline so it’s never covered by children/siblings) ── */
+@keyframes guidePulse {
+0%,
+100% {
+outline: 2px solid rgba(26, 115, 232, 0);
+}
+50% {
+outline: 3px solid rgba(26, 115, 232, 0.7);
+}
+}
+@keyframes guidePulseGreen {
+0%,
+100% {
+outline: 2px solid rgba(19, 115, 51, 0);
+}
+50% {
+outline: 3px solid rgba(19, 115, 51, 0.7);
+}
+}
+.guide-pulse {
+animation: guidePulse 2s ease-in-out infinite;
+border-radius: 6px;
+outline-offset: 2px;
+position: relative;
+z-index: 1;
+}
+.guide-pulse-green {
+animation: guidePulseGreen 2s ease-in-out infinite;
+border-radius: 6px;
+outline-offset: 2px;
+position: relative;
+z-index: 1;
+}
+/* ── Subject verify button ── */
+.gmail-subject-verify-btn {
+display: inline-flex;
+align-items: center;
+gap: 4px;
+padding: 3px 10px;
+font-size: 0.75em;
+font-weight: 600;
+font-family: inherit;
+color: #1a73e8;
+background: #e8f0fe;
+border: 1px solid #c5d7f5;
+border-radius: 12px;
+cursor: pointer;
+white-space: nowrap;
+transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
+flex-shrink: 0;
+}
+.gmail-subject-verify-btn:hover {
+background: #d2e3fc;
+border-color: #a8c7fa;
+}
+.gmail-subject-verify-btn.verified {
+background: #e6f4ea;
+color: #137333;
+border-color: #81c995;
+pointer-events: none;
+}
+.gmail-subject-verify-btn svg {
+flex-shrink: 0;
+}
+/* ── Guide step dots ── */
+.guide-step-dots {
+display: flex;
+align-items: center;
+gap: 5px;
+padding-right: 4px;
+flex-shrink: 0;
+}
+.guide-step-counter {
+flex-shrink: 0;
+white-space: nowrap;
+}
+.guide-dot {
+width: 7px;
+height: 7px;
+border-radius: 50%;
+background: rgba(255, 255, 255, 0.3);
+transition: background 0.3s, transform 0.3s;
+}
+.guide-dot.active {
+background: #fff;
+transform: scale(1.3);
+}
+.guide-dot.done {
+background: #81c995;
+}
+/* ── Mad Libs body ── */
+.madlib-body {
+flex: 1 1 0;
+min-height: 0;
+width: 100%;
+box-sizing: border-box;
+white-space: pre-wrap;
+word-break: break-word;
+font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+font-size: 0.88em;
+line-height: 1.65;
+color: #3c4043;
+margin: 0;
+padding: 0;
+}
+.madlib-blank {
+display: inline-block;
+border: none;
+border-bottom: 2px dashed #a8c7fa;
+background: #f0f6ff;
+border-radius: 4px 4px 0 0;
+padding: 2px 8px;
+font-family: inherit;
+font-size: 1em;
+line-height: 1.4;
+color: #1a73e8;
+font-weight: 600;
+min-width: 2ch;
+outline: none;
+transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.15s, padding 0.2s;
+vertical-align: baseline;
+box-sizing: content-box;
+}
+.madlib-blank::placeholder {
+color: #9ab4dd;
+font-weight: 400;
+font-style: italic;
+}
+.madlib-blank:focus {
+border-bottom-color: #1a73e8;
+border-bottom-style: solid;
+background: #e8f0fe;
+box-shadow: 0 2px 6px rgba(26, 115, 232, 0.18);
+transform: scale(1.03);
+}
+.madlib-blank.filled {
+border-bottom: 1px dashed #dadce0;
+background: transparent;
+color: inherit;
+font-weight: inherit;
+padding: 0;
+border-radius: 0;
+min-width: 0;
+}
+.madlib-blank.filled:hover {
+border-bottom-color: #bdc1c6;
+cursor: text;
+}
+.madlib-blank.filled:focus {
+border-bottom: 2px solid #1a73e8;
+background: #e8f0fe;
+color: #1a73e8;
+font-weight: 600;
+padding: 2px 8px;
+border-radius: 4px 4px 0 0;
+min-width: 80px;
+box-shadow: 0 2px 6px rgba(26, 115, 232, 0.18);
+transform: scale(1.03);
+}
+.madlib-blank.error {
+border-bottom-color: #d93025;
+background: #fce8e6;
+color: #d93025;
+animation: guidePulse 1s ease-in-out 2;
+}
+.madlib-body [contenteditable]:focus {
+outline: none;
+background: rgba(26, 115, 232, 0.04);
+border-radius: 2px;
+}
+/* ── Sent-done state ── */
+.gmail-sent-btn.sent-done {
+background: #e6f4ea;
+color: #137333;
+border-color: #81c995;
+pointer-events: none;
+}
+.gmail-sent-btn.sent-done svg {
+stroke: #137333;
+}
+.gmail-sent-btn.sent-signin-nudge {
+background: #fef3c7;
+border-color: #d97706;
+color: #92400e;
+}
+.gmail-sent-btn.sent-signin-nudge svg {
+stroke: #92400e;
+}
+@media (max-width: 480px) {
+.gmail-compose {
+margin: -16px -18px;
+border-radius: 0;
+border: none;
+box-shadow: none;
+}
+.gmail-toolbar {
+border-radius: 0;
+}
+.gmail-toolbar-steps {
+flex-wrap: wrap;
+justify-content: flex-end;
+}
+.gmail-toolbar-steps .guide-step-counter {
+order: 1;
+width: 100%;
+}
+.gmail-toolbar-steps .guide-step-dots {
+order: 2;
+margin-left: auto;
+}
+.gmail-action-bar {
+flex-direction: row;
+flex-wrap: wrap;
+gap: 10px;
+}
+.gmail-send-btn,
+.gmail-sent-btn {
+flex: 1;
+min-width: 0;
+justify-content: center;
+}
+.gmail-to-chip-text {
+max-width: 200px;
+}
+/* Field rows: allow wrap so label/input/buttons stack on narrow screens */
+.gmail-field-row {
+flex-wrap: wrap;
+gap: 6px;
+}
+.gmail-field-label {
+flex-basis: 100%;
+min-width: 0;
+}
+.gmail-from-input-wrap {
+flex-wrap: wrap;
+gap: 8px;
+}
+.gmail-from-input-wrap .gmail-field-input,
+.gmail-from-input-wrap .gmail-from-input {
+min-width: 0;
+flex: 1 1 140px;
+}
+.gmail-subject-row {
+flex-wrap: wrap;
+}
+.gmail-subject-row .gmail-field-label {
+flex-basis: auto;
+}
+.gmail-subject-input {
+flex: 1 1 160px;
+min-width: 0;
+}
+.gmail-subject-verify-btn {
+flex-shrink: 0;
+}
+.gmail-banner-text {
+min-width: 0;
+}
+.gmail-body-area {
+padding: 12px 14px;
+}
+.gmail-attachment-bar {
+padding: 8px 14px;
+}
+.gmail-action-bar {
+padding: 12px 14px;
+}
+}
+/* Legacy email drawer (for reference / fallback) */
+.drawer-email-to-row {
+display: flex;
+align-items: center;
+gap: 10px;
+padding: 10px 12px;
+margin-bottom: 12px;
+background: #f2f2f7;
+border-radius: 8px;
+border: 1px solid #e5e5ea;
+font-size: 0.92em;
+}
+.drawer-email-to-label {
+font-weight: 600;
+color: #6d6d72;
+flex-shrink: 0;
+}
+.drawer-email-to-value {
+color: #1c1c1e;
+word-break: break-all;
+}
+.drawer-email-to-value em {
+color: #8e8e93;
+font-style: italic;
+}
+.drawer-copy-only-banner {
+padding: 12px 14px;
+margin-bottom: 14px;
+background: #fff8e1;
+border: 1px solid #ffca28;
+border-radius: 10px;
+font-size: 0.9em;
+line-height: 1.5;
+color: #5d4e37;
+}
+.drawer-copy-only-banner strong {
+display: block;
+margin-bottom: 4px;
+color: #3e3428;
+}
+.drawer-form-group {
+margin-bottom: 14px;
+}
+.drawer-form-group label {
+display: block;
+font-weight: 600;
+font-size: 0.9em;
+margin-bottom: 4px;
+}
+.label-optional {
+font-weight: normal;
+color: #666;
+}
+.drawer-radio-row {
+display: flex;
+gap: 16px;
+margin-bottom: 6px;
+}
+.drawer-radio-label {
+font-weight: normal;
+cursor: pointer;
+}
+.drawer-input {
+width: 100%;
+max-width: 100%;
+padding: 8px 10px;
+border: 1px solid #ccc;
+border-radius: 4px;
+font-size: 0.95em;
+box-sizing: border-box;
+}
+.drawer-email-if-yes {
+margin-top: 4px;
+}
+.drawer-btn {
+padding: 8px 20px;
+border: none;
+border-radius: 4px;
+cursor: pointer;
+font-size: 0.92em;
+}
+.drawer-btn-primary {
+background: #1a6b3c;
+color: #fff;
+}
+.drawer-btn-primary:hover {
+background: #14502e;
+}
+.drawer-btn-secondary {
+background: #f0f0f0;
+color: #333;
+border: 1px solid #ccc;
+}
+.drawer-btn-secondary:hover {
+background: #e5e5e5;
+}
+.drawer-call-only-notice {
+padding: 12px 14px;
+margin-bottom: 16px;
+background: #fff8e1;
+border: 1px solid #ffca28;
+border-radius: 6px;
+font-size: 0.9em;
+line-height: 1.5;
+}
+.drawer-call-only-notice strong {
+display: block;
+margin-bottom: 4px;
+}
+.drawer-your-notes {
+margin-top: 8px;
+font-size: 0.9em;
+color: #555;
+}
+.drawer-email-nudge {
+padding: 10px 12px;
+margin-bottom: 14px;
+background: #e8f5e9;
+border: 1px solid #81c784;
+border-radius: 6px;
+font-size: 0.9em;
+}
+.drawer-email-no-public {
+padding: 12px 14px;
+margin-bottom: 16px;
+background: #fff8e1;
+border: 1px solid #ffca28;
+border-radius: 6px;
+font-size: 0.9em;
+line-height: 1.5;
+}
+.drawer-email-heading {
+margin: 0 0 12px;
+font-size: 1em;
+font-weight: 600;
+}
+.drawer-email-actions {
+display: flex;
+flex-wrap: wrap;
+gap: 8px;
+margin-bottom: 12px;
+}
+.drawer-copy-btn,
+.drawer-mailto-btn {
+padding: 6px 12px;
+font-size: 0.85em;
+background: #f0f0f0;
+border: 1px solid #ccc;
+border-radius: 4px;
+cursor: pointer;
+}
+.drawer-copy-btn:hover,
+.drawer-mailto-btn:hover {
+background: #e0e0e0;
+}
+.drawer-mailto-btn {
+background: #2a5aad;
+color: #fff;
+border-color: #2a5aad;
+}
+.drawer-mailto-btn:hover {
+background: #1e4a8a;
+}
+.drawer-email-subject {
+font-size: 0.95em;
+padding: 8px;
+background: #f5f5f5;
+border-radius: 4px;
+margin-bottom: 8px;
+word-break: break-word;
+}
+.drawer-email-body {
+white-space: pre-wrap;
+word-break: break-word;
+font-family: inherit;
+font-size: 0.9em;
+padding: 12px;
+background: #f5f5f5;
+border: 1px solid #ddd;
+border-radius: 4px;
+margin: 0 0 12px;
+line-height: 1.6;
+}
+.drawer-email-template label {
+display: block;
+font-weight: bold;
+font-size: 0.85em;
+margin: 10px 0 4px;
+}
+.drawer-email-pdf {
+margin-top: 12px;
+font-size: 0.9em;
+}
+.drawer-email-pdf a {
+color: #2a5aad;
+}
+.drawer-go-to-call-wrap {
+margin-top: 16px;
+padding-top: 12px;
+border-top: 1px solid #e0e0e0;
+}
+.drawer-go-to-call-btn {
+margin-top: 4px;
+}
+/* ── HTML tooltips (hover or click) ── */
+.tooltip-wrap {
+position: relative;
+display: inline-block;
+}
+.tooltip-wrap .tooltip-content {
+visibility: hidden;
+opacity: 0;
+position: absolute;
+z-index: 1000;
+bottom: 100%;
+left: 50%;
+transform: translateX(-50%) translateY(-6px);
+min-width: 200px;
+max-width: 340px;
+padding: 12px 14px;
+background: #fff;
+color: #111;
+font-size: 0.85em;
+font-weight: normal;
+line-height: 1.5;
+border-radius: 8px;
+box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+border: 1px solid #e0e0e0;
+pointer-events: none;
+transition: opacity 0.2s, visibility 0.2s;
+}
+.tooltip-wrap .tooltip-content::after {
+content: "";
+position: absolute;
+top: 100%;
+left: 50%;
+margin-left: -6px;
+border: 6px solid transparent;
+border-top-color: #fff;
+}
+.tooltip-wrap .tooltip-content::before {
+content: "";
+position: absolute;
+top: 100%;
+left: 50%;
+margin-left: -7px;
+border: 7px solid transparent;
+border-top-color: #e0e0e0;
+z-index: -1;
+}
+.tooltip-wrap:hover .tooltip-content,
+.tooltip-wrap.tooltip-open .tooltip-content {
+visibility: visible;
+opacity: 1;
+}
+.tooltip-wrap .tooltip-content strong {
+display: block;
+margin-bottom: 6px;
+font-size: 0.9em;
+font-weight: 600;
+color: #111;
+letter-spacing: 0.02em;
+}
+.tooltip-wrap .tooltip-content .tooltip-title {
+display: block;
+margin-bottom: 6px;
+font-size: 0.9em;
+font-weight: 600;
+color: #111;
+letter-spacing: 0.06em;
+text-transform: uppercase;
+}
+.tooltip-wrap .tooltip-content p {
+margin: 0 0 8px;
+font-weight: normal;
+color: #333;
+}
+.tooltip-wrap .tooltip-content p:last-child {
+margin-bottom: 0;
+}
+.tooltip-wrap .tooltip-content .tooltip-formula {
+font-weight: normal;
+font-size: 0.8em;
+font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
+color: #111;
+margin-top: 10px;
+padding: 10px 12px;
+background: #f5f5f5;
+border: 1px solid #e0e0e0;
+border-radius: 6px;
+line-height: 1.6;
+letter-spacing: 0.02em;
+}
+.tooltip-wrap .tooltip-content .tooltip-formula .formula-eq {
+display: block;
+margin-bottom: 4px;
+color: #333;
+}
+.tooltip-wrap .tooltip-content .tooltip-formula .formula-line {
+display: block;
+color: #444;
+}
+/* Moneyball term: underlined + ? trigger (click to open) */
+.moneyball-term {
+text-decoration: underline;
+text-underline-offset: 2px;
+cursor: help;
+}
+.moneyball-help {
+display: inline-block;
+width: 1.1em;
+height: 1.1em;
+line-height: 1.1;
+text-align: center;
+font-size: 0.85em;
+font-weight: bold;
+color: #555;
+background: #e8e8e8;
+border-radius: 50%;
+cursor: pointer;
+margin-left: 2px;
+vertical-align: middle;
+}
+.moneyball-help:hover {
+background: #d0d0d0;
+color: #333;
+}
+/* Aside: toggleable Moneyball definition (inline below Power Broker) */
+.moneyball-aside-trigger {
+display: inline;
+cursor: pointer;
+}
+.moneyball-definition-block {
+display: none;
+margin-top: 0.6em;
+padding: 0.6em 0 0;
+border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+.moneyball-definition-block.is-open {
+display: block;
+}
+.moneyball-definition-text {
+font-style: italic;
+margin: 0 0 0.5em;
+color: #444;
+font-size: 0.95em;
+}
+/* Textbook-style displayed equation: one term per line, italic variables */
+.moneyball-formula-display {
+font-family: "Cambria Math", "Latin Modern Math", "STIX Two Math", "Times New Roman", Georgia, serif;
+font-size: 0.95em;
+color: #1a1a1a;
+margin: 0.5em 0 0;
+padding-left: 1em;
+font-variant-numeric: tabular-nums;
+line-height: 1.6;
+}
+/* One-line equation */
+.moneyball-formula-display.formula-one-line {
+line-height: 1.5;
+}
+.moneyball-formula-display .formula-lhs {
+margin-right: 0.25em;
+}
+.moneyball-formula-display.formula-one-line .formula-lhs {
+display: inline;
+}
+.moneyball-formula-display .formula-eq {
+margin-left: 0.2em;
+margin-right: 0.25em;
+font-weight: 400;
+}
+.moneyball-formula-display .formula-body {
+display: inline;
+}
+.moneyball-formula-display .formula-coef {
+font-variant-numeric: tabular-nums;
+margin-right: 0.2em;
+}
+.moneyball-formula-display .formula-times {
+margin: 0 0.15em;
+font-family: "Cambria Math", "Latin Modern Math", "STIX Two Math", Symbola, "Times New Roman", serif;
+}
+.moneyball-formula-display .formula-var {
+font-style: italic;
+font-weight: 700;
+font-size: 1.12em;
+margin-right: 0.25em;
+}
+.moneyball-formula-display .formula-plus {
+margin: 0 0.15em;
+}
+/* Definition list: variable and definition on same line, term bold */
+.formula-where {
+margin: 0.6em 0 0;
+padding: 0.5em 0 0;
+border-top: 1px solid rgba(0, 0, 0, 0.1);
+font-size: 0.85em;
+color: #444;
+line-height: 1.55;
+}
+.formula-where dt {
+font-weight: 700;
+display: inline;
+margin: 0;
+}
+.formula-where dt::after {
+content: " ";
+}
+.formula-where dt .formula-var {
+font-style: italic;
+font-weight: 700;
+}
+.formula-where dd {
+display: inline;
+margin: 0;
+padding: 0;
+border: none;
+}
+.formula-where dd::after {
+content: "\A";
+white-space: pre;
+}
+.formula-where dt:first-child {
+margin-top: 0;
+}
+.formula-where dd:first-of-type {
+margin-top: 0.25em;
+}
+.tooltip-wrap.tooltip-click .tooltip-content {
+pointer-events: auto;
+}
+/* Default position (fallback before Floating UI runs); overridden by inline style when open */
+.tooltip-wrap.tooltip-click .tooltip-content {
+bottom: auto;
+top: 100%;
+transform: translateX(-50%) translateY(6px);
+}
+/* When Floating UI has set position, use fixed and inline transform (click and hover) */
+.tooltip-wrap .tooltip-content.tooltip-floating-positioned {
+position: fixed;
+left: 0;
+top: 0;
+bottom: auto;
+right: auto;
+}
+.tooltip-wrap.tooltip-click .tooltip-content::after {
+top: auto;
+bottom: 100%;
+border-top-color: transparent;
+border-bottom-color: #fff;
+}
+.tooltip-wrap.tooltip-click .tooltip-content::before {
+top: auto;
+bottom: 100%;
+border-top-color: transparent;
+border-bottom-color: #e0e0e0;
+}
+/* Arrow when tooltip flips above (placement: top) — click and hover */
+.tooltip-wrap .tooltip-content.tooltip-placement-top::after {
+top: 100%;
+bottom: auto;
+border-top-color: #fff;
+border-bottom-color: transparent;
+}
+.tooltip-wrap .tooltip-content.tooltip-placement-top::before {
+top: 100%;
+bottom: auto;
+border-top-color: #e0e0e0;
+border-bottom-color: transparent;
+}
+.tooltip-wrap.tooltip-click .signal-chip {
+cursor: pointer;
+}
+/* ── Card details (collapsed) ── */
+.card-details {
+margin-top: 8px;
+}
+.card-details-toggle {
+font-size: 0.85em;
+color: #666;
+cursor: pointer;
+padding: 4px 0;
+}
+.card-details-toggle:hover {
+color: #333;
+}
+.card-details-body {
+margin-top: 8px;
+}
+.why-picked-prose {
+margin: 0 0 1rem 0;
+color: #444;
+line-height: 1.5;
+overflow-wrap: break-word;
+word-break: break-word;
+}
+.ilga-profile-link {
+font-size: 0.85em;
+margin-top: 12px;
+margin-bottom: 0;
+}
+.ilga-profile-link a {
+color: #0645ad;
+text-decoration: underline;
+}
+.ilga-profile-link a:hover {
+text-decoration: none;
+}
+.detail-section {
+margin: 8px 0;
+}
+.detail-section h4 {
+font-size: 0.88em;
+margin: 0 0 4px;
+color: #444;
+}
+.section-zip {
+font-weight: normal;
+color: #666;
+font-size: 0.85em;
+}
+.search-form {
+margin: 20px 0;
+padding: 16px;
+background: #fafafa;
+border: 1px solid #ddd;
+}
+.search-form label {
+display: block;
+font-weight: bold;
+margin-bottom: 6px;
+}
+.search-form input[type="text"] {
+font-size: 1em;
+padding: 6px 10px;
+border: 1px solid #999;
+width: 200px;
+}
+.search-form select {
+font-size: 1em;
+padding: 5px 8px;
+border: 1px solid #999;
+width: 260px;
+background: #fff;
+}
+.search-form button {
+font-size: 1em;
+padding: 6px 16px;
+background: #333;
+color: #fff;
+border: 1px solid #111;
+cursor: pointer;
+}
+.search-form button:hover {
+background: #555;
+}
+/* ── Cards ── */
+.card {
+position: relative;
+border: 1px solid #aaa;
+padding: 14px 18px;
+margin: 14px 0;
+background: #fdfdfd;
+min-width: 0;
+overflow-wrap: break-word;
+word-wrap: break-word;
+}
+/* Heat score pill — expandable fire pill */
+.heat-score-pill {
+position: absolute;
+top: 8px;
+right: 8px;
+display: inline-flex;
+align-items: center;
+gap: 3px;
+padding: 3px 8px;
+border-radius: 999px;
+font-size: 0.75rem;
+font-weight: 500;
+color: #c2410c;
+background: #fff7ed;
+border: 1px solid #fed7aa;
+cursor: pointer;
+white-space: nowrap;
+z-index: 2;
+transition: background 0.2s;
+user-select: none;
+}
+.heat-score-pill:hover {
+background: #ffedd5;
+}
+.heat-score-pill-text {
+display: inline-block;
+max-width: 0;
+overflow: hidden;
+opacity: 0;
+transition: max-width 0.35s ease, opacity 0.25s ease;
+}
+.heat-score-pill[data-expanded] .heat-score-pill-text {
+max-width: 200px;
+opacity: 1;
+}
+.card-your-legislator {
+border: 2px solid #c9a227;
+box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.2);
+}
+/* Desktop: grid [photo | name+badges]; one column-2 cell so no trapped space; align to bottom of image */
+.card-header {
+display: grid;
+grid-template-columns: auto 1fr;
+grid-template-rows: auto;
+align-items: end;
+gap: 0 12px;
+margin-bottom: 8px;
+}
+.card-header .member-photo {
+grid-row: 1;
+}
+/* Single wrapper in column 2: name then badges in one flex column (no grid row gap) */
+.card-header-col {
+grid-column: 2;
+min-width: 0;
+display: flex;
+flex-direction: column;
+gap: 0;
+align-items: flex-start;
+}
+/* When no photo, single column so name + badges use full width */
+.card-header:not(:has(.member-photo)) {
+grid-template-columns: 1fr;
+}
+.card-header:not(:has(.member-photo)) .card-header-col {
+grid-column: 1;
+}
+.card-header-right {
+min-width: 0;
+width: 100%;
+display: flex;
+flex-direction: column;
+gap: 6px;
+}
+.card .member-photo {
+width: 100px;
+height: 128px;
+object-fit: cover;
+border-radius: 8px;
+flex-shrink: 0;
+}
+.card .member-photo-placeholder {
+display: flex;
+align-items: center;
+justify-content: center;
+background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+color: #fff;
+font-size: 1.25rem;
+font-weight: 700;
+letter-spacing: 0.02em;
+}
+/* .card .card-header-right .card-name {
+margin: 0;
+border-bottom: 1px solid #ddd;
+padding-bottom: 4px;
+} */
+.card-badge-row {
+display: flex;
+flex-wrap: wrap;
+gap: 6px;
+align-items: flex-start;
+}
+/* Badge row inside .card-header-col (desktop); no extra vertical space */
+.card-header .card-badge-row {
+margin: 0;
+padding: 0;
+min-height: 0;
+line-height: 1;
+}
+.card h3.card-name {
+font-size: 1.1em;
+margin-bottom: 6px;
+border-bottom: 1px solid #ddd;
+padding-bottom: 4px;
+}
+.card-name-meta {
+display: block;
+font-weight: normal;
+font-size: 0.88em;
+color: #555;
+margin-top: 2px;
+}
+/* Desktop only: padding between name line and badges */
+@media (min-width: 769px) {
+.card h3.card-name {
+margin-bottom: 8px;
+}
+}
+.card .role-label {
+display: inline-block;
+font-size: 0.8em;
+font-weight: bold;
+text-transform: uppercase;
+letter-spacing: 0.05em;
+color: #fff;
+padding: 2px 8px;
+}
+.role-senator {
+background: #336;
+}
+.role-rep {
+background: #346;
+}
+.role-broker {
+background: #633;
+}
+.role-ally {
+background: #363;
+}
+.role-super-ally {
+background: #a60;
+}
+.role-badge {
+background: #555;
+margin-right: 4px;
+}
+/* ── Institutional Power Badges ── */
+.power-badges {
+display: flex;
+flex-wrap: wrap;
+gap: 6px;
+margin-bottom: 8px;
+}
+.power-badge-wrapper {
+display: inline-block;
+}
+.power-badge {
+display: inline-block;
+font-size: 0.75em;
+font-weight: bold;
+text-transform: uppercase;
+letter-spacing: 0.06em;
+max-width: 100%;
+overflow-wrap: break-word;
+word-break: break-word;
+color: #fff;
+padding: 3px 10px;
+cursor: pointer;
+list-style: none;
+/* remove default <details> marker */
+user-select: none;
+}
+.power-badge::-webkit-details-marker {
+display: none;
+/* Safari marker removal */
+}
+.power-badge::marker {
+content: "";
+/* Firefox/Chrome marker removal */
+}
+.power-badge:hover {
+filter: brightness(1.2);
+}
+.power-badge-leadership {
+background: #2c2c54;
+}
+.power-badge-chair {
+background: #7b5b2a;
+}
+.power-badge-influence {
+background: #a63d2f;
+}
+/* Icon prefixes via Unicode — no emoji dependencies */
+.power-icon-leadership::before {
+content: "\1F6E1\FE0E ";
+/* shield */
+}
+.power-icon-chair::before {
+content: "\26A1\FE0E ";
+/* lightning bolt */
+}
+.power-icon-influence::before {
+content: "\1F525\FE0E ";
+/* fire */
+}
+.power-badge-explanation {
+font-size: 0.82em;
+line-height: 1.4;
+color: #333;
+background: #fafaf5;
+border: 1px solid #ddd;
+border-top: none;
+padding: 6px 10px;
+margin-top: 0;
+max-width: 360px;
+}
+/* ── Power Context box ── */
+.power-context {
+margin: 10px 0;
+padding: 12px 16px;
+background: #f0f4fa;
+border: 1px solid #c0cde0;
+border-left: 4px solid #3a6eb5;
+}
+.power-context-title {
+font-size: 0.92em;
+font-weight: bold;
+color: #2a4a7a;
+margin: 0 0 8px 0;
+text-transform: uppercase;
+letter-spacing: 0.04em;
+}
+.power-context-list {
+list-style: none;
+margin: 0;
+padding: 0;
+font-size: 0.88em;
+line-height: 1.5;
+}
+.power-context-list li {
+padding: 4px 0;
+}
+.power-context-list li+li {
+border-top: 1px solid #d5dde8;
+margin-top: 2px;
+padding-top: 6px;
+}
+.power-signal {
+color: #2a4a7a;
+}
+.power-sub {
+margin: 1px 0 0 0;
+padding-left: 16px;
+font-size: 0.92em;
+color: #445;
+}
+.power-highlight {
+font-weight: bold;
+color: #8b4513;
+}
+/* ── Compact Scorecard (always visible) ── */
+.compact-scorecard {
+margin: 10px 0;
+padding: 8px 14px;
+background: #fafaf5;
+border: 1px solid #ddd;
+overflow-wrap: break-word;
+word-break: break-word;
+}
+.compact-stats {
+list-style: none;
+margin: 0;
+padding: 0;
+font-size: 0.88em;
+line-height: 1.6;
+}
+.compact-stats li {
+padding: 1px 0;
+}
+.caucus-compare {
+font-weight: bold;
+color: #2a6a2a;
+font-size: 0.92em;
+}
+/* ── Contact row ── */
+.contact-row {
+display: flex;
+flex-wrap: wrap;
+gap: 12px;
+margin: 10px 0;
+padding: 8px 0;
+border-top: 1px solid #ddd;
+border-bottom: 1px solid #ddd;
+font-size: 0.88em;
+}
+.contact-link {
+text-decoration: none;
+color: #0645ad;
+padding: 2px 0;
+}
+.contact-link:hover {
+text-decoration: underline;
+}
+.contact-phone::before {
+content: "\260E\FE0E ";
+}
+.contact-email::before {
+content: "\2709\FE0E ";
+}
+.contact-profile::before {
+content: "\1F517\FE0E ";
+}
+.card .metric-help {
+font-size: 0.85em;
+color: #666;
+cursor: help;
+margin-left: 2px;
+}
+.card .metric-note {
+font-size: 0.8em;
+color: #666;
+font-weight: normal;
+}
+.card .card-bio {
+margin-top: 6px;
+font-size: 0.9em;
+color: #333;
+min-width: 0;
+}
+.card .card-header-right .card-bio {
+flex-shrink: 0;
+}
+.card .card-bio-text {
+margin: 0;
+line-height: 1.4;
+}
+.card .card-bio-text.card-bio-truncated {
+display: -webkit-box;
+-webkit-line-clamp: 2;
+-webkit-box-orient: vertical;
+overflow: hidden;
+}
+.card .card-bio-toggle {
+background: none;
+border: none;
+padding: 0;
+margin-top: 4px;
+font-size: 0.85em;
+color: #369;
+cursor: pointer;
+text-decoration: underline;
+}
+.card .card-bio-toggle:hover {
+color: #069;
+}
+.card .why-chosen {
+margin-top: 10px;
+font-size: 0.9em;
+color: #444;
+}
+.card .script-hint {
+margin-top: 10px;
+padding: 8px 12px;
+background: #fffff0;
+border-left: 3px solid #cc9;
+font-style: italic;
+font-size: 0.95em;
+}
+/* ── Collapsible Legislative Scorecard inside cards ── */
+.card-scorecard {
+margin-top: 10px;
+border: 1px solid #ccd;
+background: #f8f9fc;
+}
+.card-scorecard summary {
+cursor: pointer;
+font-weight: bold;
+font-size: 0.9em;
+padding: 6px 10px;
+color: #335;
+border-bottom: 1px solid #ccd;
+}
+.card-scorecard[open] summary {
+border-bottom: 1px solid #ccd;
+}
+.scorecard-body {
+padding: 6px 10px 10px;
+}
+.scorecard-table {
+width: 100%;
+border-collapse: collapse;
+font-size: 0.85em;
+}
+.scorecard-table th,
+.scorecard-table td {
+text-align: left;
+padding: 2px 6px;
+border-bottom: 1px solid #dde;
+}
+.scorecard-section-head {
+background: #eef0f5;
+font-size: 0.95em;
+padding: 4px 6px;
+color: #335;
+}
+.scorecard-table td:last-child {
+text-align: right;
+font-variant-numeric: tabular-nums;
+}
+.scorecard-note {
+font-size: 0.9em;
+color: #666;
+font-weight: normal;
+}
+.scorecard-formula-note {
+font-size: 0.8em;
+color: #555;
+padding: 4px 8px 8px;
+font-style: italic;
+border-bottom: 1px solid #e0e0e0;
+}
+.tooltip-weights-title {
+font-size: 0.9em;
+margin: 0.5em 0 0.25em;
+font-weight: 600;
+}
+.tooltip-content .tooltip-weights-list {
+margin: 0 0 0.5em;
+padding-left: 1.2em;
+font-size: 0.85em;
+line-height: 1.4;
+}
+/* ── Collapsible Committee Assignments inside cards ── */
+.card-committees {
+margin-top: 10px;
+border: 1px solid #ccd;
+background: #f9faf8;
+}
+.card-committees summary {
+cursor: pointer;
+font-weight: bold;
+font-size: 0.9em;
+padding: 6px 10px;
+color: #335;
+border-bottom: 1px solid #ccd;
+}
+.card-committees[open] summary {
+border-bottom: 1px solid #ccd;
+}
+.committees-body {
+padding: 8px 10px 10px;
+}
+.committee-row {
+margin-bottom: 8px;
+}
+.committee-row:last-child {
+margin-bottom: 0;
+}
+.committee-role-badge {
+display: inline-block;
+font-size: 0.75em;
+font-weight: bold;
+text-transform: uppercase;
+letter-spacing: 0.04em;
+color: #fff;
+padding: 1px 6px;
+margin-right: 4px;
+vertical-align: middle;
+}
+.badge-chair,
+.badge-chairperson {
+background: #8b4513;
+}
+.badge-vice-chair,
+.badge-vice-chairperson {
+background: #6a6a3a;
+}
+.badge-sub-chair,
+.badge-sub-chairperson {
+background: #7a6b4a;
+}
+.badge-sub-vice-chair,
+.badge-sub-vice-chairperson {
+background: #5a5a4a;
+}
+.badge-minority-spokesperson {
+background: #556;
+}
+.badge-member {
+background: #889;
+}
+.committee-name {
+font-size: 0.9em;
+}
+.committee-power-note {
+margin: 2px 0 2px 0;
+font-size: 0.82em;
+color: #555;
+font-style: italic;
+padding-left: 4px;
+}
+.committee-stats {
+font-size: 0.82em;
+color: #445;
+padding-left: 4px;
+font-variant-numeric: tabular-nums;
+}
+.committee-members {
+font-size: 0.88em;
+}
+.committee-member-list {
+color: #444;
+font-size: 0.9em;
+}
+/* ── Collapsible Voting Record inside cards ── */
+.card-voting-record {
+margin-top: 10px;
+border: 1px solid #ccd;
+background: #faf9f6;
+}
+.card-voting-record summary {
+cursor: pointer;
+font-weight: bold;
+font-size: 0.9em;
+padding: 6px 10px;
+color: #335;
+border-bottom: 1px solid #ccd;
+}
+.card-voting-record[open] summary {
+border-bottom: 1px solid #ccd;
+}
+.voting-record-body {
+padding: 8px 10px 10px;
+}
+.vote-list {
+margin: 0 0 8px 0;
+max-height: 320px;
+overflow-y: auto;
+}
+.vote-row {
+display: flex;
+align-items: baseline;
+gap: 8px;
+padding: 3px 0;
+font-size: 0.85em;
+border-bottom: 1px solid #eee;
+}
+.vote-row:last-child {
+border-bottom: none;
+}
+.vote-bill {
+font-weight: bold;
+white-space: nowrap;
+min-width: 72px;
+color: #335;
+text-decoration: none;
+}
+a.vote-bill {
+color: #0645ad;
+}
+a.vote-bill:hover {
+text-decoration: underline;
+}
+a.vote-bill:visited {
+color: #551a8b;
+}
+.vote-desc {
+flex: 1;
+color: #555;
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
+}
+.vote-indicator {
+font-weight: bold;
+font-size: 0.85em;
+text-transform: uppercase;
+letter-spacing: 0.03em;
+padding: 1px 6px;
+white-space: nowrap;
+}
+.vote-yes {
+color: #2a7a2a;
+background: #e6f4e6;
+}
+.vote-no {
+color: #a03030;
+background: #fbe8e8;
+}
+.vote-present {
+color: #886600;
+background: #fdf5dd;
+}
+.vote-nv {
+color: #666;
+background: #f0f0f0;
+}
+.vote-outcome {
+font-size: 0.8em;
+white-space: nowrap;
+padding: 1px 5px;
+}
+.vote-outcome-passed {
+color: #2a6a2a;
+}
+.vote-outcome-vetoed,
+.vote-outcome-stuck {
+color: #993333;
+}
+.vote-outcome-in-progress {
+color: #886600;
+}
+.vote-outcome-unknown {
+color: #888;
+}
+.vote-summary {
+font-size: 0.85em;
+color: #445;
+padding: 6px 0 2px;
+border-top: 1px solid #dde;
+}
+.vote-summary span {
+display: block;
+margin-bottom: 2px;
+}
+.vote-pattern {
+font-variant-numeric: tabular-nums;
+}
+.persuadable-callout {
+margin-top: 6px;
+padding: 6px 10px;
+background: #fff8e6;
+border-left: 3px solid #d4a017;
+font-size: 0.88em;
+color: #665500;
+}
+/* ── Influence Network section inside cards ── */
+.influence-network {
+margin-top: 10px;
+padding: 10px 14px;
+background: #f5f8f0;
+border: 1px solid #cdc;
+border-left: 3px solid #6a6;
+}
+.influence-title {
+font-size: 0.9em;
+font-weight: bold;
+color: #353;
+margin: 0 0 6px 0;
+}
+.influence-list {
+list-style: none;
+margin: 0;
+padding: 0;
+font-size: 0.88em;
+line-height: 1.55;
+}
+.influence-list li {
+padding: 2px 0;
+}
+.influence-list li+li {
+border-top: 1px solid #dde8d8;
+margin-top: 2px;
+padding-top: 4px;
+}
+.influence-detail {
+color: #556;
+font-size: 0.92em;
+}
+.section-desc {
+font-size: 0.9em;
+color: #666;
+margin-bottom: 4px;
+overflow-wrap: break-word;
+word-break: break-word;
+}
+/* ── Results container: prevent horizontal overflow ── */
+#results {
+min-width: 0;
+overflow-wrap: break-word;
+}
+/* ── ZIP search loading state: truck animation (gameified) ── */
+.results-loading {
+min-height: 160px;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+gap: 16px;
+padding: 24px 0;
+margin-top: 8px;
+}
+.results-loading-track {
+width: 100%;
+max-width: 320px;
+height: 48px;
+position: relative;
+overflow: hidden;
+}
+.results-loading-truck {
+position: absolute;
+left: 0;
+top: 50%;
+transform: translateY(-50%) scaleX(-1);
+font-size: 2.5rem;
+animation: results-truck-drive 1.8s ease-in-out forwards;
+}
+@keyframes results-truck-drive {
+0% {
+left: 0;
+transform: translateY(-50%) scaleX(-1);
+}
+100% {
+left: 100%;
+transform: translate(-100%, -50%) scaleX(-1);
+}
+}
+.results-loading-status {
+font-size: 1rem;
+font-weight: 500;
+color: #555;
+}
+.results-loading-fact {
+font-size: 0.875rem;
+color: #777;
+max-width: 320px;
+text-align: center;
+line-height: 1.4;
+}
+/* ── Two-column results: fixed aside + scrollable main ── */
+.results-layout {
+display: flex;
+gap: 20px;
+margin-top: 12px;
+align-items: flex-start;
+min-width: 0;
+}
+.results-aside {
+width: 260px;
+flex-shrink: 0;
+position: sticky;
+top: 12px;
+max-height: calc(100vh - 24px);
+overflow-y: auto;
+}
+.results-main {
+flex: 1;
+min-width: 0;
+overflow-wrap: break-word;
+word-break: break-word;
+}
+.results-main>h2:first-of-type {
+margin-top: 0;
+}
+.results-main h2 {
+overflow-wrap: break-word;
+word-break: break-word;
+}
+/* ── How-it-works (sidebar block) ── */
+.how-it-works {
+border: 1px solid #ccd;
+background: #f8f9fc;
+font-size: 0.85em;
+}
+.how-it-works .hiw-title {
+margin: 0;
+padding: 8px 10px;
+font-size: 1em;
+font-weight: bold;
+color: #335;
+border-bottom: 1px solid #ccd;
+}
+/* Collapsible sidebar (details/summary): summary looks like title, click to toggle */
+.how-it-works-details summary.hiw-title {
+cursor: pointer;
+list-style: none;
+user-select: none;
+}
+.how-it-works-details summary.hiw-title::-webkit-details-marker,
+.how-it-works-details summary.hiw-title::marker {
+display: none;
+content: none;
+}
+.how-it-works-details summary.hiw-title::after {
+content: " \25bc";
+font-size: 0.75em;
+color: #668;
+margin-left: 4px;
+}
+.how-it-works-details[open] summary.hiw-title::after {
+content: " \25b2";
+}
+.how-it-works .hiw-body {
+padding: 8px 10px 12px;
+line-height: 1.45;
+}
+.how-it-works .hiw-body dt {
+font-weight: bold;
+margin-top: 8px;
+font-size: 0.95em;
+}
+.how-it-works .hiw-body dd {
+margin: 2px 0 0 0;
+}
+.how-it-works .hiw-note {
+margin-top: 10px;
+padding-top: 8px;
+border-top: 1px solid #e0e2e8;
+font-size: 0.9em;
+color: #555;
+}
+.how-it-works .hiw-details {
+margin-top: 8px;
+}
+.how-it-works .hiw-details summary {
+cursor: pointer;
+font-weight: bold;
+}
+.how-it-works .formula-table {
+width: 100%;
+border-collapse: collapse;
+margin-top: 4px;
+font-size: 0.88em;
+}
+.how-it-works .formula-table th,
+.how-it-works .formula-table td {
+text-align: left;
+padding: 2px 6px;
+border-bottom: 1px solid #dde;
+}
+.how-it-works .formula-table th {
+background: #eef0f5;
+}
+/* ── Seed mode notice ── */
+.seed-notice {
+font-size: 0.85em;
+color: #665500;
+padding: 8px 12px;
+border: 1px solid #dd9;
+background: #fffde6;
+margin-bottom: 12px;
+}
