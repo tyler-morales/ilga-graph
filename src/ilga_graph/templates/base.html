@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <link rel="icon" href="/favicon.ico" type="image/svg+xml">
     <title>{% block title %}{{ site_name }}{% endblock %}</title>
     <meta name="description" content="{% block meta_description %}{{ meta_description }}{% endblock %}">
@@ -35,6 +35,8 @@
     <link rel="stylesheet" href="/static/css/intelligence-tables.css">
     <script src="https://unpkg.com/@floating-ui/dom@1.6.11/dist/floating-ui.dom.umd.min.js"
         crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/@popperjs/core@2" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/tippy.js@6" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/htmx.org@2.0.4"
         integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
         crossorigin="anonymous"></script>

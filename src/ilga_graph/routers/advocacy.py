@@ -78,7 +78,9 @@ async def _build_search_results_context(
     house_district = district_info.il_house
     warnings: list[str] = []
 
-    committee_codes = CATEGORY_COMMITTEES.get(category, [])
+    # Power Broker: default topic to Transportation when no category selected.
+    topic_for_broker = category or "Transportation"
+    committee_codes = CATEGORY_COMMITTEES.get(topic_for_broker, [])
     committee_ids = ah.committee_member_ids(state, committee_codes) if committee_codes else None
     category_label = category if category else ""
 
@@ -147,10 +149,10 @@ async def _build_search_results_context(
         reverse=True,
     )
 
-    exclude_dist = senate_district or ""
     broker_member, broker_why = ah.find_power_broker(
         state,
-        exclude_dist,
+        exclude_senate_district=senate_district or "",
+        exclude_house_district=house_district or "",
         committee_ids=committee_ids,
         committee_codes=committee_codes or None,
         category_name=category_label,
@@ -660,10 +662,11 @@ async def advocacy_search(
 
     1. **Your Senator** — IL Senate member for this ZIP's district.
     2. **Your Representative** — IL House member for this ZIP's district.
-    3. **Power Broker** — highest Moneyball score in the Senate (different district).
+    3. **Power Broker** — committee chair for the topic (default Transportation),
+       or highest Moneyball senator or representative outside your district.
 
-    When *category* is provided, Power Broker is filtered to members who sit
-    on a committee in that policy area.
+    When *category* is empty, topic defaults to Transportation for chair lookup.
+    When *category* is provided, Power Broker is filtered to that policy area.
 
     When the request comes from htmx (``HX-Request`` header), only the
     results partial is returned.

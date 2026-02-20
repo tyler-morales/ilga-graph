@@ -71,27 +71,25 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                 <div class="card-badge-row">
                     {% if member.badges %}
                     {% for badge in member.badges %}
-                    <span class="tooltip-wrap"><span class="role-label role-badge">{{ badge }}</span><span
+                    <span class="tooltip-wrap"><span class="role-label role-badge" tabindex="0" role="button" aria-label="{{ badge }}, focus or hover for description">{{ badge }}</span><span
                             class="tooltip-content"><strong>{{ badge }}</strong>
-                            <p>{% if badge == 'Power Broker' %}Highest-influence senator (or committee chair for
-                                your topic). Key target for co-sponsorship.{% else %}{{ badge }} role for
+                            <p>{% if badge == 'Power Broker' %}Committee chair for your topic (default Transportation), or highest Moneyball senator or rep. Key target for co-sponsorship.{% else %}{{ badge }} role for
                                 this advocacy target.{% endif %}</p>
                         </span></span>
                     {% endfor %}
                     {% else %}
-                    <span class="tooltip-wrap"><span class="role-label {{ role_class }}">{{ role_label
+                    <span class="tooltip-wrap"><span class="role-label {{ role_class }}" tabindex="0" role="button" aria-label="{{ role_label }}, focus or hover for description">{{ role_label
                             }}</span><span class="tooltip-content"><strong>{{ role_label }}</strong>
                             <p>{% if role_class == 'role-senator' %}Your state senator for this ZIP's district.
                                 Constituent calls are tracked—yours counts.{% elif role_class == 'role-rep'
                                 %}Your
                                 state representative votes on bills in the House before the Senate.{% elif
-                                role_class == 'role-broker' %}Committee chair for your topic or highest
-                                Moneyball senator. Key target for co-sponsorship.{% else %}{{ role_label }}.{% endif %}
+                                role_class == 'role-broker' %}Committee chair for your topic (default Transportation), or highest Moneyball senator or rep. Key target for co-sponsorship.{% else %}{{ role_label }}.{% endif %}
                             </p>
                         </span></span>
                     {% endif %}
                     {% for pb in member.power_badges %}
-                    <span class="tooltip-wrap"><span class="power-badge {{ pb.css_class }}"><span
+                    <span class="tooltip-wrap"><span class="power-badge {{ pb.css_class }}" tabindex="0" role="button" aria-label="{{ pb.label }}, focus or hover for description"><span
                                 class="power-badge-icon power-icon-{{ pb.icon }}"></span> {{ pb.label
                             }}</span><span class="tooltip-content"><strong>{{ pb.label }}</strong>
                             <p>{{ pb.explanation }}</p>
@@ -178,9 +176,7 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                     {% for chip_key in member.get('recommendation_chip_order', []) %}
                     {% if chip_key == 'cosponsor_lift' %}
                     <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-wow"
-                            onclick="this.closest('.tooltip-wrap').classList.toggle('tooltip-open')" role="button"
-                            tabindex="0"
-                            onkeydown="if(event.key==='Enter'||event.key===' ') { this.closest('.tooltip-wrap').classList.toggle('tooltip-open'); event.preventDefault(); }"><span
+                            role="button" tabindex="0"><span
                                 class="signal-emoji" aria-hidden="true">📈</span>
                             <span class="chip-text-full">Bills {{ _first_name }} co-sponsors pass at {{
                                 net.cosponsor_passage_multiplier }}&times; the chamber rate</span>
@@ -199,9 +195,7 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                         </span></span>
                     {% elif chip_key == 'outperforms_caucus' %}
                     <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-wow"
-                            onclick="this.closest('.tooltip-wrap').classList.toggle('tooltip-open')" role="button"
-                            tabindex="0"
-                            onkeydown="if(event.key==='Enter'||event.key===' ') { this.closest('.tooltip-wrap').classList.toggle('tooltip-open'); event.preventDefault(); }"><span
+                            role="button" tabindex="0"><span
                                 class="signal-emoji" aria-hidden="true">📈</span>
                             <span class="chip-text-full">Outperforms caucus: {{ net.passage_rate_vs_caucus
                                 }}&times; average passage</span>
@@ -222,9 +216,7 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                         net.collaborator_republicans else net.collaborator_republicans %} {% set
                         bipartisan_pct=(minority_collab / total_collab * 100)|round(1) if total_collab else 0 %} <span
                         class="tooltip-wrap tooltip-click"><span class="signal-chip signal-bridge"
-                            onclick="this.closest('.tooltip-wrap').classList.toggle('tooltip-open')" role="button"
-                            tabindex="0"
-                            onkeydown="if(event.key==='Enter'||event.key===' ') { this.closest('.tooltip-wrap').classList.toggle('tooltip-open'); event.preventDefault(); }"><span
+                            role="button" tabindex="0"><span
                                 class="signal-emoji" aria-hidden="true">🤝</span>
                             <span class="chip-text-full">{{ net.bipartisan_label }}</span>
                             <span class="chip-text-mobile">Bipartisan</span></span><span class="tooltip-content"><span
@@ -239,9 +231,7 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                         </span></span>
                         {% elif chip_key == 'big_network' %}
                         <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-wow"
-                                onclick="this.closest('.tooltip-wrap').classList.toggle('tooltip-open')" role="button"
-                                tabindex="0"
-                                onkeydown="if(event.key==='Enter'||event.key===' ') { this.closest('.tooltip-wrap').classList.toggle('tooltip-open'); event.preventDefault(); }"><span
+                                role="button" tabindex="0"><span
                                     class="signal-emoji" aria-hidden="true">👥</span>
                                 <span class="chip-text-full">Works with {{ net.unique_collaborators }}+
                                     legislators</span>
@@ -257,9 +247,7 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                         {% elif chip_key == 'chair' %}
                         {% for cr in leadership_roles %}
                         <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-chair"
-                                onclick="this.closest('.tooltip-wrap').classList.toggle('tooltip-open')" role="button"
-                                tabindex="0"
-                                onkeydown="if(event.key==='Enter'||event.key===' ') { this.closest('.tooltip-wrap').classList.toggle('tooltip-open'); event.preventDefault(); }"><span
+                                role="button" tabindex="0"><span
                                     class="signal-emoji" aria-hidden="true">🪑</span>
                                 <span class="chip-text-full">{{ cr.role }}: {{ cr.name }}{% if cr.total_bills >
                                     0 and cr.advancement_rate_pct >= 25 %} ({{ cr.advancement_rate_pct }}%
@@ -278,9 +266,7 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                         {% endfor %}
                         {% elif chip_key == 'high_rank' %}
                         <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-rank"
-                                onclick="this.closest('.tooltip-wrap').classList.toggle('tooltip-open')" role="button"
-                                tabindex="0"
-                                onkeydown="if(event.key==='Enter'||event.key===' ') { this.closest('.tooltip-wrap').classList.toggle('tooltip-open'); event.preventDefault(); }"><span
+                                role="button" tabindex="0"><span
                                     class="signal-emoji" aria-hidden="true">🏆</span>
                                 <span class="chip-text-full">Top of {{ member.chamber }} (#{{
                                     member.rank_chamber }} of {{ member.chamber_size }})</span>
@@ -295,9 +281,7 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                             </span></span>
                         {% elif chip_key == 'high_passage' %}
                         <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-passage"
-                                onclick="this.closest('.tooltip-wrap').classList.toggle('tooltip-open')" role="button"
-                                tabindex="0"
-                                onkeydown="if(event.key==='Enter'||event.key===' ') { this.closest('.tooltip-wrap').classList.toggle('tooltip-open'); event.preventDefault(); }"><span
+                                role="button" tabindex="0"><span
                                     class="signal-emoji" aria-hidden="true">📊</span>
                                 <span class="chip-text-full">{{ member.passage_rate_pct }}% passage rate ({{
                                     member.laws_passed }}/{{ member.laws_filed }} passed)</span>
@@ -313,9 +297,7 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                             </span></span>
                         {% elif chip_key == 'productive' %}
                         <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-passage"
-                                onclick="this.closest('.tooltip-wrap').classList.toggle('tooltip-open')" role="button"
-                                tabindex="0"
-                                onkeydown="if(event.key==='Enter'||event.key===' ') { this.closest('.tooltip-wrap').classList.toggle('tooltip-open'); event.preventDefault(); }"><span
+                                role="button" tabindex="0"><span
                                     class="signal-emoji" aria-hidden="true">✅</span>
                                 <span class="chip-text-full">{{ member.laws_passed }} law{{ 's' if
                                     member.laws_passed != 1 else '' }} passed</span>
@@ -332,9 +314,7 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                             </span></span>
                         {% elif chip_key == 'cross_party' %}
                         <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-bridge"
-                                onclick="this.closest('.tooltip-wrap').classList.toggle('tooltip-open')" role="button"
-                                tabindex="0"
-                                onkeydown="if(event.key==='Enter'||event.key===' ') { this.closest('.tooltip-wrap').classList.toggle('tooltip-open'); event.preventDefault(); }"><span
+                                role="button" tabindex="0"><span
                                     class="signal-emoji" aria-hidden="true">🤝</span>
                                 <span class="chip-text-full">Works across the aisle ({{ member.bridge_pct }}%
                                     cross-party bills)</span>
@@ -350,9 +330,7 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                             </span></span>
                         {% elif chip_key == 'persuadable' %}
                         <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-persuadable"
-                                onclick="this.closest('.tooltip-wrap').classList.toggle('tooltip-open')" role="button"
-                                tabindex="0"
-                                onkeydown="if(event.key==='Enter'||event.key===' ') { this.closest('.tooltip-wrap').classList.toggle('tooltip-open'); event.preventDefault(); }"><span
+                                role="button" tabindex="0"><span
                                     class="signal-emoji" aria-hidden="true">💬</span>
                                 <span class="chip-text-full">Breaks party ranks {{
                                     member.voting_record.party_defection_count }}&times; &mdash;
@@ -654,14 +632,14 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                     <dt>Your Senator &amp; Representative</dt>
                     <dd>ZIP matched to IL Senate/House districts via Census.</dd>
                     <dt>Power Broker</dt>
-                    <dd>Committee chair for your topic, or highest <span class="moneyball-aside-trigger" role="button"
+                    <dd>Committee chair for your topic (default Transportation), or highest <span class="moneyball-aside-trigger" role="button"
                             tabindex="0" aria-expanded="false" aria-controls="aside-moneyball-def"
                             aria-label="Toggle Moneyball definition"><span class="moneyball-term">Moneyball</span><span
-                                class="moneyball-help" style="font-size:0.75em;">?</span></span> senator.
+                                class="moneyball-help" style="font-size:0.75em;">?</span></span> senator or rep.
                         <div class="moneyball-definition-block" id="aside-moneyball-def" aria-hidden="true">
                             <p class="moneyball-definition-text"><em>Moneyball</em> is a 0–100 composite score
                                 combining passage rate, bill progress, co-sponsor pull, cross-party work,
-                                network centrality, and institutional role. We use it to rank senators and find
+                                network centrality, and institutional role. We use it to rank senators and reps and find
                                 high-impact targets.</p>
                             <div class="moneyball-formula-display formula-one-line" aria-label="Moneyball formula">
                                 <span class="formula-lhs">Score <span class="formula-eq">=</span></span>

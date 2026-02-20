@@ -53,10 +53,10 @@ class ZipDistrictInfo:
 
 # ── Seed-mode fallback (ZIPs that match the 20-member dev mock) ─────────────────
 # All pairings below use Senate+House districts that exist in mocks/dev/members.json
-# so dev/seed mode shows Your Senator, Your Rep, Power Broker, and Ally (no red banners).
+# so dev/seed mode shows Your Senator, Your Rep, and Power Broker (no red banners).
 
 _SEED_CROSSWALK: dict[str, ZipDistrictInfo] = {
-    # Primary dev ZIPs — use these to test; all 4 cards render.
+    # Primary dev ZIPs — use these to test; all 3 cards (senator, rep, broker) render.
     "60601": ZipDistrictInfo(il_house="26", il_senate="18", us_house="4"),  # Cunningham + Buckner
     "60605": ZipDistrictInfo(il_house="106", il_senate="53", us_house="16"),  # Balkema + Bunting
     "60120": ZipDistrictInfo(il_house="26", il_senate="22", us_house="8"),  # Castro + Buckner

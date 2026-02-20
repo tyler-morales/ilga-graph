@@ -54,6 +54,18 @@
   opacity: 1;
 }
 
+/* Advocacy results: all tooltip content is used by Tippy.js (cloned into body); hide inline copy */
+#results .tooltip-wrap .tooltip-content {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .tooltip-wrap .tooltip-content strong {
   display: block;
   margin-bottom: 6px;
@@ -310,7 +322,51 @@
 }
 
 .tooltip-wrap.tooltip-click .signal-chip {
-  cursor: pointer;
+  cursor: help;
+}
+
+/* Tippy.js: single tooltip style for advocacy (white background). Apply to ALL .tippy-box so chips and badges match. */
+.tippy-box {
+  background: #fff !important;
+  color: #111 !important;
+  font-size: 0.85em;
+  line-height: 1.5;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  border: 1px solid #e0e0e0;
+  padding: 0;
+  max-width: 340px;
+}
+.tippy-box .tippy-content {
+  padding: 12px 14px;
+}
+.tippy-box .tooltip-title,
+.tippy-box strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.9em;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #111;
+}
+.tippy-box .tooltip-title {
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.tippy-box p {
+  margin: 0 0 8px;
+  color: #333;
+}
+.tippy-box p:last-child {
+  margin-bottom: 0;
+}
+/* Tippy arrow: match light theme (white fill, grey border) */
+.tippy-box .tippy-arrow {
+  color: #fff;
+}
+.tippy-box .tippy-arrow::before {
+  border-bottom-color: #fff;
+  border-top-color: #fff;
 }
 
 /* ── Card details (collapsed) ── */
@@ -635,6 +691,22 @@ padding-bottom: 4px;
   margin-right: 4px;
 }
 
+.card-badge-row .tooltip-wrap > .role-label,
+.card-badge-row .tooltip-wrap > .power-badge {
+  cursor: help;
+}
+
+.card-badge-row .tooltip-wrap > .role-label:focus-visible,
+.card-badge-row .tooltip-wrap > .power-badge:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.card-badge-row .tooltip-wrap > .power-badge:focus-visible {
+  filter: brightness(1.2);
+}
+
 /* ── Institutional Power Badges ── */
 .power-badges {
   display: flex;
@@ -658,7 +730,7 @@ padding-bottom: 4px;
   word-break: break-word;
   color: #fff;
   padding: 5px 10px;
-  cursor: pointer;
+  cursor: help;
   list-style: none;
   /* remove default <details> marker */
   user-select: none;
