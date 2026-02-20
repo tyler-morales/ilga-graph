@@ -233,6 +233,14 @@ Or manually:
 pip install -e ".[dev]"
 ```
 
+**Pre-commit (recommended):** To enforce line length (100 chars) and formatting on every commit, install the git hooks once:
+
+```bash
+pre-commit install
+```
+
+Then Ruff (check + format) runs automatically on commit. To check the whole repo without committing: `make pre-commit`.
+
 ### Pipeline: scrape → serve
 
 Data is scraped once into `cache/`; the API then **serves only from cache** (no scraping on startup).
@@ -265,10 +273,11 @@ make scrape-incremental   # only new/changed bills
 make test           # pytest
 make lint           # ruff check + format check
 make lint-fix       # auto-fix
+make pre-commit     # run pre-commit on all files (ruff + pytest; same as hook)
 make clean          # remove cache/ and vault files
 ```
 
-**Before opening a PR:** run `make lint` and `make test`.
+**Before opening a PR:** run `make lint` and `make test` (or `make pre-commit` if you use the hooks).
 
 ### Documentation site
 
