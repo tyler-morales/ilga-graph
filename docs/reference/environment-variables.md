@@ -44,6 +44,23 @@ The app loads `.env` from the project root via `python-dotenv`. Copy `.env.examp
 
 ---
 
+## Feature flags
+
+Client-side UX toggles (e.g. ZIP search loading animation) use a **single registry** in `src/ilga_graph/config.py` (`_FEATURE_REGISTRY`). Each flag has:
+
+- **Profile default** — In `dev`, flags default on where it makes sense; in `prod`, they default off so production stays conservative until you opt in.
+- **Env override** — Set `ILGA_FEATURE_<NAME>=1` or `0` in `.env` to override the profile default.
+
+The app exposes only **client-facing** flags (those with `expose_to_client: True`) to templates as `features`; the advocacy index passes them to JS as `window.__ILGA_FEATURES`. Adding a new flag = one entry in the registry (no need to wire it in each route).
+
+| Variable | Dev default | Prod default | Description |
+|----------|-------------|--------------|-------------|
+| `ILGA_FEATURE_ZIP_LOADING_ANIMATION` | `1` | `0` | ZIP search: show truck loading animation before member cards. `1` = on, `0` = off. |
+
+See `config.py` for the full registry and `get_client_features()`.
+
+---
+
 ## Production checklist
 
 ```bash
