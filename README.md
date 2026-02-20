@@ -305,7 +305,7 @@ The default profile is `dev` — just run `make dev` and everything works.
 
 ```bash
 ILGA_PROFILE=prod
-ILGA_CORS_ORIGINS=https://myapp.example.com
+ILGA_CORS_ORIGINS=https://landofkei.org
 ILGA_API_KEY=your-secret-key
 ```
 

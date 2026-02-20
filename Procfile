@@ -1,1 +1,2 @@
-web: uvicorn ilga_graph.main:app --app-dir src --host 0.0.0.0
+# Uses scripts/start_web.sh so PORT is honored (Railway/Render set PORT; local defaults to 8000).
+web: ./scripts/start_web.sh
