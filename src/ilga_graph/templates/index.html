@@ -99,12 +99,6 @@
     </div>
 </div>
 
-{# ── Nav row (compact) ── #}
-<!-- <div class="intel-nav" style="margin-top:12px;">
-    <a href="/explore">&larr; Power Map</a> &middot;
-    <a href="/intelligence">ML Intelligence Dashboard &rarr;</a>
-</div> -->
-
 <div id="results" role="region" aria-label="Search results" {% if your_legislators is defined %}
     data-has-initial-results="true" {% endif %}>
     {% if error and your_legislators is not defined %}<div class="error-msg" role="alert">{{ error }}</div>{% endif %}
@@ -182,15 +176,20 @@
     /* ── Auto-scroll to members when page loads with results (e.g. /advocacy?zip=60071) ── */
     (function () {
         var results = document.getElementById('results');
-        if (results && results.getAttribute('data-has-initial-results') === 'true') {
-            var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            requestAnimationFrame(function () {
-                results.scrollIntoView({
-                    behavior: reduceMotion ? 'auto' : 'smooth',
-                    block: 'start'
-                });
+        if (!results || results.getAttribute('data-has-initial-results') !== 'true') return;
+        var params = new URLSearchParams(window.location.search || '');
+        var autoView = params.get('view') || (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('__ilga_dev_view'));
+        var autoMember = params.get('member_id') || (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('__ilga_dev_member'));
+        if (autoView && autoMember) return;
+        var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        requestAnimationFrame(function () {
+            var drawer = document.getElementById('advocacy-drawer');
+            if ((drawer && drawer.classList.contains('open')) || shouldSkipResultsScroll()) return;
+            results.scrollIntoView({
+                behavior: reduceMotion ? 'auto' : 'smooth',
+                block: 'start'
             });
-        }
+        });
     })();
     /* ── Advocacy tooltips: Tippy.js for chips (singleton) and badges (hover), same theme "advocacy" ── */
     var __recommendationChipSingleton = null;
@@ -264,15 +263,17 @@
     function initRecommendationChipTooltips(container) {
         initAdvocacyTooltips(container);
     }
-
     /* ── Auto-submit on 5-digit ZIP ── */
     document.getElementById('zip_code').addEventListener('input', function () {
         if (this.value.replace(/\D/g, '').length === 5) {
             this.value = this.value.replace(/\D/g, '').slice(0, 5);
             document.getElementById('advocacy-form').requestSubmit();
             setTimeout(function () {
+                var drawer = document.getElementById('advocacy-drawer');
+                if (drawer && drawer.classList.contains('open')) return;
+                if (shouldSkipResultsScroll()) return;
                 var results = document.getElementById('results');
-                results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if (results) results.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 600);
         }
     });
@@ -398,7 +399,8 @@
         applyCardEnterAnimation(results);
         applyCardBioOverflow();
         initRecommendationChipTooltips(results);
-        results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        var drawer = document.getElementById('advocacy-drawer');
+        if (!(drawer && drawer.classList.contains('open')) && !shouldSkipResultsScroll()) results.scrollIntoView({ behavior: 'smooth', block: 'start' });
         __advocacyStoredResponse = null;
         __advocacyLoadingActive = false;
         __advocacyReadyToInject = false;
@@ -434,7 +436,11 @@
         __advocacyReadyToInject = false;
         __advocacyLoadingActive = true;
         target.innerHTML = RESULTS_LOADING_HTML;
-        setTimeout(function () { target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
+        setTimeout(function () {
+            var drawer = document.getElementById('advocacy-drawer');
+            if ((drawer && drawer.classList.contains('open')) || shouldSkipResultsScroll()) return;
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 50);
         var facts = window.__ILGA_LOADING_FACTS;
         if (facts && facts.length > 0) {
             var factEl = document.getElementById('results-loading-fact');
@@ -473,6 +479,8 @@
             setTimeout(function () {
                 applyCardBioOverflow();
                 initRecommendationChipTooltips(e.detail.target);
+                var drawer = document.getElementById('advocacy-drawer');
+                if ((drawer && drawer.classList.contains('open')) || shouldSkipResultsScroll()) return;
                 e.detail.target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
         }
@@ -503,10 +511,22 @@
     }
 
     /* ── Advocacy drawer: Call (script + after-call form) or Email (template + copy/mailto) ── */
+    var DRAWER_CLOSE_MS = 520;
     function openAdvocacyDrawer(view, memberId, zipCode, photoUrl, targetType) {
         var drawer = document.getElementById('advocacy-drawer');
         var body = document.getElementById('advocacy-drawer-body');
         if (!drawer || !body) return;
+        if (drawer.classList.contains('open')) {
+            window.__pendingDrawerOpen = [view, memberId || '', zipCode || '', photoUrl != null && photoUrl !== '' ? photoUrl : '', targetType != null && targetType !== '' ? targetType : ''];
+            closeAdvocacyDrawer();
+            setTimeout(function () {
+                if (!window.__pendingDrawerOpen) return;
+                var a = window.__pendingDrawerOpen;
+                window.__pendingDrawerOpen = null;
+                openAdvocacyDrawer(a[0], a[1], a[2], a[3], a[4]);
+            }, DRAWER_CLOSE_MS);
+            return;
+        }
         drawer.setAttribute('data-member-id', memberId || '');
         drawer.setAttribute('data-drawer-zip', zipCode || '');
         drawer.setAttribute('data-drawer-constituent', '');
@@ -518,10 +538,22 @@
         body.innerHTML = '<p class="drawer-loading">Loading…</p>';
         drawer.classList.add('open');
         document.getElementById('advocacy-drawer-overlay').classList.add('open');
-        if (window.matchMedia('(max-width: 768px)').matches) {
-            document.body.style.overflow = 'hidden';
-            document.body.style.touchAction = 'none';
+        var scrollY;
+        if (document.body.style.position === 'fixed' && typeof window.__drawerScrollY === 'number') {
+            scrollY = window.__drawerScrollY;
+        } else {
+            scrollY = window.scrollY || window.pageYOffset;
         }
+        var scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+        document.documentElement.style.paddingRight = scrollbarWidth + 'px';
+        var bodyCurrentRight = parseFloat(getComputedStyle(document.body).paddingRight) || 0;
+        document.body.style.paddingRight = (bodyCurrentRight + scrollbarWidth) + 'px';
+        document.body.style.position = 'fixed';
+        document.body.style.top = '-' + scrollY + 'px';
+        document.body.style.left = '0';
+        document.body.style.right = '0';
+        document.body.style.overflow = 'hidden';
+        window.__drawerScrollY = scrollY;
         initDrawerFocusTrapAndFocus();
         var fetchView = (view === 'call_wrapup') ? 'call' : view;
         var params = new URLSearchParams({ view: fetchView, member_id: memberId || '', zip: zipCode || '' });
@@ -594,19 +626,43 @@
             d.getAttribute('data-drawer-photo-url') || '', d.getAttribute('data-drawer-target-type') || '');
     }
 
+    /** Skip results scrollIntoView for this many ms after drawer close so zip/result auto-scroll doesn't override restored position. */
+    var DRAWER_CLOSED_SCROLL_GUARD_MS = 1000;
+    function shouldSkipResultsScroll() {
+        return window.__drawerClosedAt && (Date.now() - window.__drawerClosedAt) < DRAWER_CLOSED_SCROLL_GUARD_MS;
+    }
+
     function closeAdvocacyDrawer() {
         var drawer = document.getElementById('advocacy-drawer');
         var overlay = document.getElementById('advocacy-drawer-overlay');
+        var reOpening = !!window.__pendingDrawerOpen;
         if (drawer) drawer.classList.remove('open');
         if (overlay) overlay.classList.remove('open');
-        document.body.style.overflow = '';
-        document.body.style.touchAction = '';
+        if (!reOpening) {
+            var scrollY = window.__drawerScrollY || 0;
+            window.__drawerScrollY = null;
+            var prevFocus = window.__advocacyDrawerPreviousFocus;
+            window.__advocacyDrawerPreviousFocus = null;
+            window.__drawerClosedAt = Date.now();
+            requestAnimationFrame(function () {
+                document.body.style.position = '';
+                document.body.style.top = '';
+                document.body.style.left = '';
+                document.body.style.right = '';
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+                document.documentElement.style.paddingRight = '';
+                void document.body.offsetHeight;
+                document.documentElement.scrollTop = scrollY;
+                document.body.scrollTop = scrollY;
+                try { window.scrollTo({ top: scrollY, left: 0, behavior: 'instant' }); } catch (e) { window.scrollTo(0, scrollY); }
+                if (prevFocus && typeof prevFocus.focus === 'function') {
+                    try { prevFocus.focus({ preventScroll: true }); } catch (err) { }
+                }
+            });
+        }
         if (drawer) drawer.setAttribute('aria-hidden', 'true');
         removeDrawerFocusTrap();
-        if (window.__advocacyDrawerPreviousFocus && typeof window.__advocacyDrawerPreviousFocus.focus === 'function') {
-            try { window.__advocacyDrawerPreviousFocus.focus(); } catch (err) { }
-            window.__advocacyDrawerPreviousFocus = null;
-        }
     }
 
     document.body.addEventListener('click', function (e) {

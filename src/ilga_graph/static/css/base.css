@@ -267,21 +267,22 @@ margin: 0.3em 0;
 color: #888;
 font-size: 0.85em;
 }
-/* ── Responsive: tablet and below ── */
-@media (max-width: 768px) {
-body {
-padding: 12px;
-}
-.container {
-padding: 16px 20px;
-}
+/* ── Responsive: tablet and below (full-width white, no beige) ── */
+@media (max-width: 1024px) {
+  html,
+  body {
+    padding: 0;
+    background: #fff;
+  }
+  .container {
+    border: none;
+    max-width: none;
+    padding: 16px 20px;
+  }
 }
 /* ── Responsive: phone ── */
 @media (max-width: 480px) {
-body {
-padding: 8px;
-}
-.container {
-padding: 12px 14px;
-}
+  .container {
+    padding: 12px 14px;
+  }
 }
