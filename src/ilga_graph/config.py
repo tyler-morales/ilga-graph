@@ -74,6 +74,10 @@ GA_NUMBER: int = GA_ID + 86
 
 # ── Base URLs ────────────────────────────────────────────────────────────────
 BASE_URL: str = _env("ILGA_BASE_URL", "https://www.ilga.gov/").rstrip("/") + "/"
+# Public URL of this app (startup banner, logs). Set in production e.g. https://landofkei.org
+APP_BASE_URL: str = _env("ILGA_APP_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+# Optional; docs site URL for startup banner when different from app (e.g. same host).
+DOCS_BASE_URL: str = _env("ILGA_DOCS_BASE_URL", "").strip().rstrip("/")
 
 # ── Directories ──────────────────────────────────────────────────────────────
 # Dev uses cache/dev/ so it never touches the full scraped data in cache/.

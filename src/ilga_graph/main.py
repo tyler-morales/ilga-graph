@@ -584,14 +584,24 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             flush=True,
         )
 
-    # Show service URLs
+    # Show service URLs (use ILGA_APP_BASE_URL in production so logs show your domain)
     c = _Colors
+    app_url = cfg.APP_BASE_URL
+    graphql_url = f"{app_url}/graphql"
+    if cfg.DOCS_BASE_URL:
+        docs_url = cfg.DOCS_BASE_URL
+        docs_note = ""
+    elif "127.0.0.1" in app_url:
+        docs_url = "http://127.0.0.1:8001"
+        docs_note = f"  {c.DIM}(make docs-serve){c.RESET}"
+    else:
+        docs_url = app_url
+        docs_note = f"  {c.DIM}(docs){c.RESET}"
     print(
         f"\n  {c.BOLD}Services:{c.RESET}\n"
-        f"    {c.WHITE}Website    {c.BRIGHT_CYAN}http://127.0.0.1:8000{c.RESET}\n"
-        f"    {c.WHITE}GraphQL    {c.BRIGHT_CYAN}http://127.0.0.1:8000/graphql{c.RESET}\n"
-        f"    {c.WHITE}Docs       {c.BRIGHT_CYAN}http://127.0.0.1:8001{c.RESET}  "
-        f"{c.DIM}(make docs-serve){c.RESET}\n",
+        f"    {c.WHITE}Website    {c.BRIGHT_CYAN}{app_url}{c.RESET}\n"
+        f"    {c.WHITE}GraphQL    {c.BRIGHT_CYAN}{graphql_url}{c.RESET}\n"
+        f"    {c.WHITE}Docs       {c.BRIGHT_CYAN}{docs_url}{c.RESET}{docs_note}\n",
         flush=True,
     )
 

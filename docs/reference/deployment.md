@@ -48,6 +48,7 @@ ILGA_LOAD_ONLY=1 ILGA_PROFILE=prod uvicorn ilga_graph.main:app --app-dir src --h
 
 | Variable | Purpose |
 |----------|---------|
+| `ILGA_APP_BASE_URL` | Public URL of the app (e.g. `https://landofkei.org`). When set, the startup banner and logs show this URL instead of `http://127.0.0.1:8000`. |
 | `ILGA_DB_PATH` | Path to SQLite DB (default: `data/ilga.db`). Use an absolute path if the process cwd is not the project root. |
 | `ILGA_CACHE_DIR` | Path to cache directory (default: `cache`). Use an absolute path if needed. |
 | `ILGA_SMTP_*` | SMTP settings so verification codes are emailed to users. **If unset, codes are logged to the terminal only** (no email sent) — fine for dev; set these in production. See [Email (Brevo)](email-brevo.md) for setup. |
@@ -75,6 +76,7 @@ See [Environment variables](environment-variables.md) for the full list.
 | Platform | Notes |
 |----------|--------|
 | **VPS** | SSH in, clone repo, install deps (`pip install -e .` or use a venv), upload or rsync `cache/`, set env (e.g. in `.env` or systemd), run the start command. Use Nginx or Caddy as reverse proxy with HTTPS. Run the app with systemd so it restarts on reboot. |
+| **Vultr (Ubuntu)** | Step-by-step with common pitfalls: [Vultr deployment guide](vultr-deployment-guide.md) (SSH user, Python version, venv activation, startup wait, UFW before Certbot). |
 | **Railway / Render** | Connect the repo, set env vars, set **root directory** to the project root (or ensure start command runs from it). Add a **persistent volume** for `data/` (and optionally `cache/`), then upload your cache into the volume or copy it in via a one-off job. Set the start command to include `--port $PORT` if the platform sets `PORT`. |
 | **Fly.io** | Use a Dockerfile or `fly launch`, attach a **Fly Volume** for `data/` (and optionally `cache/`). Run the same uvicorn command; ensure the container’s working directory is the project root. |
 

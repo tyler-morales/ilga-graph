@@ -34,6 +34,8 @@ The app loads `.env` from the project root via `python-dotenv`. Copy `.env.examp
 | `ILGA_TEST_MEMBER_CHAMBER` | `Senate` | Chamber for the test member URL. |
 | `ILGA_CORS_ORIGINS` | *profile* | Comma-separated CORS origins. |
 | `ILGA_API_KEY` | *(empty)* | If set, non-exempt routes require `X-API-Key` header. |
+| `ILGA_APP_BASE_URL` | `http://127.0.0.1:8000` | Public URL of this app; used in the startup banner and logs. Set in production (e.g. `https://landofkei.org`) so logs show your domain. |
+| `ILGA_DOCS_BASE_URL` | *(empty)* | Optional docs site URL for the startup banner when different from the app. |
 | `ILGA_VOTE_BILL_URLS` | *(built-in)* | Comma-separated bill status URLs for votes/slips. |
 | `ILGA_SMTP_HOST` | *(empty)* | SMTP server (e.g. `smtp-relay.brevo.com`). **If unset, verification codes are logged to the terminal only** — no email is sent. See [Email (Brevo)](email-brevo.md). |
 | `ILGA_SMTP_PORT` | `587` | SMTP port. |

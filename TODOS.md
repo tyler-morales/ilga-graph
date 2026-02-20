@@ -51,6 +51,8 @@
   - **Lint:** Fixed remaining E501 in `scripts/snapshot_mocks.py` (docstring + 2 log messages) and `routers/advocacy.py` (kei fact string). `make lint` passes.
   - **Procfile:** Uses `scripts/start_web.sh` so the web process binds to `$PORT` when set (Railway, Render) and defaults to 8000 locally. No dashboard override needed for port.
   - **Docs:** `docs/reference/status-report.md` updated (lint ✅, Procfile ✅, nav ✅); `docs/reference/deployment.md` updated to describe Procfile/start_web.sh. TODOS updated here.
+  - **Vultr deployment guide (2026-02-20):** Added `docs/reference/vultr-deployment-guide.md` — step-by-step Vultr/Ubuntu deploy with corrections: SSH username from dashboard (not root), system Python on Ubuntu 24.04 (not python3.11), activate venv before `pip install -e .`, wait for app startup (~2 min) before curl, UFW allow 80/443 before Certbot, Certbot for HTTPS. Linked from deployment.md and nav.
+  - **Startup banner URLs (2026-02-20):** Service URLs in the startup banner (Website, GraphQL, Docs) now use `ILGA_APP_BASE_URL` (default `http://127.0.0.1:8000`). Set `ILGA_APP_BASE_URL=https://landofkei.org` (or your domain) in production so server logs show your public URL. Optional `ILGA_DOCS_BASE_URL` for docs when different from app. Config: `APP_BASE_URL`, `DOCS_BASE_URL`; main.py banner; .env, deployment.md, environment-variables.md.
 
 - **Accessibility pass — advocacy drawer and results (2026-02-19):**
   - **Drawer:** Advocacy drawer is a modal dialog: `role="dialog"`, `aria-modal="true"`, `aria-label="Outreach: call script and email template"`. When closed, `aria-hidden="true"`; when open, `aria-hidden="false"`. Overlay has `aria-hidden="true"` so it is ignored by screen readers.
@@ -270,7 +272,7 @@
 
 - **Startup summary table + service URLs (2026-02-17):**
   - **Missing ETL steps added to summary table:** The startup banner previously showed only 9 steps (Load → ZIP crosswalk) but omitted three phases that ran after: co-sponsorship graph, ML intelligence loading, and influence engine computation. All three now appear as steps 10–12 with timing and counts. Co-sponsorship graph and ML loading now have `elapsed_graph` and `elapsed_ml` timing variables; influence already had `elapsed_influence` but wasn't passed to the table.
-  - **Service URLs in banner:** After the MVP line, the startup banner now prints a "Services" block with clickable URLs: Website (http://127.0.0.1:8000), GraphQL (http://127.0.0.1:8000/graphql), Docs (http://127.0.0.1:8001, via `make docs-serve`).
+  - **Service URLs in banner:** After the MVP line, the startup banner prints a "Services" block (Website, GraphQL, Docs). URLs come from `ILGA_APP_BASE_URL` (default `http://127.0.0.1:8000`); set in production so logs show your domain. Optional `ILGA_DOCS_BASE_URL` for docs.
   - **CSV timing log extended:** `.startup_timings.csv` now includes `graph_s`, `ml_s`, `influence_s` columns.
 
 - **Advocacy page overhaul — outreach-first redesign (2026-02-17):**
