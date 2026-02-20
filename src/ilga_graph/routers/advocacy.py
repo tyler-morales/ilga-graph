@@ -21,6 +21,7 @@ from ..db import get_db
 from ..db_models import OutreachEvent, User
 from ..dependencies import get_current_user_optional
 from ..member_lookup import find_member_by_district, find_member_by_id
+from ..routers.outreach import get_outreach_aggregate
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
 _LETTER_PDF_PATH = (
@@ -65,25 +66,209 @@ def _loading_facts(member_count: int, zip_count: int) -> list[str]:
     return list(_KEI_LOADING_FACTS)
 
 
+async def _build_search_results_context(
+    zip_code: str,
+    category: str,
+    db: AsyncSession,
+    user: User | None,
+) -> dict[str, Any]:
+    """Build context for the results partial. Assumes zip_code is in state.zip_to_district."""
+    district_info = state.zip_to_district[zip_code]
+    senate_district = district_info.il_senate
+    house_district = district_info.il_house
+    warnings: list[str] = []
+
+    committee_codes = CATEGORY_COMMITTEES.get(category, [])
+    committee_ids = ah.committee_member_ids(state, committee_codes) if committee_codes else None
+    category_label = category if category else ""
+
+    senator_member = (
+        find_member_by_district(state, "senate", senate_district) if senate_district else None
+    )
+    senator_card = None
+    if senator_member:
+        senator_card = ah.member_to_card(
+            state,
+            senator_member,
+            why=f"Represents IL Senate District {senate_district}, which contains ZIP {zip_code}.",
+        )
+        senator_card["script_hint"] = ah.build_script_hint_senator(
+            senator_card, zip_code, senate_district
+        )
+        senator_card["script_sections"] = ah.build_script_sections_senator(
+            senator_card, zip_code, senate_district
+        )
+        senator_card["email_subject"] = ah.build_email_subject(zip_code)
+        senator_card["email_body"] = ah.build_email_body(
+            senator_member.name,
+            senator_card["script_hint"],
+            has_public_email=bool(senator_member.email),
+        )
+    elif senate_district:
+        warnings.append(
+            f"Senate District {senate_district} (for ZIP {zip_code}) — "
+            "senator not in current data (dev/seed mode has limited members)."
+        )
+
+    rep_member = find_member_by_district(state, "house", house_district) if house_district else None
+    rep_card = None
+    if rep_member:
+        rep_card = ah.member_to_card(
+            state,
+            rep_member,
+            why=f"Represents IL House District {house_district}, which contains ZIP {zip_code}.",
+        )
+        rep_card["script_hint"] = ah.build_script_hint_rep(rep_card, zip_code, house_district)
+        rep_card["script_sections"] = ah.build_script_sections_rep(
+            rep_card, zip_code, house_district
+        )
+        rep_card["email_subject"] = ah.build_email_subject(zip_code)
+        rep_card["email_body"] = ah.build_email_body(
+            rep_member.name,
+            rep_card["script_hint"],
+            has_public_email=bool(rep_member.email),
+        )
+    elif house_district:
+        warnings.append(
+            f"House District {house_district} (for ZIP {zip_code}) — "
+            "representative not in current data (dev/seed mode has limited members)."
+        )
+
+    your_legislators: list[dict[str, Any]] = []
+    for card, role_label, role_class in [
+        (senator_card, "Your Senator", "role-senator"),
+        (rep_card, "Your Representative", "role-rep"),
+    ]:
+        if card is None:
+            continue
+        your_legislators.append({"card": card, "role_label": role_label, "role_class": role_class})
+    your_legislators.sort(
+        key=lambda x: x["card"].get("moneyball_score") or 0,
+        reverse=True,
+    )
+
+    exclude_dist = senate_district or ""
+    broker_member, broker_why = ah.find_power_broker(
+        state,
+        exclude_dist,
+        committee_ids=committee_ids,
+        committee_codes=committee_codes or None,
+        category_name=category_label,
+    )
+
+    broker_card = None
+    if broker_member:
+        broker_card = ah.member_to_card(state, broker_member, why=broker_why)
+        broker_card["script_hint"] = ah.build_script_hint_broker(broker_card, broker_why)
+        broker_card["script_sections"] = ah.build_script_sections_broker(broker_card, broker_why)
+        broker_card["email_subject"] = ah.build_email_subject(zip_code)
+        broker_card["email_body"] = ah.build_email_body(
+            broker_member.name,
+            broker_card["script_hint"],
+            has_public_email=bool(broker_member.email),
+        )
+
+    error = "; ".join(warnings) if warnings else None
+    result_member_ids: list[str] = []
+    for item in your_legislators:
+        result_member_ids.append(item["card"]["id"])
+    for card in (senator_card, rep_card, broker_card):
+        if card is not None:
+            result_member_ids.append(card["id"])
+    result_member_ids = list(dict.fromkeys(result_member_ids))
+
+    user_called_member_ids: set[str] = set()
+    user_emailed_member_ids: set[str] = set()
+    if user and result_member_ids:
+        outreach_result = await db.execute(
+            select(OutreachEvent.member_id, OutreachEvent.kind)
+            .where(OutreachEvent.user_id == user.id)
+            .where(OutreachEvent.member_id.in_(result_member_ids))
+            .where(OutreachEvent.kind.in_(["call", "email"]))
+        )
+        for mid, kind in outreach_result.all():
+            if kind == "call":
+                user_called_member_ids.add(mid)
+            elif kind == "email":
+                user_emailed_member_ids.add(mid)
+
+    outreach_heat: dict[str, int] = {}
+    if result_member_ids:
+        heat_result = await db.execute(
+            select(OutreachEvent.member_id, func.count(func.distinct(OutreachEvent.user_id)))
+            .where(OutreachEvent.member_id.in_(result_member_ids))
+            .where(OutreachEvent.kind.in_(["call", "email"]))
+            .group_by(OutreachEvent.member_id)
+        )
+        outreach_heat = {str(mid): int(cnt) for mid, cnt in heat_result.all()}
+
+    return {
+        "seed_mode": cfg.SEED_MODE,
+        "member_count": len(state.members),
+        "zip_count": len(state.zip_to_district),
+        "zip": zip_code,
+        "category": category,
+        "senate_district": senate_district,
+        "house_district": house_district,
+        "your_legislators": your_legislators,
+        "senator": senator_card,
+        "representative": rep_card,
+        "broker": broker_card,
+        "error": error,
+        "user_called_member_ids": user_called_member_ids,
+        "user_emailed_member_ids": user_emailed_member_ids,
+        "outreach_heat": outreach_heat,
+    }
+
+
 @router.get("/")
-async def advocacy_index(request: Request, zip: str = "", member_id: str = "", view: str = ""):
+async def advocacy_index(
+    request: Request,
+    zip: str = "",
+    member_id: str = "",
+    view: str = "",
+    db: AsyncSession = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+):
     """Render the advocacy search page. Accepts dev deep-link params when ?dev is present."""
+    zip_param = (zip or "").strip()
+    in_district = zip_param in state.zip_to_district if zip_param else False
     member_count = len(state.members)
     zip_count = len(state.zip_to_district)
+    try:
+        agg = await get_outreach_aggregate(db)
+        calls_total = agg["calls_total"]
+        calls_this_week = agg["calls_this_week"]
+    except Exception:
+        calls_total = 0
+        calls_this_week = 0
     ctx: dict[str, Any] = {
         "request": request,
         "title": "Kei Truck Freedom",
+        "hero_headline": "Don't Let Springfield Ban Our Kei Trucks.",
+        "hero_subhead": (
+            "The state wants them off the road. Enter your ZIP code to find your rep, "
+            "get a custom script, and tell them why they need to protect our trucks. "
+            "It takes 60 seconds."
+        ),
         "categories": CATEGORY_CHOICES,
         "member_count": member_count,
         "zip_count": zip_count,
         "category": "Transportation",
+        "calls_total": calls_total,
+        "calls_this_week": calls_this_week,
         "features": cfg.get_client_features(),
         "loading_facts": _loading_facts(member_count, zip_count),
     }
     if zip:
         ctx["zip"] = zip
+    elif cfg.DEV_MODE:
+        ctx["zip"] = "60601"
     elif cfg.SEED_MODE:
         ctx["zip"] = "60601"
+    if zip_param and in_district:
+        results_ctx = await _build_search_results_context(zip_param, "Transportation", db, user)
+        ctx.update(results_ctx)
     return templates.TemplateResponse("index.html", ctx)
 
 
@@ -471,22 +656,18 @@ async def advocacy_search(
 ):
     """Look up advocacy targets for a given ZIP code and optional policy category.
 
-    Returns up to four cards (or three if Power Broker and Ally are the same
-    person, merged into a single "Super Ally" card):
+    Returns up to three cards:
 
     1. **Your Senator** — IL Senate member for this ZIP's district.
     2. **Your Representative** — IL House member for this ZIP's district.
     3. **Power Broker** — highest Moneyball score in the Senate (different district).
-    4. **Potential Ally** — senator's physical seatmate with highest bridge score.
 
-    When *category* is provided, Power Broker and Ally are filtered to members
-    who sit on a committee in that policy area.
+    When *category* is provided, Power Broker is filtered to members who sit
+    on a committee in that policy area.
 
     When the request comes from htmx (``HX-Request`` header), only the
     results partial is returned.
     """
-    from .. import config as cfg
-
     zip_code = zip_code.strip()
     category = category.strip()
     is_htmx = request.headers.get("HX-Request") == "true"
@@ -501,205 +682,31 @@ async def advocacy_search(
             sample = sorted(state.zip_to_district.keys())[:6]
             error += f" In dev mode, try ZIPs such as: {', '.join(sample)}."
         tpl = "_results_partial.html" if is_htmx else "index.html"
-        return templates.TemplateResponse(
-            tpl,
-            {
-                "request": request,
-                "title": "Kei Truck Freedom",
-                "categories": CATEGORY_CHOICES,
-                "zip": zip_code,
-                "category": category or "Transportation",
-                "error": error,
-            },
-        )
+        ctx_error: dict[str, Any] = {
+            "request": request,
+            "title": "Kei Truck Freedom",
+            "hero_headline": "Don't Let Springfield Ban Our Kei Trucks.",
+            "hero_subhead": (
+                "The state wants them off the road. Enter your ZIP code to find your rep, "
+                "get a custom script, and tell them why they need to protect our trucks. "
+                "It takes 60 seconds."
+            ),
+            "categories": CATEGORY_CHOICES,
+            "zip": zip_code,
+            "category": category or "Transportation",
+            "error": error,
+        }
+        if not is_htmx:
+            try:
+                agg = await get_outreach_aggregate(db)
+                ctx_error["calls_total"] = agg["calls_total"]
+                ctx_error["calls_this_week"] = agg["calls_this_week"]
+            except Exception:
+                ctx_error["calls_total"] = 0
+                ctx_error["calls_this_week"] = 0
+        return templates.TemplateResponse(tpl, ctx_error)
 
-    senate_district = district_info.il_senate
-    house_district = district_info.il_house
-    warnings: list[str] = []
-
-    committee_codes = CATEGORY_COMMITTEES.get(category, [])
-    committee_ids = ah.committee_member_ids(state, committee_codes) if committee_codes else None
-    category_label = category if category else ""
-
-    senator_member = (
-        find_member_by_district(state, "senate", senate_district) if senate_district else None
-    )
-    senator_card = None
-    if senator_member:
-        senator_card = ah.member_to_card(
-            state,
-            senator_member,
-            why=f"Represents IL Senate District {senate_district}, which contains ZIP {zip_code}.",
-        )
-        senator_card["script_hint"] = ah.build_script_hint_senator(
-            senator_card,
-            zip_code,
-            senate_district,
-        )
-        senator_card["script_sections"] = ah.build_script_sections_senator(
-            senator_card, zip_code, senate_district
-        )
-        senator_card["email_subject"] = ah.build_email_subject(zip_code)
-        senator_card["email_body"] = ah.build_email_body(
-            senator_member.name,
-            senator_card["script_hint"],
-            has_public_email=bool(senator_member.email),
-        )
-    elif senate_district:
-        warnings.append(
-            f"Senate District {senate_district} (for ZIP {zip_code}) — "
-            "senator not in current data (dev/seed mode has limited members)."
-        )
-
-    rep_member = find_member_by_district(state, "house", house_district) if house_district else None
-    rep_card = None
-    if rep_member:
-        rep_card = ah.member_to_card(
-            state,
-            rep_member,
-            why=f"Represents IL House District {house_district}, which contains ZIP {zip_code}.",
-        )
-        rep_card["script_hint"] = ah.build_script_hint_rep(
-            rep_card,
-            zip_code,
-            house_district,
-        )
-        rep_card["script_sections"] = ah.build_script_sections_rep(
-            rep_card, zip_code, house_district
-        )
-        rep_card["email_subject"] = ah.build_email_subject(zip_code)
-        rep_card["email_body"] = ah.build_email_body(
-            rep_member.name,
-            rep_card["script_hint"],
-            has_public_email=bool(rep_member.email),
-        )
-    elif house_district:
-        warnings.append(
-            f"House District {house_district} (for ZIP {zip_code}) — "
-            "representative not in current data (dev/seed mode has limited members)."
-        )
-
-    your_legislators: list[dict[str, Any]] = []
-    for card, role_label, role_class in [
-        (senator_card, "Your Senator", "role-senator"),
-        (rep_card, "Your Representative", "role-rep"),
-    ]:
-        if card is None:
-            continue
-        your_legislators.append({"card": card, "role_label": role_label, "role_class": role_class})
-    your_legislators.sort(
-        key=lambda x: x["card"].get("moneyball_score") or 0,
-        reverse=True,
-    )
-
-    exclude_dist = senate_district or ""
-    broker_member, broker_why = ah.find_power_broker(
-        state,
-        exclude_dist,
-        committee_ids=committee_ids,
-        committee_codes=committee_codes or None,
-        category_name=category_label,
-    )
-
-    ally_member, ally_why = (
-        ah.find_ally(
-            state,
-            senator_member,
-            committee_ids=committee_ids,
-            category_name=category_label,
-        )
-        if senator_member
-        else (None, "")
-    )
-
-    broker_card = None
-    ally_card = None
-    super_ally_card = None
-
-    if broker_member and ally_member and broker_member.id == ally_member.id:
-        merged_why = (
-            f"This legislator is both the most influential senator in the chamber "
-            f"AND a physical neighbor of your senator — a uniquely powerful advocacy target. "
-            f"{broker_why} {ally_why}"
-        )
-        super_ally_card = ah.member_to_card(
-            state,
-            broker_member,
-            why=merged_why,
-            badges=["Power Broker", "Potential Ally"],
-        )
-        super_ally_card["script_hint"] = ah.build_script_hint_super_ally(super_ally_card)
-        super_ally_card["script_sections"] = ah.build_script_sections_super_ally(super_ally_card)
-        super_ally_card["email_subject"] = ah.build_email_subject(zip_code)
-        super_ally_card["email_body"] = ah.build_email_body(
-            broker_member.name,
-            super_ally_card["script_hint"],
-            has_public_email=bool(broker_member.email),
-        )
-    else:
-        if broker_member:
-            broker_card = ah.member_to_card(state, broker_member, why=broker_why)
-            broker_card["script_hint"] = ah.build_script_hint_broker(
-                broker_card,
-                broker_why,
-            )
-            broker_card["script_sections"] = ah.build_script_sections_broker(
-                broker_card, broker_why
-            )
-            broker_card["email_subject"] = ah.build_email_subject(zip_code)
-            broker_card["email_body"] = ah.build_email_body(
-                broker_member.name,
-                broker_card["script_hint"],
-                has_public_email=bool(broker_member.email),
-            )
-        if ally_member:
-            ally_card = ah.member_to_card(state, ally_member, why=ally_why)
-            ally_card["script_hint"] = ah.build_script_hint_ally(ally_card)
-            ally_card["script_sections"] = ah.build_script_sections_ally(ally_card)
-            ally_card["email_subject"] = ah.build_email_subject(zip_code)
-            ally_card["email_body"] = ah.build_email_body(
-                ally_member.name,
-                ally_card["script_hint"],
-                has_public_email=bool(ally_member.email),
-            )
-
-    error = "; ".join(warnings) if warnings else None
-
-    result_member_ids: list[str] = []
-    for item in your_legislators:
-        result_member_ids.append(item["card"]["id"])
-    for card in (senator_card, rep_card, broker_card, ally_card, super_ally_card):
-        if card is not None:
-            result_member_ids.append(card["id"])
-    result_member_ids = list(dict.fromkeys(result_member_ids))
-
-    user_called_member_ids: set[str] = set()
-    user_emailed_member_ids: set[str] = set()
-    if user and result_member_ids:
-        outreach_result = await db.execute(
-            select(OutreachEvent.member_id, OutreachEvent.kind)
-            .where(OutreachEvent.user_id == user.id)
-            .where(OutreachEvent.member_id.in_(result_member_ids))
-            .where(OutreachEvent.kind.in_(["call", "email"]))
-        )
-        for mid, kind in outreach_result.all():
-            if kind == "call":
-                user_called_member_ids.add(mid)
-            elif kind == "email":
-                user_emailed_member_ids.add(mid)
-
-    outreach_heat: dict[str, int] = {}
-    if result_member_ids:
-        heat_result = await db.execute(
-            select(OutreachEvent.member_id, func.count(func.distinct(OutreachEvent.user_id)))
-            .where(OutreachEvent.member_id.in_(result_member_ids))
-            .where(OutreachEvent.kind.in_(["call", "email"]))
-            .group_by(OutreachEvent.member_id)
-        )
-        outreach_heat = {str(mid): int(cnt) for mid, cnt in heat_result.all()}
-
-    member_count = len(state.members)
-    zip_count = len(state.zip_to_district)
+    results_ctx = await _build_search_results_context(zip_code, category, db, user)
     tpl = "_results_partial.html" if is_htmx else "results.html"
     return templates.TemplateResponse(
         tpl,
@@ -707,22 +714,6 @@ async def advocacy_search(
             "request": request,
             "title": "Kei Truck Freedom",
             "categories": CATEGORY_CHOICES,
-            "seed_mode": cfg.SEED_MODE,
-            "member_count": member_count,
-            "zip_count": zip_count,
-            "zip": zip_code,
-            "category": category,
-            "senate_district": senate_district,
-            "house_district": house_district,
-            "your_legislators": your_legislators,
-            "senator": senator_card,
-            "representative": rep_card,
-            "broker": broker_card,
-            "ally": ally_card,
-            "super_ally": super_ally_card,
-            "error": error,
-            "user_called_member_ids": user_called_member_ids,
-            "user_emailed_member_ids": user_emailed_member_ids,
-            "outreach_heat": outreach_heat,
+            **results_ctx,
         },
     )
