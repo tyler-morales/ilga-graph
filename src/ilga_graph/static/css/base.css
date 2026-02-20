@@ -1,0 +1,463 @@
+/* ── 2005 Functional CSS ── */
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+}
+html {
+overflow-x: hidden;
+scroll-behavior: smooth;
+}
+body {
+font-family: Georgia, "Times New Roman", serif;
+background: #f4f4f0;
+color: #222;
+line-height: 1.5;
+padding: 20px;
+overflow-x: hidden;
+}
+.container {
+width: 100%;
+max-width: 1120px;
+margin: 0 auto;
+background: #fff;
+border: 1px solid #ccc;
+padding: 24px 32px;
+}
+h1 {
+font-size: 1.6em;
+border-bottom: 2px solid #333;
+padding-bottom: 6px;
+margin-bottom: 16px;
+}
+h2 {
+font-size: 1.2em;
+margin-top: 20px;
+margin-bottom: 8px;
+color: #444;
+}
+p {
+margin-bottom: 10px;
+}
+a {
+color: #0645ad;
+}
+a:visited {
+color: #551a8b;
+}
+/* ── Error ── */
+.error-msg {
+color: #900;
+font-weight: bold;
+padding: 10px;
+border: 1px solid #c99;
+background: #fff0f0;
+margin: 12px 0;
+}
+.results-empty {
+color: #666;
+padding: 16px;
+margin: 12px 0;
+text-align: center;
+background: #f5f5f5;
+border-radius: 6px;
+}
+/* ── Footer ── */
+.footer {
+margin-top: 24px;
+padding-top: 10px;
+border-top: 1px solid #ccc;
+font-size: 0.85em;
+color: #777;
+text-align: center;
+}
+/* ── HTMX indicator ── */
+.htmx-indicator {
+display: none;
+font-style: italic;
+color: #888;
+margin-left: 8px;
+}
+.htmx-request .htmx-indicator {
+display: inline;
+}
+.htmx-request button {
+opacity: 0.6;
+}
+/* ═══════════════════════════════════════════════════════════════════
+ML Intelligence Dashboard
+═══════════════════════════════════════════════════════════════════ */
+/* ── Section headers ── */
+.intel-section-header {
+margin-bottom: 12px;
+}
+.intel-section-header h2 {
+margin-top: 8px;
+margin-bottom: 4px;
+}
+.intel-section-header p {
+color: #666;
+font-size: 0.9em;
+}
+/* ── Tables ── */
+.intel-table {
+width: 100%;
+border-collapse: collapse;
+font-size: 0.85em;
+margin: 8px 0 16px;
+}
+.intel-table th {
+background: #f0f0f0;
+border: 1px solid #ccc;
+padding: 6px 8px;
+text-align: left;
+font-size: 0.9em;
+white-space: nowrap;
+}
+.intel-table td {
+border: 1px solid #ddd;
+padding: 5px 8px;
+vertical-align: top;
+}
+.intel-table tbody tr:hover {
+background: #f8f8f0;
+}
+.intel-table-compact {
+font-size: 0.82em;
+}
+.intel-table-compact td,
+.intel-table-compact th {
+padding: 3px 6px;
+}
+.bill-num {
+white-space: nowrap;
+}
+.desc-cell {
+max-width: 300px;
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
+}
+.reason-cell {
+max-width: 200px;
+font-size: 0.88em;
+color: #555;
+}
+/* ── Score bars ── */
+.score-bar-container {
+position: relative;
+width: 100px;
+height: 18px;
+background: #eee;
+border: 1px solid #ccc;
+display: inline-block;
+vertical-align: middle;
+}
+.score-bar {
+height: 100%;
+position: absolute;
+left: 0;
+top: 0;
+}
+.score-text {
+position: relative;
+z-index: 1;
+font-size: 0.8em;
+font-weight: bold;
+padding: 0 4px;
+line-height: 18px;
+}
+.score-high {
+background: #4a9;
+}
+.score-mid {
+background: #da4;
+}
+.score-low {
+background: #d66;
+}
+.score-anomaly {
+background: #c44;
+}
+.score-normal {
+background: #8b8;
+}
+.score-feature {
+background: #68a;
+}
+/* ── Influence score bars ── */
+.score-bar-high {
+background: #2d8659;
+}
+.score-bar-moderate {
+background: #c09020;
+}
+.score-bar-low {
+background: #b04040;
+}
+.influence-signal-tag {
+display: inline-block;
+font-size: 0.7em;
+padding: 1px 5px;
+margin: 1px 2px;
+background: #e8f0fe;
+color: #1a4d8f;
+border-radius: 3px;
+border: 1px solid #b0c4de;
+}
+.intel-coalition-grid {
+display: grid;
+grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+gap: 1em;
+}
+.intel-coalition-card {
+border: 1px solid #ccc;
+border-radius: 6px;
+padding: 1em;
+background: #fafafa;
+}
+.intel-coalition-card h3 {
+margin: 0 0 0.5em 0;
+font-size: 1em;
+}
+.intel-coalition-stats {
+font-size: 0.85em;
+color: #555;
+margin-bottom: 0.5em;
+}
+.intel-coalition-stats span {
+margin-right: 1em;
+}
+.intel-coalition-leader,
+.intel-coalition-bridge {
+font-size: 0.85em;
+margin: 0.3em 0;
+}
+.intel-note {
+color: #888;
+font-size: 0.85em;
+}
+/* ── Responsive: tablet and below ── */
+@media (max-width: 768px) {
+body {
+padding: 12px;
+}
+.container {
+padding: 16px 20px;
+}
+.advocacy-hero {
+padding: 16px 0 24px;
+}
+.hero-headline {
+font-size: 1.35em;
+}
+.hero-form {
+padding: 16px 18px;
+}
+.hero-form-row {
+flex-direction: column;
+align-items: stretch;
+}
+.hero-field-btn {
+margin-top: 4px;
+}
+.hero-field-btn button {
+width: 100%;
+}
+/* Results: stack sidebar above main; sidebar full width, no sticky */
+.results-layout {
+flex-direction: column;
+gap: 16px;
+margin-top: 8px;
+}
+.results-aside {
+width: 100%;
+max-width: 100%;
+position: static;
+max-height: none;
+order: -1;
+}
+.results-aside .how-it-works {
+margin-bottom: 0;
+}
+/* Script panels: bottom sheet on tablet/mobile (slide up from bottom, draggable) */
+.phone-panel-handle {
+display: flex;
+justify-content: center;
+align-items: center;
+padding: 10px 0 6px;
+cursor: grab;
+flex-shrink: 0;
+-webkit-user-select: none;
+user-select: none;
+position: relative;
+z-index: 2;
+background: #fff;
+}
+.phone-panel-handle:active {
+cursor: grabbing;
+}
+.phone-panel-title-row {
+position: relative;
+z-index: 2;
+background: #fff;
+}
+.phone-panel {
+top: auto;
+left: 0;
+right: 0;
+bottom: 0;
+width: 100%;
+max-width: 100%;
+height: 95vh;
+max-height: 95vh;
+border-radius: 16px 16px 0 0;
+transform: translateY(100%);
+will-change: transform;
+}
+.phone-panel.open {
+transform: translateY(0);
+}
+.phone-panel.phone-panel--email {
+width: 100%;
+max-width: 100%;
+}
+/* Mobile: flex wrap so badges go full width below photo + name */
+.card-header {
+display: flex;
+flex-direction: row;
+flex-wrap: wrap;
+align-items: flex-end;
+}
+.card-header .member-photo {
+grid-row: auto;
+}
+/* Wrapper disappears so card-header-right and card-badge-row are flex children of .card-header */
+.card-header-col {
+display: contents;
+}
+.card-header-right {
+flex: 1;
+min-width: 0;
+}
+.card-header .card-badge-row {
+flex-basis: 100%;
+width: 100%;
+grid-column: auto;
+margin-top: 12px;
+}
+.card .why-chosen,
+.card .compact-scorecard {
+width: 100%;
+max-width: 100%;
+}
+/* Badges full width on mobile */
+.card-badge-row {
+flex-direction: column;
+width: 100%;
+}
+.card-badge-row .tooltip-wrap {
+width: 100%;
+}
+.card-badge-row .role-label,
+.card-badge-row .power-badge {
+display: block;
+width: 100%;
+text-align: center;
+box-sizing: border-box;
+}
+.card .member-photo {
+width: 80px;
+height: 102px;
+}
+.tooltip-wrap .tooltip-content {
+max-width: min(340px, calc(100vw - 32px));
+}
+/* Chips: show short text on tablet/mobile so they flow as pills */
+.chip-text-full {
+display: none;
+}
+.chip-text-mobile {
+display: inline;
+}
+}
+/* ── Responsive: phone ── */
+@media (max-width: 480px) {
+body {
+padding: 8px;
+}
+.container {
+padding: 12px 14px;
+}
+.hero-image {
+max-width: 100%;
+height: auto;
+}
+.hero-headline {
+font-size: 1.2em;
+}
+.hero-subhead {
+font-size: 0.95em;
+}
+.hero-trust {
+font-size: 0.72em;
+}
+.hero-trust .trust-sep {
+display: none;
+}
+.hero-trust .trust-item {
+display: block;
+margin: 2px 0;
+}
+.hero-meta {
+font-size: 0.72em;
+}
+.outreach-btn {
+flex: 1 1 0;
+}
+.card {
+padding: 12px 14px;
+}
+.card-header {
+align-items: flex-end;
+}
+.card-header-right {
+flex: 1;
+min-width: 0;
+}
+.card .why-picked-prose,
+.card .compact-scorecard {
+width: 100%;
+max-width: 100%;
+}
+.card .member-photo {
+width: 72px;
+height: 92px;
+}
+.card-name-meta {
+display: block;
+margin-top: 2px;
+}
+.card h3.card-name {
+font-size: 1.05em;
+}
+.phone-panel-title {
+padding: 16px 18px 10px;
+font-size: 1.05em;
+}
+.phone-panel-body {
+padding: 16px 18px;
+}
+/* Email drawer: full width like call; compose bleeds to panel edges */
+.phone-panel.phone-panel--email {
+width: 100%;
+max-width: 100%;
+}
+.phone-panel-done {
+width: 100%;
+text-align: center;
+}
+.compact-scorecard ul.compact-stats {
+padding-left: 1em;
+}
+}

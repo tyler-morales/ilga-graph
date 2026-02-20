@@ -1,0 +1,55 @@
+/**
+ * Design tokens — single source for colors, spacing, typography.
+ * Use var(--token) in base.css, advocacy.css, intelligence.css.
+ * No build step; plain CSS custom properties.
+ */
+:root {
+  /* Backgrounds */
+  --color-bg-page: #f4f4f0;
+  --color-bg-card: #fff;
+  --color-bg-muted: #fafafa;
+  --color-bg-input: #f0f0f0;
+
+  /* Text */
+  --color-text: #222;
+  --color-text-muted: #444;
+  --color-text-secondary: #555;
+  --color-text-tertiary: #666;
+  --color-text-quiet: #777;
+  --color-text-hint: #888;
+
+  /* Borders */
+  --color-border: #ccc;
+  --color-border-light: #ddd;
+  --color-border-focus: #333;
+
+  /* Links */
+  --color-link: #0645ad;
+  --color-link-visited: #551a8b;
+  --color-link-action: #1a73e8;
+  --color-link-action-hover: #1765cc;
+
+  /* Semantic */
+  --color-success: #059669;
+  --color-error: #900;
+  --color-error-bg: #fff0f0;
+  --color-error-border: #c99;
+  --color-warning-bg: #fffde6;
+  --color-warning-border: #dd9;
+
+  /* Spacing (scale) */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-2xl: 24px;
+  --space-3xl: 32px;
+
+  /* Typography */
+  --font-serif: Georgia, "Times New Roman", serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --line-height-body: 1.5;
+  --max-width-container: 1120px;
+  --max-width-hero: 680px;
+}
