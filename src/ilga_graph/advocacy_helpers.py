@@ -707,13 +707,14 @@ def build_email_first_body(
 
 def find_power_broker(
     state: Any,
-    exclude_district: str,
     *,
+    exclude_senate_district: str = "",
+    exclude_house_district: str = "",
     committee_ids: set[str] | None = None,
     committee_codes: list[str] | None = None,
     category_name: str = "",
 ) -> tuple[Member | None, str]:
-    """Find the top Senate Power Broker. Returns (Member | None, why_text)."""
+    """Find the Power Broker: committee chair for the topic (default Transportation), or highest Moneyball senator or rep outside the user's district. Returns (Member | None, why_text)."""
     member_lookup = {m.id: m for m in state.members}
 
     if committee_codes:
@@ -722,10 +723,10 @@ def find_power_broker(
                 role_lower = cmr.role.lower()
                 if "chair" in role_lower and "vice" not in role_lower:
                     chair_member = member_lookup.get(cmr.member_id)
-                    if (
-                        chair_member
-                        and chair_member.chamber == "Senate"
-                        and chair_member.district != exclude_district
+                    if chair_member and chair_member.district != (
+                        exclude_senate_district
+                        if chair_member.chamber == "Senate"
+                        else exclude_house_district
                     ):
                         committee_name = ""
                         cmt = state.committee_lookup.get(code)
@@ -752,9 +753,9 @@ def find_power_broker(
 
     best_profile = None
     for profile in state.moneyball.profiles.values():
-        if profile.chamber != "Senate":
+        if profile.chamber == "Senate" and profile.district == exclude_senate_district:
             continue
-        if profile.district == exclude_district:
+        if profile.chamber == "House" and profile.district == exclude_house_district:
             continue
         if committee_ids and profile.member_id not in committee_ids:
             continue
@@ -768,9 +769,10 @@ def find_power_broker(
     if member is None:
         return None, ""
 
+    chamber_label = "senator" if best_profile.chamber == "Senate" else "representative"
     parts = [
         f"Highest Moneyball score ({best_profile.moneyball_score}) "
-        f"in the Senate outside your district",
+        f"among senators and representatives outside your district ({chamber_label})",
     ]
     if category_name:
         parts.append(f"sits on a {category_name} committee")

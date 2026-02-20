@@ -2074,7 +2074,7 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        padding: 10px 0 6px;
+        padding: max(10px, env(safe-area-inset-top, 0px)) 0 6px;
         cursor: grab;
         flex-shrink: 0;
         -webkit-user-select: none;

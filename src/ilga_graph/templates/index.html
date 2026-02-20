@@ -169,24 +169,6 @@
 </div>
 
 <script>
-    // #region agent log
-    (function () {
-        var params = new URLSearchParams(window.location.search);
-        var urlZip = params.get('zip') || '';
-        fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '0217e7' },
-            body: JSON.stringify({
-                sessionId: '0217e7',
-                hypothesisId: 'H4',
-                location: 'index.html:onload',
-                message: 'Page load with zip in URL',
-                data: { url_has_zip: !!urlZip, url_zip: urlZip, auto_submit_on_load: false },
-                timestamp: Date.now()
-            })
-        }).catch(function () { });
-    })();
-    // #endregion
     /* ── Auto-scroll to members when page loads with results (e.g. /advocacy?zip=60071) ── */
     (function () {
         var results = document.getElementById('results');
@@ -200,26 +182,77 @@
             });
         }
     })();
-    /* ── Floating UI: position click tooltips with flip/shift ── */
-    function updateTooltipPosition(wrap) {
-        if (typeof window.FloatingUIDOM === 'undefined') return;
-        var content = wrap && wrap.querySelector('.tooltip-content');
-        if (!content) return;
-        var lib = window.FloatingUIDOM;
-        var middleware = [];
-        if (lib.offset) middleware.push(lib.offset(6));
-        if (lib.flip) middleware.push(lib.flip());
-        if (lib.shift) middleware.push(lib.shift({ padding: 8 }));
-        lib.computePosition(wrap, content, {
+    /* ── Advocacy tooltips: Tippy.js for chips (singleton) and badges (hover), same theme "advocacy" ── */
+    var __recommendationChipSingleton = null;
+    var __recommendationChipInstances = [];
+    var __badgeTooltipInstances = [];
+    function getTooltipContent(wrap) {
+        var contentEl = wrap && wrap.querySelector('.tooltip-content');
+        return contentEl ? contentEl.cloneNode(true) : document.createElement('span');
+    }
+    function initAdvocacyTooltips(container) {
+        var root = container || document;
+        if (typeof tippy === 'undefined') return;
+        var theme = 'advocacy';
+        var common = {
+            theme: theme,
             placement: 'top',
-            strategy: 'fixed',
-            middleware: middleware
-        }).then(function (result) {
-            content.classList.add('tooltip-floating-positioned');
-            content.classList.remove('tooltip-placement-top', 'tooltip-placement-bottom', 'tooltip-placement-left', 'tooltip-placement-right');
-            content.classList.add('tooltip-placement-' + result.placement);
-            content.style.transform = 'translate(' + result.x + 'px, ' + result.y + 'px)';
-        }).catch(function () { });
+            maxWidth: 340,
+            appendTo: document.body,
+            content: function (reference) {
+                var wrap = reference.closest('.tooltip-wrap');
+                return getTooltipContent(wrap);
+            }
+        };
+
+        /* Chips: click/focus, singleton */
+        var chipWraps = root.querySelectorAll('.tooltip-wrap.tooltip-click');
+        if (__recommendationChipSingleton) {
+            __recommendationChipSingleton.destroy();
+            __recommendationChipSingleton = null;
+        }
+        __recommendationChipInstances.forEach(function (inst) { inst.destroy(); });
+        __recommendationChipInstances = [];
+        var chipTriggers = [];
+        chipWraps.forEach(function (wrap) {
+            var t = wrap.querySelector('.signal-chip');
+            if (t) chipTriggers.push(t);
+        });
+        if (chipTriggers.length) {
+            var chipInstances = tippy(chipTriggers, Object.assign({}, common, {
+                trigger: 'click focus',
+                interactive: true,
+                hideOnClick: true,
+                onShow: function (i) { var r = i.reference; if (r && r.setAttribute) r.setAttribute('aria-expanded', 'true'); },
+                onHide: function (i) { var r = i.reference; if (r && r.setAttribute) r.setAttribute('aria-expanded', 'false'); }
+            }));
+            __recommendationChipInstances = chipInstances;
+            if (typeof tippy.createSingleton === 'function') {
+                __recommendationChipSingleton = tippy.createSingleton(chipInstances, {
+                    moveTransition: 'transform 0.2s ease-out',
+                    overrides: ['content', 'placement']
+                });
+            }
+        }
+
+        /* Badges: hover/focus, same theme (no singleton) */
+        __badgeTooltipInstances.forEach(function (inst) { inst.destroy(); });
+        __badgeTooltipInstances = [];
+        var badgeWraps = root.querySelectorAll('.tooltip-wrap:not(.tooltip-click)');
+        var badgeTriggers = [];
+        badgeWraps.forEach(function (wrap) {
+            var trigger = wrap.firstElementChild;
+            if (trigger && wrap.querySelector('.tooltip-content')) badgeTriggers.push(trigger);
+        });
+        if (badgeTriggers.length) {
+            __badgeTooltipInstances = tippy(badgeTriggers, Object.assign({}, common, {
+                trigger: 'mouseenter focus',
+                interactive: true
+            }));
+        }
+    }
+    function initRecommendationChipTooltips(container) {
+        initAdvocacyTooltips(container);
     }
 
     /* ── Auto-submit on 5-digit ZIP ── */
@@ -270,26 +303,7 @@
                 el.setAttribute('aria-expanded', 'false');
             });
         }
-        /* ── Close Moneyball (and other click) tooltips when clicking outside ── */
-        if (!e.target.closest('.tooltip-wrap')) {
-            document.querySelectorAll('.tooltip-wrap.tooltip-open').forEach(function (el) {
-                el.classList.remove('tooltip-open');
-                var content = el.querySelector('.tooltip-content');
-                if (content) {
-                    content.classList.remove('tooltip-floating-positioned', 'tooltip-placement-top', 'tooltip-placement-bottom', 'tooltip-placement-left', 'tooltip-placement-right');
-                    content.style.transform = '';
-                }
-            });
-        } else {
-            var tooltipWrap = e.target.closest('.tooltip-wrap.tooltip-click');
-            if (tooltipWrap) {
-                setTimeout(function () {
-                    if (tooltipWrap.classList.contains('tooltip-open')) {
-                        updateTooltipPosition(tooltipWrap);
-                    }
-                }, 0);
-            }
-        }
+        /* ── Close Moneyball definition when clicking outside (Tippy handles chip tooltips) ── */
     });
 
     /* ── Moneyball definition: keyboard toggle (Enter/Space) ── */
@@ -337,40 +351,14 @@
         }
     }
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', applyCardBioOverflow);
+        document.addEventListener('DOMContentLoaded', function () {
+            applyCardBioOverflow();
+            initRecommendationChipTooltips();
+        });
     } else {
         applyCardBioOverflow();
+        initRecommendationChipTooltips();
     }
-
-    /* ── Reposition open tooltips on scroll/resize (Floating UI) ── */
-    function repositionOpenTooltips() {
-        document.querySelectorAll('.tooltip-wrap.tooltip-click.tooltip-open').forEach(updateTooltipPosition);
-    }
-
-    /* ── Hover tooltips: run Floating UI so they flip/shift and stay in viewport ── */
-    document.addEventListener('mouseover', function (e) {
-        var wrap = e.target.closest('.tooltip-wrap');
-        if (!wrap || wrap.classList.contains('tooltip-click')) return;
-        if (wrap.contains(e.relatedTarget)) return;
-        setTimeout(function () {
-            updateTooltipPosition(wrap);
-        }, 0);
-    });
-    var repositionTicks;
-    window.addEventListener('scroll', function () {
-        if (repositionTicks) cancelAnimationFrame(repositionTicks);
-        repositionTicks = requestAnimationFrame(function () {
-            repositionTicks = 0;
-            repositionOpenTooltips();
-        });
-    }, true);
-    window.addEventListener('resize', function () {
-        if (repositionTicks) cancelAnimationFrame(repositionTicks);
-        repositionTicks = requestAnimationFrame(function () {
-            repositionTicks = 0;
-            repositionOpenTooltips();
-        });
-    });
 
     /* ── ZIP search loading: truck animation (gameified), then inject results ── */
     var __advocacyLoadingActive = false;
@@ -399,6 +387,7 @@
         if (typeof htmx !== 'undefined') htmx.process(results);
         applyCardEnterAnimation(results);
         applyCardBioOverflow();
+        initRecommendationChipTooltips(results);
         results.scrollIntoView({ behavior: 'smooth', block: 'start' });
         __advocacyStoredResponse = null;
         __advocacyLoadingActive = false;
@@ -473,6 +462,7 @@
             applyCardEnterAnimation(e.detail.target);
             setTimeout(function () {
                 applyCardBioOverflow();
+                initRecommendationChipTooltips(e.detail.target);
                 e.detail.target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
         }
@@ -2000,22 +1990,10 @@
 
         /* ── Smart constituent checkbox: when user changes zip in mad lib, update checkbox to match district ── */
         var zipBlanks = madlibContainer ? madlibContainer.querySelectorAll('input[data-madlib-key="CITY_OR_ZIP"]') : [];
-        // #region agent log
-        (function () {
-            var payload = { sessionId: '4888d4', hypothesisId: 'H1', location: 'index.html:zipBlanks', message: 'zip constituent init', data: { zipBlanksLength: zipBlanks ? zipBlanks.length : 0, hasMadlib: !!(madlibContainer && madlibContainer.children.length) }, timestamp: Date.now() };
-            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '4888d4' }, body: JSON.stringify(payload) }).catch(function () { });
-        })();
-        // #endregion
         function updateConstituentFromZip(zipValue) {
             var z = (zipValue || '').trim();
             var memberId = (drawerEl && drawerEl.getAttribute('data-member-id')) || '';
             var zipValid = /^\d{5}$/.test(z);
-            // #region agent log
-            (function () {
-                var payload = { sessionId: '4888d4', hypothesisId: 'H2', location: 'index.html:updateConstituentFromZip', message: 'updateConstituentFromZip called', data: { zipValue: z, memberId: memberId, zipValid: zipValid }, timestamp: Date.now() };
-                fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '4888d4' }, body: JSON.stringify(payload) }).catch(function () { });
-            })();
-            // #endregion
             if (!zipValid) return;
             if (!memberId) return;
             var url = '/advocacy/api/check-constituent?member_id=' + encodeURIComponent(memberId) + '&zip=' + encodeURIComponent(z);
@@ -2023,12 +2001,6 @@
                 .then(function (r) { return r.ok ? r.json() : { is_constituent: false }; })
                 .then(function (data) {
                     var isConst = !!(data && data.is_constituent);
-                    // #region agent log
-                    (function () {
-                        var payload = { sessionId: '4888d4', hypothesisId: 'H4', location: 'index.html:check-constituent response', message: 'constituent API result', data: { isConst: isConst, checkboxId: emailConstituentCheckbox ? emailConstituentCheckbox.id : null }, timestamp: Date.now() };
-                        fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '4888d4' }, body: JSON.stringify(payload) }).catch(function () { });
-                    })();
-                    // #endregion
                     if (emailConstituentCheckbox) {
                         requestAnimationFrame(function () {
                             emailConstituentCheckbox.checked = isConst;
