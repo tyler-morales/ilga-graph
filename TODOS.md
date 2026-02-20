@@ -66,6 +66,7 @@
   - **Advocacy router SEO globals (2026-02-20):** Advocacy router uses its own Jinja2 env; added same template globals as main (app_base_url, site_name, meta_description, og_image_url, umami_*) so `/advocacy` and drawer/partials that extend base get correct share cards, canonical URL, and Umami when enabled.
   - **Docs:** app-overview.md (share cards + Umami bullet), deployment checklist (APP_BASE_URL, Umami optional step).
 
+- **Automated deploy to Vultr (2026-02-20):** Push to `main` now runs CI then deploys to Vultr via GitHub Actions: SSH deploy job (appleboy/ssh-action) runs `git pull origin main` and `scripts/deploy-on-server.sh` (pip install -e ., systemctl restart ilga-graph). Required secrets: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`. One-time server setup: deploy key in `authorized_keys`, sudoers NOPASSWD for `systemctl restart ilga-graph`. Docs: vultr-deployment-guide.md "Automated deploy (CI/CD)" section; environment-variables.md "CI/CD deploy secrets" subsection.
 - **Deployment prep (2026-02-19):**
   - **Lint:** Fixed remaining E501 in `scripts/snapshot_mocks.py` (docstring + 2 log messages) and `routers/advocacy.py` (kei fact string). `make lint` passes.
   - **Procfile:** Uses `scripts/start_web.sh` so the web process binds to `$PORT` when set (Railway, Render) and defaults to 8000 locally. No dashboard override needed for port.

@@ -81,6 +81,12 @@ The app warns at startup if CORS or API key are missing in prod.
 
 ---
 
+## CI/CD deploy secrets (GitHub Actions only)
+
+Automated deploy to Vultr (on push to `main`) uses **GitHub Actions secrets**, not `.env`. These are configured in the repo under Settings → Secrets and variables → Actions: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`. The app never reads them. See [Vultr deployment guide](vultr-deployment-guide.md#automated-deploy-cicd) for one-time server setup.
+
+---
+
 ## PaaS port
 
 The app does not read a `PORT` environment variable. Uvicorn defaults to port 8000. On platforms that assign a port (e.g. Railway, Render), set the **start command** to pass it explicitly, for example:

@@ -364,6 +364,33 @@ This can be slow and memory-heavy (full cache + sklearn, etc.). To skip hyperpar
 
 ---
 
+## Automated deploy (CI/CD)
+
+On **push to `main`**, after CI (lint and test) passes, GitHub Actions runs a deploy job that SSHs to this server, pulls the latest code, installs dependencies, and restarts the app. You do not need to SSH in and run these steps manually.
+
+### One-time setup
+
+1. **GitHub Secrets** (repo → Settings → Secrets and variables → Actions): add
+   - `DEPLOY_HOST` — server IP or hostname (e.g. `45.76.21.216` or `landofkei.org`)
+   - `DEPLOY_USER` — SSH user (e.g. `linuxuser`)
+   - `DEPLOY_SSH_KEY` — private key contents for a dedicated deploy key (no passphrase)
+
+2. **Deploy key on the server:** Generate an SSH key pair on your machine (e.g. `ssh-keygen -t ed25519 -C "github-deploy" -f deploy_key -N ""`). Add the **public** key to the server user’s `~/.ssh/authorized_keys` (same user as `DEPLOY_USER`).
+
+3. **Passwordless sudo for restart:** So the deploy can run `systemctl restart ilga-graph` without a password, create a sudoers file:
+   ```bash
+   sudo visudo -f /etc/sudoers.d/ilga-graph-deploy
+   ```
+   Add one line (replace `linuxuser` with your deploy user):
+   ```
+   linuxuser ALL=(ALL) NOPASSWD: /bin/systemctl restart ilga-graph
+   ```
+   Save and exit. Restrict this to the deploy user and key in practice.
+
+The workflow runs `cd ~/ilga-graph && bash scripts/deploy-on-server.sh`. If your app directory or user differs, you can run that script manually after SSH (see Useful commands) or add a `DEPLOY_PATH` secret and update the workflow.
+
+---
+
 ## Useful commands
 
 | Task | Command |
@@ -371,7 +398,7 @@ This can be slow and memory-heavy (full cache + sklearn, etc.). To skip hyperpar
 | Restart the app | `sudo systemctl restart ilga-graph` |
 | View app logs (live) | `sudo journalctl -u ilga-graph -f` |
 | Last 80 log lines | `sudo journalctl -u ilga-graph -n 80 --no-pager` |
-| After pulling new code | `cd ~/ilga-graph && git pull && sudo systemctl restart ilga-graph` |
+| After pulling new code (manual) | `cd ~/ilga-graph && bash scripts/deploy-on-server.sh` (or `git pull && sudo systemctl restart ilga-graph`) |
 | Test certificate renewal | `sudo certbot renew --dry-run` |
 | Edit Nginx config | `sudo vim /etc/nginx/sites-available/ilga-graph` then `sudo nginx -t && sudo systemctl reload nginx` |
 
