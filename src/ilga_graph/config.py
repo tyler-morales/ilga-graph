@@ -83,7 +83,8 @@ DOCS_BASE_URL: str = _env("ILGA_DOCS_BASE_URL", "").strip().rstrip("/")
 SITE_NAME: str = _env("ILGA_SITE_NAME", "Kei Truck Freedom").strip() or "Kei Truck Freedom"
 META_DESCRIPTION: str = _env(
     "ILGA_META_DESCRIPTION",
-    "Find your Illinois legislators and see who has the most influence. Advocate with confidence.",
+    "Find your Illinois legislators and advocate for a statutory fix so highway-built Kei vehicles "
+    "can be titled and registered. 625 ILCS 5/3-401(c-1).",
 ).strip()
 # Optional absolute URL for share card image (1200×630). Unset → APP_BASE_URL/static/og-image.png.
 _OG_IMAGE_OVERRIDE: str = _env("ILGA_OG_IMAGE_URL", "").strip()

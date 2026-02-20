@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="/favicon.ico" type="image/svg+xml">
-    <title>{% block title %}Kei Truck Freedom{% endblock %}</title>
+    <title>{% block title %}{{ site_name }}{% endblock %}</title>
     <meta name="description" content="{% block meta_description %}{{ meta_description }}{% endblock %}">
     <link rel="canonical" href="{{ app_base_url }}{{ request.url.path }}">
     <meta property="og:type" content="website">
@@ -19,8 +19,8 @@
     <meta name="twitter:description" content="{% block twitter_description %}{{ meta_description }}{% endblock %}">
     <meta name="twitter:image" content="{{ og_image_url }}">
     {% block meta_extra %}{% endblock %}
-    {% if umami_website_id %}
-    <script async src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>
+    {% if umami_enabled %}
+    <script defer src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>
     {% endif %}
     <link rel="stylesheet" href="/static/css/variables.css">
     <link rel="stylesheet" href="/static/css/base.css">

@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import advocacy_helpers as ah
+from .. import config as cfg
 from ..app_state import state
 from ..config import DEV_MODE, SEED_MODE
 from ..constants import CATEGORY_CHOICES, CATEGORY_COMMITTEES
@@ -35,6 +36,14 @@ _BRIEF_PDF_PATH = (
 router = APIRouter()
 templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
 templates.env.globals["dev_available"] = DEV_MODE
+# SEO, share cards, analytics (base.html uses these; same as main.py globals)
+templates.env.globals["app_base_url"] = cfg.APP_BASE_URL
+templates.env.globals["site_name"] = cfg.SITE_NAME
+templates.env.globals["meta_description"] = cfg.META_DESCRIPTION
+templates.env.globals["og_image_url"] = cfg.OG_IMAGE_URL
+templates.env.globals["umami_enabled"] = cfg.PROFILE == "prod" and bool(cfg.UMAMI_WEBSITE_ID)
+templates.env.globals["umami_website_id"] = cfg.UMAMI_WEBSITE_ID
+templates.env.globals["umami_script_url"] = cfg.UMAMI_SCRIPT_URL
 
 # Kei truck facts for loading animation: informative, fun trivia (one shown per search).
 _KEI_LOADING_FACTS: list[str] = [
@@ -59,8 +68,6 @@ def _loading_facts(member_count: int, zip_count: int) -> list[str]:
 @router.get("/")
 async def advocacy_index(request: Request, zip: str = "", member_id: str = "", view: str = ""):
     """Render the advocacy search page. Accepts dev deep-link params when ?dev is present."""
-    from .. import config as cfg
-
     member_count = len(state.members)
     zip_count = len(state.zip_to_district)
     ctx: dict[str, Any] = {
