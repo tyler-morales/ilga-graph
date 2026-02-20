@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import advocacy_helpers as ah
 from ..app_state import state
-from ..config import DEV_MODE
+from ..config import DEV_MODE, SEED_MODE
 from ..constants import CATEGORY_CHOICES, CATEGORY_COMMITTEES
 from ..db import get_db
 from ..db_models import OutreachEvent, User
@@ -36,23 +36,24 @@ router = APIRouter()
 templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
 templates.env.globals["dev_available"] = DEV_MODE
 
-# Kei truck facts for loading animation (fun + factual + data-driven)
-_KEI_LOADING_FACTS_STATIC: list[str] = [
+# Kei truck facts for loading animation: informative, fun trivia (one shown per search).
+_KEI_LOADING_FACTS: list[str] = [
+    "Suzuki Carry, Honda Acty, Daihatsu Hijet — classic kei trucks.",
+    "'Kei' means 'light' in Japanese — the vehicle class is kei jidōsha.",
     "Texas made kei trucks legal for on-road use in 2025.",
     "25+ year old kei vehicles are federally legal to import; states set registration rules.",
-    'Illinois SOS brands some titles "Not Eligible for Registration" — we want a clear statute.',
-    "Kei trucks are small and fuel-efficient; legal in many states, restricted in Illinois.",
-    "'Kei' means 'light' in Japanese — the vehicle class is kei jidōsha.",
-    "Suzuki Carry, Honda Acty, Daihatsu Hijet — classic kei trucks.",
+    "Kei engines are capped at 660cc — that's why they're so efficient.",
+    "Subaru Sambar: so small it fits Japan's strict kei parking spaces.",
+    "Mini trucks were never sold new in the US; the 25-year import rule is why you see them now.",
+    "Illinois SOS sometimes brands titles 'Not Eligible for Registration' — we want clarity.",
+    "Kei jidōsha = 'light vehicle' — Japan's most popular vehicle class.",
+    "Mazda Scrum, Mitsubishi Minicab — more kei truck names to know.",
 ]
 
 
 def _loading_facts(member_count: int, zip_count: int) -> list[str]:
-    """Build list of kei truck facts for loading animation (static + data-driven)."""
-    facts: list[str] = list(_KEI_LOADING_FACTS_STATIC)
-    facts.append(f"We're tracking {member_count} Illinois legislators.")
-    facts.append(f"ZIPs mapped to districts: {zip_count}.")
-    return facts
+    """Return kei truck facts for loading animation (one random fact shown per button press)."""
+    return list(_KEI_LOADING_FACTS)
 
 
 @router.get("/")
@@ -489,6 +490,9 @@ async def advocacy_search(
             f"ZIP code {zip_code!r} not found in Illinois district data. "
             "Please enter a valid 5-digit Illinois ZIP code."
         )
+        if SEED_MODE and state.zip_to_district:
+            sample = sorted(state.zip_to_district.keys())[:6]
+            error += f" In dev mode, try ZIPs such as: {', '.join(sample)}."
         tpl = "_results_partial.html" if is_htmx else "index.html"
         return templates.TemplateResponse(
             tpl,

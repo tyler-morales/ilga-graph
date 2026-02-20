@@ -321,7 +321,6 @@
     var __advocacyStoredResponse = null;
     var __advocacyMinDurationTimer = null;
     var __advocacyLoadedTextTimer = null;
-    var __advocacyLoadingFactInterval = null;
     var __advocacyReadyToInject = false;
 
     var RESULTS_LOADING_HTML = '<div class="results-layout">'
@@ -341,10 +340,6 @@
     function injectStoredResultsAndCleanup() {
         var results = document.getElementById('results');
         if (!results || !__advocacyStoredResponse) return;
-        if (__advocacyLoadingFactInterval) {
-            clearInterval(__advocacyLoadingFactInterval);
-            __advocacyLoadingFactInterval = null;
-        }
         results.innerHTML = __advocacyStoredResponse;
         if (typeof htmx !== 'undefined') htmx.process(results);
         applyCardBioOverflow();
@@ -366,10 +361,6 @@
         if (!elt || (elt.id !== 'advocacy-form' && !elt.closest('#advocacy-form'))) return;
         if (__advocacyMinDurationTimer) clearTimeout(__advocacyMinDurationTimer);
         if (__advocacyLoadedTextTimer) clearTimeout(__advocacyLoadedTextTimer);
-        if (__advocacyLoadingFactInterval) {
-            clearInterval(__advocacyLoadingFactInterval);
-            __advocacyLoadingFactInterval = null;
-        }
         __advocacyStoredResponse = null;
         __advocacyReadyToInject = false;
         __advocacyLoadingActive = true;
@@ -378,13 +369,7 @@
         var facts = window.__ILGA_LOADING_FACTS;
         if (facts && facts.length > 0) {
             var factEl = document.getElementById('results-loading-fact');
-            var factIndex = 0;
-            if (factEl) factEl.textContent = facts[0];
-            __advocacyLoadingFactInterval = setInterval(function () {
-                factIndex = (factIndex + 1) % facts.length;
-                var el = document.getElementById('results-loading-fact');
-                if (el) el.textContent = facts[factIndex];
-            }, 2500);
+            if (factEl) factEl.textContent = facts[Math.floor(Math.random() * facts.length)];
         }
         __advocacyLoadedTextTimer = setTimeout(function () {
             __advocacyLoadedTextTimer = null;
@@ -408,10 +393,6 @@
             __advocacyStoredResponse = xhr.responseText;
             if (__advocacyReadyToInject) setTimeout(injectStoredResultsAndCleanup, 300);
         } else {
-            if (__advocacyLoadingFactInterval) {
-                clearInterval(__advocacyLoadingFactInterval);
-                __advocacyLoadingFactInterval = null;
-            }
             __advocacyLoadingActive = false;
         }
     });

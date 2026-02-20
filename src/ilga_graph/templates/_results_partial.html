@@ -24,6 +24,7 @@
         {% set heat_count = outreach_heat.get(member.id, 0) if outreach_heat else 0 %}
         <div class="card {% if role_class in ['role-senator', 'role-rep'] %}card-your-legislator{% endif %}"
             id="card-{{ member.id }}">
+            {# Fire pill (corner): data-driven from outreach_events — COUNT(DISTINCT user_id) per member; see docs/development/db-and-outreach.md #}
             {% if heat_count > 0 %}
             <span class="heat-score-pill" onclick="this.toggleAttribute('data-expanded')" title="{{ heat_count }} unique outreach advocate{{ 's' if heat_count != 1 else '' }}">🔥 {{ heat_count }}<span class="heat-score-pill-text">&nbsp;unique outreach advocate{{ 's' if heat_count != 1 else '' }}</span></span>
             {% endif %}
