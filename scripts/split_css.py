@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Split monolithic base.css into base, advocacy, intelligence. Strips leading indent."""
+"""Split monolithic base.css into base, advocacy, intelligence. Strips leading indent.
+
+Note: The app now uses split advocacy (form, drawer, email, cards) and intelligence
+(dashboard, tables) CSS files; this script outputs single advocacy.css and
+intelligence.css. To regenerate the split files, run this script then split
+advocacy.css and intelligence.css by section (see base.html link order).
+"""
 
 from pathlib import Path
 

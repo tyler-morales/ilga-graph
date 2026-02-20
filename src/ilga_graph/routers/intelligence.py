@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from datetime import datetime
 from pathlib import Path
 
@@ -12,6 +11,10 @@ from fastapi.templating import Jinja2Templates
 from .. import config as cfg
 from ..app_state import state
 from ..date_parse import parse_action_date
+from ..intelligence_helpers import (
+    bill_description_for_slip_bill_number,
+    canonical_organization_name,
+)
 from ..ml.rule_engine import get_bill_to_law_process
 from ..models import Bill
 
@@ -38,77 +41,6 @@ _PROCEDURAL_COMMITTEE_NAMES = frozenset(
         "rules committee",
     }
 )
-
-# Canonical labels for witness-slip org names (avoids duplicate rows for Self/self/NA/None etc.)
-_CANONICAL_NO_ORG = "No organization"
-_CANONICAL_INDIVIDUAL = "Individual"
-_ORG_NORMALIZE_MAP: dict[str, str] | None = None
-
-
-def _get_org_normalize_map() -> dict[str, str]:
-    """Lazy-build map from normalized raw org string -> canonical display name."""
-    global _ORG_NORMALIZE_MAP
-    if _ORG_NORMALIZE_MAP is not None:
-        return _ORG_NORMALIZE_MAP
-    no_org = (
-        "na",
-        "n/a",
-        "none",
-        "not applicable",
-        "not specified",
-        "no organization",
-        "(no organization)",
-        "—",
-        "-",
-        "",
-    )
-    individual = (
-        "self",
-        "myself",
-        "on behalf of self",
-        "individual",
-        "citizen",
-        "family",
-        "personal",
-        "retired",
-        "private citizen",
-        "self-employed",
-        "me",
-    )
-    m = {}
-    for v in no_org:
-        m[v.strip().lower()] = _CANONICAL_NO_ORG
-    for v in individual:
-        m[v.strip().lower()] = _CANONICAL_INDIVIDUAL
-    _ORG_NORMALIZE_MAP = m
-    return _ORG_NORMALIZE_MAP
-
-
-def _canonical_organization_name(raw: str) -> str:
-    """Map raw witness-slip organization string to a canonical name for grouping."""
-    s = (raw or "").strip()
-    if not s:
-        return _CANONICAL_NO_ORG
-    key = s.lower()
-    canonical = _get_org_normalize_map().get(key)
-    if canonical is not None:
-        return canonical
-    return s
-
-
-def _bill_description_for_slip_bill_number(bill_number: str) -> str:
-    """Resolve bill description for a witness-slip bill number (may lack leading zeros)."""
-    bill = getattr(state, "bill_lookup", {}).get(bill_number)
-    if bill:
-        return bill.description or ""
-    m = re.match(r"([A-Za-z]+)0*(\d+)", (bill_number or "").strip(), re.IGNORECASE)
-    if m:
-        norm = f"{m.group(1).upper()}{m.group(2)}"
-        for b in getattr(state, "bills", []):
-            m2 = re.match(r"([A-Za-z]+)0*(\d+)", (b.bill_number or "").strip(), re.IGNORECASE)
-            if m2 and f"{m2.group(1).upper()}{m2.group(2)}" == norm:
-                return b.description or ""
-    return ""
 
 
 @router.get("/")
@@ -723,10 +655,10 @@ async def intelligence_witness_slips(request: Request):
         no_pos = sum(1 for s in slips if s.position and "no position" in s.position.lower())
         total = len(slips)
         controversy = (opp / (pro + opp)) if (pro + opp) > 0 else 0.0
-        desc = _bill_description_for_slip_bill_number(bill_number)
+        desc = bill_description_for_slip_bill_number(bill_number)
         org_counts = {}
         for s in slips:
-            org = _canonical_organization_name(s.organization or "")
+            org = canonical_organization_name(s.organization or "")
             if org not in org_counts:
                 org_counts[org] = {"total": 0, "pro": 0, "opp": 0}
             org_counts[org]["total"] += 1
@@ -761,7 +693,7 @@ async def intelligence_witness_slips(request: Request):
     org_global = {}
     for slips in lookup.values():
         for s in slips:
-            org = _canonical_organization_name(s.organization or "")
+            org = canonical_organization_name(s.organization or "")
             org_global[org] = org_global.get(org, 0) + 1
     top_organizations = sorted(org_global.items(), key=lambda x: -x[1])[:50]
 

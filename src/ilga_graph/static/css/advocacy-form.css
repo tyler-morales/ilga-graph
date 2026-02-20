@@ -1,0 +1,512 @@
+/* ── Form ── */
+/* ── Advocacy Hero (matches page: light, serif, bordered) ── */
+.advocacy-hero {
+background: #fff;
+color: #222;
+padding: 24px 0 32px;
+margin-bottom: 4px;
+text-align: center;
+border-bottom: 1px solid #ccc;
+}
+.hero-inner {
+max-width: 680px;
+margin: 0 auto;
+}
+.hero-eyebrow {
+text-transform: uppercase;
+letter-spacing: 0.1em;
+font-size: 0.78em;
+color: #555;
+margin: 0 0 8px;
+}
+.hero-headline {
+font-size: 1.6em;
+font-weight: normal;
+margin: 0 0 8px;
+padding-bottom: 6px;
+border-bottom: 2px solid #333;
+line-height: 1.3;
+}
+.hero-image {
+display: block;
+max-width: 100%;
+height: auto;
+margin-left: auto;
+margin-right: auto;
+}
+.hero-subhead {
+font-size: 1em;
+color: #444;
+margin: 0 0 20px;
+line-height: 1.55;
+}
+.hero-subhead strong {
+color: #222;
+}
+.hero-form {
+background: #fafafa;
+border: 1px solid #ccc;
+padding: 20px 24px;
+margin: 0 auto 16px;
+max-width: 600px;
+}
+.hero-form label {
+display: block;
+font-weight: bold;
+margin-bottom: 5px;
+font-size: 0.88em;
+text-align: left;
+color: #333;
+}
+.label-optional {
+font-weight: normal;
+color: #666;
+}
+.hero-form-row {
+display: flex;
+gap: 12px;
+align-items: flex-end;
+flex-wrap: wrap;
+}
+.hero-field {
+flex: 1;
+min-width: 140px;
+}
+.hero-field-btn {
+flex: 0 0 auto;
+}
+.hero-form input[type="text"] {
+width: 100%;
+box-sizing: border-box;
+font-size: 1em;
+padding: 8px 12px;
+border: 1px solid #ccc;
+background: #fff;
+color: #222;
+}
+.hero-form select {
+width: 100%;
+box-sizing: border-box;
+font-size: 1em;
+padding: 8px 10px;
+border: 1px solid #ccc;
+background: #fff;
+color: #222;
+}
+.hero-form button {
+font-size: 1em;
+padding: 8px 20px;
+background: #333;
+color: #fff;
+border: 1px solid #333;
+font-weight: bold;
+cursor: pointer;
+white-space: nowrap;
+}
+.hero-form button:hover {
+background: #222;
+}
+.hero-trust {
+font-size: 0.78em;
+color: #666;
+margin-top: 4px;
+}
+.trust-sep {
+margin: 0 6px;
+}
+.hero-meta {
+font-size: 0.78em;
+color: #666;
+margin-top: 12px;
+text-align: center;
+}
+.hero-meta-line {
+display: flex;
+flex-wrap: wrap;
+align-items: center;
+justify-content: center;
+gap: 2px 6px;
+}
+.hero-meta-item {
+margin: 0;
+}
+.hero-meta-sep {
+color: #999;
+user-select: none;
+}
+.hero-meta-auth {
+margin: 0;
+}
+.auth-strip {
+font-size: 0.8em;
+color: #555;
+margin-top: 8px;
+}
+.auth-strip-signed-in {
+color: #059669;
+margin-top: 12px;
+transition: opacity 0.55s ease, transform 0.55s ease;
+}
+.auth-strip-signed-in:not([hidden]) {
+opacity: 0;
+transform: translateY(8px);
+}
+.auth-strip-signed-in.auth-strip-signed-in--visible {
+opacity: 1;
+transform: translateY(0);
+}
+.hero-verified-icon {
+display: inline-block;
+vertical-align: middle;
+margin-right: 4px;
+color: #059669;
+}
+.hero-verified-icon svg {
+display: block;
+}
+.auth-strip-signout {
+background: none;
+border: none;
+color: #1a73e8;
+cursor: pointer;
+padding: 0;
+text-decoration: underline;
+font-size: inherit;
+}
+.auth-strip-signout:hover {
+color: #1765cc;
+}
+.auth-strip-signin-btn {
+background: none;
+border: none;
+color: #1a73e8;
+cursor: pointer;
+padding: 0;
+text-decoration: underline;
+font-size: inherit;
+}
+.auth-strip-signin-btn:hover {
+color: #1765cc;
+}
+.hero-signin-inline {
+margin-top: 22px;
+font-size: inherit;
+display: flex;
+flex-direction: column;
+align-items: center;
+text-align: center;
+transition: opacity 0.55s ease, transform 0.55s ease;
+}
+.hero-signin-inline:not([hidden]) {
+opacity: 0;
+transform: translateY(8px);
+}
+.hero-signin-inline.hero-signin-inline--open {
+opacity: 1;
+transform: translateY(0);
+}
+.hero-signin-inline[hidden] {
+display: none !important;
+}
+.hero-signin-inline .hero-signin-state {
+display: flex;
+flex-wrap: wrap;
+align-items: center;
+justify-content: center;
+gap: 12px;
+transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.hero-signin-inline .hero-signin-state:not([hidden]) {
+opacity: 0;
+transform: translateY(8px);
+}
+.hero-signin-inline .hero-signin-state.hero-signin-state-visible {
+opacity: 1;
+transform: translateY(0);
+align-items: center;
+}
+.hero-signin-inline .hero-signin-state[hidden] {
+display: none !important;
+}
+.hero-signin-inline .hero-signin-input {
+padding: 4px 8px;
+border: 1px solid #ccc;
+border-radius: 4px;
+font-size: inherit;
+min-width: 180px;
+}
+.hero-signin-inline .hero-signin-code-input {
+padding: 6px 12px;
+border: 1px solid #ccc;
+border-radius: 4px;
+font-size: 2em;
+letter-spacing: 0.2em;
+min-width: 14ch;
+width: 14ch;
+height: 1.4em;
+line-height: 1.2;
+text-align: center;
+box-sizing: border-box;
+}
+.hero-signin-inline .hero-signin-btn {
+padding: 4px 12px;
+background: #1a73e8;
+color: #fff;
+border: none;
+border-radius: 4px;
+cursor: pointer;
+font-size: inherit;
+}
+.hero-signin-inline .hero-signin-btn:hover {
+background: #1765cc;
+}
+.hero-signin-inline .hero-signin-btn:disabled {
+opacity: 0.5;
+cursor: not-allowed;
+}
+.hero-signin-inline .hero-signin-btn.hero-signin-btn--sending:disabled {
+cursor: wait;
+}
+.hero-signin-code-hint {
+font-size: 0.95em;
+color: #555;
+}
+.hero-signin-code-row {
+display: flex;
+align-items: center;
+gap: 8px;
+}
+.hero-signin-error {
+color: #c00;
+font-size: 0.9em;
+display: block;
+margin-top: 6px;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.hero-signin-resend {
+background: none;
+border: none;
+color: #1a73e8;
+cursor: pointer;
+padding: 0;
+text-decoration: underline;
+font-size: 0.9em;
+margin-top: 8px;
+}
+.hero-signin-resend:hover {
+color: #1765cc;
+}
+.hero-signin-resend:disabled {
+opacity: 0.5;
+cursor: wait;
+}
+.hero-signin-cancel {
+background: none;
+border: none;
+color: #555;
+cursor: pointer;
+padding: 0;
+text-decoration: underline;
+font-size: 0.9em;
+margin-top: 24px;
+margin-left: 0;
+display: inline-block;
+}
+.hero-signin-cancel:hover {
+color: #333;
+}
+/* ── Outreach action buttons ── */
+.outreach-row {
+display: flex;
+flex-wrap: wrap;
+gap: 8px;
+margin-top: 12px;
+padding: 10px 0;
+border-top: 1px solid #ddd;
+}
+.outreach-row>.outreach-btn {
+flex: 1 1 0;
+min-width: 0;
+}
+.outreach-btn {
+min-height: 2.5rem;
+}
+.outreach-cell {
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 4px;
+flex: 1 1 0;
+min-width: 0;
+}
+.outreach-count {
+font-size: 0.8em;
+color: #555;
+}
+.outreach-btn {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+gap: 6px;
+flex: 1 1 0;
+min-width: 0;
+padding: 10px 12px;
+font-size: 0.9em;
+font-weight: 600;
+border: none;
+border-radius: 6px;
+cursor: pointer;
+text-decoration: none;
+color: #fff;
+transition: filter 0.15s, transform 0.1s;
+}
+.outreach-btn:hover {
+filter: brightness(1.1);
+}
+.outreach-btn:active {
+transform: scale(0.98);
+}
+.outreach-icon {
+display: inline-flex;
+align-items: center;
+color: inherit;
+}
+.outreach-icon svg {
+width: 1.15em;
+height: 1.15em;
+flex-shrink: 0;
+}
+.outreach-phone {
+background: #1a6b3c;
+}
+.outreach-phone:hover {
+background: #1a6b3c;
+}
+.outreach-btn.outreach-primary {
+background: #1a6b3c;
+min-width: 120px;
+}
+.outreach-btn.outreach-primary:hover {
+background: #1a6b3c;
+}
+.outreach-done-text {
+display: inline-flex;
+align-items: center;
+padding: 10px 12px;
+font-size: 0.9em;
+font-weight: 600;
+color: #6b7280;
+}
+.outreach-email {
+background: #2a5aad;
+}
+.outreach-email:hover {
+background: #2a5aad;
+}
+/* When no email on file: Call = primary (emphasize), Email = secondary */
+.outreach-row-no-email .outreach-phone {
+box-shadow: 0 0 0 2px rgba(26, 107, 60, 0.4);
+}
+.outreach-row-no-email .outreach-email {
+background: #6b7280;
+color: #fff;
+}
+.outreach-row-no-email .outreach-email:hover {
+background: #4b5563;
+}
+/* Email button cell (legacy): same flex when two buttons */
+.outreach-email-wrap {
+flex: 1 1 0;
+min-width: 0;
+}
+.outreach-email-wrap .outreach-email {
+width: 100%;
+}
+/* Hint on its own row below buttons, right-aligned (no collision) */
+.outreach-row-hint {
+padding: 0;
+width: 100%;
+font-size: 0.8em;
+color: #6b7280;
+line-height: 1.35;
+text-align: right;
+}
+/* Gamified "Called!" / "Emailed!" — gold metallic done state */
+.outreach-btn.outreach-done {
+cursor: default;
+pointer-events: none;
+background: linear-gradient(145deg, #c9a227 0%, #b8860b 30%, #daa520 50%, #b8860b 70%, #8b6914 100%);
+color: #1a1a0a;
+font-weight: 700;
+box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -1px 0 rgba(0, 0, 0, 0.2), 0 2px 6px rgba(184, 134, 11, 0.4);
+text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.outreach-btn.outreach-done .outreach-icon {
+filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.3));
+}
+@media (prefers-reduced-motion: no-preference) {
+.outreach-btn.outreach-done {
+animation: outreach-done-shine 3s ease-in-out infinite;
+}
+}
+@keyframes outreach-done-shine {
+0%,
+100% {
+filter: brightness(1);
+}
+50% {
+filter: brightness(1.12);
+}
+}
+/* ── Power signal chips ── */
+.chips-label {
+font-size: 0.85em;
+font-weight: 600;
+color: #555;
+margin: 10px 0 4px 0;
+letter-spacing: 0.02em;
+}
+.power-signals {
+display: flex;
+flex-wrap: wrap;
+align-items: flex-start;
+gap: 6px 8px;
+margin: 8px 0;
+}
+/* Chip text: full on desktop, abbreviated on mobile */
+.chip-text-mobile {
+display: none;
+}
+/* Signal chips: flow as compact pills; size to content */
+.signal-chip {
+display: inline-flex;
+align-items: center;
+flex: 0 1 auto;
+gap: 6px;
+font-size: 0.88em;
+font-weight: 500;
+color: #111;
+padding: 4px 10px;
+border-radius: 6px;
+max-width: 100%;
+overflow-wrap: break-word;
+word-break: break-word;
+background: #f5f5f5;
+border: 1px solid #e0e0e0;
+}
+.signal-chip .signal-emoji {
+flex-shrink: 0;
+font-style: normal;
+}
+/* All signal types use same neutral style; emoji differentiates in template */
+.signal-chair,
+.signal-rank,
+.signal-passage,
+.signal-bridge,
+.signal-persuadable,
+.signal-wow {
+background: #f5f5f5;
+color: #111;
+border: 1px solid #e0e0e0;
+}
+/* Advocacy drawer: chrome = phone-overlay / phone-panel; body content = drawer-* classes. */
