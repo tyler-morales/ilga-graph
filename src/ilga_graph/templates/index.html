@@ -3,56 +3,57 @@
 {% block title %}{{ title }} — Find Your Targets{% endblock %}
 
 {% block content %}
-<script>window.__ILGA_FEATURES = {{ (features or {}) | tojson }};</script>
-<script>window.__ILGA_LOADING_FACTS = {{ (loading_facts or []) | tojson }};</script>
-{# ── Hero section ─────────────────────────────────────────────────── #}
+<script>window.__ILGA_FEATURES = {{ (features or { }) | tojson }};</script>
+<script>window.__ILGA_LOADING_FACTS = {{ (loading_facts or[]) | tojson }};</script>
+{# ── Hero section (hardball: threat-focused copy, image + action layout) ── #}
 <div class="advocacy-hero">
     <div class="hero-inner">
-        <p class="hero-eyebrow">Illinois Legislative Advocacy Tool</p>
-        <h1 class="hero-headline">{{ title }}</h1>
-        <img src="https://upload.wikimedia.org/wikipedia/commons/a/ad/SuzukiCarry8th.jpg" alt="Suzuki Carry kei truck"
-            class="hero-image" loading="lazy">
-        <p class="hero-subhead">
-            Enter your ZIP code. We'll tell you <strong>exactly who to call</strong>,
-            <strong>what to say</strong>, and <strong>who has the power</strong> to move
-            your issue through Springfield.
-        </p>
-
-        <div class="hero-form">
-            <form action="/advocacy/search" method="post" id="advocacy-form" hx-post="/advocacy/search"
-                hx-target="#results" hx-swap="innerHTML" hx-indicator="#search-spinner">
-                <div class="hero-form-row">
-                    <div class="hero-field">
-                        <label for="zip_code">Your Illinois ZIP Code</label>
-                        <input type="text" id="zip_code" name="zip_code" inputmode="numeric" pattern="[0-9]{5}"
-                            placeholder="60614" maxlength="5" required autocomplete="postal-code"
-                            value="{{ zip or '' }}">
-                    </div>
-                    <div class="hero-field">
-                        <label for="category">Policy Area <span class="label-optional">(optional)</span></label>
-                        <select id="category" name="category">
-                            {% for value, label in categories %}
-                            <option value="{{ value }}" {% if category is defined and category==value %}selected{% endif
-                                %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="hero-field hero-field-btn">
-                        <button type="submit" id="find-btn">Find My Targets</button>
-                        <span id="search-spinner" class="htmx-indicator">Searching&hellip;</span>
-                    </div>
+        <p class="hero-eyebrow">Take action</p>
+        <h1 class="hero-headline">{{ hero_headline or title }}</h1>
+        <div class="hero-split">
+            <div class="hero-image-wrap">
+                <img src="/static/images/truck-hero.jpg" alt="White Kei truck on city street" class="hero-image"
+                    loading="eager" width="600" height="400"
+                    onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/a/ad/SuzukiCarry8th.jpg'; this.alt='Suzuki Carry kei truck';">
+            </div>
+            <div class="hero-action">
+                <p class="hero-subhead">{{ hero_subhead }}</p>
+                <p class="hero-ticker" aria-live="polite">
+                    {% if calls_this_week|default(0) > 0 %}
+                    Over <strong aria-hidden="true">{{ calls_this_week }}</strong> calls made to Springfield this week.
+                    {% elif calls_total|default(0) > 0 %}
+                    <strong aria-hidden="true">{{ calls_total }}</strong> calls to Springfield so far. Add yours.
+                    {% else %}
+                    Join the first callers — enter your ZIP below.
+                    {% endif %}
+                </p>
+                <div class="hero-form">
+                    <form action="/advocacy/search" method="post" id="advocacy-form" hx-post="/advocacy/search"
+                        hx-target="#results" hx-swap="innerHTML" hx-indicator="#search-spinner">
+                        <input type="hidden" name="category" value="Transportation">
+                        <div class="hero-form-row">
+                            <div class="hero-field">
+                                <label for="zip_code">Your Illinois ZIP code</label>
+                                <input type="text" id="zip_code" name="zip_code" inputmode="numeric" pattern="[0-9]{5}"
+                                    placeholder="60614" maxlength="5" required autocomplete="postal-code"
+                                    value="{{ zip or '' }}">
+                            </div>
+                            <div class="hero-field hero-field-btn">
+                                <button type="submit" id="find-btn">Get My Call Script</button>
+                                <span id="search-spinner" class="htmx-indicator">Searching&hellip;</span>
+                            </div>
+                        </div>
+                    </form>
                 </div>
-            </form>
+            </div>
         </div>
-
+        <div class="hero-trust-badges" role="list" aria-label="Why take action">
+            <span role="listitem"><span aria-hidden="true">⏱</span> Takes 1 Minute</span>
+            <span role="listitem"><span aria-hidden="true">📜</span> Scripts Provided</span>
+            <span role="listitem"><span aria-hidden="true">✓</span> Real Impact</span>
+        </div>
         <div class="hero-meta" id="auth-strip" aria-live="polite">
             <div class="hero-meta-line">
-                <span class="hero-meta-item">Data from <strong>ilga.gov</strong></span>
-                <span class="hero-meta-sep">&middot;</span>
-                <span class="hero-meta-item">{{ member_count or 177 }} legislators tracked</span>
-                <span class="hero-meta-sep">&middot;</span>
-                <span class="hero-meta-item">ML-scored influence rankings</span>
-                <span class="hero-meta-sep">&middot;</span>
                 <span id="auth-strip-signed-out" class="hero-meta-auth">
                     <button type="button" class="auth-strip-signin-btn" id="auth-strip-signin-btn">Sign in</button>
                 </span>
@@ -94,23 +95,31 @@
     <a href="/intelligence">ML Intelligence Dashboard &rarr;</a>
 </div> -->
 
-<div id="results" role="region" aria-label="Search results">
-    {% if error %}<div class="error-msg" role="alert">{{ error }}</div>{% endif %}
-    {% block results %}{% endblock %}
+<div id="results" role="region" aria-label="Search results" {% if your_legislators is defined %}
+    data-has-initial-results="true" {% endif %}>
+    {% if error and your_legislators is not defined %}<div class="error-msg" role="alert">{{ error }}</div>{% endif %}
+    {% block results %}
+    {% if your_legislators is defined %}
+    {% include "_results_partial.html" %}
+    {% endif %}
+    {% endblock %}
 </div>
 
 {# ── Advocacy drawer (Call script → After-call email, or Email-first) ── #}
 <div id="advocacy-drawer-overlay" class="phone-overlay" onclick="closeAdvocacyDrawer()" aria-hidden="true"></div>
-<div id="advocacy-drawer" class="phone-panel" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Outreach: call script and email template"
-    data-member-id="" data-drawer-zip="" data-drawer-constituent="" data-drawer-photo-url="">
+<div id="advocacy-drawer" class="phone-panel" role="dialog" aria-modal="true" aria-hidden="true"
+    aria-label="Outreach: call script and email template" data-member-id="" data-drawer-zip=""
+    data-drawer-constituent="" data-drawer-photo-url="">
     <div class="phone-panel-handle" id="advocacy-drawer-handle" aria-hidden="true">
         <div class="phone-panel-handle-pill"></div>
     </div>
     <div class="phone-panel-title-row">
         <div class="drawer-step-strip" id="drawer-step-strip" role="tablist" aria-label="Outreach steps">
-            <button type="button" class="drawer-step-link" id="drawer-step-call" role="tab" aria-selected="true" data-step="call">Call</button>
+            <button type="button" class="drawer-step-link" id="drawer-step-call" role="tab" aria-selected="true"
+                data-step="call">Call</button>
             <span class="drawer-step-sep" aria-hidden="true">·</span>
-            <button type="button" class="drawer-step-link" id="drawer-step-email" role="tab" aria-selected="false" data-step="email">Email</button>
+            <button type="button" class="drawer-step-link" id="drawer-step-email" role="tab" aria-selected="false"
+                data-step="email">Email</button>
         </div>
         <div id="advocacy-drawer-title-extra" class="phone-panel-title-extra">
             <div class="drawer-header-constituent" role="group" aria-label="Constituent status">
@@ -160,6 +169,37 @@
 </div>
 
 <script>
+    // #region agent log
+    (function () {
+        var params = new URLSearchParams(window.location.search);
+        var urlZip = params.get('zip') || '';
+        fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '0217e7' },
+            body: JSON.stringify({
+                sessionId: '0217e7',
+                hypothesisId: 'H4',
+                location: 'index.html:onload',
+                message: 'Page load with zip in URL',
+                data: { url_has_zip: !!urlZip, url_zip: urlZip, auto_submit_on_load: false },
+                timestamp: Date.now()
+            })
+        }).catch(function () { });
+    })();
+    // #endregion
+    /* ── Auto-scroll to members when page loads with results (e.g. /advocacy?zip=60071) ── */
+    (function () {
+        var results = document.getElementById('results');
+        if (results && results.getAttribute('data-has-initial-results') === 'true') {
+            var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            requestAnimationFrame(function () {
+                results.scrollIntoView({
+                    behavior: reduceMotion ? 'auto' : 'smooth',
+                    block: 'start'
+                });
+            });
+        }
+    })();
     /* ── Floating UI: position click tooltips with flip/shift ── */
     function updateTooltipPosition(wrap) {
         if (typeof window.FloatingUIDOM === 'undefined') return;
@@ -280,6 +320,22 @@
             }
         });
     }
+
+    /** Stagger fade-in + slide-up animation delays for member cards (respects prefers-reduced-motion in CSS). */
+    function applyCardEnterAnimation(container) {
+        if (!container) return;
+        var cards = container.querySelectorAll('.results-main .card');
+        for (var i = 0; i < cards.length; i++) {
+            var card = cards[i];
+            card.style.animationDelay = (i * 90) + 'ms';
+            card.addEventListener('animationend', function onCardAnimationEnd(e) {
+                if (e.target && e.animationName === 'card-fade-slide-up') {
+                    e.target.classList.add('card-animate-done');
+                    e.target.removeEventListener('animationend', onCardAnimationEnd);
+                }
+            }, { once: true });
+        }
+    }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', applyCardBioOverflow);
     } else {
@@ -326,7 +382,6 @@
     var RESULTS_LOADING_HTML = '<div class="results-layout">'
         + '<aside class="results-aside">'
         + '<details class="how-it-works how-it-works-details" open><summary class="hiw-title">How we pick targets</summary>'
-        + '<div class="hiw-body"><p class="hiw-note">Loading your targets…</p></div></details>'
         + '</aside>'
         + '<main class="results-main">'
         + '<h2>🏡 Your Legislators</h2>'
@@ -342,6 +397,7 @@
         if (!results || !__advocacyStoredResponse) return;
         results.innerHTML = __advocacyStoredResponse;
         if (typeof htmx !== 'undefined') htmx.process(results);
+        applyCardEnterAnimation(results);
         applyCardBioOverflow();
         results.scrollIntoView({ behavior: 'smooth', block: 'start' });
         __advocacyStoredResponse = null;
@@ -352,6 +408,20 @@
             __advocacyMinDurationTimer = null;
         }
     }
+
+    /* ── Keep URL in sync with ZIP when user searches (shareable, bookmarkable links) ── */
+    document.body.addEventListener('htmx:beforeRequest', function (e) {
+        var elt = e.detail.elt;
+        var form = elt && (elt.id === 'advocacy-form' ? elt : (elt.closest && elt.closest('#advocacy-form')));
+        if (!form) return;
+        var zipInput = form.querySelector('input[name="zip_code"]');
+        var zip = zipInput ? zipInput.value.trim() : '';
+        if (/^\d{5}$/.test(zip)) {
+            var url = new URL(window.location.href);
+            url.searchParams.set('zip', zip);
+            history.replaceState(null, '', url.pathname + url.search);
+        }
+    });
 
     document.body.addEventListener('htmx:beforeRequest', function (e) {
         if (!(window.__ILGA_FEATURES && window.__ILGA_FEATURES.zip_loading_animation)) return;
@@ -400,6 +470,7 @@
     /* ── Scroll to results after htmx swap ── */
     document.body.addEventListener('htmx:afterSwap', function (e) {
         if (e.detail.target && e.detail.target.id === 'results') {
+            applyCardEnterAnimation(e.detail.target);
             setTimeout(function () {
                 applyCardBioOverflow();
                 e.detail.target.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -447,6 +518,10 @@
         body.innerHTML = '<p class="drawer-loading">Loading…</p>';
         drawer.classList.add('open');
         document.getElementById('advocacy-drawer-overlay').classList.add('open');
+        if (window.matchMedia('(max-width: 768px)').matches) {
+            document.body.style.overflow = 'hidden';
+            document.body.style.touchAction = 'none';
+        }
         initDrawerFocusTrapAndFocus();
         var fetchView = (view === 'call_wrapup') ? 'call' : view;
         var params = new URLSearchParams({ view: fetchView, member_id: memberId || '', zip: zipCode || '' });
@@ -524,6 +599,8 @@
         var overlay = document.getElementById('advocacy-drawer-overlay');
         if (drawer) drawer.classList.remove('open');
         if (overlay) overlay.classList.remove('open');
+        document.body.style.overflow = '';
+        document.body.style.touchAction = '';
         if (drawer) drawer.setAttribute('aria-hidden', 'true');
         removeDrawerFocusTrap();
         if (window.__advocacyDrawerPreviousFocus && typeof window.__advocacyDrawerPreviousFocus.focus === 'function') {
@@ -633,6 +710,7 @@
         }
 
         function onPointerMove(e) {
+            e.preventDefault();
             var deltaY = e.clientY - startY;
             var newTranslateY = Math.max(0, startTranslateY + deltaY);
             panel.style.transform = 'translateY(' + newTranslateY + 'px)';
@@ -1358,6 +1436,7 @@
                 inlineBlock.hidden = true;
                 inlineBlock.classList.remove('hero-signin-inline--open');
             }
+            if (stripSignedOut) stripSignedOut.hidden = false;
             showHeroState('email');
             if (emailInput) emailInput.value = '';
             if (codeInput) codeInput.value = '';
@@ -1365,6 +1444,7 @@
         }
 
         signinBtn && (signinBtn.onclick = function () {
+            if (stripSignedOut) stripSignedOut.hidden = true;
             showInline(true);
             showHeroState('email');
             requestAnimationFrame(function () {
@@ -1923,7 +2003,7 @@
         // #region agent log
         (function () {
             var payload = { sessionId: '4888d4', hypothesisId: 'H1', location: 'index.html:zipBlanks', message: 'zip constituent init', data: { zipBlanksLength: zipBlanks ? zipBlanks.length : 0, hasMadlib: !!(madlibContainer && madlibContainer.children.length) }, timestamp: Date.now() };
-            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '4888d4' }, body: JSON.stringify(payload) }).catch(function () {});
+            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '4888d4' }, body: JSON.stringify(payload) }).catch(function () { });
         })();
         // #endregion
         function updateConstituentFromZip(zipValue) {
@@ -1933,7 +2013,7 @@
             // #region agent log
             (function () {
                 var payload = { sessionId: '4888d4', hypothesisId: 'H2', location: 'index.html:updateConstituentFromZip', message: 'updateConstituentFromZip called', data: { zipValue: z, memberId: memberId, zipValid: zipValid }, timestamp: Date.now() };
-                fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '4888d4' }, body: JSON.stringify(payload) }).catch(function () {});
+                fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '4888d4' }, body: JSON.stringify(payload) }).catch(function () { });
             })();
             // #endregion
             if (!zipValid) return;
@@ -1946,7 +2026,7 @@
                     // #region agent log
                     (function () {
                         var payload = { sessionId: '4888d4', hypothesisId: 'H4', location: 'index.html:check-constituent response', message: 'constituent API result', data: { isConst: isConst, checkboxId: emailConstituentCheckbox ? emailConstituentCheckbox.id : null }, timestamp: Date.now() };
-                        fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '4888d4' }, body: JSON.stringify(payload) }).catch(function () {});
+                        fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '4888d4' }, body: JSON.stringify(payload) }).catch(function () { });
                     })();
                     // #endregion
                     if (emailConstituentCheckbox) {
@@ -1958,7 +2038,7 @@
                         });
                     }
                 })
-                .catch(function () {});
+                .catch(function () { });
         }
         /* Event delegation: madlib body can be re-rendered by applyBodyFromStore(), which replaces
            innerHTML and removes the inputs we attached to. Attach once on the container so any

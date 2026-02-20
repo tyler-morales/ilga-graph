@@ -7,7 +7,10 @@
 - Real data: always seeds backlog rows for moratyle@gmail.com (rep names → member_id
   from cache + mocks merged). Run seed after a scrape so member IDs match the app.
 - Mock data: only when ILGA_PROFILE=dev. Seeds advocate1–5@example.com for 60608
-  + Transportation so heat pills show varied counts in dev.
+  + Transportation so heat pills show varied counts in dev. Also inserts "this week"
+  events (relative dates) so the landing ticker shows a realistic call count, extra
+  member_ids for more fire pills, and support_score 1–5 spread so the call-drawer
+  interest poll shows a full bar chart.
 Run from repo root: python scripts/seed_outreach.py  (or: make seed-outreach)
 """
 
@@ -17,7 +20,7 @@ import asyncio
 import json
 import re
 import unicodedata
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # Project root = parent of scripts/
@@ -425,6 +428,150 @@ async def _main() -> None:
             await session.commit()
             print(
                 f"Inserted {community_created} dev mock outreach events across {len(_COMMUNITY_ROWS)} advocates."
+            )
+
+            # Dev-only: "this week" events with relative dates so the landing ticker
+            # always shows a realistic count (calls_this_week >= 7-day window).
+            # (adv_email, member_id, kind, days_ago, support_score, notes, contact_name)
+            _THIS_WEEK_ROWS: list[tuple[str, str, str, int, int, str, str]] = [
+                (
+                    "advocate1@example.com",
+                    "3291",
+                    "call",
+                    6,
+                    4,
+                    "Mock: left message about kei trucks",
+                    "Staff",
+                ),
+                (
+                    "advocate2@example.com",
+                    "3318",
+                    "call",
+                    5,
+                    3,
+                    "Mock: brief call, asked to email",
+                    "",
+                ),
+                (
+                    "advocate3@example.com",
+                    "3366",
+                    "call",
+                    4,
+                    4,
+                    "Mock: staffer interested",
+                    "Priya",
+                ),
+                (
+                    "advocate4@example.com",
+                    "3291",
+                    "call",
+                    3,
+                    2,
+                    "Mock: skeptical, said to send facts",
+                    "Receptionist",
+                ),
+                (
+                    "advocate5@example.com",
+                    "3318",
+                    "call",
+                    2,
+                    5,
+                    "Mock: champion, will bring up in caucus",
+                    "Val",
+                ),
+                ("advocate1@example.com", "3366", "call", 1, 3, "Mock: neutral, took note", ""),
+                (
+                    "advocate2@example.com",
+                    "3291",
+                    "call",
+                    0,
+                    1,
+                    "Mock: strongly opposed to change",
+                    "Staff",
+                ),
+                (
+                    "advocate3@example.com",
+                    "3318",
+                    "call",
+                    0,
+                    4,
+                    "Mock: interested, asked for one-pager",
+                    "",
+                ),
+                ("advocate4@example.com", "3291", "email", 1, 4, "Mock: follow-up after call", ""),
+                (
+                    "advocate5@example.com",
+                    "3366",
+                    "call",
+                    2,
+                    3,
+                    "Mock: quick call, will review",
+                    "",
+                ),
+            ]
+            # Extra members so more result cards show the fire pill (Power Broker).
+            _FIRE_PILL_EXTRA: list[tuple[str, str, int, int, str]] = [
+                ("advocate1@example.com", "3292", 3, 4, "Mock: heat pill demo"),
+                ("advocate2@example.com", "3292", 2, 3, "Mock: heat pill demo"),
+                ("advocate3@example.com", "3312", 4, 4, "Mock: heat pill demo"),
+                ("advocate4@example.com", "3279", 1, 3, "Mock: heat pill demo"),
+            ]
+            now = datetime.now(timezone.utc)
+            dev_advocate_emails = [row[0] for row in _COMMUNITY_ROWS]
+            r = await session.execute(select(User).where(User.email.in_(dev_advocate_emails)))
+            adv_users = {u.email: u for u in r.scalars().all()}
+            this_week_created = 0
+            for (
+                adv_email,
+                member_id,
+                kind,
+                days_ago,
+                support_score,
+                notes,
+                contact_name,
+            ) in _THIS_WEEK_ROWS:
+                u = adv_users.get(adv_email)
+                if not u:
+                    continue
+                session.add(
+                    OutreachEvent(
+                        user_id=u.id,
+                        user_email=adv_email,
+                        member_id=member_id,
+                        kind=kind,
+                        zip_code="60608",
+                        outcome=None,
+                        notes=notes,
+                        contact_name=contact_name or None,
+                        support_score=support_score,
+                        constituent=True,
+                        created_at=now - timedelta(days=days_ago),
+                    )
+                )
+                this_week_created += 1
+            for adv_email, member_id, days_ago, support_score, notes in _FIRE_PILL_EXTRA:
+                u = adv_users.get(adv_email)
+                if not u:
+                    continue
+                session.add(
+                    OutreachEvent(
+                        user_id=u.id,
+                        user_email=adv_email,
+                        member_id=member_id,
+                        kind="call",
+                        zip_code="60608",
+                        outcome=None,
+                        notes=notes,
+                        contact_name=None,
+                        support_score=support_score,
+                        constituent=True,
+                        created_at=now - timedelta(days=days_ago),
+                    )
+                )
+                this_week_created += 1
+            await session.commit()
+            print(
+                f"Inserted {this_week_created} dev 'this week' + fire-pill events (relative dates, poll score 1–5)."
             )
 
 

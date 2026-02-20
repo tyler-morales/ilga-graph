@@ -7,6 +7,7 @@ Anonymous users can still use advocacy but events are not persisted.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Form
 from fastapi.responses import JSONResponse
@@ -83,6 +84,39 @@ async def record_outreach(
     await db.commit()
     LOGGER.info("Outreach recorded: user=%s member=%s kind=%s", user.email, member_id, kind)
     return {"ok": True, "event_id": event.id}
+
+
+async def get_outreach_aggregate(db: AsyncSession) -> dict[str, int]:
+    """Return global outreach counts for landing page ticker/social proof."""
+    now = datetime.now(timezone.utc)
+    week_ago = now - timedelta(days=7)
+    # Total calls and emails (all time)
+    result = await db.execute(
+        select(OutreachEvent.kind, func.count())
+        .where(OutreachEvent.kind.in_(["call", "email"]))
+        .group_by(OutreachEvent.kind)
+    )
+    by_kind = {row[0]: row[1] for row in result.all()}
+    calls_total = by_kind.get("call", 0)
+    emails_total = by_kind.get("email", 0)
+    # Calls this week
+    week_result = await db.execute(
+        select(func.count())
+        .where(OutreachEvent.kind == "call")
+        .where(OutreachEvent.created_at >= week_ago)
+    )
+    calls_this_week = week_result.scalar() or 0
+    return {
+        "calls_total": calls_total,
+        "calls_this_week": calls_this_week,
+        "emails_total": emails_total,
+    }
+
+
+@router.get("/aggregate")
+async def outreach_aggregate(db: AsyncSession = Depends(get_db)):
+    """Public global outreach counts for landing page social proof."""
+    return await get_outreach_aggregate(db)
 
 
 @router.get("/stats/{member_id}")

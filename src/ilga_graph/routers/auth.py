@@ -66,7 +66,7 @@ async def _send_code_email(email: str, code: str) -> None:
     import aiosmtplib
 
     msg = EmailMessage()
-    msg["Subject"] = f"Your ILGA Graph verification code: {code}"
+    msg["Subject"] = f"Your {cfg.SITE_NAME} verification code: {code}"
     msg["From"] = cfg.SMTP_FROM
     msg["To"] = email
     plain = (

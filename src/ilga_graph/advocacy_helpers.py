@@ -1,4 +1,4 @@
-"""Advocacy page helpers: card building, script/email copy, Power Broker and Ally selection.
+"""Advocacy page helpers: card building, script/email copy, Power Broker selection.
 
 All functions that need app state take `state` as the first argument (the same
 AppState instance used in main.py lifespan). Pure helpers (script/email text,
@@ -488,59 +488,6 @@ def build_script_sections_broker(card: dict, broker_why: str) -> dict:
     }
 
 
-def build_script_sections_ally(card: dict) -> dict:
-    bridge = card.get("bridge_pct")
-    net = card.get("influence_network")
-    bipartisan = (net or {}).get("bipartisan_label") or ""
-    if bridge is not None and bridge >= 15:
-        why = (
-            f"This senator sits next to yours in the chamber and has a {bridge}% cross-party "
-            "co-sponsorship rate \u2014 they regularly work across the aisle. "
-            "A natural partner for your senator on this issue."
-        )
-    elif bipartisan:
-        why = (
-            "This senator sits physically next to yours in the chamber and has "
-            f"{bipartisan}. They are a natural partner for your senator on this issue."
-        )
-    else:
-        why = (
-            "This senator sits physically next to yours in the chamber. "
-            "Proximity matters \u2014 asking your senator to partner with them can build momentum."
-        )
-    return {
-        "opening": (
-            "Hi, I\u2019m calling about kei truck legislation. "
-            "I\u2019d like to leave a message about partnering with my senator on this."
-        ),
-        "why_them": why,
-        "the_ask": (
-            "Ask your senator to partner with this colleague on kei truck legislation \u2014 "
-            "they sit next to each other and can work together on the bill."
-        ),
-        "closing": "Thank you for your time.",
-    }
-
-
-def build_script_sections_super_ally(card: dict) -> dict:
-    wow = script_wow_line(card)
-    return {
-        "opening": (
-            "Hi, I\u2019m calling about kei truck legislation. "
-            "I\u2019d like to leave a message about co-sponsorship and partnering with my senator."
-        ),
-        "why_them": (
-            "This legislator is both the top influence in the chamber and sits next to your senator. "
-            "Their support can move the bill in committee and on the floor." + wow
-        ),
-        "the_ask": (
-            "Ask them to co-sponsor and to work with your senator. "
-            "Constituent pressure plus their influence can unlock the process."
-        ),
-        "closing": "Thank you for your time.",
-    }
-
-
 def build_script_hint_senator(card: dict, zip_code: str, district: str) -> str:
     s = build_script_sections_senator(card, zip_code, district)
     return " ".join(filter(None, [s["opening"], s["why_them"], s["the_ask"], s["closing"]]))
@@ -553,16 +500,6 @@ def build_script_hint_rep(card: dict, zip_code: str, district: str) -> str:
 
 def build_script_hint_broker(card: dict, broker_why: str) -> str:
     s = build_script_sections_broker(card, broker_why)
-    return " ".join(filter(None, [s["opening"], s["why_them"], s["the_ask"], s["closing"]]))
-
-
-def build_script_hint_ally(card: dict) -> str:
-    s = build_script_sections_ally(card)
-    return " ".join(filter(None, [s["opening"], s["why_them"], s["the_ask"], s["closing"]]))
-
-
-def build_script_hint_super_ally(card: dict) -> str:
-    s = build_script_sections_super_ally(card)
     return " ".join(filter(None, [s["opening"], s["why_them"], s["the_ask"], s["closing"]]))
 
 
@@ -843,65 +780,6 @@ def find_power_broker(
     )
     why = ". ".join(parts) + "."
     return member, why
-
-
-def find_ally(
-    state: Any,
-    senator: Member,
-    *,
-    committee_ids: set[str] | None = None,
-    category_name: str = "",
-) -> tuple[Member | None, str]:
-    """Find the best Ally from the senator's seatmates. Returns (Member | None, why_text)."""
-    if not senator.seatmate_names:
-        return None, ""
-
-    best_member = None
-    best_bridge = -1.0
-
-    for seatmate_name in senator.seatmate_names:
-        member = state.member_lookup.get(seatmate_name)
-        if member is None:
-            continue
-        if committee_ids and member.id not in committee_ids:
-            continue
-
-        bridge = 0.0
-        if state.moneyball:
-            mb = state.moneyball.profiles.get(member.id)
-            if mb:
-                bridge = mb.bridge_score
-
-        if bridge > best_bridge:
-            best_bridge = bridge
-            best_member = member
-
-    if best_member is None and committee_ids:
-        return find_ally(state, senator, committee_ids=None, category_name="")
-
-    if best_member is None:
-        for seatmate_name in senator.seatmate_names:
-            member = state.member_lookup.get(seatmate_name)
-            if member is not None:
-                best_member = member
-                break
-
-    if best_member is None:
-        return None, ""
-
-    why_parts = ["Sits next to your senator in the chamber"]
-    if category_name and committee_ids and best_member.id in committee_ids:
-        why_parts.append(f"also on a {category_name} committee")
-    if state.moneyball:
-        mb = state.moneyball.profiles.get(best_member.id)
-        if mb and mb.bridge_score > 0:
-            why_parts.append(
-                f"bridge score of {mb.bridge_score:.0%} (cross-party co-sponsorship rate)"
-            )
-    if senator.seatmate_affinity > 0:
-        why_parts.append(f"{senator.seatmate_affinity:.0%} bill overlap with seatmates")
-    why = ". ".join(why_parts) + "."
-    return best_member, why
 
 
 def test_member_list(state: Any, max_count: int = 20) -> list[dict[str, Any]]:

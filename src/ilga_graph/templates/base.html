@@ -45,12 +45,13 @@
         <main id="main-content" role="main">
             {% block content %}{% endblock %}
         </main>
-        <div class="footer" role="contentinfo">
-            <a href="/explore">Power Map</a> &middot;
-            <a href="/advocacy">Advocacy</a> &middot;
-            <a href="/intelligence">Intelligence</a>
-            &mdash; ILGA Graph PoC
-        </div>
+        <footer class="footer" role="contentinfo">
+            <p class="footer-brand">{{ site_name }}</p>
+            <p class="footer-links">
+                <a href="https://www.facebook.com/groups/690646129984408" target="_blank" rel="noopener noreferrer">Join the Facebook group</a>
+            </p>
+            <p class="footer-disclaimer">Not affiliated with the Illinois General Assembly. Information here is for advocacy and educational purposes only.</p>
+        </footer>
     </div>
 
     {% if dev_available %}
