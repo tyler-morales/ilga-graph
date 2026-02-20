@@ -11,7 +11,7 @@
 {% endif %}
 
         {% if error %}
-        <div class="error-msg">{{ error }}</div>
+        <div class="error-msg" role="alert">{{ error }}</div>
         {% endif %}
 
         {# ══════════════════════════════════════════════════════════════════════ #}
@@ -44,13 +44,14 @@
                 {% set bipartisan_reach = net and net.bipartisan_label %}
                 {% set big_network = net and net.unique_collaborators is not none and net.unique_collaborators >= 40 %}
 
-                {# ── Card header: [photo] | [name then badges on desktop]; mobile keeps badges full width below ── #}
+                {# ── Card header: [photo] | [name + badges in one column on desktop]; mobile keeps badges full width below ── #}
                 <div class="card-header">
                     {% if member.photo_url %}
                     <img src="{{ member.photo_url }}" alt="{{ member.name }}" class="member-photo" loading="lazy">
                     {% else %}
                     <div class="member-photo member-photo-placeholder" title="{{ member.name }}" aria-hidden="true">{% if member.name and member.name.split() %}{{ member.name.split()[0][0] }}{{ member.name.split()[-1][0] }}{% else %}?{% endif %}</div>
                     {% endif %}
+                    <div class="card-header-col">
                     <div class="card-header-right">
                         <h3 class="card-name">
                             {{ member.name }}
@@ -100,6 +101,7 @@
                                 <p>{{ pb.explanation }}</p>
                             </span></span>
                         {% endfor %}
+                    </div>
                     </div>
                 </div>
                 {# ── Why we recommend them (prose; full width below header) ── #}
@@ -374,7 +376,7 @@
                         </div>
                         {% endif %}
 
-                        {# ── Outreach action buttons (open advocacy drawer: Call or Email view); gamified "Called!" / "Emailed!" when done ── #}
+                        {# ── Call (primary) + Email; Call first nudge. Drawer keeps Call · Email step strip. ── #}
                         {% set target_type = 'POWER_BROKER' if role_class in ['role-broker', 'role-super-ally'] else 'NON_COMMITTEE' %}
                         <div class="outreach-row {% if not member.email %}outreach-row-no-email{% endif %}">
                             {% if member.phone %}
@@ -430,7 +432,9 @@
                             {% endif %}
                         </div>
                         {% if not member.email %}
-                        <p class="outreach-row-hint">No email on file — call to get one, or check their website.</p>
+                        <p class="outreach-row-hint">No public email — call to get one, or check their website.</p>
+                        {% else %}
+                        <p class="outreach-row-hint">Call first, then follow up by email.</p>
                         {% endif %}
 
                         {# ── Expandable "About" (bio + committees, voting, scorecard) ── #}
@@ -737,5 +741,5 @@
         </div>
         {% endif %}
         {% if not error and not (your_legislators or broker or ally or super_ally) %}
-        <div class="results-empty">No targets found for this ZIP. Try another Illinois ZIP or policy area.</div>
+        <div class="results-empty" role="status" aria-live="polite">No targets found for this ZIP. Try another Illinois ZIP or policy area.</div>
         {% endif %}

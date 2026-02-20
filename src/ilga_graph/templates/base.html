@@ -16,6 +16,7 @@
 
         html {
             overflow-x: hidden;
+            scroll-behavior: smooth;
         }
 
         body {
@@ -514,6 +515,24 @@
             background: #1a6b3c;
         }
 
+        .outreach-btn.outreach-primary {
+            background: #1a6b3c;
+            min-width: 120px;
+        }
+
+        .outreach-btn.outreach-primary:hover {
+            background: #1a6b3c;
+        }
+
+        .outreach-done-text {
+            display: inline-flex;
+            align-items: center;
+            padding: 10px 12px;
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #6b7280;
+        }
+
         .outreach-email {
             background: #2a5aad;
         }
@@ -522,7 +541,7 @@
             background: #2a5aad;
         }
 
-        /* When no email on file: Call = primary, Email = secondary (still clickable) */
+        /* When no email on file: Call = primary (emphasize), Email = secondary */
         .outreach-row-no-email .outreach-phone {
             box-shadow: 0 0 0 2px rgba(26, 107, 60, 0.4);
         }
@@ -536,7 +555,7 @@
             background: #4b5563;
         }
 
-        /* Email button cell: same flex as Call so equal width */
+        /* Email button cell (legacy): same flex when two buttons */
         .outreach-email-wrap {
             flex: 1 1 0;
             min-width: 0;
@@ -700,11 +719,84 @@
             line-height: 1;
         }
 
+        /* Drag handle: hidden on desktop, shown on mobile for bottom sheet */
+        .phone-panel-handle {
+            display: none;
+        }
+
+        .phone-panel-handle-pill {
+            width: 40px;
+            height: 4px;
+            border-radius: 2px;
+            background: #ccc;
+        }
+
+        .phone-panel.dragging {
+            transition: none;
+        }
+
+        .phone-panel-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 12px 6px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
         .phone-panel-title {
-            padding: 20px 24px 12px;
+            padding: 0;
             margin: 0;
             font-size: 1.15em;
-            border-bottom: 1px solid #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .phone-panel-title-extra {
+            flex-shrink: 0;
+        }
+
+        .drawer-header-constituent .drawer-constituent-checkbox-wrap {
+            white-space: nowrap;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .drawer-step-strip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0;
+            margin: 0 4px;
+            flex-shrink: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .drawer-step-link {
+            background: none;
+            border: none;
+            padding: 0;
+            font-size: 0.95em;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #9ca3af;
+            cursor: pointer;
+            text-decoration: none;
+            transition: color 0.15s, font-weight 0.15s;
+        }
+
+        .drawer-step-link:hover {
+            color: #6b7280;
+        }
+
+        .drawer-step-link.drawer-step-link-active {
+            font-weight: 600;
+            color: #111;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        .drawer-step-sep {
+            color: #c0c0c0;
+            font-weight: 300;
+            user-select: none;
         }
 
         .phone-panel-body {
@@ -716,6 +808,12 @@
             overflow-y: auto;
             font-size: 0.95em;
             line-height: 1.7;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        /* Email drawer: single scroll (textarea only); prevent panel scrollbar */
+        .phone-panel-body.drawer-email-open {
+            overflow: hidden;
         }
 
         .phone-script-to {
@@ -970,29 +1068,45 @@
             color: #1e7a33;
         }
 
-        /* Constituent checkbox: prefill intro bubble with ZIP when checked */
+        /* Constituent checkbox: same component on call and email drawer — one size, centered */
         .drawer-constituent-hint {
-            padding: 8px 0;
-            font-size: 0.9em;
+            padding: 6px 0;
             color: #3a3a3c;
-            justify-self: end;
+            justify-self: center;
+            font-size: 1em;
         }
 
+        /* Match height of Send code button (32px) so checkbox row aligns in email drawer and call script */
         .drawer-constituent-checkbox-wrap {
             display: inline-flex;
             align-items: center;
             gap: 8px;
             cursor: pointer;
+            font-size: 1em;
+            min-height: 32px;
+            box-sizing: border-box;
         }
 
         .drawer-constituent-checkbox {
-            width: 18px;
-            height: 18px;
-            accent-color: #248a3d;
+            width: 20px;
+            height: 20px;
+            accent-color: #1a73e8;
+            flex-shrink: 0;
         }
 
         .drawer-constituent-label {
+            font-size: .9em;
             font-weight: 500;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .gmail-constituent-row {
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding: 10px 20px;
         }
 
         /* Voicemail script view (toggled in place; same bubble styles) */
@@ -1005,14 +1119,6 @@
 
         .drawer-voicemail[hidden] {
             display: none !important;
-        }
-
-        .drawer-voicemail-intro {
-            font-size: 0.85em;
-            line-height: 1.45;
-            color: #555;
-            margin-bottom: 4px;
-            padding: 0 2px;
         }
 
         .drawer-voicemail-single {
@@ -1439,7 +1545,6 @@
 
         .drawer-call-content {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            padding: 16px 0 28px 0;
         }
 
         .chat-bubble {
@@ -2268,12 +2373,12 @@
             background: var(--pill-fill, transparent);
             border-radius: inherit;
             z-index: 0;
-            transition: width 0.55s ease 0.3s;
+            transition: width 1.2s ease-out 0.25s;
         }
 
         @media (prefers-reduced-motion: reduce) {
             .drawer-interest-pill.poll-voted::after {
-                transition-duration: 0.15s;
+                transition-duration: 0.2s;
                 transition-delay: 0.1s;
             }
         }
@@ -2636,12 +2741,13 @@
             font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #fff;
             border: 1px solid #dadce0;
-            overflow: hidden;
-            margin: -12px -24px;
+            overflow: visible;
             flex: 1 1 0;
             min-height: 0;
             display: flex;
             flex-direction: column;
+            border-radius: 12px;
+            margin-top: 10px;
         }
 
         .gmail-toolbar {
@@ -2649,7 +2755,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 10px 16px;
+            padding: 8px 16px;
             background: #404040;
             color: #fff;
             border-radius: 12px 12px 0 0;
@@ -2658,6 +2764,16 @@
         .gmail-toolbar-title {
             font-size: 0.9em;
             font-weight: 500;
+        }
+
+        .gmail-toolbar-steps {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 6px;
+            margin-left: auto;
+            flex-shrink: 0;
         }
 
         .gmail-toolbar-btn {
@@ -2748,6 +2864,15 @@
 
         .gmail-field-row:last-child {
             border-bottom: none;
+        }
+
+        .gmail-from-row-constituent {
+            flex-shrink: 0;
+            margin-left: 12px;
+        }
+
+        .gmail-from-row-constituent .drawer-constituent-checkbox-wrap {
+            white-space: nowrap;
         }
 
         .gmail-field-label {
@@ -2865,9 +2990,12 @@
             color: #fff;
             border: none;
             border-radius: 4px;
-            padding: 4px 12px;
+            padding: 0 12px;
+            height: 32px;
+            line-height: 32px;
             cursor: pointer;
             white-space: nowrap;
+            box-sizing: border-box;
         }
 
         .gmail-from-verify-btn:hover {
@@ -3018,6 +3146,52 @@
             display: none !important;
         }
 
+        /* To field: pill when recipient is set (same look as From chip) */
+        .gmail-to-value {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+
+        .gmail-to-state {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+
+        .gmail-to-state[hidden] {
+            display: none !important;
+        }
+
+        .gmail-to-state .gmail-to-input {
+            flex: 1;
+        }
+
+        .gmail-to-clear-btn {
+            background: none;
+            border: none;
+            color: #9aa0a6;
+            font-size: 1.1em;
+            cursor: pointer;
+            padding: 0 4px;
+            line-height: 1;
+        }
+
+        .gmail-to-clear-btn:hover {
+            color: #d93025;
+        }
+
+        /* To chip party colors (same saturation as From green: light bg + darker text) */
+        .gmail-to-recipient-chip--dem {
+            background: #e8f0fe;
+            color: #1967d2;
+        }
+
+        .gmail-to-recipient-chip--rep {
+            background: #fce8e6;
+            color: #c5221f;
+        }
+
         .gmail-subject-row {
             font-weight: 500;
         }
@@ -3057,6 +3231,16 @@
 
         .gmail-body-text::placeholder {
             color: #9aa0a6;
+        }
+
+        .gmail-body-store {
+            position: absolute;
+            left: -9999px;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            opacity: 0;
+            pointer-events: none;
         }
 
         .gmail-attachment-bar {
@@ -3152,12 +3336,6 @@
             flex-shrink: 0;
         }
 
-        .gmail-copy-row {
-            flex-shrink: 0;
-            padding: 6px 16px 0;
-            border-top: 1px solid #e8eaed;
-            background: #f8f9fa;
-        }
 
         .gmail-copy-link {
             background: none !important;
@@ -3193,6 +3371,19 @@
             font-family: inherit;
             font-weight: 500;
             transition: background 0.15s, border-color 0.15s, color 0.15s;
+        }
+
+        .gmail-sent-btn:disabled {
+            color: #9aa0a6;
+            background: #f1f3f4;
+            border-color: #dadce0;
+            cursor: not-allowed;
+        }
+
+        .gmail-sent-btn:disabled:hover {
+            background: #f1f3f4;
+            border-color: #dadce0;
+            color: #9aa0a6;
         }
 
         .gmail-sent-btn:hover {
@@ -3250,12 +3441,6 @@
             border-color: #81c995;
         }
 
-        .gmail-footer-link {
-            flex-shrink: 0;
-            padding: 12px 16px;
-            border-top: 1px solid #dadce0;
-            text-align: center;
-        }
 
         .gmail-go-to-call-btn {
             display: inline-flex;
@@ -3282,16 +3467,16 @@
             color: #1a73e8;
         }
 
-        /* ── Guide pulse: traveling outline ── */
+        /* ── Guide pulse: traveling outline (outline so it’s never covered by children/siblings) ── */
         @keyframes guidePulse {
 
             0%,
             100% {
-                box-shadow: 0 0 0 2px rgba(26, 115, 232, 0);
+                outline: 2px solid rgba(26, 115, 232, 0);
             }
 
             50% {
-                box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.55);
+                outline: 3px solid rgba(26, 115, 232, 0.7);
             }
         }
 
@@ -3299,24 +3484,28 @@
 
             0%,
             100% {
-                box-shadow: 0 0 0 2px rgba(19, 115, 51, 0);
+                outline: 2px solid rgba(19, 115, 51, 0);
             }
 
             50% {
-                box-shadow: 0 0 0 3px rgba(19, 115, 51, 0.55);
+                outline: 3px solid rgba(19, 115, 51, 0.7);
             }
         }
 
         .guide-pulse {
             animation: guidePulse 2s ease-in-out infinite;
             border-radius: 6px;
-            transition: box-shadow 0.4s ease;
+            outline-offset: 2px;
+            position: relative;
+            z-index: 1;
         }
 
         .guide-pulse-green {
             animation: guidePulseGreen 2s ease-in-out infinite;
             border-radius: 6px;
-            transition: box-shadow 0.4s ease;
+            outline-offset: 2px;
+            position: relative;
+            z-index: 1;
         }
 
         /* ── Subject verify button ── */
@@ -3359,8 +3548,13 @@
             display: flex;
             align-items: center;
             gap: 5px;
-            margin-left: auto;
             padding-right: 4px;
+            flex-shrink: 0;
+        }
+
+        .guide-step-counter {
+            flex-shrink: 0;
+            white-space: nowrap;
         }
 
         .guide-dot {
@@ -3408,11 +3602,11 @@
             line-height: 1.4;
             color: #1a73e8;
             font-weight: 600;
-            min-width: 80px;
-            max-width: 220px;
+            min-width: 2ch;
             outline: none;
-            transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.15s;
+            transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.15s, padding 0.2s;
             vertical-align: baseline;
+            box-sizing: content-box;
         }
 
         .madlib-blank::placeholder {
@@ -3430,10 +3624,30 @@
         }
 
         .madlib-blank.filled {
-            border-bottom-color: #81c995;
-            border-bottom-style: solid;
-            background: #e6f4ea;
-            color: #137333;
+            border-bottom: 1px dashed #dadce0;
+            background: transparent;
+            color: inherit;
+            font-weight: inherit;
+            padding: 0;
+            border-radius: 0;
+            min-width: 0;
+        }
+
+        .madlib-blank.filled:hover {
+            border-bottom-color: #bdc1c6;
+            cursor: text;
+        }
+
+        .madlib-blank.filled:focus {
+            border-bottom: 2px solid #1a73e8;
+            background: #e8f0fe;
+            color: #1a73e8;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px 4px 0 0;
+            min-width: 80px;
+            box-shadow: 0 2px 6px rgba(26, 115, 232, 0.18);
+            transform: scale(1.03);
         }
 
         .madlib-blank.error {
@@ -3441,6 +3655,12 @@
             background: #fce8e6;
             color: #d93025;
             animation: guidePulse 1s ease-in-out 2;
+        }
+
+        .madlib-body [contenteditable]:focus {
+            outline: none;
+            background: rgba(26, 115, 232, 0.04);
+            border-radius: 2px;
         }
 
         /* ── Sent-done state ── */
@@ -3467,7 +3687,7 @@
 
         @media (max-width: 480px) {
             .gmail-compose {
-                margin: -12px -24px;
+                margin: -16px -18px;
                 border-radius: 0;
                 border: none;
                 box-shadow: none;
@@ -3475,6 +3695,21 @@
 
             .gmail-toolbar {
                 border-radius: 0;
+            }
+
+            .gmail-toolbar-steps {
+                flex-wrap: wrap;
+                justify-content: flex-end;
+            }
+
+            .gmail-toolbar-steps .guide-step-counter {
+                order: 1;
+                width: 100%;
+            }
+
+            .gmail-toolbar-steps .guide-step-dots {
+                order: 2;
+                margin-left: auto;
             }
 
             .gmail-action-bar {
@@ -3492,6 +3727,61 @@
 
             .gmail-to-chip-text {
                 max-width: 200px;
+            }
+
+            /* Field rows: allow wrap so label/input/buttons stack on narrow screens */
+            .gmail-field-row {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+
+            .gmail-field-label {
+                flex-basis: 100%;
+                min-width: 0;
+            }
+
+            .gmail-from-input-wrap {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .gmail-from-input-wrap .gmail-field-input,
+            .gmail-from-input-wrap .gmail-from-input {
+                min-width: 0;
+                flex: 1 1 140px;
+            }
+
+            .gmail-subject-row {
+                flex-wrap: wrap;
+            }
+
+            .gmail-subject-row .gmail-field-label {
+                flex-basis: auto;
+            }
+
+            .gmail-subject-input {
+                flex: 1 1 160px;
+                min-width: 0;
+            }
+
+            .gmail-subject-verify-btn {
+                flex-shrink: 0;
+            }
+
+            .gmail-banner-text {
+                min-width: 0;
+            }
+
+            .gmail-body-area {
+                padding: 12px 14px;
+            }
+
+            .gmail-attachment-bar {
+                padding: 8px 14px;
+            }
+
+            .gmail-action-bar {
+                padding: 12px 14px;
             }
         }
 
@@ -4206,18 +4496,28 @@
             box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.2);
         }
 
-        /* Desktop: grid so badges sit under name (column 2); photo spans both rows; no extra top space */
+        /* Desktop: grid [photo | name+badges]; one column-2 cell so no trapped space; align to bottom of image */
         .card-header {
             display: grid;
             grid-template-columns: auto 1fr;
-            grid-template-rows: auto auto;
+            grid-template-rows: auto;
             align-items: end;
-            gap: 2px 12px;
+            gap: 0 12px;
             margin-bottom: 8px;
         }
 
         .card-header .member-photo {
-            grid-row: 1 / -1;
+            grid-row: 1;
+        }
+
+        /* Single wrapper in column 2: name then badges in one flex column (no grid row gap) */
+        .card-header-col {
+            grid-column: 2;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            align-items: flex-start;
         }
 
         /* When no photo, single column so name + badges use full width */
@@ -4225,14 +4525,13 @@
             grid-template-columns: 1fr;
         }
 
-        .card-header:not(:has(.member-photo)) .card-header-right,
-        .card-header:not(:has(.member-photo)) .card-badge-row {
+        .card-header:not(:has(.member-photo)) .card-header-col {
             grid-column: 1;
         }
 
         .card-header-right {
-            grid-column: 2;
             min-width: 0;
+            width: 100%;
             display: flex;
             flex-direction: column;
             gap: 6px;
@@ -4270,9 +4569,8 @@
             align-items: flex-start;
         }
 
-        /* Badges in column 2 under name (desktop); no extra vertical space */
+        /* Badge row inside .card-header-col (desktop); no extra vertical space */
         .card-header .card-badge-row {
-            grid-column: 2;
             margin: 0;
             padding: 0;
             min-height: 0;
@@ -4292,6 +4590,13 @@
             font-size: 0.88em;
             color: #555;
             margin-top: 2px;
+        }
+
+        /* Desktop only: padding between name line and badges */
+        @media (min-width: 769px) {
+            .card h3.card-name {
+                margin-bottom: 8px;
+            }
         }
 
         .card .role-label {
@@ -4967,6 +5272,61 @@
         #results {
             min-width: 0;
             overflow-wrap: break-word;
+        }
+
+        /* ── ZIP search loading state: truck animation (gameified) ── */
+        .results-loading {
+            min-height: 160px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 24px 0;
+            margin-top: 8px;
+        }
+
+        .results-loading-track {
+            width: 100%;
+            max-width: 320px;
+            height: 48px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .results-loading-truck {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%) scaleX(-1);
+            font-size: 2.5rem;
+            animation: results-truck-drive 1.8s ease-in-out forwards;
+        }
+
+        @keyframes results-truck-drive {
+            0% {
+                left: 0;
+                transform: translateY(-50%) scaleX(-1);
+            }
+
+            100% {
+                left: 100%;
+                transform: translate(-100%, -50%) scaleX(-1);
+            }
+        }
+
+        .results-loading-status {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .results-loading-fact {
+            font-size: 0.875rem;
+            color: #777;
+            max-width: 320px;
+            text-align: center;
+            line-height: 1.4;
         }
 
         /* ── Two-column results: fixed aside + scrollable main ── */
@@ -7122,8 +7482,50 @@
                 margin-bottom: 0;
             }
 
-            /* Script slide-over panels: full width on tablet */
+            /* Script panels: bottom sheet on tablet/mobile (slide up from bottom, draggable) */
+            .phone-panel-handle {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 10px 0 6px;
+                cursor: grab;
+                flex-shrink: 0;
+                -webkit-user-select: none;
+                user-select: none;
+                position: relative;
+                z-index: 2;
+                background: #fff;
+            }
+
+            .phone-panel-handle:active {
+                cursor: grabbing;
+            }
+
+            .phone-panel-title-row {
+                position: relative;
+                z-index: 2;
+                background: #fff;
+            }
+
             .phone-panel {
+                top: auto;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                width: 100%;
+                max-width: 100%;
+                height: 95vh;
+                max-height: 95vh;
+                border-radius: 16px 16px 0 0;
+                transform: translateY(100%);
+                will-change: transform;
+            }
+
+            .phone-panel.open {
+                transform: translateY(0);
+            }
+
+            .phone-panel.phone-panel--email {
                 width: 100%;
                 max-width: 100%;
             }
@@ -7138,6 +7540,11 @@
 
             .card-header .member-photo {
                 grid-row: auto;
+            }
+
+            /* Wrapper disappears so card-header-right and card-badge-row are flex children of .card-header */
+            .card-header-col {
+                display: contents;
             }
 
             .card-header-right {
@@ -7281,6 +7688,12 @@
                 padding: 16px 18px;
             }
 
+            /* Email drawer: full width like call; compose bleeds to panel edges */
+            .phone-panel.phone-panel--email {
+                width: 100%;
+                max-width: 100%;
+            }
+
             .phone-panel-done {
                 width: 100%;
                 text-align: center;
@@ -7300,8 +7713,10 @@
 
 <body>
     <div class="container">
-        {% block content %}{% endblock %}
-        <div class="footer">
+        <main id="main-content" role="main">
+            {% block content %}{% endblock %}
+        </main>
+        <div class="footer" role="contentinfo">
             <a href="/explore">Power Map</a> &middot;
             <a href="/advocacy">Advocacy</a> &middot;
             <a href="/intelligence">Intelligence</a>

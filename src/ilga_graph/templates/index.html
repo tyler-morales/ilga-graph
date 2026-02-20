@@ -3,6 +3,8 @@
 {% block title %}{{ title }} — Find Your Targets{% endblock %}
 
 {% block content %}
+<script>window.__ILGA_FEATURES = {{ (features or {}) | tojson }};</script>
+<script>window.__ILGA_LOADING_FACTS = {{ (loading_facts or []) | tojson }};</script>
 {# ── Hero section ─────────────────────────────────────────────────── #}
 <div class="advocacy-hero">
     <div class="hero-inner">
@@ -92,16 +94,34 @@
     <a href="/intelligence">ML Intelligence Dashboard &rarr;</a>
 </div> -->
 
-<div id="results">
-    {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+<div id="results" role="region" aria-label="Search results">
+    {% if error %}<div class="error-msg" role="alert">{{ error }}</div>{% endif %}
     {% block results %}{% endblock %}
 </div>
 
 {# ── Advocacy drawer (Call script → After-call email, or Email-first) ── #}
-<div id="advocacy-drawer-overlay" class="phone-overlay" onclick="closeAdvocacyDrawer()"></div>
-<div id="advocacy-drawer" class="phone-panel" data-member-id="" data-drawer-zip="" data-drawer-photo-url="">
-    <button class="phone-panel-close" onclick="closeAdvocacyDrawer()" aria-label="Close">&times;</button>
-    <h3 id="advocacy-drawer-title" class="phone-panel-title">Call script</h3>
+<div id="advocacy-drawer-overlay" class="phone-overlay" onclick="closeAdvocacyDrawer()" aria-hidden="true"></div>
+<div id="advocacy-drawer" class="phone-panel" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Outreach: call script and email template"
+    data-member-id="" data-drawer-zip="" data-drawer-constituent="" data-drawer-photo-url="">
+    <div class="phone-panel-handle" id="advocacy-drawer-handle" aria-hidden="true">
+        <div class="phone-panel-handle-pill"></div>
+    </div>
+    <div class="phone-panel-title-row">
+        <div class="drawer-step-strip" id="drawer-step-strip" role="tablist" aria-label="Outreach steps">
+            <button type="button" class="drawer-step-link" id="drawer-step-call" role="tab" aria-selected="true" data-step="call">Call</button>
+            <span class="drawer-step-sep" aria-hidden="true">·</span>
+            <button type="button" class="drawer-step-link" id="drawer-step-email" role="tab" aria-selected="false" data-step="email">Email</button>
+        </div>
+        <div id="advocacy-drawer-title-extra" class="phone-panel-title-extra">
+            <div class="drawer-header-constituent" role="group" aria-label="Constituent status">
+                <label class="drawer-constituent-checkbox-wrap">
+                    <input type="checkbox" id="advocacy-drawer-constituent-checkbox" class="drawer-constituent-checkbox"
+                        aria-label="I am a constituent">
+                    <span class="drawer-constituent-label">I'm a constituent</span>
+                </label>
+            </div>
+        </div>
+    </div>
     <div id="advocacy-drawer-body" class="phone-panel-body"></div>
 </div>
 
@@ -111,8 +131,8 @@
     <div class="reminder-modal-backdrop" id="reminder-modal-backdrop"></div>
     <div class="reminder-modal-card">
         <h2 id="reminder-modal-title" class="reminder-modal-title">Set a reminder to follow up</h2>
-        <p class="reminder-modal-hint">Pick when you want to be reminded. The call script link will be included so you
-            can jump right back.</p>
+        <p class="reminder-modal-hint">Pick when you want a nudge — we'll include the call script link so you can jump
+            right back.</p>
         <div class="reminder-modal-fields">
             <label class="reminder-modal-row">
                 <span class="reminder-modal-label">Date</span>
@@ -230,52 +250,6 @@
                 }, 0);
             }
         }
-        // #region agent log
-        /* Debug: sidebar Moneyball tooltip clipping — log overflow chain when opening tooltip in .results-aside */
-        var asideTrigger = e.target.closest('.results-aside .moneyball-help, .results-aside .moneyball-term');
-        if (asideTrigger && asideTrigger.closest('.tooltip-wrap')) {
-            var wrap = asideTrigger.closest('.tooltip-wrap');
-            setTimeout(function () {
-                var openWrap = document.querySelector('.results-aside .tooltip-wrap.tooltip-open');
-                if (!openWrap) return;
-                var tooltipContent = openWrap.querySelector('.tooltip-content');
-                var aside = document.querySelector('.results-aside');
-                var howItWorks = aside ? aside.querySelector('.how-it-works') : null;
-                var hiwBody = aside ? aside.querySelector('.hiw-body') : null;
-                var data = { hypothesisId: 'H1', message: 'sidebar Moneyball tooltip opened' };
-                if (aside) {
-                    var s = getComputedStyle(aside);
-                    data.resultsAside = { overflow: s.overflow, overflowX: s.overflowX, overflowY: s.overflowY, width: aside.offsetWidth };
-                    var ar = aside.getBoundingClientRect();
-                    data.asideRect = { left: ar.left, right: ar.right, width: ar.width };
-                }
-                if (howItWorks) {
-                    var s = getComputedStyle(howItWorks);
-                    data.howItWorks = { overflow: s.overflow, overflowX: s.overflowX, overflowY: s.overflowY };
-                }
-                if (hiwBody) {
-                    var s = getComputedStyle(hiwBody);
-                    data.hiwBody = { overflow: s.overflow, overflowX: s.overflowX, overflowY: s.overflowY };
-                }
-                if (tooltipContent) {
-                    var tr = tooltipContent.getBoundingClientRect();
-                    data.tooltipRect = { left: tr.left, right: tr.right, width: tr.width };
-                    data.tooltipOverflowsRight = aside ? tr.right > aside.getBoundingClientRect().right : null;
-                }
-                var el = tooltipContent;
-                var ancestors = [];
-                while (el && el !== document.body) {
-                    var s = getComputedStyle(el);
-                    if (s.overflow !== 'visible' || s.overflowX !== 'visible' || s.overflowY !== 'visible') {
-                        ancestors.push({ tag: el.tagName, className: el.className || '', overflow: s.overflow, overflowX: s.overflowX, overflowY: s.overflowY });
-                    }
-                    el = el.parentElement;
-                }
-                data.clippingAncestors = ancestors;
-                fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'index.html:sidebar-tooltip', message: 'Moneyball tooltip overflow diagnostic', data: data, timestamp: Date.now() }) }).catch(function () { });
-            }, 0);
-        }
-        // #endregion
     });
 
     /* ── Moneyball definition: keyboard toggle (Enter/Space) ── */
@@ -342,6 +316,106 @@
         });
     });
 
+    /* ── ZIP search loading: truck animation (gameified), then inject results ── */
+    var __advocacyLoadingActive = false;
+    var __advocacyStoredResponse = null;
+    var __advocacyMinDurationTimer = null;
+    var __advocacyLoadedTextTimer = null;
+    var __advocacyLoadingFactInterval = null;
+    var __advocacyReadyToInject = false;
+
+    var RESULTS_LOADING_HTML = '<div class="results-layout">'
+        + '<aside class="results-aside">'
+        + '<details class="how-it-works how-it-works-details" open><summary class="hiw-title">How we pick targets</summary>'
+        + '<div class="hiw-body"><p class="hiw-note">Loading your targets…</p></div></details>'
+        + '</aside>'
+        + '<main class="results-main">'
+        + '<h2>🏡 Your Legislators</h2>'
+        + '<p class="section-desc">Finding your representatives…</p>'
+        + '<div class="results-loading" aria-live="polite" aria-busy="true">'
+        + '<div class="results-loading-track"><span class="results-loading-truck" aria-hidden="true">🚚</span></div>'
+        + '<span class="results-loading-status" id="results-loading-status">Loading...</span>'
+        + '<span class="results-loading-fact" id="results-loading-fact" aria-live="polite"></span></div>'
+        + '</main></div>';
+
+    function injectStoredResultsAndCleanup() {
+        var results = document.getElementById('results');
+        if (!results || !__advocacyStoredResponse) return;
+        if (__advocacyLoadingFactInterval) {
+            clearInterval(__advocacyLoadingFactInterval);
+            __advocacyLoadingFactInterval = null;
+        }
+        results.innerHTML = __advocacyStoredResponse;
+        if (typeof htmx !== 'undefined') htmx.process(results);
+        applyCardBioOverflow();
+        results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        __advocacyStoredResponse = null;
+        __advocacyLoadingActive = false;
+        __advocacyReadyToInject = false;
+        if (__advocacyMinDurationTimer) {
+            clearTimeout(__advocacyMinDurationTimer);
+            __advocacyMinDurationTimer = null;
+        }
+    }
+
+    document.body.addEventListener('htmx:beforeRequest', function (e) {
+        if (!(window.__ILGA_FEATURES && window.__ILGA_FEATURES.zip_loading_animation)) return;
+        var target = e.detail.target;
+        var elt = e.detail.elt;
+        if (!target || target.id !== 'results') return;
+        if (!elt || (elt.id !== 'advocacy-form' && !elt.closest('#advocacy-form'))) return;
+        if (__advocacyMinDurationTimer) clearTimeout(__advocacyMinDurationTimer);
+        if (__advocacyLoadedTextTimer) clearTimeout(__advocacyLoadedTextTimer);
+        if (__advocacyLoadingFactInterval) {
+            clearInterval(__advocacyLoadingFactInterval);
+            __advocacyLoadingFactInterval = null;
+        }
+        __advocacyStoredResponse = null;
+        __advocacyReadyToInject = false;
+        __advocacyLoadingActive = true;
+        target.innerHTML = RESULTS_LOADING_HTML;
+        setTimeout(function () { target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
+        var facts = window.__ILGA_LOADING_FACTS;
+        if (facts && facts.length > 0) {
+            var factEl = document.getElementById('results-loading-fact');
+            var factIndex = 0;
+            if (factEl) factEl.textContent = facts[0];
+            __advocacyLoadingFactInterval = setInterval(function () {
+                factIndex = (factIndex + 1) % facts.length;
+                var el = document.getElementById('results-loading-fact');
+                if (el) el.textContent = facts[factIndex];
+            }, 2500);
+        }
+        __advocacyLoadedTextTimer = setTimeout(function () {
+            __advocacyLoadedTextTimer = null;
+            var status = document.getElementById('results-loading-status');
+            if (status) status.textContent = 'Loaded.';
+        }, 1100);
+        __advocacyMinDurationTimer = setTimeout(function () {
+            __advocacyMinDurationTimer = null;
+            if (__advocacyStoredResponse) injectStoredResultsAndCleanup();
+            else __advocacyReadyToInject = true;
+        }, 2000);
+    });
+
+    document.body.addEventListener('htmx:beforeSwap', function (e) {
+        if (!(window.__ILGA_FEATURES && window.__ILGA_FEATURES.zip_loading_animation)) return;
+        if (!e.detail.target || e.detail.target.id !== 'results') return;
+        if (!__advocacyLoadingActive) return;
+        var xhr = e.detail.xhr;
+        if (xhr && xhr.status === 200) {
+            e.detail.shouldSwap = false;
+            __advocacyStoredResponse = xhr.responseText;
+            if (__advocacyReadyToInject) setTimeout(injectStoredResultsAndCleanup, 300);
+        } else {
+            if (__advocacyLoadingFactInterval) {
+                clearInterval(__advocacyLoadingFactInterval);
+                __advocacyLoadingFactInterval = null;
+            }
+            __advocacyLoadingActive = false;
+        }
+    });
+
     /* ── Scroll to results after htmx swap ── */
     document.body.addEventListener('htmx:afterSwap', function (e) {
         if (e.detail.target && e.detail.target.id === 'results') {
@@ -354,22 +428,45 @@
 
     function esc(s) { return (s == null ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
+    /** Open outreach drawer from card button; reads data-initial-view and other data-* from the button. */
+    function openOutreachDrawer(btn) {
+        if (!btn || typeof openAdvocacyDrawer !== 'function') return;
+        var view = (btn.getAttribute('data-initial-view') || 'call').toLowerCase();
+        openAdvocacyDrawer(view, btn.getAttribute('data-member-id') || '', btn.getAttribute('data-zip') || '',
+            btn.getAttribute('data-photo-url') || '', btn.getAttribute('data-target-type') || '');
+    }
+
+    /** Set active state on drawer step strip (Call | Email). step is 'call' or 'email'. */
+    function updateDrawerStepStrip(step) {
+        var strip = document.getElementById('drawer-step-strip');
+        if (!strip) return;
+        var callTab = document.getElementById('drawer-step-call');
+        var emailTab = document.getElementById('drawer-step-email');
+        if (!callTab || !emailTab) return;
+        var isCall = step === 'call';
+        callTab.classList.toggle('drawer-step-link-active', isCall);
+        callTab.setAttribute('aria-selected', isCall ? 'true' : 'false');
+        emailTab.classList.toggle('drawer-step-link-active', !isCall);
+        emailTab.setAttribute('aria-selected', !isCall ? 'true' : 'false');
+    }
+
     /* ── Advocacy drawer: Call (script + after-call form) or Email (template + copy/mailto) ── */
     function openAdvocacyDrawer(view, memberId, zipCode, photoUrl, targetType) {
         var drawer = document.getElementById('advocacy-drawer');
         var body = document.getElementById('advocacy-drawer-body');
-        var titleEl = document.getElementById('advocacy-drawer-title');
         if (!drawer || !body) return;
         drawer.setAttribute('data-member-id', memberId || '');
         drawer.setAttribute('data-drawer-zip', zipCode || '');
+        drawer.setAttribute('data-drawer-constituent', '');
         drawer.setAttribute('data-drawer-photo-url', (photoUrl != null && photoUrl !== '') ? photoUrl : '');
         if (targetType != null && targetType !== '') drawer.setAttribute('data-drawer-target-type', targetType);
         else drawer.removeAttribute('data-drawer-target-type');
-        titleEl.textContent = view === 'email' ? 'Follow-up email' : 'Call script';
         drawer.classList.toggle('phone-panel--email', view === 'email');
+        window.__advocacyDrawerPreviousFocus = document.activeElement && document.activeElement.closest && document.activeElement.closest('#advocacy-drawer') ? null : document.activeElement;
         body.innerHTML = '<p class="drawer-loading">Loading…</p>';
         drawer.classList.add('open');
         document.getElementById('advocacy-drawer-overlay').classList.add('open');
+        initDrawerFocusTrapAndFocus();
         var fetchView = (view === 'call_wrapup') ? 'call' : view;
         var params = new URLSearchParams({ view: fetchView, member_id: memberId || '', zip: zipCode || '' });
         var photo = (photoUrl != null && photoUrl !== '') ? photoUrl : (drawer.getAttribute('data-drawer-photo-url') || '');
@@ -380,7 +477,8 @@
             .then(function (r) {
                 if (!r.ok) {
                     var msg = r.status === 404 ? 'Legislator not found.' : 'Something went wrong. Try again.';
-                    body.innerHTML = '<p class="drawer-error">' + msg + '</p>';
+                    body.innerHTML = '<p class="drawer-error" role="alert">' + msg + '</p>';
+                    initDrawerFocusTrapAndFocus();
                     return undefined;
                 }
                 return r.text();
@@ -389,6 +487,15 @@
                 if (html == null) return;
                 body.innerHTML = html;
                 if (typeof htmx !== 'undefined') htmx.process(body);
+                if (body.querySelector('.gmail-compose')) body.classList.add('drawer-email-open');
+                else body.classList.remove('drawer-email-open');
+                var root = body.querySelector('.drawer-call-content') || body.querySelector('.gmail-compose');
+                var headerCheckbox = document.getElementById('advocacy-drawer-constituent-checkbox');
+                if (root && headerCheckbox) {
+                    var isConst = root.getAttribute('data-is-constituent') === 'true';
+                    headerCheckbox.checked = isConst;
+                    drawer.setAttribute('data-drawer-constituent', isConst ? 'true' : 'false');
+                }
                 var photoUrl = drawer.getAttribute('data-drawer-photo-url') || '';
                 if (photoUrl) {
                     var header = body.querySelector('.drawer-call-header-inner');
@@ -413,8 +520,14 @@
                 initDrawerConstituentCheckbox(body);
                 initDrawerVoicemailToggle(body);
                 if (view === 'call_wrapup') showWrapupWithMockPoll(body);
+                var currentStep = body.querySelector('.drawer-call-content') ? 'call' : (body.querySelector('.gmail-compose') ? 'email' : null);
+                if (currentStep) updateDrawerStepStrip(currentStep);
+                initDrawerFocusTrapAndFocus();
             })
-            .catch(function () { body.innerHTML = '<p class="drawer-error">Could not load. Try again.</p>'; });
+            .catch(function () {
+                body.innerHTML = '<p class="drawer-error" role="alert">Couldn\'t load. Try again.</p>';
+                initDrawerFocusTrapAndFocus();
+            });
     }
 
     /** Open drawer to another view using current drawer data (e.g. from no-answer or email partial). */
@@ -426,9 +539,24 @@
     }
 
     function closeAdvocacyDrawer() {
-        document.getElementById('advocacy-drawer').classList.remove('open');
-        document.getElementById('advocacy-drawer-overlay').classList.remove('open');
+        var drawer = document.getElementById('advocacy-drawer');
+        var overlay = document.getElementById('advocacy-drawer-overlay');
+        if (drawer) drawer.classList.remove('open');
+        if (overlay) overlay.classList.remove('open');
+        if (drawer) drawer.setAttribute('aria-hidden', 'true');
+        removeDrawerFocusTrap();
+        if (window.__advocacyDrawerPreviousFocus && typeof window.__advocacyDrawerPreviousFocus.focus === 'function') {
+            try { window.__advocacyDrawerPreviousFocus.focus(); } catch (err) { }
+            window.__advocacyDrawerPreviousFocus = null;
+        }
     }
+
+    document.body.addEventListener('click', function (e) {
+        var stepBtn = e.target && e.target.closest && e.target.closest('.drawer-step-link');
+        if (!stepBtn) return;
+        var step = stepBtn.getAttribute('data-step');
+        if (step && typeof openAdvocacyDrawerFromDrawer === 'function') openAdvocacyDrawerFromDrawer(step);
+    });
 
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
@@ -438,6 +566,114 @@
             }
         }
     });
+
+    function getDrawerFocusables() {
+        var drawer = document.getElementById('advocacy-drawer');
+        if (!drawer || !drawer.classList.contains('open')) return [];
+        var sel = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+        return Array.prototype.filter.call(drawer.querySelectorAll(sel), function (el) {
+            return el.offsetParent !== null && !el.hasAttribute('aria-hidden');
+        });
+    }
+
+    var __drawerFocusTrapHandler = null;
+
+    function removeDrawerFocusTrap() {
+        if (__drawerFocusTrapHandler) {
+            document.removeEventListener('keydown', __drawerFocusTrapHandler);
+            __drawerFocusTrapHandler = null;
+        }
+    }
+
+    function initDrawerFocusTrapAndFocus() {
+        var drawer = document.getElementById('advocacy-drawer');
+        var body = document.getElementById('advocacy-drawer-body');
+        if (!drawer || !body) return;
+        drawer.setAttribute('aria-hidden', 'false');
+        removeDrawerFocusTrap();
+        var focusables = getDrawerFocusables();
+        var first = focusables[0];
+        if (first) {
+            first.focus();
+        }
+        __drawerFocusTrapHandler = function (e) {
+            if (e.key !== 'Tab' || !drawer.classList.contains('open')) return;
+            var list = getDrawerFocusables();
+            if (list.length === 0) return;
+            var current = document.activeElement;
+            var idx = list.indexOf(current);
+            if (idx === -1) return;
+            if (e.shiftKey) {
+                if (idx === 0) {
+                    e.preventDefault();
+                    list[list.length - 1].focus();
+                }
+            } else {
+                if (idx === list.length - 1) {
+                    e.preventDefault();
+                    list[0].focus();
+                }
+            }
+        };
+        document.addEventListener('keydown', __drawerFocusTrapHandler);
+    }
+
+    /* ── Mobile bottom sheet: drag handle to dismiss (only when drawer is full-width) ── */
+    (function () {
+        var handle = document.getElementById('advocacy-drawer-handle');
+        var panel = document.getElementById('advocacy-drawer');
+        if (!handle || !panel) return;
+
+        var startY = 0;
+        var startTranslateY = 0;
+        var dismissThreshold = 0;
+
+        function getTranslateY(el) {
+            var t = (window.getComputedStyle(el).transform || '').trim();
+            if (!t || t === 'none') return 0;
+            var parts = t.match(/matrix(?:3d)?\s*\(([^)]+)\)/);
+            if (!parts) return 0;
+            var values = parts[1].split(/,\s*/).map(parseFloat);
+            return values.length >= 6 ? values[5] : (values.length >= 14 ? values[13] : 0);
+        }
+
+        function onPointerDown(e) {
+            if (!window.matchMedia('(max-width: 768px)').matches) return;
+            if (!panel.classList.contains('open')) return;
+            e.preventDefault();
+            startY = e.clientY;
+            startTranslateY = getTranslateY(panel);
+            dismissThreshold = 0.4 * window.innerHeight;
+            panel.classList.add('dragging');
+            handle.setPointerCapture(e.pointerId);
+            handle.addEventListener('pointermove', onPointerMove);
+            handle.addEventListener('pointerup', onPointerUp);
+            handle.addEventListener('pointercancel', onPointerUp);
+        }
+
+        function onPointerMove(e) {
+            var deltaY = e.clientY - startY;
+            var newTranslateY = Math.max(0, startTranslateY + deltaY);
+            panel.style.transform = 'translateY(' + newTranslateY + 'px)';
+        }
+
+        function onPointerUp(e) {
+            handle.releasePointerCapture(e.pointerId);
+            handle.removeEventListener('pointermove', onPointerMove);
+            handle.removeEventListener('pointerup', onPointerUp);
+            handle.removeEventListener('pointercancel', onPointerUp);
+            panel.classList.remove('dragging');
+            var currentY = getTranslateY(panel);
+            if (currentY >= dismissThreshold) {
+                closeAdvocacyDrawer();
+                panel.style.transform = '';
+            } else {
+                panel.style.transform = '';
+            }
+        }
+
+        handle.addEventListener('pointerdown', onPointerDown, { passive: false });
+    })();
 
     /** Build URL that opens this call script (deep link). Used in reminder details so user can jump back. */
     function buildCallScriptUrl(memberId, zipCode) {
@@ -606,28 +842,38 @@
 
     function initDrawerConstituentCheckbox(container) {
         if (!container) container = document.getElementById('advocacy-drawer-body');
+        var drawer = document.getElementById('advocacy-drawer');
         var content = container && container.querySelector('.drawer-call-content');
-        var checkbox = container && container.querySelector('#drawer-constituent-checkbox');
+        var checkbox = document.getElementById('advocacy-drawer-constituent-checkbox');
         var introPhrase = container && container.querySelector('#drawer-intro-location-phrase');
         var vmPhrase = container && container.querySelector('#drawer-voicemail-location-phrase');
         if (!content || !checkbox || !introPhrase) return;
 
+        if (drawer) {
+            var constAttr = (drawer.getAttribute('data-drawer-constituent') || '').trim();
+            if (constAttr === 'true') checkbox.checked = true;
+            else if (constAttr === 'false') checkbox.checked = false;
+            else {
+                // Fresh load: server rendered correct state in HTML; sync drawer attr from checkbox (do not overwrite from zip)
+                drawer.setAttribute('data-drawer-constituent', checkbox.checked ? 'true' : 'false');
+            }
+        }
+
         function updatePhrases() {
             var isConstituent = checkbox.checked;
-            var zip = (content.getAttribute('data-drawer-zip') || '').trim();
-            if (isConstituent && zip) {
-                introPhrase.innerHTML = 'I\'m a constituent in <strong>ZIP ' + zip + '</strong>';
-                if (vmPhrase) vmPhrase.innerHTML = 'a constituent in <strong>ZIP ' + zip + '</strong>';
-            } else if (isConstituent) {
-                introPhrase.innerHTML = 'I\'m a constituent in <strong>[ZIP]</strong>';
-                if (vmPhrase) vmPhrase.innerHTML = 'a constituent in <strong>[ZIP]</strong>';
+            if (isConstituent) {
+                introPhrase.textContent = 'I\'m a constituent';
+                if (vmPhrase) vmPhrase.textContent = 'a constituent';
             } else {
                 introPhrase.innerHTML = 'I\'m calling from <strong>[CALLER_CITY] [CALLER_ZIP]</strong>';
                 if (vmPhrase) vmPhrase.innerHTML = 'calling from <strong>[CALLER_CITY] [CALLER_ZIP]</strong>';
             }
         }
 
-        checkbox.addEventListener('change', updatePhrases);
+        checkbox.addEventListener('change', function () {
+            if (drawer) drawer.setAttribute('data-drawer-constituent', checkbox.checked ? 'true' : 'false');
+            updatePhrases();
+        });
         updatePhrases();
     }
 
@@ -639,21 +885,21 @@
         var intro = container && container.querySelector('#drawer-script-intro');
         if (!btn || !chat || !voicemail) return;
 
-        var introCall = 'Read one bubble at a time. Say your line, then listen.';
-        var introVoicemail = 'Leave this message on their voicemail. Then follow up with an email when you can.';
+        var introCall = 'One bubble at a time: say your line, then listen.';
+        var introVoicemail = 'Leave this on their voicemail, then follow up with an email when you can.';
 
         function setVoicemailMode(isVoicemail) {
             if (isVoicemail) {
                 chat.setAttribute('hidden', '');
                 voicemail.removeAttribute('hidden');
                 if (intro) intro.textContent = introVoicemail;
-                btn.textContent = 'Switch back to call script';
+                btn.textContent = 'Back to call script';
                 btn.setAttribute('aria-pressed', 'true');
             } else {
                 chat.removeAttribute('hidden');
                 voicemail.setAttribute('hidden', '');
                 if (intro) intro.textContent = introCall;
-                btn.textContent = 'Switch to voicemail script';
+                btn.textContent = 'Use the voicemail script instead';
                 btn.setAttribute('aria-pressed', 'false');
             }
         }
@@ -943,7 +1189,7 @@
                     if (data.ok) {
                         goCode(email);
                     } else {
-                        if (codeError) { codeError.textContent = data.error || 'Could not send code'; codeError.hidden = false; }
+                        if (codeError) { codeError.textContent = data.error || 'Couldn\'t send code'; codeError.hidden = false; }
                     }
                 })
                 .catch(function () {
@@ -982,7 +1228,7 @@
                     if (data.ok && data.email) {
                         goVerified(data.email);
                     } else {
-                        if (codeError) { codeError.textContent = data.error || 'Invalid or expired code. Try again or resend.'; codeError.hidden = false; }
+                        if (codeError) { codeError.textContent = data.error || 'That code didn\'t work — try again or resend.'; codeError.hidden = false; }
                         if (codeInput) { codeInput.value = ''; codeInput.focus(); }
                     }
                 })
@@ -1016,7 +1262,7 @@
                         if (codeHint) codeHint.textContent = 'New code sent to ' + _pendingAuthEmail;
                         if (codeInput) { codeInput.value = ''; codeInput.focus(); }
                     } else {
-                        if (codeError) { codeError.textContent = data.error || 'Could not resend'; codeError.hidden = false; }
+                        if (codeError) { codeError.textContent = data.error || 'Couldn\'t resend'; codeError.hidden = false; }
                     }
                 })
                 .catch(function () {
@@ -1185,7 +1431,7 @@
                         if (codeError) codeError.hidden = true;
                         showHeroState('code');
                     } else {
-                        if (codeError) { codeError.textContent = data.error || 'Could not send code'; codeError.hidden = false; }
+                        if (codeError) { codeError.textContent = data.error || 'Couldn\'t send code'; codeError.hidden = false; }
                     }
                 })
                 .catch(function () {
@@ -1223,7 +1469,7 @@
                         if (codeError) { codeError.textContent = ''; codeError.hidden = true; }
                         updateAuthStrip(true, data.email);
                     } else {
-                        if (codeError) { codeError.textContent = data.error || 'Invalid or expired code. Try again or resend.'; codeError.hidden = false; }
+                        if (codeError) { codeError.textContent = data.error || 'That code didn\'t work — try again or resend.'; codeError.hidden = false; }
                         if (codeInput) { codeInput.value = ''; codeInput.focus(); }
                     }
                 })
@@ -1323,17 +1569,17 @@
 
     /* ── Mad Libs placeholder config ── */
     var MADLIB_PLACEHOLDERS = {
-        'CALLER_NAME': { label: 'Your name', type: 'text', size: 14 },
-        'CALLER_CITY': { label: 'City', type: 'text', size: 10 },
-        'CALLER_ZIP': { label: 'ZIP', type: 'text', size: 5 },
-        'CALLER_PHONE': { label: 'Phone', type: 'tel', size: 12 },
-        'CALLER_EMAIL': { label: 'Email', type: 'email', size: 18 },
-        'YOUR FULL NAME': { label: 'Your name', type: 'text', size: 14 },
-        'YOUR STREET ADDRESS': { label: 'Address', type: 'text', size: 20 },
-        'YOUR CITY, STATE ZIP': { label: 'City, ST ZIP', type: 'text', size: 16 },
-        'YOUR PHONE': { label: 'Phone', type: 'tel', size: 12 }
+        'LEGISLATOR_NAME': { label: "Legislator's name", type: 'text', minCh: 8 },
+        'CALLER_NAME': { label: 'Your name', type: 'text', minCh: 6 },
+        'CALLER_PHONE': { label: 'Phone (optional)', type: 'tel', minCh: 10 },
+        'CALLER_EMAIL': { label: 'Email', type: 'email', minCh: 12 },
+        'CITY_OR_ZIP': { label: 'City or ZIP', type: 'text', minCh: 6 },
+        'ONE_SENTENCE_WHY': { label: 'Why this matters to you (optional)', type: 'text', minCh: 12 }
     };
-    var MADLIB_REGEX = /\[(CALLER_NAME|CALLER_CITY|CALLER_ZIP|CALLER_PHONE|CALLER_EMAIL|YOUR FULL NAME|YOUR STREET ADDRESS|YOUR CITY, STATE ZIP|YOUR PHONE)\]/g;
+    var MADLIB_REGEX = /\[(LEGISLATOR_NAME|CALLER_NAME|CALLER_PHONE|CALLER_EMAIL|CITY_OR_ZIP|ONE_SENTENCE_WHY|CONSTITUENT_INTRO)\]/g;
+    var MADLIB_FOOTER_KEYS = ['CALLER_NAME', 'CALLER_PHONE', 'CALLER_EMAIL'];
+    var MADLIB_FOOTER_WIDTH_CH = 22;
+    var MADLIB_OPTIONAL_KEYS = ['ONE_SENTENCE_WHY', 'CALLER_PHONE'];
 
     function renderMadLibsBody(bodyText, container, prefills) {
         container.innerHTML = '';
@@ -1346,36 +1592,71 @@
                 if (parts[i]) {
                     var span = document.createElement('span');
                     span.textContent = parts[i];
+                    span.setAttribute('contenteditable', 'true');
+                    span.setAttribute('spellcheck', 'true');
                     container.appendChild(span);
                 }
             } else {
                 var key = parts[i];
-                var cfg = MADLIB_PLACEHOLDERS[key] || { label: key, type: 'text', size: 12 };
+                if (key === 'CONSTITUENT_INTRO') {
+                    var introSpan = document.createElement('span');
+                    introSpan.setAttribute('data-madlib-key', 'CONSTITUENT_INTRO');
+                    introSpan.className = 'madlib-constituent-intro';
+                    introSpan.textContent = "I'm a constituent ";
+                    container.appendChild(introSpan);
+                    continue;
+                }
+                var cfg = MADLIB_PLACEHOLDERS[key] || { label: key, type: 'text', minCh: 8 };
+                var minCh = (cfg.minCh !== undefined) ? cfg.minCh : 8;
                 var inp = document.createElement('input');
                 inp.type = cfg.type;
                 inp.className = 'madlib-blank';
                 inp.placeholder = cfg.label;
-                inp.size = cfg.size;
                 inp.setAttribute('data-madlib-key', key);
+                inp.setAttribute('data-madlib-min-ch', String(minCh));
                 inp.setAttribute('autocomplete', 'off');
                 if (prefills && prefills[key]) {
                     inp.value = prefills[key];
                     inp.classList.add('filled');
                     if (!valueMap[key]) valueMap[key] = prefills[key];
                 }
+                function resizeMadLibInput(input) {
+                    var key = input.getAttribute('data-madlib-key');
+                    var isFooter = key && MADLIB_FOOTER_KEYS.indexOf(key) !== -1;
+                    var cursorCh = (document.activeElement === input) ? 1 : 0;
+                    var ch;
+                    if (isFooter) {
+                        ch = MADLIB_FOOTER_WIDTH_CH + cursorCh;
+                    } else {
+                        var v = (input.value || '').trim();
+                        var pl = (input.placeholder || '');
+                        var len = v ? v.length : pl.length;
+                        var min = parseInt(input.getAttribute('data-madlib-min-ch') || '2', 10);
+                        ch = Math.max(min, len) + cursorCh;
+                    }
+                    input.style.width = ch + 'ch';
+                }
+                resizeMadLibInput(inp);
                 (function (input, k) {
-                    var isNameKey = (k === 'CALLER_NAME' || k === 'YOUR FULL NAME');
                     input.addEventListener('input', function () {
-                        var val = isNameKey ? input.value : input.value.trim();
+                        var val = input.value.trim();
                         valueMap[k] = val;
                         container.querySelectorAll('input[data-madlib-key="' + k + '"]').forEach(function (el) {
                             if (el !== input) el.value = val;
-                            el.classList.toggle('filled', !!val.trim());
+                            el.classList.toggle('filled', !!val);
                             el.classList.remove('error');
+                            resizeMadLibInput(el);
                         });
+                        resizeMadLibInput(input);
+                    });
+                    input.addEventListener('blur', function () {
+                        if (input.value.trim()) input.classList.add('filled');
+                        resizeMadLibInput(input);
+                        container.querySelectorAll('input[data-madlib-key="' + k + '"]').forEach(resizeMadLibInput);
                     });
                     input.addEventListener('focus', function () {
                         input.classList.remove('error');
+                        resizeMadLibInput(input);
                     });
                 })(inp, key);
                 container.appendChild(inp);
@@ -1389,19 +1670,28 @@
         var container = wrap.querySelector('#gmail-madlib-body');
         if (!container || !container.children.length) {
             var ta = wrap.querySelector('#gmail-body-text');
-            return ta ? (ta.value || '').trim() : '';
+            if (!ta) return '';
+            var raw = (ta.value || '').trim();
+            var constituentCheckbox = document.getElementById('advocacy-drawer-constituent-checkbox');
+            var constituentPhrase = (constituentCheckbox && constituentCheckbox.checked) ? "I'm a constituent " : "I'm ";
+            return raw.replace(/\[CONSTITUENT_INTRO\]/g, constituentPhrase);
         }
         var text = '';
         container.childNodes.forEach(function (node) {
             if (node.nodeType === 3) {
                 text += node.textContent;
             } else if (node.tagName === 'SPAN') {
-                text += node.textContent;
+                text += node.innerText || node.textContent;
             } else if (node.tagName === 'INPUT') {
-                text += node.value || ('[' + (node.getAttribute('data-madlib-key') || '?') + ']');
+                var val = (node.value || '').trim();
+                text += val;
             }
         });
-        return text.trim();
+        text = text.trim();
+        if (text.indexOf('This matters to me because .') !== -1) {
+            text = text.replace(/This matters to me because \.\s*\n\n?/g, '');
+        }
+        return text;
     }
 
     function allBlanksValid(blanks) {
@@ -1411,6 +1701,7 @@
             var k = blanks[i].getAttribute('data-madlib-key');
             if (seen[k]) continue;
             seen[k] = true;
+            if (MADLIB_OPTIONAL_KEYS.indexOf(k) !== -1) continue;
             if (!blanks[i].value.trim()) {
                 valid = false;
                 blanks[i].classList.add('error');
@@ -1425,6 +1716,7 @@
             var k = blanks[i].getAttribute('data-madlib-key');
             if (seen[k]) continue;
             seen[k] = true;
+            if (MADLIB_OPTIONAL_KEYS.indexOf(k) !== -1) continue;
             if (!blanks[i].value.trim()) return blanks[i];
         }
         return null;
@@ -1432,6 +1724,7 @@
 
     /* ── Email Guide state machine ── */
     var GUIDE_STEPS = ['sign_in', 'subject', 'madlibs', 'pdf', 'open_client', 'confirm_sent'];
+    var GUIDE_STEP_LABELS = ['Sign in', 'Subject', 'Fill in your details', 'Grab the PDF', 'Send', 'Confirm'];
 
     function EmailGuide(wrap, blanks) {
         this.wrap = wrap;
@@ -1454,6 +1747,12 @@
             this.dots[d].classList.toggle('done', d < idx);
         }
         this.step = idx;
+        var counter = this.wrap.querySelector('#guide-step-counter');
+        if (counter && typeof GUIDE_STEP_LABELS !== 'undefined') {
+            counter.textContent = GUIDE_STEP_LABELS[idx] + ' · Step ' + (idx + 1) + ' of 6';
+        } else if (counter) {
+            counter.textContent = 'Step ' + (idx + 1) + ' of 6';
+        }
         var name = GUIDE_STEPS[idx];
         var el = null;
         if (name === 'sign_in') el = this.wrap.querySelector('#gmail-from-row');
@@ -1491,14 +1790,22 @@
             this.dots[d].classList.remove('active');
             this.dots[d].classList.add('done');
         }
+        var counter = this.wrap.querySelector('#guide-step-counter');
+        if (counter && typeof GUIDE_STEP_LABELS !== 'undefined') {
+            counter.textContent = GUIDE_STEP_LABELS[5] + ' · Step 6 of 6';
+        } else if (counter) {
+            counter.textContent = 'Step 6 of 6';
+        }
     };
 
+    /** Focus first mad lib blank in document order (so focus walks every option); optional blanks still editable. */
     EmailGuide.prototype.focusNextBlank = function () {
-        var blank = firstUnfilledBlank(this.blanks);
-        if (blank) {
-            blank.focus();
+        if (this.blanks.length) {
+            this.blanks[0].focus();
         } else {
             this.jumpTo('pdf');
+            var pdfLink = this.wrap.querySelector('#gmail-attachment-link');
+            if (pdfLink) pdfLink.focus();
         }
     };
 
@@ -1506,28 +1813,187 @@
         if (!container) container = document.getElementById('advocacy-drawer-body');
         var wrap = container && container.querySelector('.gmail-compose');
         if (!wrap) return;
+        container.classList.add('drawer-email-open');
         initDrawerFromAuth(wrap);
 
         var subjectEl = wrap.querySelector('#gmail-subject-text');
         var toInput = wrap.querySelector('#gmail-to-input');
+        var toStateInput = wrap.querySelector('#gmail-to-state-input');
+        var toStateChip = wrap.querySelector('#gmail-to-state-chip');
+        var toChipEmailSpan = wrap.querySelector('#gmail-to-email-text');
+        var toClearBtn = wrap.querySelector('#gmail-to-clear-btn');
         var hiddenBodyEl = wrap.querySelector('#gmail-body-text');
         var madlibContainer = wrap.querySelector('#gmail-madlib-body');
         var rawBody = wrap.getAttribute('data-body') || (hiddenBodyEl ? hiddenBodyEl.value : '') || '';
+        var contactName = (wrap.getAttribute('data-contact-name') || '').trim();
+        if (contactName) {
+            var hour = new Date().getHours();
+            var timeOfDay = (hour < 12) ? 'morning' : (hour < 17) ? 'afternoon' : 'evening';
+            rawBody = rawBody.replace(/\[TIME_OF_DAY\]/g, timeOfDay).replace(/\[CONTACT_NAME\]/g, contactName);
+            if (hiddenBodyEl) hiddenBodyEl.value = rawBody;
+        }
 
         function getSubject() { return subjectEl ? (subjectEl.value || '').trim() : ''; }
         function getRecipient() { return toInput ? (toInput.value || '').trim() : (wrap.getAttribute('data-recipient') || ''); }
 
+        /* ── To field: show pill when recipient is set (same styling as From) ── */
+        function showToState(which) {
+            if (toStateInput) toStateInput.hidden = (which !== 'input');
+            if (toStateChip) toStateChip.hidden = (which !== 'chip');
+        }
+        /* Show To clear button only when current value is NOT the scraped recipient (user can only remove their own/receipts). */
+        function updateToClearButtonVisibility() {
+            if (!toClearBtn) return;
+            var scraped = (wrap.getAttribute('data-recipient') || '').trim().toLowerCase();
+            var current = (toInput && toInput.value ? toInput.value.trim() : '').toLowerCase();
+            toClearBtn.style.display = (scraped && current === scraped) ? 'none' : '';
+        }
+        if (toInput && toChipEmailSpan) {
+            var toVal = (toInput.value || '').trim();
+            if (toVal) {
+                toChipEmailSpan.textContent = toVal;
+                showToState('chip');
+                updateToClearButtonVisibility();
+            } else {
+                showToState('input');
+            }
+            if (toClearBtn) {
+                toClearBtn.onclick = function () {
+                    if (toInput) toInput.value = '';
+                    showToState('input');
+                    if (toInput) toInput.focus();
+                };
+            }
+            toInput.addEventListener('blur', function () {
+                var v = (toInput.value || '').trim();
+                if (v) {
+                    toChipEmailSpan.textContent = v;
+                    showToState('chip');
+                    updateToClearButtonVisibility();
+                }
+            });
+        }
+
         /* ── Render Mad Libs body ── */
         var drawerEl = document.getElementById('advocacy-drawer');
-        var drawerZip = (drawerEl && drawerEl.getAttribute('data-drawer-zip')) || getConstituentZip() || '';
         var prefills = {};
-        if (drawerZip) prefills['CALLER_ZIP'] = drawerZip;
         if (_ilgaUserEmail) prefills['CALLER_EMAIL'] = _ilgaUserEmail;
+        var zipPrefill = getConstituentZip();
+        if (zipPrefill) prefills['CITY_OR_ZIP'] = zipPrefill;
+        var legislatorName = (wrap.getAttribute('data-legislator-name') || '').trim();
+        if (legislatorName) prefills['LEGISLATOR_NAME'] = legislatorName;
 
         var madlibResult = renderMadLibsBody(rawBody, madlibContainer, prefills);
         var blanks = madlibResult.blanks;
 
+        if (madlibContainer && madlibContainer.children.length) {
+            hiddenBodyEl.style.display = 'none';
+        } else {
+            madlibContainer.style.display = 'none';
+        }
+
         function getBody() { return getComposedBody(wrap); }
+
+        /* ── Email constituent (synced with Call tab); checkbox in drawer header ── */
+        var emailConstituentCheckbox = document.getElementById('advocacy-drawer-constituent-checkbox');
+
+        function setConstituentIntroText(isConstituent) {
+            var introSpan = madlibContainer && madlibContainer.querySelector('[data-madlib-key="CONSTITUENT_INTRO"]');
+            if (introSpan) {
+                introSpan.textContent = isConstituent ? "I'm a constituent " : "I'm ";
+            }
+            if (hiddenBodyEl && (hiddenBodyEl.value || '').indexOf('[CONSTITUENT_INTRO]') !== -1) {
+                hiddenBodyEl.value = hiddenBodyEl.value.replace(
+                    /\[CONSTITUENT_INTRO\]/g,
+                    isConstituent ? "I'm a constituent " : "I'm "
+                );
+            }
+        }
+
+        function updateSubjectFromConstituent(isConstituent) {
+            if (!subjectEl) return;
+            subjectEl.value = isConstituent
+                ? (wrap.getAttribute('data-subject-constituent') || wrap.getAttribute('data-subject') || '')
+                : (wrap.getAttribute('data-subject-general') || wrap.getAttribute('data-subject') || '');
+        }
+
+        if (drawerEl && emailConstituentCheckbox) {
+            var constAttr = (drawerEl.getAttribute('data-drawer-constituent') || '').trim();
+            if (constAttr === 'true') emailConstituentCheckbox.checked = true;
+            else if (constAttr === 'false') emailConstituentCheckbox.checked = false;
+            else {
+                // Fresh load: server rendered correct state in HTML; sync drawer attr from checkbox (do not overwrite from zip)
+                drawerEl.setAttribute('data-drawer-constituent', emailConstituentCheckbox.checked ? 'true' : 'false');
+            }
+            setConstituentIntroText(emailConstituentCheckbox.checked);
+            updateSubjectFromConstituent(emailConstituentCheckbox.checked);
+        }
+
+        if (emailConstituentCheckbox) {
+            emailConstituentCheckbox.addEventListener('change', function () {
+                if (drawerEl) drawerEl.setAttribute('data-drawer-constituent', this.checked ? 'true' : 'false');
+                setConstituentIntroText(this.checked);
+                updateSubjectFromConstituent(this.checked);
+            });
+        }
+
+        /* ── Smart constituent checkbox: when user changes zip in mad lib, update checkbox to match district ── */
+        var zipBlanks = madlibContainer ? madlibContainer.querySelectorAll('input[data-madlib-key="CITY_OR_ZIP"]') : [];
+        // #region agent log
+        (function () {
+            var payload = { sessionId: '4888d4', hypothesisId: 'H1', location: 'index.html:zipBlanks', message: 'zip constituent init', data: { zipBlanksLength: zipBlanks ? zipBlanks.length : 0, hasMadlib: !!(madlibContainer && madlibContainer.children.length) }, timestamp: Date.now() };
+            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '4888d4' }, body: JSON.stringify(payload) }).catch(function () {});
+        })();
+        // #endregion
+        function updateConstituentFromZip(zipValue) {
+            var z = (zipValue || '').trim();
+            var memberId = (drawerEl && drawerEl.getAttribute('data-member-id')) || '';
+            var zipValid = /^\d{5}$/.test(z);
+            // #region agent log
+            (function () {
+                var payload = { sessionId: '4888d4', hypothesisId: 'H2', location: 'index.html:updateConstituentFromZip', message: 'updateConstituentFromZip called', data: { zipValue: z, memberId: memberId, zipValid: zipValid }, timestamp: Date.now() };
+                fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '4888d4' }, body: JSON.stringify(payload) }).catch(function () {});
+            })();
+            // #endregion
+            if (!zipValid) return;
+            if (!memberId) return;
+            var url = '/advocacy/api/check-constituent?member_id=' + encodeURIComponent(memberId) + '&zip=' + encodeURIComponent(z);
+            fetch(url)
+                .then(function (r) { return r.ok ? r.json() : { is_constituent: false }; })
+                .then(function (data) {
+                    var isConst = !!(data && data.is_constituent);
+                    // #region agent log
+                    (function () {
+                        var payload = { sessionId: '4888d4', hypothesisId: 'H4', location: 'index.html:check-constituent response', message: 'constituent API result', data: { isConst: isConst, checkboxId: emailConstituentCheckbox ? emailConstituentCheckbox.id : null }, timestamp: Date.now() };
+                        fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '4888d4' }, body: JSON.stringify(payload) }).catch(function () {});
+                    })();
+                    // #endregion
+                    if (emailConstituentCheckbox) {
+                        requestAnimationFrame(function () {
+                            emailConstituentCheckbox.checked = isConst;
+                            if (drawerEl) drawerEl.setAttribute('data-drawer-constituent', isConst ? 'true' : 'false');
+                            setConstituentIntroText(isConst);
+                            updateSubjectFromConstituent(isConst);
+                        });
+                    }
+                })
+                .catch(function () {});
+        }
+        /* Event delegation: madlib body can be re-rendered by applyBodyFromStore(), which replaces
+           innerHTML and removes the inputs we attached to. Attach once on the container so any
+           current or future CITY_OR_ZIP input triggers the constituent check. */
+        if (madlibContainer) {
+            madlibContainer.addEventListener('input', function (e) {
+                if (e.target && e.target.getAttribute('data-madlib-key') === 'CITY_OR_ZIP') {
+                    updateConstituentFromZip(e.target.value);
+                }
+            });
+            madlibContainer.addEventListener('blur', function (e) {
+                if (e.target && e.target.getAttribute('data-madlib-key') === 'CITY_OR_ZIP') {
+                    updateConstituentFromZip(e.target.value);
+                }
+            });
+        }
 
         /* ── Init guide ── */
         var guide = new EmailGuide(wrap, blanks);
@@ -1543,6 +2009,9 @@
                 emailBlanks.forEach(function (el) {
                     if (!el.value) { el.value = email; el.classList.add('filled'); }
                 });
+                if (hiddenBodyEl && madlibContainer.hidden && hiddenBodyEl.value.indexOf('[CALLER_EMAIL]') !== -1) {
+                    hiddenBodyEl.value = hiddenBodyEl.value.replace(/\[CALLER_EMAIL\]/g, email);
+                }
                 guide.advance();
             }
         };
@@ -1558,8 +2027,18 @@
                 setTimeout(function () { guide.focusNextBlank(); }, 300);
             };
         }
+        /* ── Subject: Enter focuses "Looks good" so user can Tab/Enter through steps ── */
+        var subjectInput = wrap.querySelector('#gmail-subject-text');
+        if (subjectInput && subjectVerifyBtn) {
+            subjectInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    subjectVerifyBtn.focus();
+                }
+            });
+        }
 
-        /* ── Mad Libs: auto-advance when all blanks filled ── */
+        /* ── Mad Libs: Tab/Enter advance through every blank in order (optional ones still editable), then to PDF ── */
         blanks.forEach(function (blank) {
             blank.addEventListener('input', function () {
                 if (guide.step === 2 && !firstUnfilledBlank(blanks)) {
@@ -1567,15 +2046,26 @@
                 }
             });
             blank.addEventListener('keydown', function (e) {
-                if (e.key === 'Tab' && !e.shiftKey && guide.step === 2) {
-                    var idx = blanks.indexOf(blank);
-                    var nextUnfilled = null;
-                    for (var n = idx + 1; n < blanks.length; n++) {
-                        if (!blanks[n].value.trim()) { nextUnfilled = blanks[n]; break; }
+                if (e.key !== 'Tab' && e.key !== 'Enter') return;
+                var idx = blanks.indexOf(blank);
+                if (e.key === 'Enter') e.preventDefault();
+                if (e.shiftKey && e.key === 'Tab') {
+                    e.preventDefault();
+                    if (idx > 0) {
+                        blanks[idx - 1].focus();
+                    } else if (subjectVerifyBtn) {
+                        subjectVerifyBtn.focus();
                     }
-                    if (!nextUnfilled && !firstUnfilledBlank(blanks)) {
-                        guide.jumpTo('pdf');
-                    }
+                    return;
+                }
+                if (e.key === 'Tab' && e.shiftKey) return;
+                e.preventDefault();
+                if (idx + 1 < blanks.length) {
+                    blanks[idx + 1].focus();
+                } else {
+                    guide.jumpTo('pdf');
+                    var pdfLink = wrap.querySelector('#gmail-attachment-link');
+                    if (pdfLink) pdfLink.focus();
                 }
             });
         });
@@ -1646,11 +2136,12 @@
                     '&body=' + encodeURIComponent(getBody());
                 window.location.href = url;
                 guide._mailtoClicked = true;
+                if (sentBtn) sentBtn.disabled = false;
                 guide.jumpTo('confirm_sent');
             };
         }
 
-        /* ── "I sent" button ── */
+        /* ── "I sent it!" button (enabled only after opening email client) ── */
         var sentBtn = wrap.querySelector('#gmail-sent-email-btn');
         if (sentBtn) {
             sentBtn.onclick = function () {
@@ -1671,15 +2162,47 @@
                             guide.setStep(0);
                             setTimeout(function () {
                                 sentBtn.classList.remove('sent-signin-nudge');
-                                span.textContent = 'I sent';
+                                span.textContent = 'I sent it!';
                             }, 3000);
                         } else {
                             span.textContent = 'Couldn\'t save. Try again.';
-                            setTimeout(function () { if (span) span.textContent = 'I sent'; }, 3000);
+                            setTimeout(function () { if (span) span.textContent = 'I sent it!'; }, 3000);
                         }
                     }
                 });
             };
+        }
+
+        /* ── Email body: apply follow-up or first-outreach template from server (no toggle) ── */
+        var storeFollowup = wrap.querySelector('#gmail-body-followup-store');
+        var storeFirst = wrap.querySelector('#gmail-body-first-store');
+        if (storeFollowup && storeFirst && hiddenBodyEl && madlibContainer) {
+            var initialMode = (wrap.getAttribute('data-email-mode') || 'first').toLowerCase();
+            var storeEl = initialMode === 'followup' ? storeFollowup : storeFirst;
+
+            function applyBodyFromStore(store) {
+                var text = (store && store.value) || '';
+                var contactName = (wrap.getAttribute('data-contact-name') || '').trim();
+                if (contactName) {
+                    var hour = new Date().getHours();
+                    var timeOfDay = (hour < 12) ? 'morning' : (hour < 17) ? 'afternoon' : 'evening';
+                    text = text.replace(/\[TIME_OF_DAY\]/g, timeOfDay).replace(/\[CONTACT_NAME\]/g, contactName);
+                }
+                hiddenBodyEl.value = text;
+                var newResult = renderMadLibsBody(text, madlibContainer, prefills);
+                if (guide) guide.blanks = newResult.blanks;
+                if (madlibContainer && madlibContainer.children.length) {
+                    hiddenBodyEl.style.display = 'none';
+                    madlibContainer.style.display = '';
+                } else {
+                    madlibContainer.style.display = 'none';
+                    hiddenBodyEl.style.display = '';
+                }
+                setConstituentIntroText(emailConstituentCheckbox ? emailConstituentCheckbox.checked : true);
+                updateSubjectFromConstituent(emailConstituentCheckbox ? emailConstituentCheckbox.checked : true);
+            }
+
+            applyBodyFromStore(storeEl);
         }
     }
 
@@ -1784,15 +2307,28 @@
             if (countEl) countEl.textContent = n > 0 ? n : '';
             var barPct = maxCount > 0 ? (n / maxCount) * 100 : 0;
             var c = PILL_BAR_COLORS[s];
+            pill.style.background = '';
             if (c && barPct > 0) {
                 pill.classList.remove('poll-bar-zero');
                 var alpha = 0.35 + (barPct / 100) * 0.4;
-                pill.style.background = 'linear-gradient(to right, ' + c.base + alpha + ') 0%, ' + c.base + alpha + ') ' + barPct + '%, transparent ' + barPct + '%)';
+                pill.style.setProperty('--pill-fill', c.base + alpha + ')');
+                pill.style.setProperty('--pill-fill-pct', '0%');
             } else {
                 pill.classList.add('poll-bar-zero');
                 var lightAlpha = 0.18;
-                pill.style.background = c ? (c.base + lightAlpha + ')') : 'rgba(0,0,0,0.06)';
+                pill.style.setProperty('--pill-fill', c ? (c.base + lightAlpha + ')') : 'rgba(0,0,0,0.06)');
+                pill.style.setProperty('--pill-fill-pct', '0%');
             }
+        });
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                pills.forEach(function (pill) {
+                    var s = pill.getAttribute('data-score');
+                    var n = byScore[s] || 0;
+                    var barPct = maxCount > 0 ? (n / maxCount) * 100 : 0;
+                    pill.style.setProperty('--pill-fill-pct', barPct + '%');
+                });
+            });
         });
         if (container) {
             container.removeAttribute('hidden');
@@ -1902,6 +2438,7 @@
             if (existing) return;
             var banner = document.createElement('div');
             banner.className = 'drawer-error-banner';
+            banner.setAttribute('role', 'alert');
             banner.textContent = 'Couldn\'t load follow-up. Try again.';
             body.insertBefore(banner, body.firstChild);
         }
@@ -1921,8 +2458,11 @@
             .then(function (html) {
                 if (html == null) return;
                 body.innerHTML = html;
-                var titleEl = document.getElementById('advocacy-drawer-title');
-                if (titleEl && body.querySelector('.gmail-compose')) titleEl.textContent = 'Follow-up email';
+                var hasEmail = body.querySelector('.gmail-compose');
+                if (hasEmail) {
+                    body.classList.add('drawer-email-open');
+                    document.getElementById('advocacy-drawer').classList.add('phone-panel--email');
+                }
                 if (window.htmx && window.htmx.process) window.htmx.process(body);
                 initDrawerEmailActions(body);
                 if (body.querySelector('.drawer-call-content')) {
@@ -1930,6 +2470,7 @@
                     initDrawerEndCall(body);
                     initDrawerVoicemailToggle(body);
                 }
+                updateDrawerStepStrip('email');
                 recordOutreach(memberId, 'call', zip, '', nextStepVal, stafferVal, supportVal);
             })
             .catch(showWrapupError);
@@ -1938,9 +2479,15 @@
     document.body.addEventListener('htmx:afterSwap', function (e) {
         if (e.detail.target && e.detail.target.id === 'advocacy-drawer-body') {
             var body = e.detail.target;
-            var titleEl = document.getElementById('advocacy-drawer-title');
-            if (titleEl && body.querySelector('.gmail-compose')) {
-                titleEl.textContent = 'Follow-up email';
+            if (body.querySelector('.gmail-compose')) body.classList.add('drawer-email-open');
+            else body.classList.remove('drawer-email-open');
+            var root = body.querySelector('.drawer-call-content') || body.querySelector('.gmail-compose');
+            var headerCheckbox = document.getElementById('advocacy-drawer-constituent-checkbox');
+            var drawer = document.getElementById('advocacy-drawer');
+            if (root && headerCheckbox && drawer) {
+                var isConst = root.getAttribute('data-is-constituent') === 'true';
+                headerCheckbox.checked = isConst;
+                drawer.setAttribute('data-drawer-constituent', isConst ? 'true' : 'false');
             }
             initDrawerEmailActions(body);
             if (body.querySelector('.drawer-call-content')) {
@@ -1948,6 +2495,7 @@
                 initDrawerEndCall(body);
                 initDrawerVoicemailToggle(body);
             }
+            if (drawer && drawer.classList.contains('open')) initDrawerFocusTrapAndFocus();
         }
     });
 
