@@ -30,7 +30,7 @@ This doc summarizes the DB implementation, potential issues, and how tests verif
 
 - **Auth:** request-code inserts one `AuthCode`; verify-code finds it, marks used, and gets-or-creates `User`, updates `last_login_at`.
 - **Outreach:** POST /outreach/record (requires auth) inserts one `OutreachEvent` per call/email/no_answer.
-- **Seed:** `scripts/seed_outreach.py` uses the same profile/env as the app; runs `init_db()`, then gets-or-creates user for the backlog email and inserts many `OutreachEvent` rows (real backlog + in dev, mock advocate data). Use the same `ILGA_PROFILE` (or same `ILGA_DB_PATH`) for app and seed so they point at the same file.
+- **Seed:** `scripts/seed_outreach.py` uses the same profile/env as the app; runs `init_db()`, then gets-or-creates user for the backlog email and inserts many `OutreachEvent` rows (real backlog + in dev, mock advocate data). Use the same `ILGA_PROFILE` (or same `ILGA_DB_PATH`) for app and seed so they point at the same file. In dev, the seed also inserts additional **"this week"** events with relative `created_at` (e.g. now − 0..6 days) so the landing ticker always shows a realistic "Over N calls made to Springfield this week", and includes a spread of **support_score** (1–5) for at least one member so the call-drawer interest poll bar chart shows all segments (Opposed → Champion).
 
 ### Read paths (where DB data is used)
 
