@@ -7,7 +7,6 @@ stats sentence) take no state.
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any
 
 from .metrics_definitions import MONEYBALL_ONE_LINER
@@ -568,126 +567,97 @@ def build_script_hint_super_ally(card: dict) -> str:
 
 
 def build_email_subject(zip_code: str) -> str:
-    """Legacy: card prefill subject. Uses default poignant subject."""
-    return build_email_subject_line(zip_code, variant="default")
+    """Legacy: card prefill subject (constituent variant)."""
+    return build_email_subject_line(zip_code, variant="constituent")
 
 
-def build_email_subject_line(zip_code: str, variant: str = "default") -> str:
-    """Dynamic subject line. variant: default | alternate_short | alternate_direct."""
-    zip_ = zip_code or "____"
-    if variant == "alternate_short":
-        return f'Please support a narrow "kei vehicle" registration fix ({zip_} constituent)'
-    if variant == "alternate_direct":
-        return "Will [LEGISLATOR_TITLE] [LEGISLATOR_LAST] support kei vehicle legislation?"
+def build_email_subject_line(zip_code: str, variant: str = "constituent") -> str:
+    """Subject line keyed by variant: constituent | general."""
+    if variant == "general":
+        return "Request: clarify Illinois registration for kei vehicles (25+ years old)"
     return "Constituent request: clarify Illinois registration for kei vehicles (25+ years old)"
 
 
-def build_email_ask_block(title_label: str, legislator_last: str, target_type: str) -> str:
-    """Dynamic ASK block for email body (narrow bill, 25+ year kei, limited on-road)."""
-    title = title_label or "[LEGISLATOR_TITLE]"
-    last = legislator_last or "[LEGISLATOR_LAST]"
+def _kei_email_body_core(
+    title_label: str,
+    legislator_last: str,
+    *,
+    greeting_line: str | None = None,
+) -> str:
+    """Kei vehicle email body with mad-lib placeholders.
+
+    [LEGISLATOR_NAME] is the recipient name (prefilled as title + last; user can edit).
+    [CONSTITUENT_INTRO] toggles between constituent / general intro (JS-managed).
+    [CITY_OR_ZIP], [ONE_SENTENCE_WHY] are inline mad-lib blanks (city/zip; why it matters).
+    [CALLER_NAME], [CALLER_PHONE], [CALLER_EMAIL] are filled by the user in the drawer.
+    If greeting_line is set (e.g. "Good [TIME_OF_DAY] [CONTACT_NAME],\\n\\n"), use it instead
+    of "Hi [LEGISLATOR_NAME]," for after-call personalization.
+    """
+    first_line = greeting_line if greeting_line is not None else "Hi [LEGISLATOR_NAME],\n\n"
     return (
-        f"My ask: Please support and help advance a narrow, safety-focused bill that explicitly "
-        f"authorizes registration of 25+ year old kei vehicles for limited on-road use "
-        f"(e.g., no interstates, equipment and insurance requirements). I'm asking {title} {last} "
-        "to support and help advance this fix."
+        first_line
+        + "I live in [CITY_OR_ZIP]. [CONSTITUENT_INTRO]writing to share a brief on an issue "
+        "affecting vehicle registration under 625 ILCS 5/3-401(c-1).\n\n"
+        "This matters to me because [ONE_SENTENCE_WHY].\n\n"
+        "Currently, Illinois is treating federally lawful imported vehicles (commonly 25+ years "
+        'old) as off-highway/non-highway based on how "originally manufactured for operation on '
+        'highways" is being interpreted. In practice, this prevents otherwise lawful vehicles '
+        "from being titled and registered for normal road use.\n\n"
+        "The attached briefing outlines:\n"
+        "\t\u2022 The specific statutory ambiguity being relied upon\n"
+        "\t\u2022 Why this is a legislative clarification issue rather than an administrative one\n"
+        "\t\u2022 A narrow, targeted fix that preserves all existing Illinois safety, equipment, "
+        "and insurance requirements\n"
+        "\t\u2022 Examples of other states that have authorized or restored registration through "
+        "statute or formal policy\n\n"
+        "The goal is not to create a new vehicle class or exemption, but to clarify how existing "
+        "law applies to highway-built vehicles that are federally lawful to import.\n\n"
+        "Consistent with the briefing, I am asking your office to:\n"
+        "\t\u2022 Help identify the appropriate legislative path and sponsor strategy within the "
+        "Vehicle Code\n"
+        "\t\u2022 Facilitate a staff-level discussion with the Secretary of State's office to "
+        "confirm acceptable statutory language\n"
+        "\t\u2022 Consider supporting or carrying a narrowly drafted clarification in the next "
+        "legislative window\n\n"
+        "I'm happy to provide additional materials or connect further if helpful.\n\n"
+        "Thank you for your time and consideration.\n\n"
+        "[CALLER_NAME]\n"
+        "[CALLER_PHONE]\n"
+        "[CALLER_EMAIL]\n"
     )
-
-
-def _time_of_day_greeting() -> str:
-    """Return 'morning', 'afternoon', or 'evening' based on current hour (server local time)."""
-    hour = datetime.now().hour
-    if hour < 12:
-        return "morning"
-    if hour < 17:
-        return "afternoon"
-    return "evening"
 
 
 def build_email_body_full(
     *,
     legislator_title: str,
     legislator_last: str,
-    legislator_full: str,
-    office_name: str,
-    district: str,
-    zip_code: str,
-    target_type: str,
-    called_or_email_first: str,
-    staffer_name: str = "",
-    call_date: str = "",
-    one_pager_note: str = "Attached is a two-page brief with the core argument and optional supporting detail.",
+    **_kwargs: str,
 ) -> str:
-    """Dynamic email body: what's happening, why (3-401(c-1)), my ask (bullets), next step.
+    """Kei vehicle email body using the simplified mad-lib template.
 
-    Placeholders for user: [CALLER_NAME], [CALLER_CITY], [CALLER_ZIP], [CALLER_PHONE], [CALLER_EMAIL].
-    Greeting: if staffer_name (person they talked to on the phone), use "Good [time], [Name],";
-    otherwise use "Dear [Office of Rep./Sen. Last]," for a more official tone.
+    Delegates to ``_kei_email_body_core`` which has [CONSTITUENT_INTRO],
+    [CALLER_NAME], [CALLER_PHONE], [CALLER_EMAIL] placeholders.
+    Extra kwargs kept for backward compat but ignored.
     """
-    if staffer_name:
-        time_word = _time_of_day_greeting()
-        greeting = f"Good {time_word}, {staffer_name},\n\n"
-    else:
-        greeting = f"Dear {office_name},\n\n"
-    intro = "My name is [CALLER_NAME] and I'm a constituent in [CALLER_CITY] [CALLER_ZIP]. "
-    if called_or_email_first == "CALLED":
-        intro += (
-            f"I'm following up on my call to request {legislator_title} {legislator_last}'s "
-            "support on a narrow legislative fix for kei vehicles in Illinois.\n\n"
-        )
-    else:
-        intro += (
-            f"I'm reaching out to request {legislator_title} {legislator_last}'s support on a "
-            "narrow legislative fix for kei vehicles in Illinois.\n\n"
-        )
-    whats_happening = (
-        "What's happening: The Illinois Secretary of State is treating kei vehicles as "
-        'off-highway/non-highway and branding titles "Not Eligible for Registration," stating '
-        "that states which allow on-road use do so by statute.\n\n"
-    )
-    why_plain = (
-        "Why (in plain terms): Illinois is relying on the registration eligibility test in "
-        '625 ILCS 5/3-401(c-1) (the "originally manufactured for highway use" requirement) to '
-        "deny registration.\n\n"
-    )
-    my_ask = (
-        "My ask: Please support and help advance a narrow, safety-focused bill that:\n"
-        '• Defines a "Kei Vehicle" category (e.g., 25+ years old)\n'
-        "• Authorizes registration for limited on-road use with clear restrictions (e.g., no interstates)\n"
-        "• Sets standard requirements (equipment, insurance, documentation)\n\n"
-    )
-    closing = (
-        f"{one_pager_note}\n\n"
-        "[NEXT_STEP_ASK]\n\n"
-        "Sincerely,\n"
-        "[CALLER_NAME]\n"
-        "[CALLER_CITY], IL [CALLER_ZIP]\n"
-        "[CALLER_PHONE]\n"
-    )
-    return greeting + intro + whats_happening + why_plain + my_ask + closing
+    return _kei_email_body_core(legislator_title, legislator_last)
 
 
-def build_email_body(member_name: str, script_hint: str, has_public_email: bool) -> str:
-    """Legacy: card prefill body. Uses generic script_hint paragraph."""
-    body = (
-        f"Dear {member_name},\n\n"
-        "I am a constituent writing to urge your support for kei truck legalization in Illinois.\n\n"
-        f"{script_hint}\n\n"
-        "Thank you for your service and your consideration.\n\n"
-        "Sincerely,\n"
-        "[YOUR FULL NAME]\n"
-        "[YOUR STREET ADDRESS]\n"
-        "[YOUR CITY, STATE ZIP]\n"
-        "[YOUR PHONE]\n"
-        "[OPTIONAL: One sentence on why this matters to you]\n"
-    )
-    if not has_public_email:
-        body = (
-            "(If this legislator\u2019s email is not publicly listed, call their office and ask for "
-            "the best email address for constituent correspondence. Use the Call script to get the number.)\n\n"
-            + body
+def build_email_body(
+    member_name: str,
+    script_hint: str,
+    has_public_email: bool,
+    *,
+    chamber: str | None = None,
+) -> str:
+    """Legacy: card prefill body. Same Kei email as drawer."""
+    if chamber:
+        title_label, legislator_last, _, _, _ = _legislator_email_context(
+            member_name, chamber, None
         )
-    return body
+    else:
+        title_label = "Rep./Sen."
+        legislator_last = member_name.split()[-1] if member_name else "[Last Name]"
+    return _kei_email_body_core(title_label, legislator_last)
 
 
 def _legislator_email_context(
@@ -716,6 +686,18 @@ def _legislator_email_context(
     return title_label, legislator_last, legislator_full, office_name, district_label
 
 
+def get_legislator_display_name(
+    legislator_name: str,
+    chamber: str | None = None,
+    district: str | None = None,
+) -> str:
+    """Return display name for email greeting, e.g. 'Representative Smith' or 'Senator Jones'."""
+    title_label, legislator_last, _, _, _ = _legislator_email_context(
+        legislator_name, chamber, district
+    )
+    return f"{title_label} {legislator_last}".strip()
+
+
 def legislator_drawer_context(member: Member | None) -> dict[str, str]:
     """Return template context for call/email drawer: title_label, legislator_last, office_name, district_label.
     Single source for Senator/Rep, district label, office name."""
@@ -740,7 +722,7 @@ def legislator_drawer_context(member: Member | None) -> dict[str, str]:
 
 
 def build_after_call_email_subject(zip_code: str) -> str:
-    return build_email_subject_line(zip_code, variant="default")
+    return build_email_subject_line(zip_code, variant="constituent")
 
 
 def build_after_call_email_body(
@@ -753,26 +735,22 @@ def build_after_call_email_body(
     target_type: str = "NON_COMMITTEE",
     call_date: str = "",
 ) -> str:
-    """After-call follow-up email body with dynamic ASK block (POWER_BROKER vs NON_COMMITTEE)."""
-    title_label, legislator_last, legislator_full, office_name, district_label = (
-        _legislator_email_context(legislator_name, chamber, district)
+    """After-call follow-up email body (simplified Kei template with mad-lib placeholders).
+
+    When staffer_name is provided, use a personable greeting "Good [TIME_OF_DAY] [CONTACT_NAME],"
+    (filled by JS from the user's local time and captured name) instead of "Hi Senator/Rep Last,".
+    """
+    title_label, legislator_last, _, _, _ = _legislator_email_context(
+        legislator_name, chamber, district
     )
-    return build_email_body_full(
-        legislator_title=title_label,
-        legislator_last=legislator_last,
-        legislator_full=legislator_full,
-        office_name=office_name,
-        district=district_label,
-        zip_code=zip_code or "",
-        target_type="POWER_BROKER" if target_type == "POWER_BROKER" else "NON_COMMITTEE",
-        called_or_email_first="CALLED",
-        staffer_name=staffer_name or "",
-        call_date=call_date,
-    )
+    greeting = None
+    if (staffer_name or "").strip():
+        greeting = "Good [TIME_OF_DAY] [CONTACT_NAME],\n\n"
+    return _kei_email_body_core(title_label, legislator_last, greeting_line=greeting)
 
 
 def build_email_first_subject(zip_code: str) -> str:
-    return build_email_subject_line(zip_code, variant="default")
+    return build_email_subject_line(zip_code, variant="constituent")
 
 
 def build_email_first_body(
@@ -783,22 +761,11 @@ def build_email_first_body(
     district: str | None = None,
     target_type: str = "NON_COMMITTEE",
 ) -> str:
-    """Email-first (no prior call) body with dynamic ASK block (POWER_BROKER vs NON_COMMITTEE)."""
-    title_label, legislator_last, legislator_full, office_name, district_label = (
-        _legislator_email_context(legislator_name, chamber, district)
+    """Email-first (no prior call) body (simplified Kei template with mad-lib placeholders)."""
+    title_label, legislator_last, _, _, _ = _legislator_email_context(
+        legislator_name, chamber, district
     )
-    return build_email_body_full(
-        legislator_title=title_label,
-        legislator_last=legislator_last,
-        legislator_full=legislator_full,
-        office_name=office_name,
-        district=district_label,
-        zip_code=zip_code or "",
-        target_type="POWER_BROKER" if target_type == "POWER_BROKER" else "NON_COMMITTEE",
-        called_or_email_first="EMAIL_FIRST",
-        staffer_name="",
-        call_date="",
-    )
+    return _kei_email_body_core(title_label, legislator_last)
 
 
 def find_power_broker(

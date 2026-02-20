@@ -36,18 +36,41 @@ router = APIRouter()
 templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
 templates.env.globals["dev_available"] = DEV_MODE
 
+# Kei truck facts for loading animation (fun + factual + data-driven)
+_KEI_LOADING_FACTS_STATIC: list[str] = [
+    "Texas made kei trucks legal for on-road use in 2025.",
+    "25+ year old kei vehicles are federally legal to import; states set registration rules.",
+    'Illinois SOS brands some titles "Not Eligible for Registration" — we want a clear statute.',
+    "Kei trucks are small and fuel-efficient; legal in many states, restricted in Illinois.",
+    "'Kei' means 'light' in Japanese — the vehicle class is kei jidōsha.",
+    "Suzuki Carry, Honda Acty, Daihatsu Hijet — classic kei trucks.",
+]
+
+
+def _loading_facts(member_count: int, zip_count: int) -> list[str]:
+    """Build list of kei truck facts for loading animation (static + data-driven)."""
+    facts: list[str] = list(_KEI_LOADING_FACTS_STATIC)
+    facts.append(f"We're tracking {member_count} Illinois legislators.")
+    facts.append(f"ZIPs mapped to districts: {zip_count}.")
+    return facts
+
 
 @router.get("/")
 async def advocacy_index(request: Request, zip: str = "", member_id: str = "", view: str = ""):
     """Render the advocacy search page. Accepts dev deep-link params when ?dev is present."""
     from .. import config as cfg
 
+    member_count = len(state.members)
+    zip_count = len(state.zip_to_district)
     ctx: dict[str, Any] = {
         "request": request,
         "title": "Kei Truck Freedom",
         "categories": CATEGORY_CHOICES,
-        "member_count": len(state.members),
+        "member_count": member_count,
+        "zip_count": zip_count,
         "category": "Transportation",
+        "features": cfg.get_client_features(),
+        "loading_facts": _loading_facts(member_count, zip_count),
     }
     if zip:
         ctx["zip"] = zip
@@ -140,6 +163,24 @@ async def advocacy_drawer(
             {"detail": "Legislator not found."},
             status_code=404,
         )
+    # Constituent checkbox: checked only when selected member is user's rep or senator for this zip
+    is_constituent = False
+    if zip_code and member:
+        district_info = state.zip_to_district.get(zip_code)
+        if district_info:
+            senator_member = (
+                find_member_by_district(state, "senate", district_info.il_senate)
+                if district_info.il_senate
+                else None
+            )
+            rep_member = (
+                find_member_by_district(state, "house", district_info.il_house)
+                if district_info.il_house
+                else None
+            )
+            is_constituent = (senator_member and member.id == senator_member.id) or (
+                rep_member and member.id == rep_member.id
+            )
     legislator_name = member.name if member else ""
     phone = None
     if member:
@@ -168,7 +209,8 @@ async def advocacy_drawer(
         target_type = "POWER_BROKER" if target_type_param == "POWER_BROKER" else "NON_COMMITTEE"
         chamber = getattr(member, "chamber", None) if member else None
         district = getattr(member, "district", None) if member else None
-        subject = ah.build_email_first_subject(zip_code)
+        subject_constituent = ah.build_email_subject_line(zip_code, variant="constituent")
+        subject_general = ah.build_email_subject_line(zip_code, variant="general")
         body = ah.build_email_first_body(
             legislator_name,
             zip_code,
@@ -176,18 +218,45 @@ async def advocacy_drawer(
             district=district,
             target_type=target_type,
         )
+        body_followup = ah.build_after_call_email_body(
+            "",
+            legislator_name,
+            zip_code,
+            chamber=chamber,
+            district=district,
+            target_type=target_type,
+            call_date="",
+        )
+        legislator_display_name = ah.get_legislator_display_name(legislator_name, chamber, district)
+        party_abbr = ""
+        if member and (member.party or "").lower():
+            if "republican" in (member.party or "").lower():
+                party_abbr = "R"
+            elif "democrat" in (member.party or "").lower():
+                party_abbr = "D"
+            else:
+                party_abbr = (member.party or "")[:1]
         return templates.TemplateResponse(
             "_advocacy_drawer_email.html",
             {
                 "request": request,
                 "drawer_view": "email_first",
                 "legislator_name": legislator_name,
+                "legislator_display_name": legislator_display_name,
                 "recipient_email": recipient_email,
+                "contact_name": "",
                 "has_public_email": has_public_email,
-                "subject": subject,
+                "subject": subject_constituent,
+                "subject_constituent": subject_constituent,
+                "subject_general": subject_general,
                 "body": body,
+                "body_followup": body_followup,
+                "body_first": body,
                 "show_call_nudge": show_call_nudge,
                 "show_go_to_call": not has_public_email,
+                "zip_code": zip_code,
+                "is_constituent": is_constituent,
+                "party_abbr": party_abbr,
             },
         )
 
@@ -203,6 +272,7 @@ async def advocacy_drawer(
             "request": request,
             "legislator_name": legislator_name,
             "zip_code": zip_code,
+            "is_constituent": is_constituent,
             "phone": phone or "",
             "member_id": member_id or "",
             "photo_url": photo_url,
@@ -234,7 +304,25 @@ async def advocacy_call_wrapup(request: Request, call_id: str):
     call_date = (form.get("call_date") or "").strip()
     chamber = getattr(member, "chamber", None) if member else None
     district = getattr(member, "district", None) if member else None
-    subject = ah.build_after_call_email_subject(zip_code)
+    is_constituent = False
+    if zip_code and member:
+        district_info = state.zip_to_district.get(zip_code)
+        if district_info:
+            senator_member = (
+                find_member_by_district(state, "senate", district_info.il_senate)
+                if district_info.il_senate
+                else None
+            )
+            rep_member = (
+                find_member_by_district(state, "house", district_info.il_house)
+                if district_info.il_house
+                else None
+            )
+            is_constituent = (senator_member and member.id == senator_member.id) or (
+                rep_member and member.id == rep_member.id
+            )
+    subject_constituent = ah.build_email_subject_line(zip_code, variant="constituent")
+    subject_general = ah.build_email_subject_line(zip_code, variant="general")
     body = ah.build_after_call_email_body(
         staffer,
         legislator_name,
@@ -244,7 +332,24 @@ async def advocacy_call_wrapup(request: Request, call_id: str):
         target_type=target_type,
         call_date=call_date,
     )
+    body_first = ah.build_email_first_body(
+        legislator_name,
+        zip_code,
+        chamber=chamber,
+        district=district,
+        target_type=target_type,
+    )
 
+    contact_name = staffer or ""
+    legislator_display_name = ah.get_legislator_display_name(legislator_name, chamber, district)
+    party_abbr = ""
+    if member and (member.party or "").lower():
+        if "republican" in (member.party or "").lower():
+            party_abbr = "R"
+        elif "democrat" in (member.party or "").lower():
+            party_abbr = "D"
+        else:
+            party_abbr = (member.party or "")[:1]
     if recipient:
         return templates.TemplateResponse(
             "_advocacy_drawer_email.html",
@@ -252,13 +357,22 @@ async def advocacy_call_wrapup(request: Request, call_id: str):
                 "request": request,
                 "drawer_view": "after_call",
                 "legislator_name": legislator_name,
+                "legislator_display_name": legislator_display_name,
                 "recipient_email": recipient,
+                "contact_name": contact_name,
                 "has_public_email": True,
-                "subject": subject,
+                "subject": subject_constituent,
+                "subject_constituent": subject_constituent,
+                "subject_general": subject_general,
                 "body": body,
+                "body_followup": body,
+                "body_first": body_first,
                 "show_call_nudge": False,
                 "show_go_to_call": False,
                 "copy_only_mode": False,
+                "zip_code": zip_code,
+                "is_constituent": is_constituent,
+                "party_abbr": party_abbr,
             },
         )
 
@@ -268,14 +382,23 @@ async def advocacy_call_wrapup(request: Request, call_id: str):
             "request": request,
             "drawer_view": "after_call",
             "legislator_name": legislator_name,
+            "legislator_display_name": legislator_display_name,
             "recipient_email": "",
+            "contact_name": contact_name,
             "has_public_email": False,
-            "subject": subject,
+            "subject": subject_constituent,
+            "subject_constituent": subject_constituent,
+            "subject_general": subject_general,
             "body": body,
+            "body_followup": body,
+            "body_first": body_first,
             "instructions": next_step,
             "show_call_nudge": False,
             "show_go_to_call": True,
             "copy_only_mode": True,
+            "zip_code": zip_code,
+            "is_constituent": is_constituent,
+            "party_abbr": party_abbr,
         },
     )
 
@@ -299,6 +422,35 @@ async def advocacy_call_no_answer(request: Request, call_id: str):
             "outcome": outcome,
         },
     )
+
+
+@router.get("/api/check-constituent")
+async def check_constituent(member_id: str = "", zip: str = ""):
+    """Return whether the given ZIP is in the given member's district (constituent checkbox)."""
+    zip_code = (zip or "").strip()
+    member_id_stripped = (member_id or "").strip()
+    if not member_id_stripped or not zip_code:
+        return JSONResponse({"is_constituent": False})
+    member = find_member_by_id(state, member_id_stripped)
+    if not member:
+        return JSONResponse({"is_constituent": False})
+    district_info = state.zip_to_district.get(zip_code)
+    if not district_info:
+        return JSONResponse({"is_constituent": False})
+    senator_member = (
+        find_member_by_district(state, "senate", district_info.il_senate)
+        if district_info.il_senate
+        else None
+    )
+    rep_member = (
+        find_member_by_district(state, "house", district_info.il_house)
+        if district_info.il_house
+        else None
+    )
+    is_constituent = (senator_member and member.id == senator_member.id) or (
+        rep_member and member.id == rep_member.id
+    )
+    return JSONResponse({"is_constituent": is_constituent})
 
 
 @router.post("/search")
