@@ -519,8 +519,13 @@
         drawer.classList.add('open');
         document.getElementById('advocacy-drawer-overlay').classList.add('open');
         if (window.matchMedia('(max-width: 768px)').matches) {
+            var scrollY = window.scrollY || window.pageYOffset;
+            document.body.style.position = 'fixed';
+            document.body.style.top = '-' + scrollY + 'px';
+            document.body.style.left = '0';
+            document.body.style.right = '0';
             document.body.style.overflow = 'hidden';
-            document.body.style.touchAction = 'none';
+            window.__drawerScrollY = scrollY;
         }
         initDrawerFocusTrapAndFocus();
         var fetchView = (view === 'call_wrapup') ? 'call' : view;
@@ -599,8 +604,14 @@
         var overlay = document.getElementById('advocacy-drawer-overlay');
         if (drawer) drawer.classList.remove('open');
         if (overlay) overlay.classList.remove('open');
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
         document.body.style.overflow = '';
-        document.body.style.touchAction = '';
+        var scrollY = window.__drawerScrollY || 0;
+        window.scrollTo(0, scrollY);
+        window.__drawerScrollY = null;
         if (drawer) drawer.setAttribute('aria-hidden', 'true');
         removeDrawerFocusTrap();
         if (window.__advocacyDrawerPreviousFocus && typeof window.__advocacyDrawerPreviousFocus.focus === 'function') {
