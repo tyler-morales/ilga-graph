@@ -79,6 +79,7 @@ OBSERVATION_DAYS_AFTER_SNAPSHOT = 90
 # positive_weak, neutral, negative_weak, negative, negative_terminal).
 
 # ── Feature mode ──────────────────────────────────────────────────────────────
+# (This file is intentionally large for feature cohesion; split by domain only if needed.)
 # "full"     = Status model — uses ALL features including staleness, slips,
 #              action counts, and rule-derived features.
 # "forecast" = Forecast model — uses only intrinsic / Day-0 features:

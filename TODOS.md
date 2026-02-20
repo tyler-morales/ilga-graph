@@ -13,10 +13,13 @@
   - **date_parse.py** — `parse_bill_date`, `parse_action_date`, `safe_parse_date` for GraphQL and intelligence bill detail. Main re-exports `_parse_bill_date` / `_safe_parse_date` for test backward compat.
   - **member_lookup.py** — `find_member_by_id(state, id)`, `find_member_by_district(state, chamber, district)`; single implementation used by advocacy router, explore, and intelligence (advocacy_helpers imports and re-exports for callers that use `ah.find_member_by_*`).
   - **routers/advocacy.py (2026-02-19):** SSR advocacy routes extracted from main: GET `/advocacy`, `/advocacy/test`, `/advocacy/letter-template`, `/advocacy/drawer`, POST `/advocacy/call/{id}/wrapup`, `/advocacy/call/{id}/no-answer`, POST `/advocacy/search`. State and deps unchanged (app_state.state, get_db, get_current_user_optional). Main mounts router with prefix `/advocacy`.
-  - **routers/** — Advocacy wired; intelligence and explore still in main.
+  - **routers/** — Advocacy, intelligence, and explore extracted. Main mounts advocacy (prefix `/advocacy`), intelligence (prefix `/intelligence`), explore (no prefix; routes `/explore`, `/api/graph`), auth, outreach.
+  - **routers/intelligence.py (2026-02-20):** All `/intelligence` and `/intelligence/*` routes plus witness-slip/org helpers moved from main. Main mounts with prefix `/intelligence`. SHAP endpoint `GET /api/bills/{bill_id}/explanation` remains in main.
+  - **routers/explore.py (2026-02-20):** `GET /explore` and `GET /api/graph` (Legislative Power Map) moved from main. Router mounted with no prefix.
+  - **base.html CSS (2026-02-20):** Embedded `<style>` moved to `static/css/`: `variables.css` (design tokens), `base.css`, `advocacy.css`, `intelligence.css`; base template links all four. Split script: `scripts/split_css.py`.
   - **Cursor skill: extract-route-group-to-router (2026-02-18):** `.cursor/skills/extract-route-group-to-router/SKILL.md` — guides extracting route groups from main.py into `routers/` with state/deps preserved and TODOS updated.
   - **Cursor skill: graphql-resolver-and-loaders (2026-02-18):** `.cursor/skills/graphql-resolver-and-loaders/SKILL.md` — implements/updates Strawberry resolvers with batch loaders and state-from-context; documents new API in `docs/reference/graphql.md`; post-ship TODOS + docs.
-  - main.py reduced from ~4780 to ~3560 lines. Next: extract `/intelligence/*` and `/explore` into routers to shrink main further.
+  - main.py reduced from ~4780 to ~1800 lines after intelligence + explore extraction and CSS externalization.
 - **Advocacy helpers extracted from main.py (2026-02-18):**
   - Moved all advocacy-specific logic into `src/ilga_graph/advocacy_helpers.py`: card building (`member_to_card`), recommendation chip order, influence dict, script/email builders, `find_power_broker`, `find_ally`, `committee_member_ids`, `test_member_list`, `legislator_drawer_context`. Member lookup: single source in `member_lookup.py`; advocacy_helpers imports and re-exports `find_member_by_id` / `find_member_by_district`. Each helper that needs app state takes `state` as first argument; advocacy router calls `advocacy_helpers.*(state, ...)`. Reduces main.py size and keeps advocacy logic in one place.
 - **Unified outreach drawer with step strip (2026-02-19):**
@@ -33,11 +36,12 @@
   - Legislator context: `legislator_drawer_context(member)` in advocacy_helpers; call drawer uses it instead of inline title_label/office_name/district_label in main.
 - **Snapshot mocks (2026-02-19):** `make snapshot-mocks` samples all cache JSON types the app uses from mocks: members, bills, committees, vote_events, witness_slips, scorecards, moneyball, zip_to_district. zip_to_district is subset so only ZIPs mapping to the 40 mock members' districts are included—so dev ZIP search can show all 40 members (Your Senator/Rep + Power Broker/Ally vary by ZIP). Seed mode loads zip crosswalk from mocks/dev/ when present, else hardcoded seed. Not snapshot: house/senate_committees (unified committees.json), scrape_metadata (scrape state only).
 - **Backlog:**
-  - **base.html CSS** — Move embedded CSS (~6k lines) to `static/css/` (e.g. `base.css`, `advocacy.css`, `intelligence.css`) and link from base template. TODOS already noted: "move embedded CSS to static/style.css when it grows."
-  - **Intelligence routes** — Extract `/intelligence/*` handlers into a FastAPI `APIRouter` and mount in main to shrink main.py further.
-  - **main.py** — Consider splitting remaining route groups (e.g. `/api/*`, `/explore`) into routers once advocacy + intelligence are extracted.
+  - **base.html CSS** — Done: multi-file layout in `static/css/`: `variables.css` (design tokens), `base.css`, `advocacy.css`, `intelligence.css`; base template links all four in order (2026-02-20).
+  - **Intelligence routes** — Done (2026-02-20): `routers/intelligence.py`.
+  - **main.py** — Done: intelligence and explore extracted. Remaining routes (/, health, logs, dev, SHAP, GraphQL) stay in main.
 
-- **Legacy purge (2026-02-18):**
+- **Legacy purge (2026-02-18, 2026-02-20):**
+  - **2026-02-20:** Removed ~1110 lines of intelligence routes + helpers to `routers/intelligence.py`; ~220 lines explore/graph to `routers/explore.py`; ~7700 lines inline CSS to `static/css/base.css`. Dropped unused main imports (datetime, parse_action_date, get_bill_to_law_process, CATEGORY_CHOICES, find_member_by_district).
   - **Removed** `POST /advocacy/drawer/after-call` — all flows use `/advocacy/call/<id>/wrapup`; no templates or JS referenced the old endpoint.
   - **Removed** dead ML code in `ml/features.py`: `build_full_text_features()`, `_RE_LEGISLATIVE_BOILERPLATE`, and `FULLTEXT_MAX_FEATURES` / `FULLTEXT_MAX_TOKENS` (full-text TF-IDF was already disabled for leakage; the function was never called).
   - **Removed** unused CSS in `base.html`: `.drawer-after-call`, `.drawer-after-call-title` (replaced by Wrap Up card styles).
@@ -47,6 +51,7 @@
 
 ## Current
 
+- **Refactor round (2026-02-20):** Intelligence router (`routers/intelligence.py`), explore router (`routers/explore.py`), base CSS moved to `static/css/base.css`. main.py ~1800 lines; lint and 301 tests pass. See Refactor and Legacy purge above.
 - **Post-prod: share cards, analytics, security (2026-02-20):**
   - **Open Graph + Twitter Card:** base.html now has og:title, og:description, og:image, og:url, og:site_name and twitter:card/title/description/image. Defaults use `APP_BASE_URL`, `SITE_NAME`, `META_DESCRIPTION`, `OG_IMAGE_URL` from config; child templates can override `{% block og_title %}`, `{% block meta_description %}`, etc. `{% block meta_extra %}` for future per-page meta.
   - **Canonical + meta description:** `<link rel="canonical" href="{{ app_base_url }}{{ request.url.path }}">` and `<meta name="description">` with block override.
