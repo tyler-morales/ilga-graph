@@ -93,9 +93,9 @@ OG_IMAGE_URL: str = (
 )
 
 # ── Beta banner (site-wide notice) ───────────────────────────────────────────
-# When 1, base template shows a small "new site, may have bugs" bar with Report a bug link.
+# When 1, base template shows beta banner. Report-a-bug link remains in footer only.
 BETA_BANNER: bool = _env("ILGA_BETA_BANNER", "0") == "1"
-# URL for "Report a bug" (e.g. Google Form, GitHub Issues). If set, banner link goes here.
+# URL for "Report a bug" in footer and drawer nudges (e.g. Google Form, GitHub Issues, /report-bug).
 BETA_BANNER_FEEDBACK_URL: str = _env("ILGA_BETA_BANNER_FEEDBACK_URL", "").strip()
 # When someone submits the in-app form at /report-bug, an email is sent here if SMTP is configured.
 # Banner link is unaffected; it goes to /report-bug (or FEEDBACK_URL if set).

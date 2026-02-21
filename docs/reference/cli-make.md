@@ -9,9 +9,10 @@ All `make` targets. Run `make help` in the repo root to see this list in the ter
 | Target | Description |
 |--------|-------------|
 | `make install` | Install project: `pip install -e ".[dev]"`. |
-| `make dev` | Serve app in **dev mode** (auto-reload, port 8000). Uses `ILGA_LOAD_ONLY=1`, `ILGA_PROFILE=dev`. Reads from `cache/dev/`; falls back to `mocks/dev/` when empty. |
-| `make serve` | Serve app in **prod mode** (no reload). Uses `ILGA_LOAD_ONLY=1`, `ILGA_PROFILE=prod`. Reads from `cache/`. |
-| `make dev-reset` | Clear `cache/dev/` so the next `make dev` falls back to `mocks/dev/` seed data. |
+| `make dev` | Serve app in **dev mode** (auto-reload, port 8000). Reads from `cache/dev/` if it has data, else `mocks/dev/`. |
+| `make serve` | Serve app in **prod mode** (no reload). Reads from `cache/` only. |
+| `make dev-reset` | Clear `cache/dev/` so the next `make dev` uses `mocks/dev/`. |
+| `make dev-cache` | Copy `cache/` into `cache/dev/` so `make dev` uses full scraped data. Run after `make scrape`. |
 
 ---
 
@@ -67,6 +68,9 @@ The unified pipeline fetches each bill's BillStatus page **once** and reuses the
 
 | Target | Description |
 |--------|-------------|
+| `make snapshot-mocks` | Sample `cache/` into `mocks/dev/` (subset of members, bills, votes, etc.). Run after scrape; commit result to refresh dev seed. |
+| `make seed-outreach` | Seed outreach DB: backlog for funky_mama11@gmail.com; in dev only, mock advocates for heat-pill demo. Use same profile as the app. |
+| `make db-migrate` | Run Alembic migrations to head. For existing DBs created before Alembic, run once: `alembic stamp head`. |
 | `make logs` | Show unified run log (scrape, ml_run, startup). Optional `N=50` for `--tail 50`. |
 | `make clean` | Remove `cache/`, `processed/*.parquet`, vault output, `site/`, run logs. |
 

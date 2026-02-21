@@ -1,0 +1,67 @@
+"""Dev-only routes: component playground. All handlers return 404 when not DEV_MODE."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from fastapi import APIRouter, Request
+from fastapi.responses import JSONResponse
+from fastapi.templating import Jinja2Templates
+
+from .. import config as cfg
+from ..dev_playground_scenes import get_scene, get_scene_context, get_scenes
+
+_TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
+router = APIRouter()
+templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
+templates.env.globals["dev_available"] = cfg.DEV_MODE
+templates.env.globals["app_base_url"] = cfg.APP_BASE_URL
+templates.env.globals["site_name"] = cfg.SITE_NAME
+templates.env.globals["meta_description"] = cfg.META_DESCRIPTION
+templates.env.globals["og_image_url"] = cfg.OG_IMAGE_URL
+templates.env.globals["umami_enabled"] = cfg.PROFILE == "prod" and bool(cfg.UMAMI_WEBSITE_ID)
+templates.env.globals["umami_website_id"] = cfg.UMAMI_WEBSITE_ID
+templates.env.globals["umami_script_url"] = cfg.UMAMI_SCRIPT_URL
+templates.env.globals["show_beta_banner"] = cfg.BETA_BANNER
+templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
+
+
+def _playground_context(request: Request, scene_id: str | None):
+    """Build context for dev_playground.html: scenes, scene_id, scene_html, trigger, scene_label."""
+    scenes = get_scenes()
+    scene_html = ""
+    trigger = None
+    scene_label = ""
+    if scene_id:
+        scene = get_scene(scene_id)
+        if scene:
+            ctx = get_scene_context(scene, request)
+            scene_html = templates.env.get_template(scene["template"]).render(**ctx)
+            trigger = scene.get("trigger")
+            scene_label = scene.get("label", "")
+    return {
+        "request": request,
+        "scenes": scenes,
+        "scene_id": scene_id or "",
+        "scene_html": scene_html,
+        "trigger": trigger,
+        "scene_label": scene_label,
+    }
+
+
+@router.get("/playground", include_in_schema=False)
+async def dev_playground(request: Request, scene: str | None = None):
+    """Render component playground; optional ?scene=<id>. Returns 404 when not DEV_MODE."""
+    if not cfg.DEV_MODE:
+        return JSONResponse(status_code=404, content={"detail": "Not available"})
+    ctx = _playground_context(request, scene)
+    return templates.TemplateResponse("dev_playground.html", ctx)
+
+
+@router.get("/playground/{scene_id}", include_in_schema=False)
+async def dev_playground_scene(request: Request, scene_id: str):
+    """Render playground with a specific scene (deep link). Returns 404 when not DEV_MODE."""
+    if not cfg.DEV_MODE:
+        return JSONResponse(status_code=404, content={"detail": "Not available"})
+    ctx = _playground_context(request, scene_id)
+    return templates.TemplateResponse("dev_playground.html", ctx)

@@ -96,7 +96,7 @@ The advocacy flow is self-contained and works in production with the same env as
 - **Routes:** `/` redirects to `/advocacy`. Advocacy page, drawer (call/email/no-answer), search, and wrap-up are all served server-side.
 - **Auth:** `/auth` and `/outreach` are exempt from API-key middleware so browser users can sign in and record outreach.
 - **SSR pages:** `/advocacy`, `/explore`, and `/intelligence` (and sub-pages) are exempt so the full site works when `ILGA_API_KEY` is set; the key then only protects `/graphql` and programmatic API routes.
-- **DB:** `init_db()` runs on startup and creates `data/ilga.db` (or `ILGA_DB_PATH`) and the directory if needed. No manual migrations.
+- **DB:** `init_db()` runs on startup and runs Alembic migrations to head (or fallback create_all when no alembic.ini). Creates `data/ilga.db` (or `ILGA_DB_PATH`) and the directory if needed. **Existing DBs** from before Alembic: run `alembic stamp head` once from project root, then restart.
 - **Letter template:** Optional. Add `static/advocacy/letter-template.pdf` to serve it at `/advocacy/letter-template.pdf`; if missing, the app returns a clear message and the rest of the flow still works.
 
 ---

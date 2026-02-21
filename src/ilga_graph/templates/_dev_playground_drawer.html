@@ -1,0 +1,112 @@
+{# Playground: single drawer experience with Call and Email tabs. Overlay click and handle drag close. #}
+<div id="advocacy-drawer-overlay" class="phone-overlay open" aria-hidden="false" role="button" tabindex="0"
+    aria-label="Close drawer"></div>
+<div id="advocacy-drawer" class="phone-panel open" role="dialog" aria-modal="true" aria-hidden="false"
+    aria-label="Outreach: call script and email template" data-member-id="{{ member_id or '' }}"
+    data-drawer-zip="{{ zip_code or '' }}"
+    data-drawer-constituent="{{ 'true' if is_constituent else 'false' }}" data-drawer-photo-url="{{ photo_url or '' }}">
+    <div class="phone-panel-handle" id="advocacy-drawer-handle" aria-hidden="true">
+        <div class="phone-panel-handle-pill"></div>
+    </div>
+    <div class="phone-panel-title-row">
+        <div class="drawer-step-strip" id="drawer-step-strip" role="tablist" aria-label="Outreach steps">
+            <button type="button" class="drawer-step-link drawer-step-link-active" id="drawer-step-call" role="tab"
+                aria-selected="true" data-step="call">Call</button>
+            <span class="drawer-step-sep" aria-hidden="true">·</span>
+            <button type="button" class="drawer-step-link" id="drawer-step-email" role="tab" aria-selected="false"
+                data-step="email">Email</button>
+        </div>
+        <div id="advocacy-drawer-title-extra" class="phone-panel-title-extra">
+            <div class="drawer-header-constituent" role="group" aria-label="Constituent status">
+                <label class="drawer-constituent-checkbox-wrap">
+                    <input type="checkbox" id="advocacy-drawer-constituent-checkbox" class="drawer-constituent-checkbox"
+                        aria-label="I am a constituent"{% if is_constituent %} checked{% endif %}>
+                    <span class="drawer-constituent-label">I'm a constituent</span>
+                </label>
+            </div>
+        </div>
+    </div>
+    <div id="advocacy-drawer-body" class="phone-panel-body">
+        <div id="playground-drawer-call" class="playground-drawer-pane">
+            {% include "_advocacy_drawer_call.html" %}
+        </div>
+        <div id="playground-drawer-email" class="playground-drawer-pane" hidden>
+            {% include "_advocacy_drawer_email.html" %}
+        </div>
+    </div>
+</div>
+<script>
+(function() {
+    function closeAdvocacyDrawer() {
+        var overlay = document.getElementById('advocacy-drawer-overlay');
+        var drawer = document.getElementById('advocacy-drawer');
+        if (overlay) overlay.classList.remove('open');
+        if (drawer) {
+            drawer.classList.remove('open');
+            drawer.setAttribute('aria-hidden', 'true');
+            drawer.style.transform = '';
+        }
+    }
+    window.closeAdvocacyDrawer = closeAdvocacyDrawer;
+
+    var overlay = document.getElementById('advocacy-drawer-overlay');
+    if (overlay) overlay.addEventListener('click', closeAdvocacyDrawer);
+
+    var callTab = document.getElementById('drawer-step-call');
+    var emailTab = document.getElementById('drawer-step-email');
+    var callPane = document.getElementById('playground-drawer-call');
+    var emailPane = document.getElementById('playground-drawer-email');
+    var panel = document.getElementById('advocacy-drawer');
+    function setStep(isCall) {
+        if (callPane) callPane.hidden = !isCall;
+        if (emailPane) emailPane.hidden = isCall;
+        if (panel) panel.classList.toggle('phone-panel--email', !isCall);
+        if (callTab) { callTab.classList.toggle('drawer-step-link-active', isCall); callTab.setAttribute('aria-selected', isCall ? 'true' : 'false'); }
+        if (emailTab) { emailTab.classList.toggle('drawer-step-link-active', !isCall); emailTab.setAttribute('aria-selected', !isCall ? 'true' : 'false'); }
+    }
+    if (callTab) callTab.addEventListener('click', function() { setStep(true); });
+    if (emailTab) emailTab.addEventListener('click', function() { setStep(false); });
+
+    var handle = document.getElementById('advocacy-drawer-handle');
+    if (handle && panel) {
+        var startY = 0, startTranslateY = 0, dismissThreshold = 0;
+        function getTranslateY(el) {
+            var t = (window.getComputedStyle(el).transform || '').trim();
+            if (!t || t === 'none') return 0;
+            var parts = t.match(/matrix(?:3d)?\s*\(([^)]+)\)/);
+            if (!parts) return 0;
+            var values = parts[1].split(/,\s*/).map(parseFloat);
+            return values.length >= 6 ? values[5] : (values.length >= 14 ? values[13] : 0);
+        }
+        function onPointerDown(e) {
+            if (!panel.classList.contains('open')) return;
+            e.preventDefault();
+            startY = e.clientY;
+            startTranslateY = getTranslateY(panel);
+            dismissThreshold = 0.4 * window.innerHeight;
+            panel.classList.add('dragging');
+            handle.setPointerCapture(e.pointerId);
+            handle.addEventListener('pointermove', onPointerMove);
+            handle.addEventListener('pointerup', onPointerUp);
+            handle.addEventListener('pointercancel', onPointerUp);
+        }
+        function onPointerMove(e) {
+            e.preventDefault();
+            var deltaY = e.clientY - startY;
+            var newTranslateY = Math.max(0, startTranslateY + deltaY);
+            panel.style.transform = 'translateY(' + newTranslateY + 'px)';
+        }
+        function onPointerUp(e) {
+            handle.releasePointerCapture(e.pointerId);
+            handle.removeEventListener('pointermove', onPointerMove);
+            handle.removeEventListener('pointerup', onPointerUp);
+            handle.removeEventListener('pointercancel', onPointerUp);
+            panel.classList.remove('dragging');
+            var currentY = getTranslateY(panel);
+            if (currentY >= dismissThreshold) closeAdvocacyDrawer();
+            panel.style.transform = '';
+        }
+        handle.addEventListener('pointerdown', onPointerDown, { passive: false });
+    }
+})();
+</script>

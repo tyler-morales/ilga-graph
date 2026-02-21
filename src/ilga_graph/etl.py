@@ -75,25 +75,22 @@ def _link_members_to_bills(
                 m.co_sponsor_bill_ids.append(bill.leg_id)
 
 
-def load_from_cache(
-    *,
-    seed_fallback: bool = False,
-) -> ScrapedData | None:
-    """Load members, bills, and committees from cache only (no scraping).
+def load_from_cache() -> ScrapedData | None:
+    """Load members, bills, and committees from the current data dir (no scraping).
 
-    Returns ``ScrapedData`` if normalized cache exists, otherwise ``None``.
+    Returns ``ScrapedData`` if data exists, otherwise ``None``.
     Use this when ``ILGA_LOAD_ONLY`` is set so the API can start without
     running scrapers.
     """
-    normalized = load_normalized_cache(seed_fallback=seed_fallback)
+    normalized = load_normalized_cache()
     if normalized is None:
         return None
 
     members, bills_lookup = normalized
     if not bills_lookup:
-        bills_lookup = load_bill_cache(seed_fallback=seed_fallback) or {}
+        bills_lookup = load_bill_cache() or {}
 
-    scraper = ILGAScraper(request_delay=0, seed_fallback=seed_fallback)
+    scraper = ILGAScraper(request_delay=0)
     try:
         committees, committee_rosters, committee_bills = scraper.fetch_all_committees()
     except Exception:
@@ -116,16 +113,13 @@ def load_from_cache(
     )
 
 
-def load_stale_cache_fallback(
-    *,
-    seed_fallback: bool = False,
-) -> ScrapedData:
-    """Best-effort load from whatever JSON caches exist (no scrape).
+def load_stale_cache_fallback() -> ScrapedData:
+    """Best-effort load from the current data dir (no scrape).
 
-    Raises if no usable cache is found. Use when primary load/scrape fails
+    Raises if no usable data is found. Use when primary load/scrape fails
     so the app can serve stale data instead of starting empty.
     """
-    normalized = load_normalized_cache(seed_fallback=seed_fallback)
+    normalized = load_normalized_cache()
     if normalized is not None:
         members, bills_lookup = normalized
     else:
@@ -133,9 +127,9 @@ def load_stale_cache_fallback(
         bills_lookup = {}
 
     if not bills_lookup:
-        bills_lookup = load_bill_cache(seed_fallback=seed_fallback) or {}
+        bills_lookup = load_bill_cache() or {}
 
-    scraper = ILGAScraper(request_delay=0, seed_fallback=seed_fallback)
+    scraper = ILGAScraper(request_delay=0)
     try:
         committees, committee_rosters, committee_bills = scraper.fetch_all_committees()
     except Exception:
@@ -159,7 +153,6 @@ def load_or_scrape_data(
     *,
     limit: int = 0,
     dev_mode: bool = False,
-    seed_mode: bool = False,
     incremental: bool = False,
     sb_limit: int = 100,
     hb_limit: int = 100,
@@ -188,10 +181,7 @@ def load_or_scrape_data(
     """
     request_delay = 0.25 if dev_mode else 0.5
 
-    scraper = ILGAScraper(
-        request_delay=request_delay,
-        seed_fallback=seed_mode,
-    )
+    scraper = ILGAScraper(request_delay=request_delay)
 
     # ── EXTRACT: committees ──────────────────────────────────────────────
     committees, committee_rosters, committee_bills = scraper.fetch_all_committees()
@@ -208,7 +198,7 @@ def load_or_scrape_data(
 
     # ── EXTRACT: bills ───────────────────────────────────────────────────
     if members_only:
-        bills_lookup = load_bill_cache(seed_fallback=seed_mode) or {}
+        bills_lookup = load_bill_cache() or {}
         LOGGER.info(
             "Members-only mode: loaded %d bills from cache (no bill scrape).",
             len(bills_lookup),
@@ -227,7 +217,7 @@ def load_or_scrape_data(
             include_fulltext=include_fulltext,
         )
     else:
-        bills_lookup = load_bill_cache(seed_fallback=seed_mode)
+        bills_lookup = load_bill_cache()
         if bills_lookup is None:
             LOGGER.info("Full bill scrape (SB limit=%d, HB limit=%d)...", sb_limit, hb_limit)
             index = scrape_all_bill_indexes(
@@ -239,7 +229,6 @@ def load_or_scrape_data(
                 index,
                 request_delay=request_delay,
                 use_cache=False,
-                seed_fallback=seed_mode,
             )
         else:
             LOGGER.info("Loaded %d bills from cache.", len(bills_lookup))
@@ -306,7 +295,6 @@ def run_etl(
     limit: int = 0,
     *,
     dev_mode: bool = False,
-    seed_mode: bool = False,
     member_export_limit: int | None = None,
     committee_export_limit: int | None = None,
     bill_export_limit: int | None = None,
@@ -318,15 +306,15 @@ def run_etl(
     data = load_or_scrape_data(
         limit=limit,
         dev_mode=dev_mode,
-        seed_mode=seed_mode,
         incremental=incremental,
         sb_limit=sb_limit,
         hb_limit=hb_limit,
     )
     scorecards, moneyball = compute_analytics(data.members, data.committee_rosters)
+    from .data_source import get_data_dir
     from .seating import process_seating
 
-    process_seating(data.members, cfg.MOCK_DEV_DIR / "senate_seats.json")
+    process_seating(data.members, get_data_dir() / "senate_seats.json")
     export_vault(
         data,
         scorecards,

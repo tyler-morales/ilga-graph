@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Component playground — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="dev-playground">
+    <nav class="dev-playground-nav" aria-label="Playground scenes">
+        <ul class="dev-playground-nav-list">
+            {% for s in scenes %}
+            <li>
+                <a href="/dev/playground?scene={{ s.id }}"{% if scene_id == s.id %} aria-current="page"{% endif %}>{{ s.label }}</a>
+            </li>
+            {% endfor %}
+        </ul>
+    </nav>
+    <div class="dev-playground-main">
+        {% if scene_id %}
+        <h2 id="playground-scene-heading" class="dev-playground-heading">{{ scene_label }}</h2>
+        <div class="dev-playground-scene">{{ scene_html | safe }}</div>
+        {% else %}
+        <p class="dev-playground-pick">Pick a component from the list.</p>
+        {% endif %}
+    </div>
+</div>
+<style>
+.dev-playground { max-width: 1120px; margin: 0 auto; padding: 1rem; }
+.dev-playground-nav { margin-bottom: 1.5rem; border-bottom: 1px solid var(--color-border, #e5e7eb); padding-bottom: 0.75rem; }
+.dev-playground-nav-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; }
+.dev-playground-nav a { font-weight: 500; }
+.dev-playground-nav a[aria-current="page"] { text-decoration: underline; }
+.dev-playground-heading { font-size: var(--font-size-h2, 1.5rem); margin: 0 0 1rem; }
+.dev-playground-pick { color: var(--color-muted, #6b7280); }
+.dev-playground-scene-hint { font-size: var(--font-size-sm, 0.875rem); color: var(--color-muted, #6b7280); margin-bottom: 0.5rem; }
+.dev-playground-trigger-btn { margin-bottom: 1rem; }
+</style>
+{% endblock %}

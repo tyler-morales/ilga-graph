@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 import time
 
 from fastapi import FastAPI, Request
@@ -67,8 +68,12 @@ def register_middleware(app: FastAPI) -> None:
                 "/terms",
             }
             path = request.url.path
+            accept = request.headers.get("accept") or ""
+            # Let browser GETs through so unknown paths get the custom 404 page, not 401.
+            browser_get = request.method == "GET" and "text/html" in accept
             if (
-                path not in exempt
+                not browser_get
+                and path not in exempt
                 and not path.startswith("/advocacy")
                 and not path.startswith("/auth")
                 and not path.startswith("/outreach")
@@ -77,6 +82,7 @@ def register_middleware(app: FastAPI) -> None:
                 and not path.startswith("/intelligence")
                 and not path.startswith("/api/graph")
                 and not path.startswith("/api/dev")
+                and not path.startswith("/dev")
                 and not path.startswith("/static")
                 and request.method != "OPTIONS"
             ):
@@ -129,11 +135,11 @@ def register_middleware(app: FastAPI) -> None:
         t0 = time.perf_counter()
         response: Response = await call_next(request)
         elapsed_ms = (time.perf_counter() - t0) * 1000
+        line = f"{request.method} {request.url.path} {response.status_code} ({elapsed_ms:.1f}ms)"
         LOGGER.info(
-            "%s %s %d (%.1fms)",
-            request.method,
-            request.url.path,
-            response.status_code,
-            elapsed_ms,
+            "%s %s %d (%.1fms)", request.method, request.url.path, response.status_code, elapsed_ms
         )
+        # In dev, echo each request to stderr so traffic is visible in the terminal.
+        if cfg.DEV_MODE:
+            print(line, file=sys.stderr, flush=True)
         return response

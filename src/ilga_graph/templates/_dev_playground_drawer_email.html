@@ -1,0 +1,41 @@
+{# Playground: drawer shell (open by default) with email view body. No fetch; body is rendered with mock context. #}
+<div id="advocacy-drawer-overlay" class="phone-overlay open" aria-hidden="false" role="button" tabindex="0" aria-label="Close drawer" onclick="typeof closeAdvocacyDrawer === 'function' && closeAdvocacyDrawer()"></div>
+<div id="advocacy-drawer" class="phone-panel phone-panel--email open" role="dialog" aria-modal="true" aria-hidden="false"
+    aria-label="Outreach: call script and email template" data-member-id="playground-mock" data-drawer-zip="{{ zip_code or '' }}"
+    data-drawer-constituent="{{ 'true' if is_constituent else 'false' }}" data-drawer-photo-url="">
+    <div class="phone-panel-handle" id="advocacy-drawer-handle" aria-hidden="true">
+        <div class="phone-panel-handle-pill"></div>
+    </div>
+    <div class="phone-panel-title-row">
+        <div class="drawer-step-strip" id="drawer-step-strip" role="tablist" aria-label="Outreach steps">
+            <button type="button" class="drawer-step-link" role="tab" aria-selected="false" data-step="call">Call</button>
+            <span class="drawer-step-sep" aria-hidden="true">·</span>
+            <button type="button" class="drawer-step-link drawer-step-link-active" role="tab" aria-selected="true" data-step="email">Email</button>
+        </div>
+        <div id="advocacy-drawer-title-extra" class="phone-panel-title-extra">
+            <div class="drawer-header-constituent" role="group" aria-label="Constituent status">
+                <label class="drawer-constituent-checkbox-wrap">
+                    <input type="checkbox" id="advocacy-drawer-constituent-checkbox" class="drawer-constituent-checkbox" aria-label="I am a constituent"{% if is_constituent %} checked{% endif %}>
+                    <span class="drawer-constituent-label">I'm a constituent</span>
+                </label>
+            </div>
+        </div>
+    </div>
+    <div id="advocacy-drawer-body" class="phone-panel-body drawer-email-open">
+        {% include "_advocacy_drawer_email.html" %}
+    </div>
+</div>
+<script>
+(function() {
+    if (typeof closeAdvocacyDrawer === 'function') return;
+    function closeAdvocacyDrawer() {
+        var overlay = document.getElementById('advocacy-drawer-overlay');
+        var drawer = document.getElementById('advocacy-drawer');
+        if (overlay) overlay.classList.remove('open');
+        if (drawer) { drawer.classList.remove('open'); drawer.setAttribute('aria-hidden', 'true'); }
+    }
+    window.closeAdvocacyDrawer = closeAdvocacyDrawer;
+    var overlay = document.getElementById('advocacy-drawer-overlay');
+    if (overlay) overlay.addEventListener('click', closeAdvocacyDrawer);
+})();
+</script>

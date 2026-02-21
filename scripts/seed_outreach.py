@@ -4,13 +4,13 @@
 - DB path: dev profile → data/ilga_dev.db (sandbox); prod → data/ilga.db (live).
   Set ILGA_PROFILE=dev or =prod (or use .env). Use the SAME profile as the app
   so the app and seed use the same DB; otherwise the heat pill will be empty.
-- Real data: always seeds backlog rows for moratyle@gmail.com (rep names → member_id
-  from cache + mocks merged). Run seed after a scrape so member IDs match the app.
-- Mock data: only when ILGA_PROFILE=dev. Seeds advocate1–5@example.com for 60608
-  + Transportation so heat pills show varied counts in dev. Also inserts "this week"
-  events (relative dates) so the landing ticker shows a realistic call count, extra
-  member_ids for more fire pills, and support_score 1–5 spread so the call-drawer
-  interest poll shows a full bar chart.
+- Real data: seeds backlog by profile — prod → moratyle@gmail.com, dev → funky_mama11@gmail.com
+  (rep names → member_id from cache + mocks merged). Only inserts events when the rep name resolves to a
+  canonical member id (no slug fallback), so the DB stays consistent with app state.
+  Run seed after a scrape so member IDs match the app.
+- Mock data: only when ILGA_PROFILE=dev. Seeds advocate1–5@example.com with
+  hardcoded numeric member_ids. Also "this week" and fire-pill events. All use
+  canonical ids so prod and dev stay consistent.
 Run from repo root: python scripts/seed_outreach.py  (or: make seed-outreach)
 """
 
@@ -110,7 +110,7 @@ _SEED_ROWS = [
         "Norma Hernandez",
         True,
         True,
-        True,
+        False,  # Emailed? unchecked in spreadsheet
         4,
         "Fernanda did not know what Kei vehicles were and said she'll be in touch. When I told her I was part of a group, she took note and notice",
         "Fernanda",
@@ -304,16 +304,17 @@ def _load_members_name_to_id() -> tuple[dict[str, str], dict[str, str]]:
     return by_name, by_norm
 
 
-def _resolve_member_id(rep_name: str, by_name: dict[str, str], by_norm: dict[str, str]) -> str:
+def _resolve_member_id(
+    rep_name: str, by_name: dict[str, str], by_norm: dict[str, str]
+) -> str | None:
+    """Resolve rep name to canonical member id from members.json. Returns None if no match."""
     rep_name = (rep_name or "").strip()
     if rep_name in by_name:
         return by_name[rep_name]
     norm = _normalize_name(rep_name)
     if norm in by_norm:
         return by_norm[norm]
-    # Slug fallback so we still store the event (accent-normalized)
-    slug = _normalize_name(rep_name).replace(" ", "-").strip("-") or "unknown"
-    return slug[:32]
+    return None
 
 
 async def _main() -> None:
@@ -325,14 +326,17 @@ async def _main() -> None:
 
     by_name, by_norm = _load_members_name_to_id()
     if not by_name:
-        print("WARNING: No members.json found in cache or mocks. Events will use slug member_ids.")
+        print(
+            "WARNING: No members.json found in cache or mocks. Backlog rows will be skipped "
+            "(only dev mock events with hardcoded member_ids will be inserted)."
+        )
     else:
         print(f"Resolved {len(by_name)} member names from cache/mocks.")
 
     await init_db()
     print(f"Database: {DB_PATH} (ILGA_PROFILE={cfg.PROFILE})")
 
-    email = "moratyle@gmail.com"
+    email = "moratyle@gmail.com" if cfg.PROFILE == "prod" else "funky_mama11@gmail.com"
     async with async_session_factory() as session:
         r = await session.execute(select(User).where(User.email == email))
         user = r.scalar_one_or_none()
@@ -344,7 +348,19 @@ async def _main() -> None:
         else:
             print(f"Using existing user: {user.email} (id={user.id})")
 
+        # Replace backlog for this user so re-runs don't duplicate.
+        from sqlalchemy import delete
+
+        del_result = await session.execute(
+            delete(OutreachEvent).where(OutreachEvent.user_id == user.id)
+        )
+        removed = del_result.rowcount
+        if removed:
+            print(f"Removed {removed} existing outreach events for {email} (re-seeding).")
+        await session.flush()
+
         created = 0
+        skipped = 0
         for (
             date_str,
             rep_name,
@@ -356,6 +372,11 @@ async def _main() -> None:
             contact_name,
         ) in _SEED_ROWS:
             member_id = _resolve_member_id(rep_name, by_name, by_norm)
+            if member_id is None:
+                if called or emailed:
+                    skipped += 1
+                    print(f"  Skip (no member match): {rep_name!r}")
+                continue
             dt = _parse_date(date_str)
             if called:
                 session.add(
@@ -392,7 +413,10 @@ async def _main() -> None:
                 )
                 created += 1
         await session.commit()
-        print(f"Inserted {created} outreach events for {email}.")
+        print(
+            f"Inserted {created} outreach events for {email}."
+            + (f" Skipped {skipped} rows (no member match)." if skipped else "")
+        )
 
         # Dev sandbox only: seed mock community advocates (heat pill demo)
         from ilga_graph import config as cfg

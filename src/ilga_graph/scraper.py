@@ -9,6 +9,7 @@ from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from pathlib import Path
 from urllib.parse import parse_qs, urljoin, urlparse
 
 import requests
@@ -16,7 +17,8 @@ from bs4 import BeautifulSoup, NavigableString, Tag
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from .config import CACHE_DIR, MOCK_DEV_DIR
+from .config import CACHE_DIR
+from .data_source import get_data_dir
 from .models import Bill, CareerRange, Committee, CommitteeMemberRole, Member, Office
 from .normalize import normalize_chamber, normalize_date, validate_bill_cache
 
@@ -122,35 +124,42 @@ def _last_name_from_normalized(normalized_name: str) -> str:
 # ── Caching ──────────────────────────────────────────────────────────────────
 
 
-def load_cache(filename: str, *, seed_fallback: bool = False) -> list[dict] | None:
-    path = CACHE_DIR / filename
-    if path.exists():
-        LOGGER.info("Loading cache from %s", path)
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
-    if seed_fallback:
-        seed_path = MOCK_DEV_DIR / filename
-        if seed_path.exists():
-            LOGGER.info("Loading mock data from %s (no cache found)", seed_path)
-            with open(seed_path, encoding="utf-8") as f:
-                return json.load(f)
-    return None
+def load_cache(filename: str) -> list[dict] | None:
+    """Load a list-shaped JSON file from the current data dir (cache or mocks)."""
+    path = get_data_dir() / filename
+    if not path.exists():
+        return None
+    LOGGER.info("Loading data from %s", path)
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
 
 
-def load_dict_cache(filename: str, *, seed_fallback: bool = False) -> dict | None:
-    """Load a dict-shaped JSON cache file (e.g. rosters, committee bills)."""
-    path = CACHE_DIR / filename
-    if path.exists():
-        LOGGER.info("Loading cache from %s", path)
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
-    if seed_fallback:
-        seed_path = MOCK_DEV_DIR / filename
-        if seed_path.exists():
-            LOGGER.info("Loading mock data from %s (no cache found)", seed_path)
-            with open(seed_path, encoding="utf-8") as f:
-                return json.load(f)
-    return None
+def load_dict_cache(filename: str) -> dict | None:
+    """Load a dict-shaped JSON file from the current data dir (e.g. bills, rosters)."""
+    path = get_data_dir() / filename
+    if not path.exists():
+        return None
+    LOGGER.info("Loading data from %s", path)
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def load_cache_from_dir(data_dir: Path, filename: str) -> list[dict] | None:
+    """Load a list-shaped JSON file from the given directory (e.g. mocks/dev for playground)."""
+    path = data_dir / filename
+    if not path.exists():
+        return None
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def load_dict_cache_from_dir(data_dir: Path, filename: str) -> dict | None:
+    """Load a dict-shaped JSON file from the given directory."""
+    path = data_dir / filename
+    if not path.exists():
+        return None
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
 
 
 def save_cache(filename: str, data: list[dict]) -> None:
@@ -171,8 +180,8 @@ def save_dict_cache(filename: str, data: dict) -> None:
 
 
 def cache_age_days(filename: str) -> float | None:
-    """Return the age of a cache file in days, or None if it doesn't exist."""
-    path = CACHE_DIR / filename
+    """Return the age of the data file in days, or None if it doesn't exist."""
+    path = get_data_dir() / filename
     if not path.exists():
         return None
     mtime = path.stat().st_mtime
@@ -353,22 +362,16 @@ def save_normalized_cache(
     )
 
 
-def load_normalized_cache(
-    *,
-    seed_fallback: bool = False,
-) -> tuple[list[Member], dict[str, Bill]] | None:
-    """Load normalized members + bills from cache or seed.
+def load_normalized_cache() -> tuple[list[Member], dict[str, Bill]] | None:
+    """Load normalized members + bills from the current data dir (cache or mocks).
 
-    Returns ``(members, bills_lookup)`` or ``None`` if cache is missing.
+    Returns ``(members, bills_lookup)`` or ``None`` if data is missing.
     Members will have ``sponsored_bill_ids`` / ``co_sponsor_bill_ids`` set
     but ``sponsored_bills`` / ``co_sponsor_bills`` empty -- call
     :func:`hydrate_members` to populate the full objects.
     """
-    members_file = "members.json"
-    bills_file = "bills.json"
-
-    members_raw = load_cache(members_file, seed_fallback=seed_fallback)
-    bills_raw = load_dict_cache(bills_file, seed_fallback=seed_fallback)
+    members_raw = load_cache("members.json")
+    bills_raw = load_dict_cache("bills.json")
 
     if members_raw is None or bills_raw is None:
         return None
@@ -423,6 +426,69 @@ def load_normalized_cache(
         len(members),
         len(bills_lookup),
     )
+    return members, bills_lookup
+
+
+def load_normalized_cache_from_dir(
+    data_dir: Path,
+) -> tuple[list[Member], dict[str, Bill]] | None:
+    """Load normalized members (and optionally bills) from the given directory.
+
+    Used by the dev playground to always populate components from mocks/dev
+    regardless of app data source. Returns ``(members, bills_lookup)`` or
+    ``None`` if members.json is missing. If bills.json is missing, bills_lookup
+    is empty.
+    """
+    members_raw = load_cache_from_dir(data_dir, "members.json")
+    if members_raw is None:
+        return None
+
+    bills_raw = load_dict_cache_from_dir(data_dir, "bills.json")
+    if bills_raw:
+        validate_bill_cache(bills_raw)
+    bills_lookup: dict[str, Bill] = (
+        {lid: _bill_from_dict(bd) for lid, bd in bills_raw.items()} if bills_raw else {}
+    )
+
+    members: list[Member] = []
+    for d in members_raw:
+        m = Member(
+            id=d["id"],
+            name=d["name"],
+            member_url=d["member_url"],
+            photo_url=d.get("photo_url", "") or "",
+            chamber=d["chamber"],
+            party=d["party"],
+            district=d["district"],
+            bio_text=d["bio_text"],
+            role=d.get("role", ""),
+            career_timeline_text=d.get("career_timeline_text", ""),
+            career_ranges=[
+                CareerRange(
+                    start_year=cr["start_year"],
+                    end_year=cr.get("end_year"),
+                    chamber=cr.get("chamber"),
+                )
+                for cr in d.get("career_ranges", [])
+            ],
+            committees=d.get("committees", []),
+            associated_members=d.get("associated_members"),
+            email=d.get("email"),
+            offices=[
+                Office(
+                    name=o["name"],
+                    address=o["address"],
+                    phone=o.get("phone"),
+                    fax=o.get("fax"),
+                )
+                for o in d.get("offices", [])
+            ],
+            roles=d.get("roles", []),
+            sponsored_bill_ids=d.get("sponsored_bill_ids", []),
+            co_sponsor_bill_ids=d.get("co_sponsor_bill_ids", []),
+        )
+        members.append(m)
+
     return members, bills_lookup
 
 
@@ -522,7 +588,6 @@ class ILGAScraper:
     timeout_seconds: int = 20
     max_workers: int = 3
     request_delay: float = 1.0
-    seed_fallback: bool = False
     name_map: dict[str, str] = field(default_factory=dict)
     _session: requests.Session = field(default_factory=requests.Session, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
@@ -562,7 +627,7 @@ class ILGAScraper:
     def fetch_members(self, chamber: str = "Senate", limit: int = 0) -> list[Member]:
         # ── Try normalized cache first (members.json + bills.json) ──
         _warn_stale_cache("members.json")
-        normalized = load_normalized_cache(seed_fallback=self.seed_fallback)
+        normalized = load_normalized_cache()
         if normalized is not None:
             all_members, bills_lookup = normalized
             # Filter to requested chamber
@@ -662,7 +727,7 @@ class ILGAScraper:
         """
         # ── Try loading from unified committees.json cache/seed ──
         _warn_stale_cache("committees.json")
-        committees_raw = load_cache("committees.json", seed_fallback=self.seed_fallback)
+        committees_raw = load_cache("committees.json")
 
         if committees_raw is not None:
             committees: list[Committee] = []
@@ -726,7 +791,7 @@ class ILGAScraper:
 
     def fetch_committees_index(self, chamber: str = "Senate") -> list[Committee]:
         cache_filename = f"{chamber.lower()}_committees.json"
-        cached = load_cache(cache_filename, seed_fallback=self.seed_fallback)
+        cached = load_cache(cache_filename)
         if cached is not None:
             committees = [
                 Committee(

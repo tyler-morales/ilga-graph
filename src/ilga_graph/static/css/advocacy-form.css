@@ -233,7 +233,7 @@
 }
 
 .hero-ticker [aria-hidden="true"] {
-  font-size: var(--font-size-body);
+  font-size: var(--font-size-h2);
   color: var(--color-hero-cta);
 }
 
@@ -566,6 +566,14 @@
   font-family: var(--font-sans);
   font-size: var(--font-size-base);
   color: #555;
+}
+
+.hero-signin-dev-hint {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-label);
+  color: var(--color-muted, #555);
+  margin: 6px 0 0;
+  width: 100%;
 }
 
 .hero-signin-code-row {

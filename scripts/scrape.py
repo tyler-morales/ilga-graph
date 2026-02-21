@@ -43,7 +43,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from ilga_graph.analytics_cache import load_analytics_cache, save_analytics_cache  # noqa: E402
-from ilga_graph.config import CACHE_DIR, MOCK_DEV_DIR  # noqa: E402
+from ilga_graph.config import CACHE_DIR  # noqa: E402
 from ilga_graph.etl import (  # noqa: E402
     compute_analytics,
     export_vault,
@@ -132,7 +132,6 @@ def main() -> None:
             logger.info("Removing cache directory: %s", cache_dir)
             shutil.rmtree(cache_dir)
 
-    seed_mode = args.export_only
     include_votes = not args.skip_votes
     include_slips = not args.skip_votes
     include_fulltext = args.fulltext
@@ -149,7 +148,7 @@ def main() -> None:
     with RunLogger("scrape", meta=meta) as log:
         if args.export_only:
             t0 = time.perf_counter()
-            data = load_from_cache(seed_fallback=seed_mode)
+            data = load_from_cache()
             if data is None:
                 logger.error("No cache found. Run without --export-only to scrape first.")
                 sys.exit(1)
@@ -178,7 +177,6 @@ def main() -> None:
             data = load_or_scrape_data(
                 limit=args.limit,
                 dev_mode=args.fast,
-                seed_mode=seed_mode,
                 incremental=not args.members_only,
                 sb_limit=args.sb_limit,
                 hb_limit=args.hb_limit,
@@ -213,7 +211,7 @@ def main() -> None:
             logger.info("  Analytics + Vault export")
             logger.info("=" * 72)
             t0 = time.perf_counter()
-            cached = load_analytics_cache(CACHE_DIR, MOCK_DEV_DIR, seed_mode)
+            cached = load_analytics_cache(CACHE_DIR)
             if cached is not None:
                 scorecards, moneyball = cached
                 logger.info("  Using cached analytics.")

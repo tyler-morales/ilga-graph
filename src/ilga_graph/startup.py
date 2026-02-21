@@ -16,6 +16,7 @@ from .analytics import (
 from .analytics_cache import load_analytics_cache, save_analytics_cache
 from .app_state import state
 from .constants import CATEGORY_COMMITTEES
+from .data_source import get_data_dir, is_using_mocks
 from .etl import (
     ScrapedData,
     compute_analytics,
@@ -39,7 +40,6 @@ from .zip_crosswalk import load_zip_crosswalk
 LOGGER = logging.getLogger(__name__)
 
 DEV_MODE = cfg.DEV_MODE
-SEED_MODE = cfg.SEED_MODE
 INCREMENTAL = cfg.INCREMENTAL
 LOAD_ONLY = cfg.LOAD_ONLY
 
@@ -90,7 +90,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
                 "under ILGA_LOAD_ONLY=1; vault export bill cap=%s%s.",
                 _SCRAPE_MEMBER_LIMIT,
                 _EXPORT_BILL_LIMIT or "all",
-                " (seed fallback ON)" if SEED_MODE else "",
+                " (using mocks)" if is_using_mocks() else "",
             )
         else:
             LOGGER.warning(
@@ -98,7 +98,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
                 "vault export bill cap=%s%s.",
                 _SCRAPE_MEMBER_LIMIT,
                 _EXPORT_BILL_LIMIT or "all",
-                " (seed fallback ON)" if SEED_MODE else "",
+                " (using mocks)" if is_using_mocks() else "",
             )
     elif LOAD_ONLY:
         LOGGER.info(
@@ -109,11 +109,11 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # ── Step 1: Load or scrape data (resilient) ──────────────────────────
     t_load = _time.perf_counter()
     if LOAD_ONLY:
-        data = load_from_cache(seed_fallback=SEED_MODE)
+        data = load_from_cache()
         if data is None:
             LOGGER.warning("ILGA_LOAD_ONLY=1 but no cache found. Trying stale-cache fallback...")
             try:
-                data = load_stale_cache_fallback(seed_fallback=SEED_MODE)
+                data = load_stale_cache_fallback()
                 state.members = data.members
                 LOGGER.warning(
                     "Loaded stale cache: %d members, %d bills.",
@@ -138,7 +138,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             data = load_or_scrape_data(
                 limit=_SCRAPE_MEMBER_LIMIT,
                 dev_mode=DEV_MODE,
-                seed_mode=SEED_MODE,
                 incremental=INCREMENTAL,
                 sb_limit=100,
                 hb_limit=100,
@@ -148,7 +147,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         except Exception:
             LOGGER.exception("ETL load/scrape failed. Attempting stale-cache fallback...")
             try:
-                data = load_stale_cache_fallback(seed_fallback=SEED_MODE)
+                data = load_stale_cache_fallback()
                 state.members = data.members
                 elapsed_load = _time.perf_counter() - t_startup_begin
                 LOGGER.warning(
@@ -173,11 +172,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # ── Step 2: Compute analytics (or load from cache when fresh) ───────────
     try:
         t_analytics = _time.perf_counter()
-        cached = load_analytics_cache(
-            cfg.CACHE_DIR,
-            cfg.MOCK_DEV_DIR,
-            SEED_MODE,
-        )
+        cached = load_analytics_cache(cfg.CACHE_DIR)
         if cached is not None:
             state.scorecards, state.moneyball = cached
         else:
@@ -210,7 +205,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # ── Step 2b: Seating chart analytics ─────────────────────────────────
     try:
         t_seating = _time.perf_counter()
-        seating_path = cfg.MOCK_DEV_DIR / "senate_seats.json"
+        seating_path = get_data_dir() / "senate_seats.json"
         process_seating(state.members, seating_path)
         elapsed_seating = _time.perf_counter() - t_seating
     except Exception:
@@ -449,7 +444,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         len(state.influence),
         LOAD_ONLY,
         DEV_MODE,
-        SEED_MODE,
+        is_using_mocks(),
     )
     print(summary, flush=True)
 
@@ -498,7 +493,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         len(state.witness_slips),
         len(state.zip_to_district),
         DEV_MODE,
-        SEED_MODE,
+        is_using_mocks(),
     )
     append_startup_run(
         elapsed_total,
@@ -515,7 +510,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         len(state.witness_slips),
         len(state.zip_to_district),
         DEV_MODE,
-        SEED_MODE,
+        is_using_mocks(),
     )
 
     from .db import init_db

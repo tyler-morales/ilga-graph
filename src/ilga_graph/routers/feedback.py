@@ -394,11 +394,13 @@ async def report_bug_submit(
         if saved:
             attachment_paths.append(saved)
 
+    # Store as JSON array of path strings only (schema: no FK; validated on write)
+    attachment_paths_json = json.dumps(attachment_paths) if attachment_paths else None
     report = BugReport(
         description=description,
         reporter_email=reporter_email,
         page_url=page_url,
-        attachment_paths=json.dumps(attachment_paths) if attachment_paths else None,
+        attachment_paths=attachment_paths_json,
     )
     db.add(report)
     await db.commit()

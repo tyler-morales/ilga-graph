@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
 """Generate trimmed dev mock data from the full cache/.
 
+**Deprecated.** Prefer ``make snapshot-mocks`` (scripts/snapshot_mocks.py), which
+produces a full dev seed (members, bills, committees, votes, slips, scorecards,
+moneyball, zip_to_district) and is the canonical way to refresh mocks/dev/.
+
+This script still works and produces a smaller subset; use only if you need
+custom --limit/--bills. Otherwise run::
+
+    make snapshot-mocks
+
 Produces files in ``mocks/dev/``:
 
 - ``members.json`` -- a diverse subset of members (metadata + bill_ids)

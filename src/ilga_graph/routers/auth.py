@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import secrets
+import sys
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 
@@ -59,14 +60,16 @@ def _verification_email_html(code: str) -> str:
 async def _send_code_email(email: str, code: str) -> None:
     """Send the verification code via SMTP, or log it in dev."""
     if not cfg.SMTP_HOST:
-        LOGGER.warning(
-            "╔══════════════════════════════════════════╗\n"
-            "║  AUTH CODE for %-26s ║\n"
-            "║  Code: %-34s ║\n"
-            "╚══════════════════════════════════════════╝",
-            email,
-            code,
+        banner = (
+            "\n"
+            "╔══════════════════════════════════════════════════════════╗\n"
+            "║  AUTH CODE (no SMTP — check this terminal for sign-in)  ║\n"
+            f"║  Email: {email[:44]:<44} ║\n"
+            f"║  Code:  {code:<44} ║\n"
+            "╚══════════════════════════════════════════════════════════╝\n"
         )
+        print(banner, file=sys.stderr, flush=True)
+        LOGGER.warning("Auth code for %s (no SMTP): %s", email, code)
         return
 
     import aiosmtplib

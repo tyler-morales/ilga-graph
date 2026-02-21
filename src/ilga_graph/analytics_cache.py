@@ -7,6 +7,7 @@ import logging
 from pathlib import Path
 
 from .analytics import MemberScorecard
+from .data_source import get_data_dir
 from .moneyball import MoneyballProfile, MoneyballReport, MoneyballWeights
 
 LOGGER = logging.getLogger(__name__)
@@ -17,25 +18,12 @@ _MEMBERS_FILE = "members.json"
 _BILLS_FILE = "bills.json"
 
 
-def _source_data_mtime(cache_dir: Path, mock_dir: Path, seed_mode: bool) -> float:
-    """Return the latest mtime of source data files (members + bills).
-
-    Analytics depend on BOTH members.json and bills.json.  If either is
-    updated (e.g. a full bill scrape), the analytics cache should be
-    recomputed.  Returns the *maximum* mtime of the two, or 0.0 if
-    neither file exists.
-    """
-    data_dir = mock_dir if seed_mode else cache_dir
+def _source_data_mtime(data_dir: Path) -> float:
+    """Return the latest mtime of source data files (members + bills)."""
     mtimes: list[float] = []
     for fname in (_MEMBERS_FILE, _BILLS_FILE):
         try:
             mtimes.append((data_dir / fname).stat().st_mtime)
-        except OSError:
-            pass
-    # Also check bills in cache_dir when seed_mode (members from mock, bills from cache)
-    if seed_mode:
-        try:
-            mtimes.append((cache_dir / _BILLS_FILE).stat().st_mtime)
         except OSError:
             pass
     return max(mtimes) if mtimes else 0.0
@@ -51,25 +39,18 @@ def _moneyball_path(cache_dir: Path) -> Path:
 
 def load_analytics_cache(
     cache_dir: Path,
-    mock_dir: Path,
-    seed_mode: bool,
 ) -> tuple[dict[str, MemberScorecard], MoneyballReport] | None:
-    """Load scorecards and moneyball from disk if present and not stale.
+    """Load scorecards and moneyball from the current data dir if present and not stale.
 
-    Reads from cache_dir first. When seed_mode and cache_dir does not have
-    both files, falls back to mock_dir (mocks/dev/) so dev can use
-    snapshot analytics without recomputing.
+    Writes (save_analytics_cache) still go to cache_dir so scrape/ML can persist there.
     """
-    source_mtime = _source_data_mtime(cache_dir, mock_dir, seed_mode)
+    data_dir = get_data_dir()
+    source_mtime = _source_data_mtime(data_dir)
     if source_mtime <= 0:
         return None
 
-    sc_path = _scorecards_path(cache_dir)
-    mb_path = _moneyball_path(cache_dir)
-    # Seed mode: if cache_dir is missing analytics, try mocks/dev/
-    if seed_mode and (not sc_path.exists() or not mb_path.exists()):
-        sc_path = mock_dir / _SCORECARDS_FILE
-        mb_path = mock_dir / _MONEYBALL_FILE
+    sc_path = data_dir / _SCORECARDS_FILE
+    mb_path = data_dir / _MONEYBALL_FILE
     if not sc_path.exists() or not mb_path.exists():
         return None
     try:
