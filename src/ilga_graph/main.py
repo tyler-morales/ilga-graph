@@ -41,6 +41,7 @@ from .routers.auth import router as _auth_router
 from .routers.bills import router as _bills_router
 from .routers.explore import router as _explore_router
 from .routers.feedback import router as _feedback_router
+from .routers.legal import router as _legal_router
 from .routers.intelligence import router as _intelligence_router
 from .routers.outreach import router as _outreach_router
 from .run_log import append_startup_run, get_log_path, load_recent_runs
@@ -1716,6 +1717,7 @@ app.include_router(graphql_app, prefix="/graphql")
 app.include_router(_advocacy_router, prefix="/advocacy")
 app.include_router(_auth_router)
 app.include_router(_feedback_router)
+app.include_router(_legal_router)
 app.include_router(_bills_router, prefix="/api")
 app.include_router(_explore_router)
 app.include_router(_intelligence_router, prefix="/intelligence")

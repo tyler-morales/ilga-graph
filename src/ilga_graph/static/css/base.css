@@ -315,8 +315,29 @@ a:visited {
   margin: 0 auto;
 }
 
-.report-bug-page h1 {
+.report-bug-page h1,
+.legal-page h1 {
   margin-bottom: 0.25em;
+}
+
+.legal-page {
+  max-width: 32em;
+  margin: 0 auto;
+}
+
+.legal-page-intro {
+  color: #555;
+  margin-bottom: 1.5rem;
+}
+
+.legal-page section {
+  margin-bottom: 1.5rem;
+}
+
+.legal-page h2 {
+  font-size: var(--font-size-h2);
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
 }
 
 .report-bug-intro {

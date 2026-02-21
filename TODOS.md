@@ -58,7 +58,9 @@
 | 2026-02-20 | Call drawer overflow         | overflow-x hidden, min-width 0, word-break on mobile. |
 | 2026-02-20 | Mobile drawer URL/scroll     | 95dvh, overscroll-behavior contain, body scroll lock + restore. |
 | 2026-02-20 | Advocacy mobile responsiveness | Media queries moved from base.css into advocacy-drawer/cards/form. |
+| 2026-02-20 | Privacy and Terms + footer   | Privacy policy at /privacy and Terms of use at /terms; legal router (routers/legal.py); templates privacy.html, terms.html with .legal-page styling; footer in base.html updated with Privacy and Terms links (always shown); docs app-overview Legal and trust. |
 | 2026-02-20 | Post-prod                    | OG/Twitter cards, canonical, Umami, security headers, advocacy SEO globals. |
+| 2026-02-20 | SEO sitemap and robots       | GET /sitemap.xml (key pages: /, /advocacy, /intelligence, /explore) and GET /robots.txt (allow all, Sitemap line); both use APP_BASE_URL. Exempt from API key. Docs: environment-variables, deployment, app-overview. |
 | 2026-02-20 | Automated deploy Vultr       | Push main → CI → SSH deploy; DEPLOY_HOST/USER/SSH_KEY. |
 | 2026-02-19 | Deployment prep              | Lint, Procfile, status-report, deployment.md, vultr-deployment-guide, startup banner URLs. |
 | 2026-02-20 | Typography normalization     | Removed fixed/inconsistent text sizes and styles that caused bugs. variables.css: added --line-height-tight. All static/css: font-size and line-height use design tokens (--font-size-base, --font-size-body, --font-size-label, --font-size-sm, --font-size-xs, --font-size-h1, --font-size-h2, --line-height-body, --line-height-tight). No more px line-heights or arbitrary em/rem; hero clamp() kept for responsive headlines. base, advocacy-cards, advocacy-drawer, advocacy-form, advocacy-email, intelligence-dashboard, intelligence-tables. |
