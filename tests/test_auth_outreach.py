@@ -238,21 +238,25 @@ class TestOutreachRecord:
             "/auth/verify-code",
             data=_data_with_csrf(client, {"email": email, "code": known_code}),
         )
-        resp = client.post(
-            "/outreach/record",
-            data=_data_with_csrf(
-                client,
-                {
-                    "member_id": "1234",
-                    "kind": "call",
-                    "zip_code": "60601",
-                    "notes": "Test note",
-                    "contact_name": "Jane",
-                    "support_score": "4",
-                    "constituent": "yes",
-                },
-            ),
-        )
+        with patch(
+            "ilga_graph.routers.outreach.find_member_by_id",
+            return_value=object(),
+        ):
+            resp = client.post(
+                "/outreach/record",
+                data=_data_with_csrf(
+                    client,
+                    {
+                        "member_id": "1234",
+                        "kind": "call",
+                        "zip_code": "60601",
+                        "notes": "Test note",
+                        "contact_name": "Jane",
+                        "support_score": "4",
+                        "constituent": "yes",
+                    },
+                ),
+            )
         assert resp.status_code == 200
         data = resp.json()
         assert data.get("ok") is True
@@ -277,19 +281,23 @@ class TestOutreachRecord:
             "/auth/verify-code",
             data=_data_with_csrf(client, {"email": email, "code": code}),
         )
-        client.post(
-            "/outreach/record",
-            data=_data_with_csrf(
-                client,
-                {
-                    "member_id": "m1",
-                    "kind": "email",
-                    "zip_code": "60602",
-                    "support_score": "5",
-                    "constituent": "1",
-                },
-            ),
-        )
+        with patch(
+            "ilga_graph.routers.outreach.find_member_by_id",
+            return_value=object(),
+        ):
+            client.post(
+                "/outreach/record",
+                data=_data_with_csrf(
+                    client,
+                    {
+                        "member_id": "m1",
+                        "kind": "email",
+                        "zip_code": "60602",
+                        "support_score": "5",
+                        "constituent": "1",
+                    },
+                ),
+            )
 
         async def check():
             async with db_mod.async_session_factory() as session:
@@ -366,27 +374,31 @@ class TestOutreachStats:
             "/auth/verify-code",
             data=_data_with_csrf(client, {"email": email, "code": code}),
         )
-        client.post(
-            "/outreach/record",
-            data=_data_with_csrf(
-                client,
-                {"member_id": "agg_member", "kind": "call", "zip_code": "60601"},
-            ),
-        )
-        client.post(
-            "/outreach/record",
-            data=_data_with_csrf(
-                client,
-                {"member_id": "agg_member", "kind": "call", "zip_code": "60601"},
-            ),
-        )
-        client.post(
-            "/outreach/record",
-            data=_data_with_csrf(
-                client,
-                {"member_id": "agg_member", "kind": "email", "zip_code": "60601"},
-            ),
-        )
+        with patch(
+            "ilga_graph.routers.outreach.find_member_by_id",
+            return_value=object(),
+        ):
+            client.post(
+                "/outreach/record",
+                data=_data_with_csrf(
+                    client,
+                    {"member_id": "agg_member", "kind": "call", "zip_code": "60601"},
+                ),
+            )
+            client.post(
+                "/outreach/record",
+                data=_data_with_csrf(
+                    client,
+                    {"member_id": "agg_member", "kind": "call", "zip_code": "60601"},
+                ),
+            )
+            client.post(
+                "/outreach/record",
+                data=_data_with_csrf(
+                    client,
+                    {"member_id": "agg_member", "kind": "email", "zip_code": "60601"},
+                ),
+            )
         resp = client.get("/outreach/stats/agg_member")
         assert resp.status_code == 200
         assert resp.json()["calls"] == 2
@@ -417,20 +429,24 @@ class TestOutreachMyStats:
         data = resp.json()
         assert data["calls"] == 0
         assert data["emails"] == 0
-        client.post(
-            "/outreach/record",
-            data=_data_with_csrf(
-                client,
-                {"member_id": "m1", "kind": "call", "zip_code": "60601"},
-            ),
-        )
-        client.post(
-            "/outreach/record",
-            data=_data_with_csrf(
-                client,
-                {"member_id": "m2", "kind": "email", "zip_code": "60601"},
-            ),
-        )
+        with patch(
+            "ilga_graph.routers.outreach.find_member_by_id",
+            return_value=object(),
+        ):
+            client.post(
+                "/outreach/record",
+                data=_data_with_csrf(
+                    client,
+                    {"member_id": "m1", "kind": "call", "zip_code": "60601"},
+                ),
+            )
+            client.post(
+                "/outreach/record",
+                data=_data_with_csrf(
+                    client,
+                    {"member_id": "m2", "kind": "email", "zip_code": "60601"},
+                ),
+            )
         resp2 = client.get("/outreach/my-stats")
         assert resp2.status_code == 200
         assert resp2.json()["calls"] == 1
@@ -457,20 +473,34 @@ class TestOutreachMyHistory:
             "/auth/verify-code",
             data=_data_with_csrf(client, {"email": email, "code": code}),
         )
-        client.post(
-            "/outreach/record",
-            data=_data_with_csrf(
-                client,
-                {"member_id": "h1", "kind": "call", "zip_code": "60601", "notes": "First"},
-            ),
-        )
-        client.post(
-            "/outreach/record",
-            data=_data_with_csrf(
-                client,
-                {"member_id": "h2", "kind": "email", "zip_code": "60601", "notes": "Second"},
-            ),
-        )
+        with patch(
+            "ilga_graph.routers.outreach.find_member_by_id",
+            return_value=object(),
+        ):
+            client.post(
+                "/outreach/record",
+                data=_data_with_csrf(
+                    client,
+                    {
+                        "member_id": "h1",
+                        "kind": "call",
+                        "zip_code": "60601",
+                        "notes": "First",
+                    },
+                ),
+            )
+            client.post(
+                "/outreach/record",
+                data=_data_with_csrf(
+                    client,
+                    {
+                        "member_id": "h2",
+                        "kind": "email",
+                        "zip_code": "60601",
+                        "notes": "Second",
+                    },
+                ),
+            )
         resp = client.get("/outreach/my-history")
         assert resp.status_code == 200
         events = resp.json()["events"]

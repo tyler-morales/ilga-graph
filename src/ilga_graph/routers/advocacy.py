@@ -15,8 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import advocacy_helpers as ah
 from .. import config as cfg
 from ..app_state import state
-from ..config import DEV_MODE, SEED_MODE
+from ..config import DEV_MODE
 from ..constants import CATEGORY_CHOICES, CATEGORY_COMMITTEES
+from ..data_source import is_using_mocks
 from ..db import get_db
 from ..db_models import OutreachEvent, User
 from ..dependencies import get_current_user_optional
@@ -214,7 +215,7 @@ async def _build_search_results_context(
         outreach_heat = {str(mid): int(cnt) for mid, cnt in heat_result.all()}
 
     return {
-        "seed_mode": cfg.SEED_MODE,
+        "seed_mode": is_using_mocks(),
         "member_count": len(state.members),
         "zip_count": len(state.zip_to_district),
         "zip": zip_code,
@@ -270,7 +271,7 @@ async def advocacy_index(
         ctx["zip"] = zip
     elif cfg.DEV_MODE:
         ctx["zip"] = "60601"
-    elif cfg.SEED_MODE:
+    elif is_using_mocks():
         ctx["zip"] = "60601"
     if zip_param and in_district:
         results_ctx = await _build_search_results_context(zip_param, "Transportation", db, user)
@@ -621,7 +622,7 @@ async def advocacy_search(
             f"ZIP code {zip_code!r} not found in Illinois district data. "
             "Please enter a valid 5-digit Illinois ZIP code."
         )
-        if SEED_MODE and state.zip_to_district:
+        if is_using_mocks() and state.zip_to_district:
             sample = sorted(state.zip_to_district.keys())[:6]
             error += f" In dev mode, try ZIPs such as: {', '.join(sample)}."
         tpl = "_results_partial.html" if is_htmx else "index.html"

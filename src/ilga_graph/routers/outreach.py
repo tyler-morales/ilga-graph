@@ -14,9 +14,11 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..app_state import state
 from ..db import get_db
 from ..db_models import OutreachEvent, User
 from ..dependencies import get_current_user_optional
+from ..member_lookup import find_member_by_id
 from ..security import CSRF_COOKIE_NAME, validate_csrf_token
 
 LOGGER = logging.getLogger(__name__)
@@ -77,10 +79,19 @@ async def record_outreach(
     if kind not in ("call", "email", "no_answer"):
         return JSONResponse({"ok": False, "error": "Invalid kind"}, status_code=400)
 
+    mid = member_id.strip()[:32]
+    if not mid:
+        return JSONResponse({"ok": False, "error": "Missing legislator"}, status_code=400)
+    if find_member_by_id(state, mid) is None:
+        return JSONResponse(
+            {"ok": False, "error": "Legislator not found. Please refresh and try again."},
+            status_code=400,
+        )
+
     event = OutreachEvent(
         user_id=user.id,
         user_email=user.email,
-        member_id=member_id.strip(),
+        member_id=mid,
         kind=kind,
         zip_code=zip_code.strip() or None,
         outcome=outcome.strip() or None,
