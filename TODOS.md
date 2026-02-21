@@ -61,6 +61,7 @@
 | 2026-02-20 | Post-prod                    | OG/Twitter cards, canonical, Umami, security headers, advocacy SEO globals. |
 | 2026-02-20 | Automated deploy Vultr       | Push main → CI → SSH deploy; DEPLOY_HOST/USER/SSH_KEY. |
 | 2026-02-19 | Deployment prep              | Lint, Procfile, status-report, deployment.md, vultr-deployment-guide, startup banner URLs. |
+| 2026-02-20 | Typography normalization     | Removed fixed/inconsistent text sizes and styles that caused bugs. variables.css: added --line-height-tight. All static/css: font-size and line-height use design tokens (--font-size-base, --font-size-body, --font-size-label, --font-size-sm, --font-size-xs, --font-size-h1, --font-size-h2, --line-height-body, --line-height-tight). No more px line-heights or arbitrary em/rem; hero clamp() kept for responsive headlines. base, advocacy-cards, advocacy-drawer, advocacy-form, advocacy-email, intelligence-dashboard, intelligence-tables. |
 | 2026-02-20 | Mobile experience overhaul  | Typography: variables.css font-size tokens, :root 17px at 480px; base.css body/headings use tokens. Cards: rem-based mobile text, larger member photos (96/88px), 44px touch targets (card-details-toggle, beta-banner-dismiss). Drawer/email: larger drawer photo (80px), bumped smallest font sizes. Intelligence: responsive summary grid, .intel-table-scroll-wrap, font-size floor 0.8rem at 480px. Templates: explanation partial classes, predictions/bill inline font-sizes to rem. |
 | 2026-02-20 | Mobile typography scale-up   | variables.css: at 480px base 18px, h1 2rem, h2 1.375rem, body/label tokens. Hero: .hero-inner full-width on phone; .hero-headline 1.875rem (phone) / 1.75rem (tablet), eyebrow/subhead larger. base.css: explicit body/h1/h2/footer at 480px. advocacy-drawer.css: mobile labels 0.9375rem, panel title 1.2rem. Branch: feature/mobile-typography. |
 | 2026-02-20 | Moneyball help circle (mobile) | .moneyball-help no longer forced to 44px on mobile; stays content-sized (1.1em) so circle fits the "?" only. advocacy-cards.css. |
@@ -112,6 +113,8 @@
 
 | Topic                          | Summary |
 |--------------------------------|--------|
+| Advocacy/router cleanup        | `member_lookup.is_constituent_for_zip_member(state, zip_code, member)`; `advocacy_helpers.party_abbr_for_member(member)`; shared `_hero_context()` in advocacy router. Replaced 4× is_constituent blocks, 3× party_abbr blocks, 2× hero dicts; explore uses party_abbr_for_member. |
+| Pre-push cleanup               | Removed leftover hero-image debug instrumentation (fetch to localhost:7246/ingest) from index.html; tests 303 pass, lint clean. |
 | Full-text feature caps         | FULLTEXT_MAX_FEATURES 400, FULLTEXT_MAX_TOKENS 2000; env overrides. |
 | ML Step 3 tuning                | n_iter 20, trimmed grid, verbose=2, ILGA_ML_SKIP_TUNE=1. |
 | Smart tiered index scanning     | <24h skip, <7d tail-only, >7d full; scrape_metadata timestamps. |

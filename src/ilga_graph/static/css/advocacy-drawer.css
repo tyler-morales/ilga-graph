@@ -59,7 +59,7 @@
     position: absolute;
     top: 12px;
     right: 14px;
-    font-size: 1.6em;
+    font-size: var(--font-size-h1);
     background: none;
     border: none;
     cursor: pointer;
@@ -95,7 +95,7 @@
 .phone-panel-title {
     padding: 0;
     margin: 0;
-    font-size: 1.15em;
+    font-size: var(--font-size-body);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -125,7 +125,7 @@
     background: none;
     border: none;
     padding: 0;
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     color: #9ca3af;
     cursor: pointer;
@@ -163,7 +163,7 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
     line-height: 1.7;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
@@ -180,7 +180,7 @@
 
 .phone-script-number {
     margin-bottom: 16px;
-    font-size: 1.3em;
+    font-size: var(--font-size-h2);
 }
 
 .phone-script-number a {
@@ -211,7 +211,7 @@
 
 .script-section strong {
     display: block;
-    font-size: 0.8em;
+    font-size: var(--font-size-sm);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: #2a5a2a;
@@ -229,19 +229,19 @@
     background: #fff8e1;
     border: 1px solid #ffca28;
     border-radius: 6px;
-    font-size: 0.9em;
+    font-size: var(--font-size-label);
     line-height: 1.5;
 }
 
 .email-template label {
     display: block;
     font-weight: bold;
-    font-size: 0.85em;
+    font-size: var(--font-size-label);
     margin: 10px 0 4px;
 }
 
 .email-subject {
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
     padding: 8px;
     background: #f5f5f5;
     border-radius: 4px;
@@ -253,7 +253,7 @@
     white-space: pre-wrap;
     word-break: break-word;
     font-family: inherit;
-    font-size: 0.9em;
+    font-size: var(--font-size-label);
     padding: 12px;
     background: #f5f5f5;
     border: 1px solid #ddd;
@@ -264,7 +264,7 @@
 
 .email-pdf {
     margin-top: 12px;
-    font-size: 0.9em;
+    font-size: var(--font-size-label);
 }
 
 .email-pdf a {
@@ -278,7 +278,7 @@
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.92em;
+    font-size: var(--font-size-label);
 }
 
 .phone-panel-done:hover {
@@ -298,7 +298,7 @@
     background: #fef2f2;
     color: #991b1b;
     border-radius: 4px;
-    font-size: 0.9em;
+    font-size: var(--font-size-label);
 }
 
 /* iMessage-style call header: light gray bar, centered photo circle then name then number */
@@ -329,7 +329,7 @@
 
 .drawer-call-title {
     margin: 0 0 2px;
-    font-size: 0.8em;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: #6d6d72;
     text-transform: uppercase;
@@ -346,7 +346,7 @@
 
 .drawer-call-name {
     margin: 0 0 8px;
-    font-size: 1.15em;
+    font-size: var(--font-size-body);
     font-weight: 700;
     color: #1c1c1e;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -386,7 +386,7 @@
 .drawer-call-header .drawer-script-intro {
     margin: 0;
     padding: 0;
-    font-size: 0.8em;
+    font-size: var(--font-size-sm);
     line-height: 1.4;
     color: #8e8e93;
     font-weight: 400;
@@ -403,7 +403,7 @@
     margin: 0 -24px;
     background: #fafafa;
     border-bottom: 1px solid #eee;
-    font-size: 0.8em;
+    font-size: var(--font-size-sm);
     color: #8e8e93;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
@@ -456,7 +456,7 @@
 }
 
 .drawer-constituent-label {
-    font-size: .9em;
+    font-size: var(--font-size-label);
     font-weight: 500;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
@@ -528,7 +528,7 @@
 
 .drawer-reminder-inline-copy {
     margin: 0 0 12px 0;
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
     line-height: 1.45;
     color: #1c1c1e;
 }
@@ -544,7 +544,7 @@
 }
 
 .drawer-reminder-inline-label {
-    font-size: 0.8em;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: #3a3a3c;
 }
@@ -562,13 +562,13 @@
     padding: 8px 10px;
     border: 1px solid #c6c6c8;
     border-radius: 10px;
-    font-size: 0.9em;
+    font-size: var(--font-size-label);
     font-family: inherit;
     background: #fff;
 }
 
 .drawer-reminder-inline-link {
-    font-size: 0.75em;
+    font-size: var(--font-size-xs);
     color: #8e8e93;
     margin: 0 0 12px 0;
     word-break: break-all;
@@ -586,7 +586,7 @@
 .drawer-reminder-inline-btn {
     padding: 10px 16px;
     border-radius: 20px;
-    font-size: 0.9em;
+    font-size: var(--font-size-label);
     font-weight: 600;
     cursor: pointer;
     border: none;
@@ -633,7 +633,7 @@
 }
 
 .drawer-wrapup-inline-intro {
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
     line-height: 1.45;
     color: #1c1c1e;
 }
@@ -665,7 +665,7 @@
 }
 
 .drawer-wrapup-inline-label {
-    font-size: 0.8em;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: #3a3a3c;
 }
@@ -674,7 +674,7 @@
     padding: 8px 12px;
     border: 1px solid #c6c6c8;
     border-radius: 10px;
-    font-size: 0.9em;
+    font-size: var(--font-size-label);
     font-family: inherit;
     background: #fff;
 }
@@ -688,7 +688,7 @@
     padding: 8px 12px;
     border: 1px solid #c6c6c8;
     border-radius: 10px;
-    font-size: 0.9em;
+    font-size: var(--font-size-label);
     font-family: inherit;
     background: #fff;
     resize: vertical;
@@ -703,7 +703,7 @@
 .drawer-wrapup-inline-cta {
     padding: 12px 20px;
     border-radius: 22px;
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
     font-weight: 600;
     cursor: pointer;
     border: none;
@@ -771,7 +771,7 @@
 
 .drawer-note-sticky-label {
     display: block;
-    font-size: 0.8em;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: #5d4037;
     margin-bottom: 8px;
@@ -787,7 +787,7 @@
     border: none;
     border-radius: 2px;
     background: rgba(255, 255, 255, 0.5);
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
     font-family: inherit;
     line-height: 1.4;
     resize: vertical;
@@ -824,7 +824,7 @@
 .drawer-draft-followup-btn {
     padding: 12px 20px;
     border-radius: 22px;
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
     font-weight: 600;
     cursor: pointer;
     border: none;
@@ -868,7 +868,7 @@
     padding: 10px 14px;
     background: #f5f5f7;
     border-radius: 12px;
-    font-size: 0.9em;
+    font-size: var(--font-size-label);
     color: #333;
 }
 
@@ -913,7 +913,7 @@
     max-width: 88%;
     padding: 10px 14px;
     border-radius: 18px;
-    font-size: 0.92em;
+    font-size: var(--font-size-label);
     line-height: 1.55;
     position: relative;
     word-break: break-word;
@@ -926,7 +926,7 @@
 
 .chat-label {
     display: block;
-    font-size: 0.7em;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -965,7 +965,7 @@
 
 .chat-branch {
     font-style: italic;
-    font-size: 0.88em;
+    font-size: var(--font-size-label);
 }
 
 .chat-branch .chat-label {
@@ -1080,7 +1080,7 @@
     border-radius: 12px;
     background: #f2f2f7;
     color: #1c1c1e;
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
     font-weight: 600;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     cursor: pointer;
@@ -1124,13 +1124,13 @@
 }
 
 .reminder-modal-title {
-    font-size: 1.25em;
+    font-size: var(--font-size-h2);
     margin: 0 0 8px;
     color: #1c1c1e;
 }
 
 .reminder-modal-hint {
-    font-size: 0.9em;
+    font-size: var(--font-size-label);
     color: #8e8e93;
     margin: 0 0 18px;
     line-height: 1.4;
@@ -1150,7 +1150,7 @@
 }
 
 .reminder-modal-label {
-    font-size: 0.85em;
+    font-size: var(--font-size-label);
     font-weight: 600;
     color: #3a3a3c;
 }
@@ -1163,7 +1163,7 @@
 }
 
 .reminder-link-preview {
-    font-size: 0.8em;
+    font-size: var(--font-size-sm);
     color: #8e8e93;
     margin: 0 0 18px;
     word-break: break-all;
@@ -1178,7 +1178,7 @@
 .reminder-modal-btn {
     padding: 12px 18px;
     border-radius: 12px;
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
     font-weight: 600;
     cursor: pointer;
     border: none;
@@ -1233,7 +1233,7 @@
 
 .drawer-outcome-question {
     margin: 0 0 14px;
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
     font-weight: 600;
     color: #1c1c1e;
 }
@@ -1248,7 +1248,7 @@
     padding: 12px 10px;
     border: none;
     border-radius: 12px;
-    font-size: 0.9em;
+    font-size: var(--font-size-label);
     font-weight: 600;
     cursor: pointer;
     transition: background-color 0.2s ease, opacity 0.2s ease;
@@ -1294,7 +1294,7 @@
 
 .drawer-no-answer-headline {
     margin: 0 0 12px;
-    font-size: 1.05em;
+    font-size: var(--font-size-body);
     font-weight: 600;
     color: #1c1c1e;
 }
@@ -1302,7 +1302,7 @@
 .drawer-no-answer-steps {
     margin: 0;
     padding-left: 20px;
-    font-size: 0.92em;
+    font-size: var(--font-size-label);
     line-height: 1.6;
     color: #3c3c43;
 }
@@ -1333,7 +1333,7 @@
     width: 100%;
     padding: 12px 20px;
     border-radius: 12px;
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
 }
 
 /* Fade in/out blue border to indicate "type here" — only one field pulses at a time (see JS) */
@@ -1411,7 +1411,7 @@
     width: 100%;
     box-sizing: border-box;
     padding: 12px 16px;
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     color: #1c1c1e;
     background: #ebebf0;
@@ -1444,7 +1444,7 @@
     width: 100%;
     box-sizing: border-box;
     padding: 12px 16px;
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     color: #1c1c1e;
     background: #ebebf0;
@@ -1489,7 +1489,7 @@
     background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
     color: #0d47a1;
     border-radius: 20px;
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
     border: 1px solid rgba(13, 71, 161, 0.25);
@@ -1504,7 +1504,7 @@
     background: #1565c0;
     color: #fff;
     border-radius: 50%;
-    font-size: 0.75em;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     line-height: 1;
 }
@@ -1544,7 +1544,7 @@
 }
 
 .drawer-contact-card-icon {
-    font-size: 1.25em;
+    font-size: var(--font-size-h2);
     line-height: 1;
     opacity: 0.75;
 }
@@ -1557,7 +1557,7 @@
 }
 
 .drawer-contact-card-label {
-    font-size: 0.7em;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -1565,7 +1565,7 @@
 }
 
 .drawer-contact-card-name {
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
     font-weight: 500;
     color: #1c1c1e;
 }
@@ -1578,7 +1578,7 @@
     background: linear-gradient(180deg, #fffde7 0%, #fff9c4 50%, #fff59d 100%);
     color: #5d4037;
     font-family: "Caveat", "Comic Sans MS", "Segoe Print", cursive;
-    font-size: 1.35em;
+    font-size: var(--font-size-h2);
     font-weight: 600;
     line-height: 1.3;
     border-radius: 2px;
@@ -1621,7 +1621,7 @@
 }
 
 .chat-divider span {
-    font-size: 0.72em;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1646,7 +1646,7 @@
 
 .drawer-wrapup-title {
     margin: 0 0 12px;
-    font-size: 0.85em;
+    font-size: var(--font-size-label);
     font-weight: 600;
     color: #6d6d72;
     text-transform: uppercase;
@@ -1678,7 +1678,7 @@
     border-radius: 12px;
     border: 1px solid transparent;
     border-right: none;
-    font-size: 1.05em;
+    font-size: var(--font-size-body);
     font-weight: 600;
     cursor: pointer;
     transition: background 0.35s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
@@ -1757,7 +1757,7 @@
     display: none;
     align-items: center;
     gap: 8px;
-    font-size: 1.05em;
+    font-size: var(--font-size-body);
     font-weight: 700;
     opacity: 0.95;
     margin-left: 10px;
@@ -1919,7 +1919,7 @@
 
 /* Interest poll: bubble styling and results area (reference: clean question + stacked pills) */
 .drawer-interest-poll-bubble .chat-label {
-    font-size: 0.75em;
+    font-size: var(--font-size-xs);
     color: #6d6d72;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -1929,7 +1929,7 @@
 
 .drawer-interest-poll-bubble .drawer-interest-question {
     margin-bottom: 12px;
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
     color: #1c1c1e;
     line-height: 1.35;
 }
@@ -1938,7 +1938,7 @@
     margin-top: 12px;
     padding: 10px 12px;
     border-radius: 10px;
-    font-size: 0.88em;
+    font-size: var(--font-size-label);
     line-height: 1.4;
     min-height: 2.5em;
 }
@@ -1977,7 +1977,7 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
 }
 
 .drawer-interest-poll-results .poll-breakdown-count {
@@ -2018,7 +2018,7 @@
 }
 
 .drawer-wrapup-label {
-    font-size: 0.92em;
+    font-size: var(--font-size-label);
     color: #1c1c1e;
     flex-shrink: 0;
 }
@@ -2028,7 +2028,7 @@
     min-width: 0;
     border: none;
     background: transparent;
-    font-size: 0.92em;
+    font-size: var(--font-size-label);
     color: #1c1c1e;
     text-align: right;
     padding: 10px 0;
@@ -2048,7 +2048,7 @@
 
 .drawer-wrapup-note-label {
     display: block;
-    font-size: 0.92em;
+    font-size: var(--font-size-label);
     color: #1c1c1e;
     margin-bottom: 6px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -2061,7 +2061,7 @@
     border: 1px solid #e5e5ea;
     border-radius: 10px;
     background: #f2f2f7;
-    font-size: 0.92em;
+    font-size: var(--font-size-label);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     color: #1c1c1e;
     resize: vertical;
@@ -2171,20 +2171,20 @@
 
     .chat-label,
     .drawer-contact-card-label {
-        font-size: 0.9375rem;
+        font-size: var(--font-size-body);
     }
 
     .chat-divider span {
-        font-size: 0.9375rem;
+        font-size: var(--font-size-body);
     }
 
     .drawer-interest-poll-bubble .chat-label {
-        font-size: 0.9375rem;
+        font-size: var(--font-size-body);
     }
 
     .phone-panel-title {
         padding: 16px 18px 10px;
-        font-size: 1.2rem;
+        font-size: var(--font-size-h2);
     }
 
     .phone-panel-body {
@@ -2205,7 +2205,7 @@
 /* ── Bug report nudge (end of flow + persistent in drawer) ── */
 .drawer-bug-nudge {
     margin: 12px 0 0;
-    font-size: 0.8125rem;
+    font-size: var(--font-size-xs);
     color: #6b7280;
 }
 .drawer-bug-nudge-link {

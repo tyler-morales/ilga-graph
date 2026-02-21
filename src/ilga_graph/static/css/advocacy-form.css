@@ -19,7 +19,7 @@
 .hero-eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  font-size: 0.78em;
+  font-size: var(--font-size-sm);
   color: #555;
   margin: 0 0 8px;
   font-family: var(--font-sans);
@@ -222,7 +222,7 @@
 
 .hero-ticker {
   font-family: var(--font-sans);
-  font-size: 1rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: #222;
   margin: 0 0 16px;
@@ -232,7 +232,7 @@
 }
 
 .hero-ticker [aria-hidden="true"] {
-  font-size: 1.15em;
+  font-size: var(--font-size-body);
   color: var(--color-hero-cta);
 }
 
@@ -253,7 +253,7 @@
   display: block;
   font-weight: bold;
   margin-bottom: 5px;
-  font-size: 0.88em;
+  font-size: var(--font-size-label);
   text-align: left;
   color: #333;
   font-family: var(--font-sans);
@@ -283,7 +283,7 @@
 .hero-form input[type="text"] {
   width: 100%;
   box-sizing: border-box;
-  font-size: 1.1em;
+  font-size: var(--font-size-body);
   padding: 12px 14px;
   border: 2px solid #ccc;
   background: #fff;
@@ -308,7 +308,7 @@
 }
 
 .hero-form button {
-  font-size: 1.05em;
+  font-size: var(--font-size-body);
   padding: 12px 24px;
   background: var(--color-hero-cta);
   color: #fff;
@@ -335,7 +335,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px 16px;
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
   color: #555;
   margin-top: 12px;
   font-family: var(--font-sans);
@@ -346,7 +346,7 @@
 }
 
 .hero-trust {
-  font-size: 0.78em;
+  font-size: var(--font-size-sm);
   color: #666;
   margin-top: 4px;
 }
@@ -357,7 +357,7 @@
 
 .hero-meta {
   font-family: var(--font-sans);
-  font-size: 0.95rem;
+  font-size: var(--font-size-body);
   color: #666;
   margin-top: 12px;
   text-align: center;
@@ -385,7 +385,7 @@
 }
 
 .auth-strip {
-  font-size: 0.8em;
+  font-size: var(--font-size-sm);
   color: #555;
   margin-top: 8px;
 }
@@ -456,14 +456,14 @@
 }
 
 .auth-strip-progress {
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
   color: #555;
   margin-top: 2px;
 }
 
 .hero-signin-inline {
   font-family: var(--font-sans);
-  font-size: 1rem;
+  font-size: var(--font-size-base);
   margin-top: 22px;
   display: flex;
   flex-direction: column;
@@ -512,7 +512,7 @@
 
 .hero-signin-inline .hero-signin-input {
   font-family: var(--font-sans);
-  font-size: 0.95rem;
+  font-size: var(--font-size-body);
   padding: 5px 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -526,7 +526,7 @@
   padding: 5px 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 1.5em;
+  font-size: var(--font-size-h2);
   letter-spacing: 0.15em;
   min-width: 12ch;
   width: 12ch;
@@ -537,7 +537,7 @@
 
 .hero-signin-inline .hero-signin-btn {
   font-family: var(--font-sans);
-  font-size: 0.95rem;
+  font-size: var(--font-size-body);
   padding: 5px 12px;
   min-height: 2.25rem;
   box-sizing: border-box;
@@ -563,7 +563,7 @@
 
 .hero-signin-code-hint {
   font-family: var(--font-sans);
-  font-size: 1rem;
+  font-size: var(--font-size-base);
   color: #555;
 }
 
@@ -591,7 +591,7 @@
 
 .hero-signin-error {
   font-family: var(--font-sans);
-  font-size: 0.9rem;
+  font-size: var(--font-size-label);
   font-weight: 400;
   color: var(--color-error);
   display: block;
@@ -613,7 +613,7 @@
 
 .hero-signin-resend {
   font-family: var(--font-sans);
-  font-size: 0.875rem;
+  font-size: var(--font-size-label);
   background: none;
   border: none;
   color: #1a73e8;
@@ -634,7 +634,7 @@
 
 .hero-signin-cancel {
   font-family: var(--font-sans);
-  font-size: 0.875rem;
+  font-size: var(--font-size-label);
   background: none;
   border: none;
   color: #555;
@@ -706,7 +706,7 @@
 }
 
 .outreach-count {
-  font-size: 0.8em;
+  font-size: var(--font-size-sm);
   color: #555;
 }
 
@@ -718,7 +718,7 @@
   flex: 1 1 0;
   min-width: 0;
   padding: 10px 12px;
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
   font-weight: 600;
   border: none;
   border-radius: 6px;
@@ -769,7 +769,7 @@
   display: inline-flex;
   align-items: center;
   padding: 10px 12px;
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
   font-weight: 600;
   color: #6b7280;
 }
@@ -810,7 +810,7 @@
 .outreach-row-hint {
   padding: 0;
   width: 100%;
-  font-size: 0.8em;
+  font-size: var(--font-size-sm);
   color: #6b7280;
   line-height: 1.35;
   text-align: right;
@@ -855,7 +855,7 @@
 
 /* ── Power signal chips ── */
 .chips-label {
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
   font-weight: 600;
   color: #555;
   margin: 10px 0 4px 0;
@@ -881,7 +881,7 @@
   align-items: center;
   flex: 0 1 auto;
   gap: 6px;
-  font-size: 0.88em;
+  font-size: var(--font-size-label);
   font-weight: 500;
   color: #111;
   padding: 4px 10px;
@@ -923,11 +923,11 @@
   }
 
   .hero-eyebrow {
-    font-size: 1rem;
+    font-size: var(--font-size-base);
   }
 
   .hero-subhead {
-    font-size: 1.25rem;
+    font-size: var(--font-size-h2);
     line-height: 1.5;
   }
 
@@ -936,21 +936,21 @@
   }
 
   .hero-form label {
-    font-size: 1.05em;
+    font-size: var(--font-size-body);
   }
 
   .hero-form input[type="text"],
   .hero-form select {
-    font-size: 1.125rem;
+    font-size: var(--font-size-body);
   }
 
   .hero-trust-badges {
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
   }
 
   .hero-meta,
   .hero-meta-line {
-    font-size: 1.0625rem;
+    font-size: var(--font-size-body);
   }
 
   .hero-form-row {
@@ -964,7 +964,7 @@
 
   .hero-field-btn button {
     width: 100%;
-    font-size: 1.15em;
+    font-size: var(--font-size-body);
     padding: 10px 24px;
     min-height: 2.75rem;
   }
@@ -1066,7 +1066,7 @@
 
   .outreach-btn {
     min-height: 2.75rem;
-    font-size: 1.0625rem;
+    font-size: var(--font-size-body);
     padding: 12px 14px;
   }
 
@@ -1093,7 +1093,7 @@
   }
 
   .hero-eyebrow {
-    font-size: 1.0625rem;
+    font-size: var(--font-size-body);
   }
 
   .hero-image {
@@ -1102,27 +1102,27 @@
   }
 
   .hero-subhead {
-    font-size: 1.3125rem;
+    font-size: var(--font-size-h2);
     line-height: 1.5;
   }
 
   .hero-form label {
-    font-size: 1.1em;
+    font-size: var(--font-size-body);
   }
 
   .hero-form input[type="text"],
   .hero-form select {
-    font-size: 1.1875rem;
+    font-size: var(--font-size-h2);
   }
 
   .hero-form button {
-    font-size: 1.15em;
+    font-size: var(--font-size-body);
     padding: 12px 24px;
     min-height: 3rem;
   }
 
   .hero-trust {
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
   }
 
   .hero-trust .trust-sep {
@@ -1136,17 +1136,17 @@
 
   .hero-meta,
   .hero-meta-line {
-    font-size: 1.0625rem;
+    font-size: var(--font-size-body);
   }
 
   .hero-trust-badges {
-    font-size: 1rem;
+    font-size: var(--font-size-base);
   }
 
   .outreach-btn {
     flex: 1 1 0;
     min-height: 3rem;
-    font-size: 1.125rem;
+    font-size: var(--font-size-body);
     padding: 12px 16px;
   }
 

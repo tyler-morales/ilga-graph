@@ -13,17 +13,7 @@
             <div class="hero-image-wrap">
                 <img src="/static/images/truck-hero.jpg" alt="White Kei truck on city street" class="hero-image"
                     loading="eager" width="600" height="400"
-                    onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/a/ad/SuzukiCarry8th.jpg'; this.alt='Suzuki Carry kei truck';"
-                    onload="(function(img){
-                        // #region agent log
-                        try {
-                            var entries = performance.getEntriesByType('resource').filter(function(e){ return (e.name && e.name.indexOf('truck-hero') !== -1); });
-                            var r = entries.length ? entries[entries.length-1] : null;
-                            var preload = document.querySelector('link[rel=preload][as=image][href*=\"truck-hero\"]');
-                            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6f65e2'},body:JSON.stringify({sessionId:'6f65e2',location:'index.html:hero-img-onload',message:'Hero image load',data:{transferSize: r ? r.transferSize : null, encodedBodySize: r ? r.encodedBodySize : null, duration: r ? r.duration : null, startTime: r ? r.startTime : null, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight, hasPreload: !!preload}, timestamp: Date.now(), hypothesisId: 'H1-H5'})}).catch(function(){});
-                        } catch(e) {}
-                        // #endregion
-                    })(this)">
+                    onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/a/ad/SuzukiCarry8th.jpg'; this.alt='Suzuki Carry kei truck';">
             </div>
             <div class="hero-action">
                 <p class="hero-subhead">{{ hero_subhead }}</p>

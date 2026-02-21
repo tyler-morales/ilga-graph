@@ -51,6 +51,7 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-hero: "Helvetica Neue", Helvetica, Arial, sans-serif;
   --line-height-body: 1.5;
+  --line-height-tight: 1.25;
   --max-width-container: 1120px;
   --max-width-hero: 680px;
 

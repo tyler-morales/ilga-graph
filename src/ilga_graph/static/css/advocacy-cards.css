@@ -17,7 +17,7 @@
   padding: 12px 14px;
   background: #fff;
   color: #111;
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
   font-weight: normal;
   line-height: 1.5;
   border-radius: 8px;
@@ -69,7 +69,7 @@
 .tooltip-wrap .tooltip-content strong {
   display: block;
   margin-bottom: 6px;
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
   font-weight: 600;
   color: #111;
   letter-spacing: 0.02em;
@@ -78,7 +78,7 @@
 .tooltip-wrap .tooltip-content .tooltip-title {
   display: block;
   margin-bottom: 6px;
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
   font-weight: 600;
   color: #111;
   letter-spacing: 0.06em;
@@ -97,7 +97,7 @@
 
 .tooltip-wrap .tooltip-content .tooltip-formula {
   font-weight: normal;
-  font-size: 0.8em;
+  font-size: var(--font-size-sm);
   font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
   color: #111;
   margin-top: 10px;
@@ -133,7 +133,7 @@
   height: 1.1em;
   line-height: 1.1;
   text-align: center;
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
   font-weight: bold;
   color: #555;
   background: #e8e8e8;
@@ -169,13 +169,13 @@
   font-style: italic;
   margin: 0 0 0.5em;
   color: #444;
-  font-size: 0.95em;
+  font-size: var(--font-size-body);
 }
 
 /* Textbook-style displayed equation: one term per line, italic variables */
 .moneyball-formula-display {
   font-family: "Cambria Math", "Latin Modern Math", "STIX Two Math", "Times New Roman", Georgia, serif;
-  font-size: 0.95em;
+  font-size: var(--font-size-body);
   color: #1a1a1a;
   margin: 0.5em 0 0;
   padding-left: 1em;
@@ -232,7 +232,7 @@
   margin: 0.6em 0 0;
   padding: 0.5em 0 0;
   border-top: 1px solid rgba(0, 0, 0, 0.1);
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
   color: #444;
   line-height: 1.55;
 }
@@ -329,7 +329,7 @@
 .tippy-box {
   background: #fff !important;
   color: #111 !important;
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
   line-height: 1.5;
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
@@ -337,33 +337,40 @@
   padding: 0;
   max-width: 340px;
 }
+
 .tippy-box .tippy-content {
   padding: 12px 14px;
 }
+
 .tippy-box .tooltip-title,
 .tippy-box strong {
   display: block;
   margin-bottom: 6px;
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
   font-weight: 600;
   letter-spacing: 0.02em;
   color: #111;
 }
+
 .tippy-box .tooltip-title {
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+
 .tippy-box p {
   margin: 0 0 8px;
   color: #333;
 }
+
 .tippy-box p:last-child {
   margin-bottom: 0;
 }
+
 /* Tippy arrow: match light theme (white fill, grey border) */
 .tippy-box .tippy-arrow {
   color: #fff;
 }
+
 .tippy-box .tippy-arrow::before {
   border-bottom-color: #fff;
   border-top-color: #fff;
@@ -375,7 +382,7 @@
 }
 
 .card-details-toggle {
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
   color: #666;
   cursor: pointer;
   padding: 4px 0;
@@ -391,7 +398,7 @@
 
 .card-details-toggle::after {
   content: " \25bc";
-  font-size: 0.75em;
+  font-size: var(--font-size-xs);
   color: #666;
   margin-left: 4px;
 }
@@ -417,7 +424,7 @@
 }
 
 .ilga-profile-link {
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
   margin-top: 12px;
   margin-bottom: 0;
 }
@@ -436,7 +443,7 @@
 }
 
 .detail-section h4 {
-  font-size: 0.88em;
+  font-size: var(--font-size-label);
   margin: 0 0 4px;
   color: #444;
 }
@@ -444,7 +451,7 @@
 .section-zip {
   font-weight: normal;
   color: #666;
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
 }
 
 .search-form {
@@ -539,7 +546,7 @@
   gap: 3px;
   padding: 3px 8px;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   color: #c2410c;
   background: #fff7ed;
@@ -628,7 +635,7 @@
   justify-content: center;
   background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
   color: #fff;
-  font-size: 1.25rem;
+  font-size: var(--font-size-h2);
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -654,7 +661,7 @@ padding-bottom: 4px;
 }
 
 .card h3.card-name {
-  font-size: 1.1em;
+  font-size: var(--font-size-body);
   margin-bottom: 6px;
   border-bottom: 1px solid #ddd;
   padding-bottom: 4px;
@@ -663,7 +670,7 @@ padding-bottom: 4px;
 .card-name-meta {
   display: block;
   font-weight: normal;
-  font-size: 0.88em;
+  font-size: var(--font-size-label);
   color: #555;
   margin-top: 2px;
 }
@@ -677,7 +684,7 @@ padding-bottom: 4px;
 
 .card .role-label {
   display: inline-block;
-  font-size: 0.8em;
+  font-size: var(--font-size-sm);
   font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -710,19 +717,19 @@ padding-bottom: 4px;
   margin-right: 4px;
 }
 
-.card-badge-row .tooltip-wrap > .role-label,
-.card-badge-row .tooltip-wrap > .power-badge {
+.card-badge-row .tooltip-wrap>.role-label,
+.card-badge-row .tooltip-wrap>.power-badge {
   cursor: help;
 }
 
-.card-badge-row .tooltip-wrap > .role-label:focus-visible,
-.card-badge-row .tooltip-wrap > .power-badge:focus-visible {
+.card-badge-row .tooltip-wrap>.role-label:focus-visible,
+.card-badge-row .tooltip-wrap>.power-badge:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 2px;
   border-radius: 2px;
 }
 
-.card-badge-row .tooltip-wrap > .power-badge:focus-visible {
+.card-badge-row .tooltip-wrap>.power-badge:focus-visible {
   filter: brightness(1.2);
 }
 
@@ -740,7 +747,7 @@ padding-bottom: 4px;
 
 .power-badge {
   display: inline-block;
-  font-size: 0.75em;
+  font-size: var(--font-size-xs);
   font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -798,7 +805,7 @@ padding-bottom: 4px;
 }
 
 .power-badge-explanation {
-  font-size: 0.82em;
+  font-size: var(--font-size-sm);
   line-height: 1.4;
   color: #333;
   background: #fafaf5;
@@ -819,7 +826,7 @@ padding-bottom: 4px;
 }
 
 .power-context-title {
-  font-size: 0.92em;
+  font-size: var(--font-size-label);
   font-weight: bold;
   color: #2a4a7a;
   margin: 0 0 8px 0;
@@ -831,7 +838,7 @@ padding-bottom: 4px;
   list-style: none;
   margin: 0;
   padding: 0;
-  font-size: 0.88em;
+  font-size: var(--font-size-label);
   line-height: 1.5;
 }
 
@@ -852,7 +859,7 @@ padding-bottom: 4px;
 .power-sub {
   margin: 1px 0 0 0;
   padding-left: 16px;
-  font-size: 0.92em;
+  font-size: var(--font-size-label);
   color: #445;
 }
 
@@ -875,7 +882,7 @@ padding-bottom: 4px;
   list-style: none;
   margin: 0;
   padding: 0;
-  font-size: 0.88em;
+  font-size: var(--font-size-label);
   line-height: 1.6;
 }
 
@@ -886,7 +893,7 @@ padding-bottom: 4px;
 .caucus-compare {
   font-weight: bold;
   color: #2a6a2a;
-  font-size: 0.92em;
+  font-size: var(--font-size-label);
 }
 
 /* ── Contact row ── */
@@ -898,7 +905,7 @@ padding-bottom: 4px;
   padding: 8px 0;
   border-top: 1px solid #ddd;
   border-bottom: 1px solid #ddd;
-  font-size: 0.88em;
+  font-size: var(--font-size-label);
 }
 
 .contact-link {
@@ -924,21 +931,21 @@ padding-bottom: 4px;
 }
 
 .card .metric-help {
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
   color: #666;
   cursor: help;
   margin-left: 2px;
 }
 
 .card .metric-note {
-  font-size: 0.8em;
+  font-size: var(--font-size-sm);
   color: #666;
   font-weight: normal;
 }
 
 .card .card-bio {
   margin-top: 6px;
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
   color: #333;
   min-width: 0;
 }
@@ -964,7 +971,7 @@ padding-bottom: 4px;
   border: none;
   padding: 0;
   margin-top: 4px;
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
   color: #369;
   cursor: pointer;
   text-decoration: underline;
@@ -976,7 +983,7 @@ padding-bottom: 4px;
 
 .card .why-chosen {
   margin-top: 10px;
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
   color: #444;
 }
 
@@ -986,7 +993,7 @@ padding-bottom: 4px;
   background: #fffff0;
   border-left: 3px solid #cc9;
   font-style: italic;
-  font-size: 0.95em;
+  font-size: var(--font-size-body);
 }
 
 /* ── Collapsible Legislative Scorecard inside cards ── */
@@ -999,7 +1006,7 @@ padding-bottom: 4px;
 .card-scorecard summary {
   cursor: pointer;
   font-weight: bold;
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
   padding: 6px 10px;
   color: #335;
   border-bottom: 1px solid #ccd;
@@ -1016,7 +1023,7 @@ padding-bottom: 4px;
 .scorecard-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
 }
 
 .scorecard-table th,
@@ -1028,7 +1035,7 @@ padding-bottom: 4px;
 
 .scorecard-section-head {
   background: #eef0f5;
-  font-size: 0.95em;
+  font-size: var(--font-size-body);
   padding: 4px 6px;
   color: #335;
 }
@@ -1039,13 +1046,13 @@ padding-bottom: 4px;
 }
 
 .scorecard-note {
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
   color: #666;
   font-weight: normal;
 }
 
 .scorecard-formula-note {
-  font-size: 0.8em;
+  font-size: var(--font-size-sm);
   color: #555;
   padding: 4px 8px 8px;
   font-style: italic;
@@ -1053,7 +1060,7 @@ padding-bottom: 4px;
 }
 
 .tooltip-weights-title {
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
   margin: 0.5em 0 0.25em;
   font-weight: 600;
 }
@@ -1061,7 +1068,7 @@ padding-bottom: 4px;
 .tooltip-content .tooltip-weights-list {
   margin: 0 0 0.5em;
   padding-left: 1.2em;
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
   line-height: 1.4;
 }
 
@@ -1075,7 +1082,7 @@ padding-bottom: 4px;
 .card-committees summary {
   cursor: pointer;
   font-weight: bold;
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
   padding: 6px 10px;
   color: #335;
   border-bottom: 1px solid #ccd;
@@ -1099,7 +1106,7 @@ padding-bottom: 4px;
 
 .committee-role-badge {
   display: inline-block;
-  font-size: 0.75em;
+  font-size: var(--font-size-xs);
   font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1138,31 +1145,31 @@ padding-bottom: 4px;
 }
 
 .committee-name {
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
 }
 
 .committee-power-note {
   margin: 2px 0 2px 0;
-  font-size: 0.82em;
+  font-size: var(--font-size-sm);
   color: #555;
   font-style: italic;
   padding-left: 4px;
 }
 
 .committee-stats {
-  font-size: 0.82em;
+  font-size: var(--font-size-sm);
   color: #445;
   padding-left: 4px;
   font-variant-numeric: tabular-nums;
 }
 
 .committee-members {
-  font-size: 0.88em;
+  font-size: var(--font-size-label);
 }
 
 .committee-member-list {
   color: #444;
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
 }
 
 /* ── Collapsible Voting Record inside cards ── */
@@ -1175,7 +1182,7 @@ padding-bottom: 4px;
 .card-voting-record summary {
   cursor: pointer;
   font-weight: bold;
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
   padding: 6px 10px;
   color: #335;
   border-bottom: 1px solid #ccd;
@@ -1200,7 +1207,7 @@ padding-bottom: 4px;
   align-items: baseline;
   gap: 8px;
   padding: 3px 0;
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
   border-bottom: 1px solid #eee;
 }
 
@@ -1238,7 +1245,7 @@ a.vote-bill:visited {
 
 .vote-indicator {
   font-weight: bold;
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
   text-transform: uppercase;
   letter-spacing: 0.03em;
   padding: 1px 6px;
@@ -1266,7 +1273,7 @@ a.vote-bill:visited {
 }
 
 .vote-outcome {
-  font-size: 0.8em;
+  font-size: var(--font-size-sm);
   white-space: nowrap;
   padding: 1px 5px;
 }
@@ -1289,7 +1296,7 @@ a.vote-bill:visited {
 }
 
 .vote-summary {
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
   color: #445;
   padding: 6px 0 2px;
   border-top: 1px solid #dde;
@@ -1309,7 +1316,7 @@ a.vote-bill:visited {
   padding: 6px 10px;
   background: #fff8e6;
   border-left: 3px solid #d4a017;
-  font-size: 0.88em;
+  font-size: var(--font-size-label);
   color: #665500;
 }
 
@@ -1323,7 +1330,7 @@ a.vote-bill:visited {
 }
 
 .influence-title {
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
   font-weight: bold;
   color: #353;
   margin: 0 0 6px 0;
@@ -1333,7 +1340,7 @@ a.vote-bill:visited {
   list-style: none;
   margin: 0;
   padding: 0;
-  font-size: 0.88em;
+  font-size: var(--font-size-label);
   line-height: 1.55;
 }
 
@@ -1349,11 +1356,10 @@ a.vote-bill:visited {
 
 .influence-detail {
   color: #556;
-  font-size: 0.92em;
+  font-size: var(--font-size-label);
 }
 
 .section-desc {
-  font-size: 0.9em;
   color: #666;
   margin-bottom: 4px;
   overflow-wrap: break-word;
@@ -1404,7 +1410,7 @@ a.vote-bill:visited {
 .how-it-works {
   border: 1px solid #ccd;
   background: #f8f9fc;
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
 }
 
 .how-it-works .hiw-title {
@@ -1431,7 +1437,7 @@ a.vote-bill:visited {
 
 .how-it-works-details summary.hiw-title::after {
   content: " \25bc";
-  font-size: 0.75em;
+  font-size: var(--font-size-xs);
   color: #668;
   margin-left: 4px;
 }
@@ -1448,7 +1454,7 @@ a.vote-bill:visited {
 .how-it-works .hiw-body dt {
   font-weight: bold;
   margin-top: 8px;
-  font-size: 0.95em;
+  font-size: var(--font-size-body);
 }
 
 .how-it-works .hiw-body dd {
@@ -1459,7 +1465,7 @@ a.vote-bill:visited {
   margin-top: 10px;
   padding-top: 8px;
   border-top: 1px solid #e0e2e8;
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
   color: #555;
 }
 
@@ -1476,7 +1482,7 @@ a.vote-bill:visited {
   width: 100%;
   border-collapse: collapse;
   margin-top: 4px;
-  font-size: 0.88em;
+  font-size: var(--font-size-label);
 }
 
 .how-it-works .formula-table th,
@@ -1492,7 +1498,7 @@ a.vote-bill:visited {
 
 /* ── Seed mode notice ── */
 .seed-notice {
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
   color: #665500;
   padding: 8px 12px;
   border: 1px solid #dd9;
@@ -1600,7 +1606,7 @@ a.vote-bill:visited {
   }
 
   .card h3.card-name {
-    font-size: 1.2rem;
+    font-size: var(--font-size-h2);
   }
 
   .card-name-meta {
@@ -1619,7 +1625,7 @@ a.vote-bill:visited {
 
   .card .card-bio-text,
   .card .why-picked-prose {
-    font-size: 1rem;
+    font-size: var(--font-size-base);
     line-height: 1.45;
   }
 

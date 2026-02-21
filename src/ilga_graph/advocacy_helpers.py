@@ -29,6 +29,18 @@ RECOMMENDATION_CHIP_PRIORITY: list[str] = [
 ]
 
 
+def party_abbr_for_member(member: Member | None) -> str:
+    """Single-letter party abbreviation (R, D, or first char) for display."""
+    if not member:
+        return ""
+    party = (member.party or "").lower()
+    if "republican" in party:
+        return "R"
+    if "democrat" in party:
+        return "D"
+    return (member.party or "")[:1]
+
+
 # ── State-taking helpers ──────────────────────────────────────────────────────
 
 
@@ -299,14 +311,7 @@ def member_to_card(
     if mb and chamber_size > 0:
         rank_percentile = round((1 - (mb.rank_chamber - 1) / chamber_size) * 100)
 
-    if "republican" in (member.party or "").lower():
-        party_abbr = "R"
-    elif "democrat" in (member.party or "").lower():
-        party_abbr = "D"
-    elif member.party:
-        party_abbr = member.party[:1]
-    else:
-        party_abbr = ""
+    party_abbr = party_abbr_for_member(member)
 
     active_count = 0
     for bid in member.sponsored_bill_ids or []:
