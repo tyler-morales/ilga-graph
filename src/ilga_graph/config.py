@@ -184,6 +184,13 @@ TEST_MEMBER_CHAMBER: str = _env("ILGA_TEST_MEMBER_CHAMBER", "Senate").strip() or
 CORS_ORIGINS: str = _env("ILGA_CORS_ORIGINS").strip()
 API_KEY: str = _env("ILGA_API_KEY").strip()
 
+# CSP: report-only by default; set ILGA_CSP_ENFORCE=1 to send enforcing header.
+CSP_ENFORCE: bool = _env("ILGA_CSP_ENFORCE", "0") == "1"
+# Optional endpoint for CSP violation reports (report-uri or report-to).
+CSP_REPORT_URI: str = _env("ILGA_CSP_REPORT_URI", "").strip()
+# HSTS: only set when site is fully served over HTTPS (e.g. behind TLS-terminating proxy).
+HSTS_ENABLED: bool = _env("ILGA_HSTS_ENABLED", "0") == "1"
+
 # ── Production guard: warn if CORS is wide-open or API_KEY is missing ────────
 if PROFILE == "prod":
     if CORS_ORIGINS in ("*", ""):
@@ -195,6 +202,11 @@ if PROFILE == "prod":
     if not API_KEY:
         LOGGER.warning(
             "ILGA_PROFILE=prod but ILGA_API_KEY is empty. GraphQL endpoint is unprotected."
+        )
+    if APP_BASE_URL.strip().lower().startswith("http://"):
+        LOGGER.warning(
+            "ILGA_APP_BASE_URL is not HTTPS; set it to your public https:// URL in production "
+            "for correct canonical, Open Graph, and cookie behavior."
         )
 
 # ── Auth + SMTP ──────────────────────────────────────────────────────────────

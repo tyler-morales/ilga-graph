@@ -6,11 +6,12 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import strawberry
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.staticfiles import StaticFiles as BaseStaticFiles
 from strawberry.fastapi import GraphQLRouter
 
 from . import config as cfg
@@ -41,8 +42,8 @@ from .routers.auth import router as _auth_router
 from .routers.bills import router as _bills_router
 from .routers.explore import router as _explore_router
 from .routers.feedback import router as _feedback_router
-from .routers.legal import router as _legal_router
 from .routers.intelligence import router as _intelligence_router
+from .routers.legal import router as _legal_router
 from .routers.outreach import router as _outreach_router
 from .run_log import append_startup_run, get_log_path, load_recent_runs
 from .schema import (
@@ -1532,7 +1533,18 @@ app = FastAPI(title="ILGA Graph", lifespan=lifespan)
 # ── Static files & Jinja2 templates ──────────────────────────────────────────
 _STATIC_DIR = Path(__file__).parent / "static"
 _TEMPLATE_DIR = Path(__file__).parent / "templates"
-app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
+
+
+class StaticFilesWithCache(BaseStaticFiles):
+    """StaticFiles that sets Cache-Control for repeat visits. Unversioned assets use 1h."""
+
+    async def get_response(self, path: str, scope: dict) -> Response:
+        response = await super().get_response(path, scope)
+        response.headers.setdefault("Cache-Control", "public, max-age=3600")
+        return response
+
+
+app.mount("/static", StaticFilesWithCache(directory=str(_STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
 
 # Dev bar is available when running in dev profile (never rendered in prod)
@@ -1548,6 +1560,45 @@ templates.env.globals["umami_website_id"] = cfg.UMAMI_WEBSITE_ID
 templates.env.globals["umami_script_url"] = cfg.UMAMI_SCRIPT_URL
 templates.env.globals["show_beta_banner"] = cfg.BETA_BANNER
 templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
+
+
+def _wants_html(request: Request) -> bool:
+    """True if the client prefers an HTML response (e.g. browser navigation)."""
+    accept = request.headers.get("accept", "")
+    return "text/html" in accept
+
+
+# ── Exception handlers (custom error pages + consistent JSON for API) ─────────
+async def _http_exception_handler(request: Request, exc: HTTPException) -> Response:
+    if _wants_html(request):
+        if exc.status_code == 404:
+            return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
+        if exc.status_code >= 500:
+            return templates.TemplateResponse(
+                "500.html", {"request": request}, status_code=exc.status_code
+            )
+    detail = exc.detail if isinstance(exc.detail, (str, dict, list)) else str(exc.detail)
+    return JSONResponse(status_code=exc.status_code, content={"detail": detail})
+
+
+async def _validation_exception_handler(request: Request, exc: RequestValidationError) -> Response:
+    if LOGGER.isEnabledFor(logging.DEBUG):
+        LOGGER.debug("Request validation failed: %s", exc.errors())
+    if _wants_html(request):
+        return templates.TemplateResponse("422.html", {"request": request}, status_code=422)
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
+
+async def _uncaught_exception_handler(request: Request, exc: Exception) -> Response:
+    LOGGER.exception("Uncaught exception while handling %s %s", request.method, request.url.path)
+    if _wants_html(request):
+        return templates.TemplateResponse("500.html", {"request": request}, status_code=500)
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
+
+app.add_exception_handler(HTTPException, _http_exception_handler)
+app.add_exception_handler(RequestValidationError, _validation_exception_handler)
+app.add_exception_handler(Exception, _uncaught_exception_handler)
 
 
 @app.get("/", include_in_schema=False)
@@ -1570,9 +1621,7 @@ _SITEMAP_PATHS = ("/", "/advocacy", "/intelligence", "/explore")
 def _sitemap_xml() -> Response:
     """Serve sitemap.xml for search engine discovery; URLs use APP_BASE_URL."""
     base = cfg.APP_BASE_URL
-    urls = "".join(
-        f"    <url><loc>{base}{path}</loc></url>\n" for path in _SITEMAP_PATHS
-    )
+    urls = "".join(f"    <url><loc>{base}{path}</loc></url>\n" for path in _SITEMAP_PATHS)
     xml = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
@@ -1585,11 +1634,7 @@ def _sitemap_xml() -> Response:
 @app.get("/robots.txt", include_in_schema=False)
 def _robots_txt() -> PlainTextResponse:
     """Serve robots.txt (allow all, point to sitemap)."""
-    body = (
-        "User-agent: *\n"
-        "Allow: /\n"
-        f"Sitemap: {cfg.APP_BASE_URL}/sitemap.xml\n"
-    )
+    body = f"User-agent: *\nAllow: /\nSitemap: {cfg.APP_BASE_URL}/sitemap.xml\n"
     return PlainTextResponse(content=body)
 
 
@@ -1666,6 +1711,26 @@ async def _csrf_cookie_middleware(request: Request, call_next) -> Response:  # t
 
 
 # ── Security headers middleware ──────────────────────────────────────────────
+def _build_csp_directive() -> str:
+    """Build CSP directive: self + trusted CDNs (HTMX, Tippy, Umami, Turnstile, D3)."""
+    script_src = (
+        "'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net "
+        "https://cloud.umami.is https://challenges.cloudflare.com https://d3js.org"
+    )
+    parts = [
+        "default-src 'self'",
+        f"script-src {script_src}",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data: https:",
+        "connect-src 'self' https://cloud.umami.is https://challenges.cloudflare.com",
+        "frame-src https://challenges.cloudflare.com",
+    ]
+    directive = "; ".join(parts)
+    if cfg.CSP_REPORT_URI:
+        directive += f"; report-uri {cfg.CSP_REPORT_URI}"
+    return directive
+
+
 @app.middleware("http")
 async def _security_headers_middleware(request: Request, call_next) -> Response:  # type: ignore[no-untyped-def]
     """Add security headers to every response."""
@@ -1674,6 +1739,13 @@ async def _security_headers_middleware(request: Request, call_next) -> Response:
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        csp = _build_csp_directive()
+        if cfg.CSP_ENFORCE:
+            response.headers["Content-Security-Policy"] = csp
+        else:
+            response.headers["Content-Security-Policy-Report-Only"] = csp
+        if cfg.PROFILE == "prod" and cfg.HSTS_ENABLED:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
 
@@ -1761,3 +1833,16 @@ app.include_router(_bills_router, prefix="/api")
 app.include_router(_explore_router)
 app.include_router(_intelligence_router, prefix="/intelligence")
 app.include_router(_outreach_router)
+
+
+# ── Catch-all for unmatched paths (Starlette does not invoke 404 handler) ─────
+@app.api_route(
+    "/{full_path:path}",
+    methods=["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"],
+    include_in_schema=False,
+)
+async def _catch_all_404(request: Request, full_path: str) -> Response:
+    """Return custom 404 page or JSON for any path that did not match a route."""
+    if _wants_html(request):
+        return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
+    return JSONResponse(status_code=404, content={"detail": "Not found"})

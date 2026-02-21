@@ -34,7 +34,7 @@ The app loads `.env` from the project root via `python-dotenv`. Copy `.env.examp
 | `ILGA_TEST_MEMBER_CHAMBER` | `Senate` | Chamber for the test member URL. |
 | `ILGA_CORS_ORIGINS` | *profile* | Comma-separated CORS origins. |
 | `ILGA_API_KEY` | *(empty)* | If set, non-exempt routes require `X-API-Key` header. |
-| `ILGA_APP_BASE_URL` | `http://127.0.0.1:8000` | Public URL of this app; used in the startup banner, logs, canonical URL, and Open Graph tags. **Required for share cards:** set in production to your public HTTPS URL (e.g. `https://landofkei.org`) so `og:image` is reachable by social crawlers; otherwise the default points to localhost and the image will be reported as invalid/unreachable. |
+| `ILGA_APP_BASE_URL` | `http://127.0.0.1:8000` | Public URL of this app; used in the startup banner, logs, canonical URL, and Open Graph tags. **Required for share cards:** set in production to your public HTTPS URL (e.g. `https://landofkei.org`) so `og:image` is reachable by social crawlers; otherwise the default points to localhost and the image will be reported as invalid/unreachable. In production the site should be served over HTTPS and this value **must** use `https://`. |
 | `ILGA_DOCS_BASE_URL` | *(empty)* | Optional docs site URL for the startup banner when different from the app. |
 | `ILGA_SITE_NAME` | `The Land of Kei` | Advocacy group / site brand used in the browser tab title, UI, footer, Open Graph and Twitter cards, and verification email subject. |
 | `ILGA_META_DESCRIPTION` | Cause-tailored default (advocate with The Land of Kei, Kei vehicle registration, 625 ILCS 5/3-401(c-1)) | Default meta description and OG/Twitter description. |
@@ -59,6 +59,9 @@ The app loads `.env` from the project root via `python-dotenv`. Copy `.env.examp
 | `ILGA_SMTP_PASS` | *(empty)* | SMTP key or password. |
 | `ILGA_SMTP_FROM` | *(empty)* | Sender address for verification emails. |
 | `ILGA_SMTP_TLS` | `1` | Use TLS (1) or not (0). |
+| `ILGA_CSP_REPORT_URI` | *(empty)* | Optional endpoint for CSP violation reports. When set, the CSP header includes `report-uri <value>`. Omit in dev to rely on console reporting. |
+| `ILGA_CSP_ENFORCE` | `0` | When `1`, the app sends **Content-Security-Policy** (enforcing). When `0` (default), it sends **Content-Security-Policy-Report-Only** so violations are reported but not blocked. Use report-only first, then switch to enforce once the policy is validated. |
+| `ILGA_HSTS_ENABLED` | `0` | When `1` (and `ILGA_PROFILE=prod`), the app sends `Strict-Transport-Security: max-age=31536000; includeSubDomains`. **Only enable when the entire site is served over HTTPS** (e.g. behind a reverse proxy that terminates TLS). Do not enable for local dev or HTTP-only deployments. |
 
 **Sitemap and robots:** The app serves `/sitemap.xml` (key pages: `/`, `/advocacy`, `/intelligence`, `/explore`) and `/robots.txt` (allow all, with a `Sitemap:` line). Both use `ILGA_APP_BASE_URL` for absolute URLs, so set it in production for correct discovery by search engines.
 
@@ -78,6 +81,8 @@ See `config.py` for the full registry and `get_client_features()`.
 ---
 
 ## Security (forms and submissions)
+
+**Headers:** The app sends `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and `Referrer-Policy: strict-origin-when-cross-origin`. It also sends a **Content-Security-Policy** (report-only by default; set `ILGA_CSP_ENFORCE=1` to enforce). The CSP allows scripts/styles from `'self'` and trusted CDNs: `unpkg.com`, `cdn.jsdelivr.net`, `cloud.umami.is`, `challenges.cloudflare.com`, `d3js.org`. Optional `ILGA_CSP_REPORT_URI` sends violation reports to your endpoint. For HTTPS-only deployments, set `ILGA_HSTS_ENABLED=1` to send HSTS (or configure HSTS in your reverse proxy). **HTTPS and base URL:** In production, serve the site over HTTPS and set `ILGA_APP_BASE_URL` to your public `https://` URL so cookies, canonical URLs, and share cards behave correctly; the app warns at startup if prod and base URL is not HTTPS.
 
 - **CSRF:** State-changing POSTs (bug report, auth request-code/verify-code, outreach record) require a valid CSRF token. The app sets an `XSRF-TOKEN` cookie (not HttpOnly) and expects the same value in the request body (`csrf_token`) so JS can send it with `fetch()`. Tokens are signed with `ILGA_AUTH_SECRET` and expire after 1 hour.
 - **Rate limiting:** Bug report, request-code, and verify-code are rate-limited per IP (and per email for request-code) to reduce spam and brute-force. Limits are configurable (see table above); storage is in-memory and resets on process restart.
