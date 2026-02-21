@@ -854,7 +854,15 @@
   }
 
   .hero-headline {
-    font-size: 1.4em;
+    font-size: 1.75rem;
+  }
+
+  .hero-eyebrow {
+    font-size: 0.875rem;
+  }
+
+  .hero-subhead {
+    font-size: 1.0625rem;
   }
 
   .hero-form {
@@ -989,17 +997,29 @@
 
 /* ── Responsive: phone ── */
 @media (max-width: 480px) {
+  .hero-inner {
+    max-width: 100%;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .hero-headline {
+    font-size: 1.875rem;
+    width: 100%;
+    line-height: 1.2;
+  }
+
+  .hero-eyebrow {
+    font-size: 0.9375rem;
+  }
+
   .hero-image {
     max-width: 100%;
     height: auto;
   }
 
-  .hero-headline {
-    font-size: 1.3em;
-  }
-
   .hero-subhead {
-    font-size: 1em;
+    font-size: 1.125rem;
     line-height: 1.5;
   }
 

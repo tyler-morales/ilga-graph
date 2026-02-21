@@ -58,6 +58,7 @@
 | 2026-02-20 | Automated deploy Vultr       | Push main → CI → SSH deploy; DEPLOY_HOST/USER/SSH_KEY. |
 | 2026-02-19 | Deployment prep              | Lint, Procfile, status-report, deployment.md, vultr-deployment-guide, startup banner URLs. |
 | 2026-02-20 | Mobile experience overhaul  | Typography: variables.css font-size tokens, :root 17px at 480px; base.css body/headings use tokens. Cards: rem-based mobile text, larger member photos (96/88px), 44px touch targets (card-details-toggle, beta-banner-dismiss). Drawer/email: larger drawer photo (80px), bumped smallest font sizes. Intelligence: responsive summary grid, .intel-table-scroll-wrap, font-size floor 0.8rem at 480px. Templates: explanation partial classes, predictions/bill inline font-sizes to rem. |
+| 2026-02-20 | Mobile typography scale-up   | variables.css: at 480px base 18px, h1 2rem, h2 1.375rem, body/label tokens. Hero: .hero-inner full-width on phone; .hero-headline 1.875rem (phone) / 1.75rem (tablet), eyebrow/subhead larger. base.css: explicit body/h1/h2/footer at 480px. advocacy-drawer.css: mobile labels 0.9375rem, panel title 1.2rem. Branch: feature/mobile-typography. |
 | 2026-02-20 | Moneyball help circle (mobile) | .moneyball-help no longer forced to 44px on mobile; stays content-sized (1.1em) so circle fits the "?" only. advocacy-cards.css. |
 | 2026-02-20 | Badges keyboard-accessible   | tabindex=0, role=button, aria-label; Tippy focus trigger; focus ring. |
 | 2026-02-19 | Accessibility pass           | Drawer role=dialog, focus trap, landmarks, role=alert/status. |

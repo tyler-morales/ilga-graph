@@ -2156,20 +2156,20 @@
 
     .chat-label,
     .drawer-contact-card-label {
-        font-size: 0.8rem;
+        font-size: 0.9375rem;
     }
 
     .chat-divider span {
-        font-size: 0.8rem;
+        font-size: 0.9375rem;
     }
 
     .drawer-interest-poll-bubble .chat-label {
-        font-size: 0.8rem;
+        font-size: 0.9375rem;
     }
 
     .phone-panel-title {
         padding: 16px 18px 10px;
-        font-size: 1.05em;
+        font-size: 1.2rem;
     }
 
     .phone-panel-body {

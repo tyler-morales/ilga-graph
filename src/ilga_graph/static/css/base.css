@@ -782,4 +782,25 @@ ML Intelligence Dashboard
   .container {
     padding: 12px 14px;
   }
+
+  body {
+    font-size: var(--font-size-base);
+  }
+
+  h1 {
+    font-size: var(--font-size-h1);
+  }
+
+  h2 {
+    font-size: var(--font-size-h2);
+  }
+
+  .footer,
+  .footer-disclaimer {
+    font-size: 0.9375rem;
+  }
+
+  .footer-disclaimer {
+    font-size: 0.875rem;
+  }
 }

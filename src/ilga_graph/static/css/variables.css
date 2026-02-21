@@ -69,8 +69,13 @@
   --color-hero-cta-focus-ring: #333;
 }
 
+/* Mobile: larger base and headings for readable touch-first typography (16px → 18px base, prominent h1/h2) */
 @media (max-width: 480px) {
   :root {
-    --font-size-base: 1.0625rem;
+    --font-size-base: 1.125rem;
+    --font-size-body: 1rem;
+    --font-size-label: 0.9375rem;
+    --font-size-h1: 2rem;
+    --font-size-h2: 1.375rem;
   }
 }
