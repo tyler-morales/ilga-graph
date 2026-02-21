@@ -1734,7 +1734,7 @@ def _favicon() -> FileResponse:
     return FileResponse(path, media_type="image/svg+xml")
 
 
-_SITEMAP_PATHS = ("/", "/advocacy", "/intelligence", "/explore")
+_SITEMAP_PATHS = ("/", "/advocacy", "/intelligence", "/explore", "/privacy", "/terms")
 
 
 @app.get("/sitemap.xml", include_in_schema=False)

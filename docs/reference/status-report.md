@@ -18,7 +18,7 @@ Snapshot of what’s broken, buggy, missing, and what to do before deployment.
 
 ## Broken / buggy
 
-- **Nothing known.** Lint passes; docs nav includes status-report and db-and-outreach. Tests pass; app starts. Routes are split into `routers/` (advocacy, intelligence, explore, auth, outreach); main.py mounts them and serves `/`, health, logs, dev, SHAP, GraphQL.
+- **Nothing known.** Lint passes; docs nav includes status-report and db-and-outreach. Tests pass; app starts. Routes are split into `routers/` (advocacy, intelligence, explore, auth, outreach, feedback, legal); main.py mounts them and serves `/`, health, favicon, sitemap.xml, robots.txt, logs, dev, SHAP, GraphQL. Custom error pages (404 with Kei facts, 422, 500) and a catch-all return HTML or JSON per `Accept`. Security headers (CSP report-only or enforce, optional HSTS) and static cache are configured in main.
 
 ---
 
@@ -63,6 +63,7 @@ Snapshot of what’s broken, buggy, missing, and what to do before deployment.
 - **Health:** `/health` returns counts and `ready`; exempt from API key.
 - **Auth/outreach:** `/auth`, `/outreach` exempt; DB created via `init_db()` on startup.
 - **SSR pages:** `/advocacy`, `/explore`, `/intelligence` exempt when `ILGA_API_KEY` is set.
+- **Legal:** `/privacy`, `/terms` and **SEO:** `/sitemap.xml`, `/robots.txt` exempt from API key.
 - **GraphQL:** `/graphql` correctly requires `X-API-Key` when `ILGA_API_KEY` is set.
 
 No open FIXME/TODO that clearly block deployment. Before go-live: set **env vars** (see checklist above), **populate cache/**, and use a **persistent data/** (and optionally cache/) volume on PaaS.
