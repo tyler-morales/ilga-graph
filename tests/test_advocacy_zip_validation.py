@@ -7,8 +7,6 @@ otherwise be reflected into page content (issue #22).
 
 from __future__ import annotations
 
-import re
-
 import pytest
 
 # Import the compiled pattern directly so we can test it in isolation without
@@ -30,15 +28,15 @@ class TestZipRegex:
         "bad_input",
         [
             "",
-            "6060",          # too short
-            "606011",        # too long
-            "60071fff",      # letters appended (from issue #22 example)
-            "<script>",      # script tag
-            "1234x",         # letter in zip
-            " 60601",        # leading space
-            "60601 ",        # trailing space
-            "abc12",         # letters
-            "12345\x00",     # null byte
+            "6060",  # too short
+            "606011",  # too long
+            "60071fff",  # letters appended (from issue #22 example)
+            "<script>",  # script tag
+            "1234x",  # letter in zip
+            " 60601",  # leading space
+            "60601 ",  # trailing space
+            "abc12",  # letters
+            "12345\x00",  # null byte
         ],
     )
     def test_invalid_inputs_rejected(self, bad_input: str) -> None:
