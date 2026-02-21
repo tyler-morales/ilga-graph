@@ -232,6 +232,7 @@ async def _build_search_results_context(
     }
 
 
+@router.get("")
 @router.get("/")
 async def advocacy_index(
     request: Request,

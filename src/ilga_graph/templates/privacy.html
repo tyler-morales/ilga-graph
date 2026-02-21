@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Privacy policy — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="legal-page">
+    <h1>Privacy policy</h1>
+    <p class="legal-page-intro">This policy describes what data we collect and how we use it.</p>
+
+    <section aria-labelledby="privacy-what-we-collect">
+        <h2 id="privacy-what-we-collect">What we collect</h2>
+        <ul>
+            <li><strong>Sign-in email.</strong> When you sign in with email, we store your email address to identify your account and send you a one-time verification code. We also store the time of your last sign-in. Verification codes are short-lived and discarded after use or expiry.</li>
+            <li><strong>Outreach you save.</strong> When you are signed in and record a call or email (e.g. via “I sent” or “End call”), we store the legislator you contacted, the type of contact (call, email, or no answer), your ZIP code, and any optional details you provide (outcome, notes, contact name, support rating, whether you are a constituent).</li>
+            <li><strong>Bug reports.</strong> If you submit a bug report, we store the description, any optional email you provide, the page URL you were on, and any screenshot you attach. The notification we receive (e.g. by email) also includes your IP address and browser information so we can respond and prevent abuse; that information is not stored in our database.</li>
+            <li><strong>Analytics.</strong> When analytics is enabled (in production), we use <a href="https://umami.is" target="_blank" rel="noopener noreferrer">Umami</a> to understand how the site is used. Umami may receive data such as page views, referring source, and device or browser type. Umami is cookie-free; data is processed by Umami’s infrastructure according to their practices.</li>
+            <li><strong>Local browser storage.</strong> We use browser session storage for preferences that stay on your device (e.g. whether you dismissed the beta notice). This data is not sent to our servers.</li>
+        </ul>
+    </section>
+
+    <section aria-labelledby="privacy-how-we-use">
+        <h2 id="privacy-how-we-use">How we use it</h2>
+        <ul>
+            <li>Your sign-in email and last sign-in time are used to identify you and to associate the outreach you choose to save (calls, emails, notes, ratings) with your account.</li>
+            <li>Bug report content, optional email, and the IP/browser information in the notification are used only to respond to your report and to prevent abuse.</li>
+            <li>Analytics data is used only to improve the site and understand usage patterns.</li>
+        </ul>
+    </section>
+
+    <section aria-labelledby="privacy-retention">
+        <h2 id="privacy-retention">Retention</h2>
+        <p>Verification codes expire quickly (within minutes). We retain account data, outreach you saved, and bug report data as needed to operate the service and until you ask us to delete it or as required by law. IP and browser information in bug report notifications are kept only as part of those notifications (e.g. in our inbox). Our servers may log requests (e.g. IP, time, URL) for security and operation; we do not use such logs to identify you except where needed for abuse prevention or law. Umami retains analytics data according to their plan (e.g. 6 months on the free tier).</p>
+    </section>
+
+    <section aria-labelledby="privacy-cookies">
+        <h2 id="privacy-cookies">Cookies</h2>
+        <p>We use two cookies: (1) a session cookie to keep you signed in, and (2) a security (CSRF) token cookie to protect forms and requests from cross-site forgery. We do not use first-party cookies for analytics; when Umami is enabled, it does not set cookies.</p>
+    </section>
+
+    <section aria-labelledby="privacy-contact">
+        <h2 id="privacy-contact">Contact</h2>
+        <p>For questions about this policy or to request deletion of your data, use the <a href="{{ beta_banner_feedback_url or '/report-bug' }}">Report a bug</a> link in the footer (or visit <a href="/report-bug">/report-bug</a>) and we’ll respond.</p>
+    </section>
+</div>
+{% endblock %}

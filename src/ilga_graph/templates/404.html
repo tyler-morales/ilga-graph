@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Page not found — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="error-page">
+    <h1 class="error-page-title">404 Error: Page not found</h1>
+    <p class="error-page-body">The page you’re looking for doesn’t exist or was moved.</p>
+    <div class="error-page-fact" aria-live="polite">
+        {% if kei_fact.image %}
+        <figure class="error-page-fact-figure">
+            <img src="{{ kei_fact.image }}" alt="{{ kei_fact.image_alt or 'Kei vehicle' }}" class="error-page-fact-img" width="320" height="240" loading="lazy" decoding="async">
+            {% if kei_fact.image_credit %}
+            <figcaption class="error-page-fact-credit">{{ kei_fact.image_credit }}</figcaption>
+            {% endif %}
+        </figure>
+        {% endif %}
+        <p class="error-page-fact-text"><strong>Fun fact:</strong> {{ kei_fact.text }}</p>
+    </div>
+    <p class="error-page-hint">
+        <button type="button" class="error-page-hint-btn" id="error-page-refresh-btn" aria-label="Refresh the page to see another fun fact about Kei vehicles.">
+            <span class="error-page-hint-refresh" aria-hidden="true"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></span> Refresh the page to see another fun fact about Kei vehicles.
+        </button>
+    </p>
+</div>
+<script>
+(function() {
+    var btn = document.getElementById('error-page-refresh-btn');
+    var icon = btn && btn.querySelector('.error-page-hint-refresh');
+    if (!btn || !icon) return;
+    btn.addEventListener('click', function() {
+        icon.classList.add('error-page-hint-refresh--spinning');
+        setTimeout(function() { window.location.reload(); }, 500);
+    });
+})();
+</script>
+{% endblock %}

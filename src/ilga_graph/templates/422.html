@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Invalid request — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="error-page">
+    <h1 class="error-page-title">Invalid request</h1>
+    <p class="error-page-body">Something was wrong with your request. Please check the form and try again.</p>
+    <nav class="error-page-links" aria-label="Navigation to get back on site">
+        <a href="/">Home</a>
+        <a href="/advocacy">Advocacy</a>
+    </nav>
+</div>
+{% endblock %}

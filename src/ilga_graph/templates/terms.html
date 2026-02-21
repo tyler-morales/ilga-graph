@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Terms of use — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="legal-page">
+    <h1>Terms of use</h1>
+    <p class="legal-page-intro">By using this site, you agree to the following terms.</p>
+
+    <section aria-labelledby="terms-disclaimer">
+        <h2 id="terms-disclaimer">Disclaimer</h2>
+        <p>Information on this site is for advocacy and educational purposes only. It is not legal advice. You are responsible for your own actions and for verifying any information before relying on it.</p>
+    </section>
+
+    <section aria-labelledby="terms-not-ilga">
+        <h2 id="terms-not-ilga">Not affiliated with the Illinois General Assembly</h2>
+        <p>This site is not operated by or affiliated with the Illinois General Assembly (ILGA). Data shown here is derived from public sources and may be delayed or incomplete. For official legislation and records, use <a href="https://ilga.gov" target="_blank" rel="noopener noreferrer">ilga.gov</a>.</p>
+    </section>
+
+    <section aria-labelledby="terms-acceptable-use">
+        <h2 id="terms-acceptable-use">Acceptable use</h2>
+        <p>You agree to use this site lawfully and in good faith. You must not:</p>
+        <ul>
+            <li>Use the site to harass, spam, or impersonate others.</li>
+            <li>Run automated scraping or bots in a way that overloads the service or violates these terms.</li>
+            <li>Attempt to gain unauthorized access to our systems or other users’ data.</li>
+        </ul>
+        <p>We may suspend or block access for violations.</p>
+    </section>
+
+    <section aria-labelledby="terms-changes">
+        <h2 id="terms-changes">Changes</h2>
+        <p>We may update these terms from time to time. The current version is always available on this page. Continued use of the site after changes constitutes acceptance of the updated terms.</p>
+    </section>
+</div>
+{% endblock %}

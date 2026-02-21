@@ -65,6 +65,211 @@ a:visited {
   margin: 12px 0;
 }
 
+/* Connection / offline error banner (site-wide; shown on HTMX or fetch failure) */
+.connection-error-banner {
+  display: none;
+  position: relative;
+  max-width: 1120px;
+  margin: 0 auto 10px auto;
+  padding: 10px 36px 10px 16px;
+  align-items: center;
+  justify-content: center;
+  background: #fff0f0;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  color: #991b1b;
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+}
+
+.connection-error-banner[aria-hidden="false"] {
+  display: flex;
+}
+
+.connection-error-banner-text {
+  flex: 1 1 auto;
+  text-align: center;
+}
+
+.connection-error-banner-dismiss {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: #991b1b;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.connection-error-banner-dismiss:hover {
+  background: #fecaca;
+  color: #7f1d1d;
+}
+
+.connection-error-banner-dismiss:focus-visible {
+  outline: 2px solid #b91c1c;
+  outline-offset: 2px;
+}
+
+.connection-error-banner.offline-indicator {
+  padding-right: 16px;
+}
+
+@media (max-width: 480px) {
+  .connection-error-banner {
+    padding-left: 14px;
+    padding-right: 44px;
+  }
+
+  .connection-error-banner.offline-indicator {
+    padding-right: 14px;
+  }
+
+  .connection-error-banner-dismiss {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    right: 0;
+  }
+}
+
+.error-page {
+  text-align: center;
+}
+
+.error-page-title {
+  font-size: var(--font-size-h1);
+  line-height: var(--line-height-tight);
+  margin-bottom: 0.75rem;
+}
+
+.error-page-body {
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  margin-bottom: 1.5rem;
+  color: var(--color-text-secondary, #555);
+}
+
+.error-page-fact {
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  margin-bottom: 1rem;
+  padding: 1rem 0;
+  max-width: 48rem;
+  margin-left: auto;
+  margin-right: auto;
+  color: var(--color-text, #222);
+}
+
+.error-page-fact-figure {
+  margin: 0 0 0.75rem 0;
+  text-align: center;
+}
+
+.error-page-fact-img {
+  display: block;
+  width: 100%;
+  max-width: 36rem;
+  height: auto;
+  margin-left: auto;
+  margin-right: auto;
+  border-radius: 8px;
+  vertical-align: middle;
+}
+
+.error-page-fact-img:focus {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.error-page-fact-credit {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary, #555);
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+  text-align: center;
+}
+
+.error-page-fact-text {
+  margin: 0;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.error-page-hint {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
+  color: var(--color-text-secondary, #555);
+}
+
+.error-page-hint-btn {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.error-page-hint-btn:hover {
+  text-decoration: underline;
+}
+
+.error-page-hint-btn:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.error-page-hint-refresh {
+  display: inline-block;
+  vertical-align: -0.2em;
+  margin-right: 0.35em;
+}
+
+.error-page-hint-refresh svg {
+  display: block;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .error-page-hint-refresh--spinning svg {
+    animation: error-page-refresh-spin 0.5s linear forwards;
+  }
+}
+
+@keyframes error-page-refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.error-page-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.error-page-links a {
+  font-size: var(--font-size-body);
+  text-decoration: underline;
+}
+
+.error-page-links a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
 .results-empty {
   color: #666;
   padding: 16px;
@@ -282,28 +487,63 @@ a:visited {
 /* ── Micro-interactions (confetti-like moments) ── */
 @media (prefers-reduced-motion: no-preference) {
   @keyframes micro-pop {
-    0% { transform: scale(1); }
-    45% { transform: scale(1.08); }
-    100% { transform: scale(1); }
+    0% {
+      transform: scale(1);
+    }
+
+    45% {
+      transform: scale(1.08);
+    }
+
+    100% {
+      transform: scale(1);
+    }
   }
+
   @keyframes micro-thunk {
-    0% { transform: scale(1); }
-    40% { transform: scale(0.97); }
-    100% { transform: scale(1); }
+    0% {
+      transform: scale(1);
+    }
+
+    40% {
+      transform: scale(0.97);
+    }
+
+    100% {
+      transform: scale(1);
+    }
   }
+
   @keyframes success-scale-in {
-    0% { opacity: 0; transform: scale(0.96); }
-    100% { opacity: 1; transform: scale(1); }
+    0% {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
+
   @keyframes success-shimmer {
-    0% { filter: brightness(1); }
-    25% { filter: brightness(1.15); }
-    100% { filter: brightness(1); }
+    0% {
+      filter: brightness(1);
+    }
+
+    25% {
+      filter: brightness(1.15);
+    }
+
+    100% {
+      filter: brightness(1);
+    }
   }
 
   .micro-pop {
     animation: micro-pop 0.4s ease-out;
   }
+
   .micro-thunk {
     animation: micro-thunk 0.15s ease-out;
   }
@@ -315,8 +555,38 @@ a:visited {
   margin: 0 auto;
 }
 
-.report-bug-page h1 {
+.report-bug-page h1,
+.legal-page h1 {
   margin-bottom: 0.25em;
+}
+
+.legal-page {
+  max-width: 32em;
+  margin: 0 auto;
+}
+
+.legal-page-intro {
+  color: #555;
+  margin-bottom: 1.5rem;
+}
+
+.legal-page section {
+  margin-bottom: 1.5rem;
+}
+
+.legal-page h2 {
+  font-size: var(--font-size-h2);
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.legal-page ul {
+  padding-left: 1.5em;
+  margin: 0.5em 0 1em;
+}
+
+.legal-page li {
+  margin-bottom: 0.35em;
 }
 
 .report-bug-intro {
@@ -513,7 +783,8 @@ a:visited {
   0% {
     left: 0;
     transform: translateY(-50%) scaleX(-1);
-    animation-timing-function: ease-out; /* decelerate into pickup */
+    animation-timing-function: ease-out;
+    /* decelerate into pickup */
   }
 
   32% {
@@ -525,7 +796,8 @@ a:visited {
   38% {
     left: 50%;
     transform: translate(-50%, -50%) scaleX(-1);
-    animation-timing-function: ease-in; /* accelerate away */
+    animation-timing-function: ease-in;
+    /* accelerate away */
   }
 
   100% {
