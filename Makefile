@@ -152,3 +152,6 @@ clean: ## Remove cache/, processed/, and generated vault files
 
 seed-outreach: ## Seed outreach DB: real backlog always; mock community data only when ILGA_PROFILE=dev. Dev uses data/ilga_dev.db, prod uses data/ilga.db.
 	$(PYTHON) scripts/seed_outreach.py
+
+clean-outreach-funky-mama-only: ## One-time: remove all outreach_events not from funky_mama11@gmail.com (dev fresh start). Uses ILGA_DB_PATH.
+	$(PYTHON) scripts/clean_outreach_funky_mama_only.py

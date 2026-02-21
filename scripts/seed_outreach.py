@@ -4,8 +4,8 @@
 - DB path: dev profile → data/ilga_dev.db (sandbox); prod → data/ilga.db (live).
   Set ILGA_PROFILE=dev or =prod (or use .env). Use the SAME profile as the app
   so the app and seed use the same DB; otherwise the heat pill will be empty.
-- Real data: always seeds backlog rows for funky_mama11@gmail.com (rep names → member_id
-  from cache + mocks merged). Only inserts events when the rep name resolves to a
+- Real data: seeds backlog by profile — prod → moratyle@gmail.com, dev → funky_mama11@gmail.com
+  (rep names → member_id from cache + mocks merged). Only inserts events when the rep name resolves to a
   canonical member id (no slug fallback), so the DB stays consistent with app state.
   Run seed after a scrape so member IDs match the app.
 - Mock data: only when ILGA_PROFILE=dev. Seeds advocate1–5@example.com with
@@ -336,7 +336,7 @@ async def _main() -> None:
     await init_db()
     print(f"Database: {DB_PATH} (ILGA_PROFILE={cfg.PROFILE})")
 
-    email = "funky_mama11@gmail.com"
+    email = "moratyle@gmail.com" if cfg.PROFILE == "prod" else "funky_mama11@gmail.com"
     async with async_session_factory() as session:
         r = await session.execute(select(User).where(User.email == email))
         user = r.scalar_one_or_none()
