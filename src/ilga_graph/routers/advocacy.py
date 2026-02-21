@@ -28,6 +28,7 @@ from ..member_lookup import (
     is_constituent_for_zip_member,
 )
 from ..routers.outreach import get_outreach_aggregate
+from ..security import validate_photo_url_for_drawer
 
 _ZIP_RE = re.compile(r"^\d{5}$")
 
@@ -363,6 +364,7 @@ async def advocacy_drawer(
     raw_zip = (request.query_params.get("zip") or "").strip()
     zip_code = raw_zip if _ZIP_RE.match(raw_zip) else ""
     photo_url_param = (request.query_params.get("photo_url") or "").strip()
+    photo_url_validated = validate_photo_url_for_drawer(photo_url_param or None)
     target_type_param = (request.query_params.get("target_type") or "").strip().upper()
     member_id_stripped = member_id.strip() if member_id else ""
     member = find_member_by_id(state, member_id_stripped) if member_id_stripped else None
@@ -444,7 +446,7 @@ async def advocacy_drawer(
             },
         )
 
-    photo_url = photo_url_param or (getattr(member, "photo_url", "") or "" if member else "")
+    photo_url = photo_url_validated or (getattr(member, "photo_url", "") or "" if member else "")
     if photo_url and not photo_url.startswith(("http://", "https://")):
         photo_url = urljoin("https://www.ilga.gov/", photo_url)
     member_public_email = (member.email or "").strip() if member else ""

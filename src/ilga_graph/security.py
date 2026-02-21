@@ -123,3 +123,33 @@ def validate_page_url(url: str | None) -> str | None:
         return None
     # Reject javascript:, data:, etc. (already blocked by http/https check)
     return u
+
+
+def validate_photo_url_for_drawer(url: str | None) -> str | None:
+    """Return a URL safe for use in <img src> in the advocacy drawer, or None.
+
+    Allows: empty, relative paths (leading /, no ".."), or absolute URLs under
+    ILGA_BASE_URL (https://www.ilga.gov/). Rejects protocol-relative (//),
+    javascript:, data:, and any other origin to prevent XSS or loading external
+    resources.
+    """
+    if not url or not url.strip():
+        return None
+    u = url.strip()
+    if len(u) > 2048:
+        return None
+    lower = u.lower()
+    if lower.startswith("//"):
+        return None
+    if lower.startswith(("javascript:", "data:", "vbscript:")):
+        return None
+    if u.startswith("/"):
+        if ".." in u:
+            return None
+        return u
+    base = cfg.BASE_URL.rstrip("/").lower()
+    if lower.startswith(base + "/") or lower == base or lower == base + "/":
+        return url
+    if lower.startswith("https://www.ilga.gov/") or lower == "https://www.ilga.gov":
+        return url
+    return None
