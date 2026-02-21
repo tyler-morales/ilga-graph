@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
@@ -281,7 +281,9 @@ async def advocacy_index(
 
 @router.get("/test")
 async def advocacy_test(request: Request):
-    """Dev back door: jump to any advocacy feature without clicking through."""
+    """Dev back door: jump to any advocacy feature. Only when DEV_MODE is on (local/dev)."""
+    if not DEV_MODE:
+        raise HTTPException(status_code=404, detail="Not found")
     test_members = ah.test_member_list(state)
     default_zip = "60601"
     return templates.TemplateResponse(

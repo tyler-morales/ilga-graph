@@ -11,7 +11,7 @@ from .. import config as cfg
 
 router = APIRouter()
 _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
-_SITEMAP_PATHS = ("/", "/advocacy", "/intelligence", "/explore", "/privacy", "/terms")
+_SITEMAP_PATHS = ("/", "/advocacy", "/intelligence/", "/explore", "/privacy", "/terms")
 
 
 @router.get("/", include_in_schema=False)
@@ -24,6 +24,12 @@ def root() -> RedirectResponse:
 def advocacy_trailing_slash_redirect() -> RedirectResponse:
     """Ensure /advocacy is served: mounted router receives path ''; redirect so child sees '/'."""
     return RedirectResponse(url="/advocacy/", status_code=302)
+
+
+@router.get("/intelligence", include_in_schema=False)
+def intelligence_trailing_slash_redirect() -> RedirectResponse:
+    """Redirect /intelligence → /intelligence/ so sitemap/bookmarks don't 404."""
+    return RedirectResponse(url="/intelligence/", status_code=302)
 
 
 @router.get("/favicon.ico", include_in_schema=False)
