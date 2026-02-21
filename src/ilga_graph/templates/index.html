@@ -60,6 +60,8 @@
                 var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
                 btn.addEventListener('click', function () {
                     if (reducedMotion) return;
+                    var form = btn.closest('form');
+                    if (form && !form.checkValidity()) return;
                     var rect = btn.getBoundingClientRect();
                     var origin = { x: (rect.left + rect.width / 2) / window.innerWidth, y: (rect.top + rect.height / 2) / window.innerHeight };
                     confetti({ origin: origin, spread: 100, startVelocity: 28, particleCount: 80, colors: ['#f59e0b', '#fcd34d', '#fde68a', '#fef3c7', '#b45309', '#92400e'] });
