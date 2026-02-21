@@ -120,6 +120,7 @@
 
 | Topic                          | Summary |
 |--------------------------------|--------|
+| Code cleanup (main.py)         | Removed dead `_load_stale_cache_fallback` (lifespan uses `etl.load_stale_cache_fallback`). Removed unused `get_bill_status_urls` re-export and wrong comment (scripts don't import from main). Dropped unused imports: `ILGAScraper`, `load_bill_cache`. Query.bills() now uses `safe_parse_date` directly; kept `_parse_bill_date`/`_safe_parse_date` aliases for tests. |
 | Branch reconciliation (prod-improvements) | API key: added /privacy and /terms to exempt set so legal pages are public when ILGA_API_KEY is set. Sitemap: added /privacy and /terms to _SITEMAP_PATHS. status-report.md: routes list now includes feedback + legal; notes custom error pages, catch-all 404, CSP/HSTS, static cache; Legal and SEO paths documented as API-key exempt. CTA kept as "Start Outreaching" per product choice. |
 | Advocacy/router cleanup        | `member_lookup.is_constituent_for_zip_member(state, zip_code, member)`; `advocacy_helpers.party_abbr_for_member(member)`; shared `_hero_context()` in advocacy router. Replaced 4× is_constituent blocks, 3× party_abbr blocks, 2× hero dicts; explore uses party_abbr_for_member. |
 | Pre-push cleanup               | Removed leftover hero-image debug instrumentation (fetch to localhost:7246/ingest) from index.html; tests 303 pass, lint clean. |

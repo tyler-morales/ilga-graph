@@ -29,7 +29,6 @@ from .constants import CATEGORY_COMMITTEES
 from .date_parse import parse_bill_date, safe_parse_date
 from .etl import (
     ScrapedData,
-    _link_members_to_bills,
     compute_analytics,
     export_vault,
     load_from_cache,
@@ -75,8 +74,6 @@ from .schema import (
     WitnessSlipType,
     paginate,
 )
-from .scraper import ILGAScraper
-from .scrapers.bills import load_bill_cache
 from .search import EntityType as SearchEntityTypeEnum
 from .search import search_all
 from .seating import process_seating
@@ -94,7 +91,7 @@ from .voting_record import (
 )
 from .zip_crosswalk import load_zip_crosswalk
 
-# Backward compat for tests
+# Backward compat for tests (test_main, test_api)
 _parse_bill_date = parse_bill_date
 _safe_parse_date = safe_parse_date
 
@@ -107,10 +104,6 @@ logging.basicConfig(
     force=True,
 )
 LOGGER = logging.getLogger(__name__)
-
-# Re-export for backward compatibility (scripts/scrape.py imports from here)
-get_bill_status_urls = cfg.get_bill_status_urls
-
 
 # ── Startup timing log & summary table ──────────────────────────────────────
 
@@ -144,50 +137,6 @@ def _collect_unique_bills_by_number(bills_lookup: dict[str, Bill]) -> dict[str, 
         if b.bill_number not in unique:
             unique[b.bill_number] = b
     return unique
-
-
-def _load_stale_cache_fallback() -> ScrapedData:
-    """Best-effort fallback: load whatever JSON caches exist on disk.
-
-    Used when the primary ETL scrape fails so the app can serve stale data
-    instead of starting completely empty.  Raises if no usable cache is found.
-    """
-    scraper = ILGAScraper(request_delay=0, seed_fallback=SEED_MODE)
-
-    # Members + bills (normalized cache)
-    from .scraper import load_normalized_cache  # local to avoid circular at top-level
-
-    normalized = load_normalized_cache(seed_fallback=SEED_MODE)
-    if normalized is not None:
-        members, bills_lookup = normalized
-    else:
-        members = []
-        bills_lookup = {}
-
-    # Bills cache (independent of member cache)
-    if not bills_lookup:
-        bills_lookup = load_bill_cache(seed_fallback=SEED_MODE) or {}
-
-    # Committees (best-effort)
-    try:
-        committees, committee_rosters, committee_bills = scraper.fetch_all_committees()
-    except Exception:
-        LOGGER.warning("Committee cache also unavailable.")
-        committees, committee_rosters, committee_bills = [], {}, {}
-
-    if not members and not bills_lookup:
-        raise RuntimeError("No usable cache data found for stale-cache fallback.")
-
-    # Re-link members to bills
-    _link_members_to_bills(members, bills_lookup)
-
-    return ScrapedData(
-        members=members,
-        bills_lookup=bills_lookup,
-        committees=committees,
-        committee_rosters=committee_rosters,
-        committee_bills=committee_bills,
-    )
 
 
 @asynccontextmanager
@@ -871,11 +820,11 @@ class Query:
 
         # ── date filtering (with safe parsing) ──
         if date_from is not None:
-            from_dt = _safe_parse_date(date_from, "dateFrom")
+            from_dt = safe_parse_date(date_from, "dateFrom")
             if from_dt is not None:
                 result = [b for b in result if parse_bill_date(b.last_action_date) >= from_dt]
         if date_to is not None:
-            to_dt = _safe_parse_date(date_to, "dateTo")
+            to_dt = safe_parse_date(date_to, "dateTo")
             if to_dt is not None:
                 result = [b for b in result if parse_bill_date(b.last_action_date) <= to_dt]
 
