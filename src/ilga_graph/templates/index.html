@@ -8,7 +8,7 @@
 <div class="advocacy-hero">
     <div class="hero-inner">
         <p class="hero-eyebrow">Take action</p>
-        <h1 class="hero-headline">{% if hero_headline_line1 and hero_headline_line2 %}{{ hero_headline_line1 }}<br>{% if hero_headline_highlight %}{{ hero_headline_line2_prefix|default('') }}<span class="hero-headline-mark" aria-hidden="true">{{ hero_headline_highlight }}</span>{{ hero_headline_line2_suffix|default('') }}{% else %}{{ hero_headline_line2 }}{% endif %}{% else %}{{ hero_headline or title }}{% endif %}</h1>
+        <h1 class="hero-headline">{% if hero_headline_line1 and hero_headline_line2 %}{% if hero_headline_line1_highlight %}{{ hero_headline_line1_prefix|default('') }}<span class="hero-headline-sharpie-wrap"><img src="/static/images/sharpie.png" alt="" class="hero-headline-sharpie" aria-hidden="true" width="120" height="120"><span class="hero-headline-sharpie-text">{{ hero_headline_line1_highlight }}</span></span>{{ hero_headline_line1_suffix|default('') }}{% else %}{{ hero_headline_line1 }}{% endif %}<br>{% if hero_headline_highlight %}{{ hero_headline_line2_prefix|default('') }}<span class="hero-headline-mark" aria-hidden="true">{{ hero_headline_highlight }}</span>{{ hero_headline_line2_suffix|default('') }}{% else %}{{ hero_headline_line2 }}{% endif %}{% else %}{{ hero_headline or title }}{% endif %}</h1>
         <div class="hero-split">
             <div class="hero-image-wrap">
                 <img src="/static/images/truck-hero.jpg" alt="White Kei truck on city street" class="hero-image"
@@ -56,6 +56,22 @@
                 </div>
             </div>
         </div>
+        <script>
+        (function() {
+            var btn = document.getElementById('find-btn');
+            if (!btn || typeof confetti !== 'function') return;
+            var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            btn.addEventListener('click', function() {
+                if (reducedMotion) return;
+                var rect = btn.getBoundingClientRect();
+                var origin = { x: (rect.left + rect.width / 2) / window.innerWidth, y: (rect.top + rect.height / 2) / window.innerHeight };
+                confetti({ origin: origin, spread: 100, startVelocity: 28, particleCount: 80, colors: ['#f59e0b', '#fcd34d', '#fde68a', '#fef3c7', '#b45309', '#92400e'] });
+                setTimeout(function() {
+                    confetti({ origin: origin, spread: 70, startVelocity: 25, particleCount: 50, scalar: 1.1, colors: ['#f59e0b', '#fcd34d', '#b45309'] });
+                }, 150);
+            });
+        })();
+        </script>
         <div class="hero-trust-badges" role="list" aria-label="Why take action">
             <span role="listitem"><span aria-hidden="true">⏱</span> Takes 1 Minute</span>
             <span role="listitem"><span aria-hidden="true">📜</span> Scripts Provided</span>
@@ -99,7 +115,6 @@
         </div>
     </div>
 </div>
-
 <div id="results" role="region" aria-label="Search results" {% if your_legislators is defined %}
     data-has-initial-results="true" {% endif %}>
     {% if error and your_legislators is not defined %}<div class="error-msg" role="alert">{{ error }}</div>{% endif %}
@@ -425,7 +440,7 @@
     }
 
     /* ── Advocacy drawer: Call (script + after-call form) or Email (template + copy/mailto) ── */
-    var DRAWER_CLOSE_MS = 520;
+    var DRAWER_CLOSE_MS = 300;
     function openAdvocacyDrawer(view, memberId, zipCode, photoUrl, targetType) {
         var drawer = document.getElementById('advocacy-drawer');
         var body = document.getElementById('advocacy-drawer-body');
