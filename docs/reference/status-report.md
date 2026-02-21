@@ -45,7 +45,7 @@ Snapshot of what’s broken, buggy, missing, and what to do before deployment.
 5. Populate **cache/** (or `ILGA_CACHE_DIR`) with full or seed data (e.g. run `make scrape` locally, then upload or rsync to the server / persistent volume).
 6. Ensure **data/** (or `ILGA_DB_PATH`’s directory) is writable and, on PaaS, on a **persistent volume**.
 7. Configure **SMTP** if you want email verification for advocates (otherwise codes are console-only).
-8. Use **HTTPS** in production (reverse proxy or platform-managed TLS).
+8. Use **HTTPS** in production (reverse proxy or platform-managed TLS) and set **`ILGA_APP_BASE_URL`** to your public **https://** URL.
 
 ### 3. Platform-specific
 

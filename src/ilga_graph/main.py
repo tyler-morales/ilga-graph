@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import random
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -1568,11 +1569,124 @@ def _wants_html(request: Request) -> bool:
     return "text/html" in accept
 
 
+# Fun facts about Kei (軽) vehicles for the 404 page; one is chosen at random per request.
+# Each fact is a dict: "text", and optionally "image" (URL), "image_alt", "image_credit" (a11y).
+KEI_VEHICLE_FACTS: tuple[dict[str, str | None], ...] = (
+    {
+        "text": (
+            "The 1999 generation of the Suzuki Carry introduced modern safety standards "
+            "into the micro-truck class, including designated crumple zones, making them "
+            "vastly safer than many older UTVs currently allowed on US roads."
+        ),
+        "image": "https://commons.wikimedia.org/wiki/Special:FilePath/1999_Suzuki_Carry_1.3.jpg",
+        "image_alt": "White 1999 Suzuki Carry truck.",
+        "image_credit": "Rutger van der Maar, CC BY 2.0, Wikimedia Commons",
+    },
+    {
+        "text": (
+            "Because of their mid-engine layout, trucks like the Honda Acty have a "
+            "remarkably low center of gravity, which prevents the massive rollover risk "
+            "associated with modern lifted US pickup trucks."
+        ),
+        "image": "https://commons.wikimedia.org/wiki/Special:FilePath/1999-present_Honda_Acty_(rear).jpg",
+        "image_alt": "Rear angle of a white Honda Acty truck showing its low center of gravity.",
+        "image_credit": "Niels de Wit, CC BY 2.0, Wikimedia Commons",
+    },
+    {
+        "text": (
+            "Despite their small 660cc engines, models like the Subaru Sambar are "
+            "engineered to travel on Japanese expressways and can comfortably cruise at "
+            "55 mph, easily handling local US traffic."
+        ),
+        "image": "https://commons.wikimedia.org/wiki/Special:FilePath/Subaru_SAMBAR_TRUCK_TA_(3BA-S510J).jpg",
+        "image_alt": "Subaru Sambar Truck parked on a street.",
+        "image_credit": "Tokumeigakarinoaoshima, CC0, Wikimedia Commons",
+    },
+    {
+        "text": (
+            "A standard Mitsubishi Minicab weighs around 1,500 pounds but has a legal "
+            "payload capacity of 350 kg (771 lbs), meaning it can safely haul half its "
+            "own weight without destroying municipal road infrastructure."
+        ),
+        "image": "https://commons.wikimedia.org/wiki/Special:FilePath/Mitsubishi_MINICAB_TRUCK_M_(DS16T)_front.JPG",
+        "image_alt": "Front view of a white Mitsubishi Minicab Truck.",
+        "image_credit": "Tokumeigakarinoaoshima, CC0, Wikimedia Commons",
+    },
+    {
+        "text": (
+            "Being only 4.2 feet wide, single-seater Kei trucks like the Daihatsu Midget II "
+            "take up significantly less space, making them incredibly safe for pedestrians "
+            "and cyclists in dense urban residential neighborhoods."
+        ),
+        "image": "https://commons.wikimedia.org/wiki/Special:FilePath/Daihatsu_Midget_II_(8101380599).jpg",
+        "image_alt": "Green Daihatsu Midget II single-seater micro truck parked in a city.",
+        "image_credit": "dave_7, CC BY 2.0, Wikimedia Commons",
+    },
+    {
+        "text": (
+            "Far from being unregulated, Kei engineering is perfectly legal in highly "
+            "regulated regions with lower roadway fatality rates than the US. The Piaggio "
+            "Porter is actually a European-built, street-legal version of the Daihatsu Hijet."
+        ),
+        "image": "https://commons.wikimedia.org/wiki/Special:FilePath/Piaggio_Porter_(31945694857).jpg",
+        "image_alt": "Piaggio Porter (European Daihatsu Hijet variant) parked outdoors.",
+        "image_credit": "Guillaume Vachey, CC0, Wikimedia Commons",
+    },
+    {
+        "text": (
+            "Because imported 25-year-old Kei trucks like the Honda Acty must have passed "
+            "Japan's notoriously strict 'Shaken' inspections every two years, they arrive "
+            "in the US meticulously maintained."
+        ),
+        "image": "https://commons.wikimedia.org/wiki/Special:FilePath/Honda_Acty,_EMS_2023,_Essen_(P1160528).jpg",
+        "image_alt": "A heavily customized and well-maintained Honda Acty at an auto show.",
+        "image_credit": "Matti Blume, CC BY-SA 4.0, Wikimedia Commons",
+    },
+    {
+        "text": (
+            "Across the US, 6th generation Mitsubishi Minicabs and similar Kei trucks are "
+            "heavily utilized by universities and state parks for groundskeeping because "
+            "they are fully enclosed, street-capable, and more robust than unregulated "
+            "golf carts."
+        ),
+        "image": "https://commons.wikimedia.org/wiki/Special:FilePath/Mitsubishi_Minicab_truck_(sixth_generation).JPG",
+        "image_alt": "Sixth-generation Mitsubishi Minicab utility truck.",
+        "image_credit": "Tokumeigakarinoaoshima, CC0, Wikimedia Commons",
+    },
+    {
+        "text": (
+            "Thanks to their lightweight construction and small-displacement engines, "
+            "vehicles like the Daihatsu Hijet typically achieve an average of 40 to 50 "
+            "miles per gallon (mpg), offering a highly fuel-efficient and environmentally "
+            "friendly alternative to full-size delivery vans."
+        ),
+        "image": "https://commons.wikimedia.org/wiki/Special:FilePath/Daihatsu_HiJet_(4500946659).jpg",
+        "image_alt": "Daihatsu Hijet microvan parked.",
+        "image_credit": "Brian Snelson, CC BY 2.0, Wikimedia Commons",
+    },
+    {
+        "text": (
+            "Most Kei-class 4x4s, such as the Suzuki Jimny, feature push-button 4WD, "
+            "differential locks, and ultra-low crawler gears, making them exceptionally "
+            "capable and safe in snow and rural mud."
+        ),
+        "image": "https://commons.wikimedia.org/wiki/Special:FilePath/Suzuki_Jimny_2018_(04).jpg",
+        "image_alt": "Modern Suzuki Jimny 4x4 off-road vehicle.",
+        "image_credit": "Ery, CC BY-SA 4.0, Wikimedia Commons",
+    },
+)
+
+
+def _404_context(request: Request) -> dict:
+    """Context for the 404 template: request plus a random Kei vehicle fact."""
+    return {"request": request, "kei_fact": random.choice(KEI_VEHICLE_FACTS)}
+
+
 # ── Exception handlers (custom error pages + consistent JSON for API) ─────────
 async def _http_exception_handler(request: Request, exc: HTTPException) -> Response:
     if _wants_html(request):
         if exc.status_code == 404:
-            return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
+            return templates.TemplateResponse("404.html", _404_context(request), status_code=404)
         if exc.status_code >= 500:
             return templates.TemplateResponse(
                 "500.html", {"request": request}, status_code=exc.status_code
@@ -1605,6 +1719,12 @@ app.add_exception_handler(Exception, _uncaught_exception_handler)
 def _root() -> RedirectResponse:
     """Redirect root to the advocacy page."""
     return RedirectResponse(url="/advocacy", status_code=302)
+
+
+@app.get("/advocacy", include_in_schema=False)
+def _advocacy_trailing_slash_redirect() -> RedirectResponse:
+    """Ensure /advocacy is served: mounted router receives path ''; redirect so child sees '/'."""
+    return RedirectResponse(url="/advocacy/", status_code=302)
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -1666,6 +1786,8 @@ async def _api_key_middleware(request: Request, call_next) -> Response:  # type:
             "/favicon.ico",
             "/sitemap.xml",
             "/robots.txt",
+            "/privacy",
+            "/terms",
         }
         path = request.url.path
         if (
@@ -1844,5 +1966,5 @@ app.include_router(_outreach_router)
 async def _catch_all_404(request: Request, full_path: str) -> Response:
     """Return custom 404 page or JSON for any path that did not match a route."""
     if _wants_html(request):
-        return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
+        return templates.TemplateResponse("404.html", _404_context(request), status_code=404)
     return JSONResponse(status_code=404, content={"detail": "Not found"})

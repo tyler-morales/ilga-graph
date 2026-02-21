@@ -81,6 +81,56 @@
         })();
     </script>
     {% endif %}
+    <div id="connection-error-banner" class="connection-error-banner" role="alert" aria-live="polite" aria-hidden="true" hidden>
+        <span class="connection-error-banner-text">We're having trouble. Check your connection and try again.</span>
+        <button type="button" class="connection-error-banner-dismiss" id="connection-error-banner-dismiss" aria-label="Dismiss">×</button>
+    </div>
+    <div id="offline-indicator" class="connection-error-banner offline-indicator" role="status" aria-live="polite" aria-hidden="true" hidden>
+        <span class="connection-error-banner-text">You're offline.</span>
+    </div>
+    <script>
+        (function () {
+            var banner = document.getElementById('connection-error-banner');
+            var dismiss = document.getElementById('connection-error-banner-dismiss');
+            var offlineEl = document.getElementById('offline-indicator');
+            if (!banner) return;
+
+            function showConnectionError() {
+                banner.removeAttribute('hidden');
+                banner.setAttribute('aria-hidden', 'false');
+            }
+
+            function hideConnectionError() {
+                banner.setAttribute('hidden', '');
+                banner.setAttribute('aria-hidden', 'true');
+            }
+
+            if (dismiss) {
+                dismiss.addEventListener('click', hideConnectionError);
+            }
+
+            if (typeof htmx !== 'undefined') {
+                document.body.addEventListener('htmx:responseError', showConnectionError);
+                document.body.addEventListener('htmx:sendError', showConnectionError);
+            }
+
+            window.showConnectionError = showConnectionError;
+
+            if (offlineEl && typeof navigator !== 'undefined' && 'onLine' in navigator) {
+                function showOffline() {
+                    offlineEl.removeAttribute('hidden');
+                    offlineEl.setAttribute('aria-hidden', 'false');
+                }
+                function hideOffline() {
+                    offlineEl.setAttribute('hidden', '');
+                    offlineEl.setAttribute('aria-hidden', 'true');
+                }
+                window.addEventListener('offline', showOffline);
+                window.addEventListener('online', hideOffline);
+                if (!navigator.onLine) showOffline();
+            }
+        })();
+    </script>
     <div class="container">
         <main id="main-content" role="main">
             {% block content %}{% endblock %}
