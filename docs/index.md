@@ -29,6 +29,7 @@ Documentation for the **ILGA Graph** proof-of-concept: Illinois General Assembly
 ## Development & internals
 
 - [**Dev Bar — How it works**](development/advocacy-test-mode-internals.md) — URL contract, config guard, backend injection, template rendering, client-side persistence.
+- [**Component playground**](development/component-playground.md) — Dev-only `/dev/playground` to isolate UI components (truck animation, drawer, etc.); how to add scenes.
 - [**Bills-first pipeline testing**](BILLS_FIRST_TESTING.md) — What to expect after scrape + export; GraphQL queries to test the server.
 
 ---
@@ -40,6 +41,7 @@ Documentation for the **ILGA Graph** proof-of-concept: Illinois General Assembly
 | Advocacy (main flow) | `/advocacy` |
 | Dev Bar (activate on any page) | Any URL + `?dev` |
 | Test page (dev jump links) | `/advocacy/test` |
+| Component playground (dev) | `/dev/playground` |
 | Power Map (graph) | `/explore` |
 | ML Intelligence | `/intelligence` |
 | GraphQL playground | `/graphql` |

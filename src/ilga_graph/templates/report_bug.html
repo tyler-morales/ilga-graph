@@ -12,14 +12,7 @@
     </div>
     {% else %}
     <div class="report-bug-sending" id="report-bug-sending" aria-live="polite" aria-busy="false" hidden>
-        <div class="report-bug-truck-wrap" aria-hidden="true">
-            <div class="report-bug-truck-track">
-                <span class="report-bug-truck-path" aria-hidden="true"></span>
-                <span class="report-bug-bug" aria-hidden="true">🐛</span>
-                <span class="report-bug-truck">🚚</span>
-            </div>
-        </div>
-        <p class="report-bug-sending-status" id="report-bug-sending-status">Sending…</p>
+        {% include "_report_bug_truck.html" %}
     </div>
     <div class="report-bug-form-section" id="report-bug-form-section">
     <p class="report-bug-submit-error" id="report-bug-submit-error" role="alert" hidden></p>

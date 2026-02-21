@@ -1,0 +1,34 @@
+{# Playground scene: truck animation with a Run button so the animation can be triggered without submitting the form. #}
+<div class="dev-playground-scene-truck" data-playground-trigger="truck">
+    <p class="dev-playground-scene-hint">Click the button to run the report-bug truck animation.</p>
+    <button type="button" class="dev-playground-trigger-btn" id="playground-truck-trigger" aria-controls="playground-report-bug-sending">Run truck animation</button>
+    <div class="report-bug-sending" id="playground-report-bug-sending" aria-live="polite" aria-busy="false" hidden>
+        {% include "_report_bug_truck.html" %}
+    </div>
+</div>
+<script>
+(function() {
+    var btn = document.getElementById('playground-truck-trigger');
+    var sending = document.getElementById('playground-report-bug-sending');
+    var statusEl = sending && sending.querySelector('.report-bug-sending-status');
+    if (!btn || !sending) return;
+    var TRUCK_DURATION_MS = 3500;
+    var statusSteps = ['Sending…', 'Picking up bug', 'Sent!'];
+    var statusAtPickupMs = 1100;
+    var statusAtSentMs = 2800;
+    btn.addEventListener('click', function() {
+        sending.hidden = false;
+        sending.classList.add('is-sending');
+        sending.setAttribute('aria-busy', 'true');
+        if (statusEl) statusEl.textContent = statusSteps[0];
+        setTimeout(function() { if (statusEl) statusEl.textContent = statusSteps[1]; }, statusAtPickupMs);
+        setTimeout(function() { if (statusEl) statusEl.textContent = statusSteps[2]; }, statusAtSentMs);
+        setTimeout(function() {
+            sending.classList.remove('is-sending');
+            sending.hidden = true;
+            sending.setAttribute('aria-busy', 'false');
+            if (statusEl) statusEl.textContent = statusSteps[0];
+        }, TRUCK_DURATION_MS + 400);
+    });
+})();
+</script>

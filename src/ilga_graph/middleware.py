@@ -76,6 +76,7 @@ def register_middleware(app: FastAPI) -> None:
                 and not path.startswith("/intelligence")
                 and not path.startswith("/api/graph")
                 and not path.startswith("/api/dev")
+                and not path.startswith("/dev")
                 and not path.startswith("/static")
                 and request.method != "OPTIONS"
             ):
