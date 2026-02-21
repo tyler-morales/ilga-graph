@@ -252,7 +252,7 @@
                 var devZipEl = document.getElementById('dev-zip');
                 var lastZip = sessionStorage.getItem('__ilga_dev_zip');
                 if (lastZip) devZipEl.value = lastZip;
-                else if (params.get('zip')) devZipEl.value = params.get('zip');
+                else if (/^\d{5}$/.test(params.get('zip'))) devZipEl.value = params.get('zip');
                 // Sync dev bar ZIP to hero and auto-run search so members show without clicking
                 var heroZip = document.getElementById('zip_code');
                 var zipToUse = devZipEl.value || (heroZip && heroZip.value) || '60601';
@@ -311,7 +311,7 @@
                     sessionStorage.setItem('__ilga_dev_member', sel.value);
                 });
                 var urlZip = params.get('zip');
-                if (urlZip) document.getElementById('dev-zip').value = urlZip;
+                if (/^\d{5}$/.test(urlZip)) document.getElementById('dev-zip').value = urlZip;
             }
 
             window.__devBar = {
@@ -390,7 +390,8 @@
                 var autoMember = params.get('member_id') || sessionStorage.getItem('__ilga_dev_member');
                 var drawerWasOpen = sessionStorage.getItem('__ilga_dev_drawer_open') === '1';
                 if (autoView && autoMember && (params.get('view') || drawerWasOpen)) {
-                    var autoZip = params.get('zip') || sessionStorage.getItem('__ilga_dev_zip') || '60601';
+                    var rawAutoZip = params.get('zip');
+                    var autoZip = (/^\d{5}$/.test(rawAutoZip) ? rawAutoZip : null) || sessionStorage.getItem('__ilga_dev_zip') || '60601';
                     window.addEventListener('DOMContentLoaded', function () {
                         setTimeout(function () {
                             if (typeof openAdvocacyDrawer === 'function') {
