@@ -568,6 +568,14 @@
   color: #555;
 }
 
+.hero-signin-dev-hint {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-label);
+  color: var(--color-muted, #555);
+  margin: 6px 0 0;
+  width: 100%;
+}
+
 .hero-signin-code-row {
   display: flex;
   align-items: stretch;
