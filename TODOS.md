@@ -27,6 +27,15 @@
 
 | Date       | Area                         | Summary |
 |------------|------------------------------|--------|
+| 2026-02-20 | Truck animation → bug report | Removed all ZIP/member-cards loading behavior; HTMX direct swap. Bug report: truck + status during submit via fetch; success page (?submitted=1) is green box only, no truck. Fix: server responds in &lt;20ms so redirect was at 600ms—animation never visible. Now 3.5s truck animation with dashed horizontal path; truck drives left → stops at center ("Picking up bug") → drives to end ("Sent!"); 🐛 at center fades when truck stops (picked up). Status steps: "Sending…" → "Picking up bug" (1.1s) → "Sent!" (2.8s). base.css report-bug-truck-path (dashed), report-bug-bug, report-bug-truck-drive 3-phase keyframes; report_bug.html statusSteps, setTimeout timing. Cleanup: responsive track (width 100%, max 280px, min 200px); --report-bug-truck-duration; prefers-reduced-motion (no movement, bug fades only); small-screen smaller emoji; JS TRUCK_DURATION_MS, clearStatusTimers before redirect. |
+| 2026-02-20 | Beta banner (minimal)        | Solid #f0f0f0, max-width 1120px to match .container, no gradient/animation, minimal text + link + dismiss; responsive padding to align. base.css. |
+| 2026-02-20 | Micro-interactions (confetti-like) | Pop/thunk on key moments: "I sent it!" (pop+shimmer), End call (thunk), card Called!/Emailed! (pop), reminder Copy/Calendar (pop). Report-bug success has no animation. base.css keyframes + utilities; advocacy-email, advocacy-form, index.html. prefers-reduced-motion respected. |
+| 2026-02-20 | Beta banner + in-app bug report | Site-wide dismissible bar; “Report a bug” → in-app form at /report-bug (no GitHub/service). Form: description, optional email, stored in bug_reports; optional email to BETA_BANNER_EMAIL if SMTP set. Email body: timestamp, email, issue, page, screenshot (inline + link or “No image sent”), IP/User-Agent. Override with FEEDBACK_URL or EMAIL for external/mailto. |
+| 2026-02-20 | Bug nudge in advocacy drawer | No longer in drawer header. Call: "Something went wrong? Report a bug" at end of script (after End call) and in voicemail (_advocacy_drawer_call). Email: same copy under action bar (Open in your email app / I sent it) (_advocacy_drawer_email). No-answer drawer same copy. Gated on show_beta_banner and beta_banner_feedback_url. advocacy-drawer.css .drawer-bug-nudge, .gmail-bug-nudge. |
+| 2026-02-20 | Form submission security     | CSRF (double-submit cookie XSRF-TOKEN + body), rate limiting (bug report, request-code, verify-code), page_url validation (http/https only). /report-bug exempt from API key. security.py; docs env vars + Security section. |
+| 2026-02-20 | Turnstile CAPTCHA (optional) | Cloudflare Turnstile on bug report form when ILGA_TURNSTILE_SITE_KEY + SECRET_KEY set. Free 1M/mo; server-side siteverify. feedback router + report_bug template. |
+| 2026-02-20 | Report bug description min length | "What went wrong" requires ≥20 chars. Backend: BUG_REPORT_DESCRIPTION_MIN_LENGTH; redirect ?error=description_short. Template: minlength, inline error #description-error, aria-invalid/aria-describedby. Client-side validation before fetch; clear error on input when valid. base.css: .report-bug-field--error, .report-bug-field-error (red text, border, focus ring). |
+| 2026-02-20 | Report bug email validation | Optional reporter email validated server-side (one @, dot in domain, length limits); redirect ?error=email_invalid. Template: inline error #email-error, aria-invalid/aria-describedby; client-side isValidEmail on input/blur and submit with graceful messages (e.g. "Please enter a valid email address or leave the field empty"). |
 | 2026-02-20 | Branch cleanup               | Removed commented intel nav, consolidated tooltip init to `initAdvocacyTooltips`. |
 | 2026-02-20 | Defect pass                  | test/lint pass; smoke GET /advocacy, POST search, drawer 404; power broker, Tippy verified. |
 | 2026-02-20 | Recommendation chip tooltips | Tippy.js: one tooltip at a time, appendTo body, theme recommendation-chip; Popper 2 + Tippy 6. |
@@ -34,9 +43,11 @@
 | 2026-02-20 | Potential Ally removed       | 3 cards only: Your Senator, Your Rep, Power Broker; seating redo later. |
 | 2026-02-20 | The Land of Kei branding     | SITE_NAME, META_DESCRIPTION, footer, auth email, .env.example, docs. |
 | 2026-02-20 | Dev ZIP autofill             | ILGA_DEV_MODE=1 autofills hero ZIP 60601 when no ?zip=. |
+| 2026-02-20 | Auth strip outreach progress | Signed-in users see "Called X legislators and sent Y emails" under verified email. GET /outreach/my-stats; refresh on sign-in and after recording call/email. index.html #auth-strip-progress, advocacy-form.css .auth-strip-progress. |
 | 2026-02-20 | ZIP in URL on search         | history.replaceState ?zip=XXXXX on form submit; shareable links. |
 | 2026-02-20 | Member cards enter animation | card-fade-slide-up stagger; prefers-reduced-motion respected. |
-| 2026-02-20 | Hardball advocacy landing    | Threat headline, Anton/Impact, two-column hero, CTA "Get My Call Script", ticker, trust badges, hero alignment. |
+| 2026-02-20 | Hero copy refresh             | Subhead: statutory gap + pre-written script in under a minute; ticker "Join X+ Illinois residents who've already taken action this week"; CTA "Start My Outreach". advocacy.py hero_subhead (2 places), index.html ticker + find-btn. |
+| 2026-02-20 | Hardball advocacy landing    | Threat headline, Anton/Impact, two-column hero, CTA "Start My Outreach", ticker, trust badges, hero alignment. |
 | 2026-02-20 | Refactor round               | Intelligence/explore routers, CSS split; main ~1700 lines. |
 | 2026-02-20 | Advocacy router cleanup      | Removed debug logging; E501/F401 fixed; lint + test pass. |
 | 2026-02-20 | Drawer close-then-open       | Open another drawer → close first, then open after 320ms. |
@@ -46,10 +57,12 @@
 | 2026-02-20 | Post-prod                    | OG/Twitter cards, canonical, Umami, security headers, advocacy SEO globals. |
 | 2026-02-20 | Automated deploy Vultr       | Push main → CI → SSH deploy; DEPLOY_HOST/USER/SSH_KEY. |
 | 2026-02-19 | Deployment prep              | Lint, Procfile, status-report, deployment.md, vultr-deployment-guide, startup banner URLs. |
+| 2026-02-20 | Mobile experience overhaul  | Typography: variables.css font-size tokens, :root 17px at 480px; base.css body/headings use tokens. Cards: rem-based mobile text, larger member photos (96/88px), 44px touch targets (card-details-toggle, beta-banner-dismiss). Drawer/email: larger drawer photo (80px), bumped smallest font sizes. Intelligence: responsive summary grid, .intel-table-scroll-wrap, font-size floor 0.8rem at 480px. Templates: explanation partial classes, predictions/bill inline font-sizes to rem. |
+| 2026-02-20 | Moneyball help circle (mobile) | .moneyball-help no longer forced to 44px on mobile; stays content-sized (1.1em) so circle fits the "?" only. advocacy-cards.css. |
 | 2026-02-20 | Badges keyboard-accessible   | tabindex=0, role=button, aria-label; Tippy focus trigger; focus ring. |
 | 2026-02-19 | Accessibility pass           | Drawer role=dialog, focus trap, landmarks, role=alert/status. |
 | 2026-02-19 | Humanized advocacy copy      | Conversational tone across drawer, errors, guide steps. |
-| 2026-02-19 | ZIP search loading animation  | Truck emoji, Loading/Loaded, min 2s; kei facts; smooth scroll. |
+| 2026-02-19 | ZIP search loading animation  | (Removed 2026-02-20: truck moved to bug report success; ZIP now direct HTMX swap.) |
 | 2026-02-19 | Advocacy error states        | Drawer load 404/5xx, I sent auth/network, wrapup error, empty results, drawer-email-open sync, email mobile. |
 | 2026-02-19 | Mobile bottom sheet drawer   | ≤768px bottom sheet, drag handle, safe-area-inset for notch. |
 | 2026-02-18 | Lint                         | All E402/E501 fixed; per-file ignores; make lint. |

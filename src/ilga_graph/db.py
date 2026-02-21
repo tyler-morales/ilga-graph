@@ -44,6 +44,7 @@ async def init_db() -> None:
             "ALTER TABLE outreach_events ADD COLUMN contact_name VARCHAR(128)",
             "ALTER TABLE outreach_events ADD COLUMN support_score INTEGER",
             "ALTER TABLE outreach_events ADD COLUMN constituent BOOLEAN",
+            "ALTER TABLE bug_reports ADD COLUMN attachment_paths TEXT",
         ):
             try:
                 await conn.execute(text(col_sql))

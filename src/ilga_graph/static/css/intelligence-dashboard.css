@@ -728,3 +728,50 @@ color: #333;
 .intel-confidence-detail {
 color: #666;
 }
+
+/* ── Responsive: mobile ── */
+@media (max-width: 768px) {
+  .intel-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .intel-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .intel-summary-detail,
+  .stuck-badge,
+  .lifecycle-badge,
+  .confidence-low-label,
+  .forecast-conf,
+  .sort-arrow,
+  .focus-tag,
+  .value-badge,
+  .intel-trust-badge,
+  .pipeline-label,
+  .party-dem,
+  .party-rep,
+  .coalition-cross-label,
+  .dest-badge,
+  .intel-forecast-label,
+  .intel-flag,
+  .intel-normal,
+  .intel-outcome,
+  .intel-outcome-vetoed {
+    font-size: 0.8rem;
+  }
+
+  .committee-insights-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .intel-quality-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .coalition-grid {
+    grid-template-columns: 1fr;
+  }
+}

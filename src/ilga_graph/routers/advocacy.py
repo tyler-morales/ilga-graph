@@ -45,25 +45,8 @@ templates.env.globals["og_image_url"] = cfg.OG_IMAGE_URL
 templates.env.globals["umami_enabled"] = cfg.PROFILE == "prod" and bool(cfg.UMAMI_WEBSITE_ID)
 templates.env.globals["umami_website_id"] = cfg.UMAMI_WEBSITE_ID
 templates.env.globals["umami_script_url"] = cfg.UMAMI_SCRIPT_URL
-
-# Kei truck facts for loading animation: informative, fun trivia (one shown per search).
-_KEI_LOADING_FACTS: list[str] = [
-    "Suzuki Carry, Honda Acty, Daihatsu Hijet — classic kei trucks.",
-    "'Kei' means 'light' in Japanese — the vehicle class is kei jidōsha.",
-    "Texas made kei trucks legal for on-road use in 2025.",
-    "25+ year old kei vehicles are federally legal to import; states set registration rules.",
-    "Kei engines are capped at 660cc — that's why they're so efficient.",
-    "Subaru Sambar: so small it fits Japan's strict kei parking spaces.",
-    "Mini trucks were never sold new in the US; the 25-year import rule is why you see them now.",
-    "Illinois SOS sometimes brands titles 'Not Eligible for Registration' — we want clarity.",
-    "Kei jidōsha = 'light vehicle' — Japan's most popular vehicle class.",
-    "Mazda Scrum, Mitsubishi Minicab — more kei truck names to know.",
-]
-
-
-def _loading_facts(member_count: int, zip_count: int) -> list[str]:
-    """Return kei truck facts for loading animation (one random fact shown per button press)."""
-    return list(_KEI_LOADING_FACTS)
+templates.env.globals["show_beta_banner"] = cfg.BETA_BANNER
+templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
 
 
 async def _build_search_results_context(
@@ -247,11 +230,16 @@ async def advocacy_index(
     ctx: dict[str, Any] = {
         "request": request,
         "title": "Kei Truck Freedom",
-        "hero_headline": "Don't Let Springfield Ban Our Kei Trucks.",
+        "hero_headline": "Fix Illinois Law. Allow Kei Vehicle Registration.",
+        "hero_headline_line1": "Fix Illinois Law.",
+        "hero_headline_line2": "Allow Kei Vehicle Registration.",
+        "hero_headline_line2_prefix": "Allow ",
+        "hero_headline_highlight": "Kei Vehicle",
+        "hero_headline_line2_suffix": " Registration.",
         "hero_subhead": (
-            "The state wants them off the road. Enter your ZIP code to find your rep, "
-            "get a custom script, and tell them why they need to protect our trucks. "
-            "It takes 60 seconds."
+            "Illinois is currently blocking registration for federally lawful kei vehicles "
+            "due to a statutory gap. You can help fix it—contact your legislator with a "
+            "pre-written script in under a minute."
         ),
         "categories": CATEGORY_CHOICES,
         "member_count": member_count,
@@ -260,7 +248,6 @@ async def advocacy_index(
         "calls_total": calls_total,
         "calls_this_week": calls_this_week,
         "features": cfg.get_client_features(),
-        "loading_facts": _loading_facts(member_count, zip_count),
     }
     if zip:
         ctx["zip"] = zip
@@ -688,11 +675,16 @@ async def advocacy_search(
         ctx_error: dict[str, Any] = {
             "request": request,
             "title": "Kei Truck Freedom",
-            "hero_headline": "Don't Let Springfield Ban Our Kei Trucks.",
+            "hero_headline": "Fix Illinois Law. Allow Kei Vehicle Registration.",
+            "hero_headline_line1": "Fix Illinois Law.",
+            "hero_headline_line2": "Allow Kei Vehicle Registration.",
+            "hero_headline_line2_prefix": "Allow ",
+            "hero_headline_highlight": "Kei Vehicle",
+            "hero_headline_line2_suffix": " Registration.",
             "hero_subhead": (
-                "The state wants them off the road. Enter your ZIP code to find your rep, "
-                "get a custom script, and tell them why they need to protect our trucks. "
-                "It takes 60 seconds."
+                "Illinois is currently blocking registration for federally lawful kei vehicles "
+                "due to a statutory gap. You can help fix it—contact your legislator with a "
+                "pre-written script in under a minute."
             ),
             "categories": CATEGORY_CHOICES,
             "zip": zip_code,

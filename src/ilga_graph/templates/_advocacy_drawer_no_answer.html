@@ -21,4 +21,7 @@
             Close
         </button>
     </div>
+    {% if show_beta_banner and beta_banner_feedback_url %}
+    <p class="drawer-bug-nudge drawer-no-answer-bug-nudge">Something went wrong? <a href="{{ beta_banner_feedback_url }}" class="drawer-bug-nudge-link" target="_blank" rel="noopener noreferrer">Report a bug</a></p>
+    {% endif %}
 </div>

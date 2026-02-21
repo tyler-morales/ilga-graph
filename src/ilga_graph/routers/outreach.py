@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, Form
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..db import get_db
 from ..db_models import OutreachEvent, User
 from ..dependencies import get_current_user_optional
+from ..security import CSRF_COOKIE_NAME, validate_csrf_token
 
 LOGGER = logging.getLogger(__name__)
 
@@ -49,6 +50,7 @@ def _parse_constituent(raw: str) -> bool | None:
 
 @router.post("/record")
 async def record_outreach(
+    request: Request,
     member_id: str = Form(...),
     kind: str = Form(...),
     zip_code: str = Form(""),
@@ -57,10 +59,17 @@ async def record_outreach(
     contact_name: str = Form(""),
     support_score: str = Form(""),
     constituent: str = Form(""),
+    csrf_token: str | None = Form(None),
     user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ):
     """Record an outreach event.  Requires authentication."""
+    cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
+    if not validate_csrf_token(csrf_token, cookie_token):
+        return JSONResponse(
+            {"ok": False, "error": "Invalid or expired security token. Reload the page."},
+            status_code=403,
+        )
     if user is None:
         return JSONResponse({"ok": False, "error": "Not authenticated"}, status_code=401)
 
@@ -169,6 +178,27 @@ async def interest_poll(
             "4": by_score.get(4, 0),
             "5": by_score.get(5, 0),
         },
+    }
+
+
+@router.get("/my-stats")
+async def my_stats(
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the authenticated user's outreach counts (calls, emails)."""
+    if user is None:
+        return JSONResponse({"ok": False, "error": "Not authenticated"}, status_code=401)
+    result = await db.execute(
+        select(OutreachEvent.kind, func.count())
+        .where(OutreachEvent.user_id == user.id)
+        .where(OutreachEvent.kind.in_(["call", "email"]))
+        .group_by(OutreachEvent.kind)
+    )
+    by_kind = {row[0]: row[1] for row in result.all()}
+    return {
+        "calls": by_kind.get("call", 0),
+        "emails": by_kind.get("email", 0),
     }
 
 

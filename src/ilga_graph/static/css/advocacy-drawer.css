@@ -86,6 +86,9 @@
 
 .phone-panel-title-extra {
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .drawer-header-constituent .drawer-constituent-checkbox-wrap {
@@ -153,6 +156,7 @@
 /* Email drawer: single scroll (textarea only); prevent panel scrollbar */
 .phone-panel-body.drawer-email-open {
     overflow: hidden;
+    padding-bottom: 12px;
 }
 
 .phone-script-to {
@@ -2144,6 +2148,25 @@
 
 /* ── Responsive: phone ── */
 @media (max-width: 480px) {
+    .drawer-call-photo,
+    .drawer-call-photo-placeholder {
+        width: 80px;
+        height: 80px;
+    }
+
+    .chat-label,
+    .drawer-contact-card-label {
+        font-size: 0.8rem;
+    }
+
+    .chat-divider span {
+        font-size: 0.8rem;
+    }
+
+    .drawer-interest-poll-bubble .chat-label {
+        font-size: 0.8rem;
+    }
+
     .phone-panel-title {
         padding: 16px 18px 10px;
         font-size: 1.05em;
@@ -2162,4 +2185,33 @@
         width: 100%;
         text-align: center;
     }
+}
+
+/* ── Bug report nudge (end of flow + persistent in drawer) ── */
+.drawer-bug-nudge {
+    margin: 12px 0 0;
+    font-size: 0.8125rem;
+    color: #6b7280;
+}
+.drawer-bug-nudge-link {
+    color: #374151;
+    text-decoration: underline;
+}
+.drawer-bug-nudge-link:hover {
+    color: #111;
+}
+.drawer-bug-nudge-link:focus {
+    outline: 2px solid #333;
+    outline-offset: 2px;
+}
+.drawer-bug-nudge-vm {
+    margin-top: 16px;
+}
+.gmail-bug-nudge {
+    margin-top: 8px;
+    margin-bottom: 0;
+}
+.drawer-no-answer-bug-nudge {
+    margin-top: 16px;
+    text-align: center;
 }

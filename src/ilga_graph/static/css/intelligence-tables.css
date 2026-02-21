@@ -726,3 +726,70 @@ border-radius: 4px;
 font-size: 0.85em;
 color: #856404;
 }
+
+/* ── Explanation partial (SHAP drivers) — readable on mobile ── */
+.intel-explanation-title {
+  font-size: 1.1rem;
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #444;
+}
+.intel-explanation-intro {
+  font-size: 0.95rem;
+  color: #888;
+  margin-bottom: 12px;
+}
+.intel-explanation-heading {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.intel-explanation-factor {
+  display: inline-block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 3px;
+}
+.intel-explanation-factor--up {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+.intel-explanation-factor--down {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+.intel-explanation-msg {
+  font-size: 0.95rem;
+}
+
+/* ── Responsive: mobile ── */
+.intel-table-scroll-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 8px 0;
+}
+
+@media (max-width: 480px) {
+  .pipeline-step-label,
+  .action-category-badge,
+  .action-signal-badge,
+  .action-rule-ref,
+  .story-card-tag,
+  .component-desc,
+  .action-date {
+    font-size: 0.8rem;
+  }
+
+  .component-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .moneyball-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

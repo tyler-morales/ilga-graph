@@ -39,6 +39,12 @@ jobs:
     needs: lint-and-test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
+      - name: Check deploy secrets
+        run: |
+          if [ -z "${{ secrets.DEPLOY_HOST }}" ]; then
+            echo "::error::DEPLOY_HOST is not set. Add it (and DEPLOY_USER, DEPLOY_SSH_KEY) under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:

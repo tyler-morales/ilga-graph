@@ -43,6 +43,44 @@
 </head>
 
 <body>
+    {% if show_beta_banner %}
+    <div class="beta-banner" id="beta-banner" role="region" aria-label="Beta notice">
+        <button type="button" class="beta-banner-emoji" id="beta-banner-emoji-btn" aria-label="Celebrate with confetti">🎉</button>
+        <span class="beta-banner-pill" aria-hidden="true">Beta</span>
+        <span class="beta-banner-text">This is a new site and may have bugs.</span>
+        {% if beta_banner_feedback_url %}
+        <a href="{{ beta_banner_feedback_url }}" class="beta-banner-link" target="_blank" rel="noopener noreferrer" aria-label="Report a bug or give feedback">Report a bug</a>
+        {% endif %}
+        <button type="button" class="beta-banner-dismiss" id="beta-banner-dismiss" aria-label="Dismiss beta notice">&times;</button>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js" crossorigin="anonymous"></script>
+    <script>
+        (function() {
+            var key = 'ilga_beta_banner_dismissed';
+            var el = document.getElementById('beta-banner');
+            if (!el) return;
+            if (sessionStorage.getItem(key) === '1') {
+                el.classList.add('beta-banner--dismissed');
+                return;
+            }
+            document.getElementById('beta-banner-dismiss').addEventListener('click', function() {
+                sessionStorage.setItem(key, '1');
+                el.classList.add('beta-banner--dismissed');
+            });
+            var emojiBtn = document.getElementById('beta-banner-emoji-btn');
+            if (emojiBtn && typeof confetti === 'function') {
+                emojiBtn.addEventListener('click', function() {
+                    var rect = emojiBtn.getBoundingClientRect();
+                    var origin = { x: (rect.left + rect.width / 2) / window.innerWidth, y: (rect.top + rect.height / 2) / window.innerHeight };
+                    confetti({ origin: origin, spread: 100, startVelocity: 28, particleCount: 80, colors: ['#f59e0b', '#fcd34d', '#fde68a', '#fef3c7', '#b45309', '#92400e'] });
+                    setTimeout(function() {
+                        confetti({ origin: origin, spread: 70, startVelocity: 25, particleCount: 50, scalar: 1.1, colors: ['#f59e0b', '#fcd34d', '#b45309'] });
+                    }, 150);
+                });
+            }
+        })();
+    </script>
+    {% endif %}
     <div class="container">
         <main id="main-content" role="main">
             {% block content %}{% endblock %}
@@ -51,6 +89,10 @@
             <p class="footer-brand">{{ site_name }}</p>
             <p class="footer-links">
                 <a href="https://www.facebook.com/groups/690646129984408" target="_blank" rel="noopener noreferrer">Join the Facebook group</a>
+                {% if show_beta_banner %}
+                <span class="footer-links-sep" aria-hidden="true"> · </span>
+                <a href="{{ beta_banner_feedback_url }}" class="footer-link-report" target="_blank" rel="noopener noreferrer">Report a bug</a>
+                {% endif %}
             </p>
             <p class="footer-disclaimer">Not affiliated with the Illinois General Assembly. Information here is for advocacy and educational purposes only.</p>
         </footer>
