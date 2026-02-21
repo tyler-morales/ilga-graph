@@ -70,8 +70,9 @@
   height: 1.9em;
   object-fit: contain;
   pointer-events: none;
-  z-index: 1;
   animation: hero-sharpie-fade-in 1.4s ease-in-out 0s forwards;
+  mix-blend-mode: luminosity;
+  z-index: 100;
 }
 
 .hero-headline-sharpie-text {
@@ -117,7 +118,7 @@
   transform-origin: left center;
   transform: rotate(2deg) scaleX(0);
   /* Initial state so bar is hidden during animation-delay */
-  border-radius: 2px;
+  border-radius: 8px;
   z-index: -1;
   animation: hero-mark-reveal 0.55s ease-out var(--hero-highlight-delay, 0.5s) forwards;
 }
