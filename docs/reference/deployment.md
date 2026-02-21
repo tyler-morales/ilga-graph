@@ -131,7 +131,7 @@ If the validator shows **127.0.0.1** in the "Open Graph tags found" list, the ap
 
 1. Set `ILGA_PROFILE=prod`, `ILGA_LOAD_ONLY=1`.
 2. Set `ILGA_CORS_ORIGINS` to your public URL(s) (e.g. `https://landofkei.org`).
-3. Set `ILGA_APP_BASE_URL` to your public URL (e.g. `https://landofkei.org`) so canonical URLs and Open Graph share cards use the correct domain.
+3. Set `ILGA_APP_BASE_URL` to your public URL (e.g. `https://landofkei.org`) so canonical URLs, Open Graph share cards, and the sitemap/robots.txt URLs use the correct domain.
 4. Set `ILGA_AUTH_SECRET` to a new random value.
 5. (Recommended) Set `ILGA_API_KEY` and protect non-exempt routes.
 6. Populate `cache/` (or `ILGA_CACHE_DIR`) with full or seed data.

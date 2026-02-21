@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 import strawberry
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from strawberry.fastapi import GraphQLRouter
@@ -1563,6 +1563,36 @@ def _favicon() -> FileResponse:
     return FileResponse(path, media_type="image/svg+xml")
 
 
+_SITEMAP_PATHS = ("/", "/advocacy", "/intelligence", "/explore")
+
+
+@app.get("/sitemap.xml", include_in_schema=False)
+def _sitemap_xml() -> Response:
+    """Serve sitemap.xml for search engine discovery; URLs use APP_BASE_URL."""
+    base = cfg.APP_BASE_URL
+    urls = "".join(
+        f"    <url><loc>{base}{path}</loc></url>\n" for path in _SITEMAP_PATHS
+    )
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"{urls}"
+        "</urlset>\n"
+    )
+    return Response(content=xml, media_type="application/xml; charset=utf-8")
+
+
+@app.get("/robots.txt", include_in_schema=False)
+def _robots_txt() -> PlainTextResponse:
+    """Serve robots.txt (allow all, point to sitemap)."""
+    body = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        f"Sitemap: {cfg.APP_BASE_URL}/sitemap.xml\n"
+    )
+    return PlainTextResponse(content=body)
+
+
 # ── CORS middleware ──────────────────────────────────────────────────────────
 _cors_origins = [o.strip() for o in cfg.CORS_ORIGINS.split(",") if o.strip()]
 app.add_middleware(
@@ -1582,7 +1612,16 @@ async def _api_key_middleware(request: Request, call_next) -> Response:  # type:
     Skips auth for the health endpoint and for OPTIONS (CORS preflight).
     """
     if cfg.API_KEY:
-        exempt = {"/", "/health", "/docs", "/openapi.json", "/redoc", "/favicon.ico"}
+        exempt = {
+            "/",
+            "/health",
+            "/docs",
+            "/openapi.json",
+            "/redoc",
+            "/favicon.ico",
+            "/sitemap.xml",
+            "/robots.txt",
+        }
         path = request.url.path
         if (
             path not in exempt

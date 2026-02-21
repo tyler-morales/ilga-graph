@@ -60,6 +60,8 @@ The app loads `.env` from the project root via `python-dotenv`. Copy `.env.examp
 | `ILGA_SMTP_FROM` | *(empty)* | Sender address for verification emails. |
 | `ILGA_SMTP_TLS` | `1` | Use TLS (1) or not (0). |
 
+**Sitemap and robots:** The app serves `/sitemap.xml` (key pages: `/`, `/advocacy`, `/intelligence`, `/explore`) and `/robots.txt` (allow all, with a `Sitemap:` line). Both use `ILGA_APP_BASE_URL` for absolute URLs, so set it in production for correct discovery by search engines.
+
 ---
 
 ## Feature flags
