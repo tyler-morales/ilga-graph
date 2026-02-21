@@ -20,6 +20,7 @@
 | 2026-02-19 | Snapshot mocks          | `make snapshot-mocks` samples cache JSON types from mocks; zip_to_district subset for 40 mock members. |
 | 2026-02-20 | Refactor completed      | CSS → static/css (variables, base, advocacy×4, intelligence×2); intelligence → routers/intelligence.py; explore → routers/explore.py; SHAP → routers/bills.py. |
 | 2026-02-18/20 | Legacy purge        | Removed intelligence/explore from main, inline CSS; POST /advocacy/drawer/after-call; dead ML fulltext; test mode/deep link; unused CSS. |
+| 2026-02-21 | main.py refactor        | Lifespan → startup.py; site routes (/, /advocacy, favicon, sitemap, robots) → routers/site.py; /logs, /health, /api/dev/members → routers/admin.py; GraphQL Query + ML types → graphql_query.py; CORS/API key/CSRF/security/request-logging → middleware.py. main.py ~1921 → ~277 lines. Tests pass; _member_career_start re-exported from main for test compat. |
 
 ---
 
