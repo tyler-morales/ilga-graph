@@ -19,13 +19,13 @@ import pdfplumber
 import requests
 from bs4 import BeautifulSoup
 
-from ..config import BASE_URL, CACHE_DIR, GA_ID, MOCK_DEV_DIR, SESSION_ID
+from ..config import BASE_URL, CACHE_DIR, GA_ID, SESSION_ID
+from ..data_source import get_data_dir
 from ..models import VoteEvent
 
 LOGGER = logging.getLogger(__name__)
 
 VOTE_CACHE_FILE = CACHE_DIR / "vote_events.json"
-VOTE_MOCK_DEV_FILE = MOCK_DEV_DIR / "vote_events.json"
 
 # ── Regex patterns ────────────────────────────────────────────────────────────
 
@@ -480,19 +480,15 @@ def scrape_bills_from_range(
     return all_events
 
 
-def _load_vote_cache(*, seed_fallback: bool = False) -> list[VoteEvent] | None:
-    """Load vote events from disk: cache/ first, then mocks/dev/ if requested."""
-    if VOTE_CACHE_FILE.exists():
-        with open(VOTE_CACHE_FILE, encoding="utf-8") as f:
-            data = json.load(f)
-        LOGGER.info("Loaded %d vote events from cache (%s).", len(data), VOTE_CACHE_FILE)
-        return [_vote_event_from_dict(v) for v in data]
-    if seed_fallback and VOTE_MOCK_DEV_FILE.exists():
-        with open(VOTE_MOCK_DEV_FILE, encoding="utf-8") as f:
-            data = json.load(f)
-        LOGGER.info("Loaded %d vote events from mocks/dev (%s).", len(data), VOTE_MOCK_DEV_FILE)
-        return [_vote_event_from_dict(v) for v in data]
-    return None
+def _load_vote_cache() -> list[VoteEvent] | None:
+    """Load vote events from the current data dir (cache or mocks)."""
+    path = get_data_dir() / "vote_events.json"
+    if not path.exists():
+        return None
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    LOGGER.info("Loaded %d vote events from %s.", len(data), path)
+    return [_vote_event_from_dict(v) for v in data]
 
 
 def _vote_event_from_dict(v: dict) -> VoteEvent:
@@ -525,7 +521,6 @@ def scrape_specific_bills(
     timeout: int = 20,
     request_delay: float = 0.5,
     use_cache: bool = True,
-    seed_fallback: bool = False,
 ) -> list[VoteEvent]:
     """Scrape votes for a specific list of bill status URLs.
 
@@ -540,13 +535,10 @@ def scrape_specific_bills(
     request_delay:
         Delay between requests in seconds.
     use_cache:
-        If True, load from cache or seed (when seed_fallback) if available.
-    seed_fallback:
-        If True and cache/ is missing, load from mocks/dev/vote_events.json.
+        If True, load from the current data dir if available.
     """
-    # Check cache first, then seed when requested
     if use_cache:
-        cached = _load_vote_cache(seed_fallback=seed_fallback)
+        cached = _load_vote_cache()
         if cached is not None:
             return cached
 

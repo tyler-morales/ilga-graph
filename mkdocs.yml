@@ -44,6 +44,7 @@ nav:
     - Project structure: reference/project-structure.md
     - Status report: reference/status-report.md
   - Development:
+    - Data and environments: development/data-and-environments.md
     - Advocacy Test Mode (internals): development/advocacy-test-mode-internals.md
     - Bills-first pipeline testing: BILLS_FIRST_TESTING.md
     - DB and outreach: development/db-and-outreach.md

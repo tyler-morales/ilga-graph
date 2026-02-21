@@ -8,7 +8,8 @@ This doc summarizes the DB implementation, potential issues, and how tests verif
 
 | Component | Role |
 |-----------|------|
-| **db.py** | Async SQLite engine (`ILGA_DB_PATH`), `init_db()` (create tables + migrate old DBs), `get_db()` FastAPI dependency |
+| **db.py** | Async SQLite engine (`ILGA_DB_PATH`), `init_db()` (Alembic upgrade head, or fallback create_all + ALTERs), `get_db()` FastAPI dependency |
+| **alembic/** | Versioned migrations; `alembic upgrade head` creates/updates schema. Schema version stored in `alembic_version` table. |
 | **db_models.py** | `User`, `AuthCode`, `OutreachEvent` (SQLAlchemy ORM) |
 | **routers/auth.py** | Request code, verify code, logout, `/me` |
 | **routers/outreach.py** | Record event, stats by member, my-history |
@@ -29,8 +30,8 @@ This doc summarizes the DB implementation, potential issues, and how tests verif
 | **Seed script** | `users`, `outreach_events` | `make seed-outreach` or `python scripts/seed_outreach.py` |
 
 - **Auth:** request-code inserts one `AuthCode`; verify-code finds it, marks used, and gets-or-creates `User`, updates `last_login_at`.
-- **Outreach:** POST /outreach/record (requires auth) inserts one `OutreachEvent` per call/email/no_answer.
-- **Seed:** `scripts/seed_outreach.py` uses the same profile/env as the app; runs `init_db()`, then gets-or-creates user for the backlog email and inserts many `OutreachEvent` rows (real backlog + in dev, mock advocate data). Use the same `ILGA_PROFILE` (or same `ILGA_DB_PATH`) for app and seed so they point at the same file. In dev, the seed also inserts additional **"this week"** events with relative `created_at` (e.g. now − 0..6 days) so the landing ticker always shows a realistic "Over N calls made to Springfield this week", and includes a spread of **support_score** (1–5) for at least one member so the call-drawer interest poll bar chart shows all segments (Opposed → Champion).
+- **Outreach:** POST /outreach/record (requires auth) inserts one `OutreachEvent` per call/email/no_answer. The server validates that `member_id` refers to a legislator in app state (`find_member_by_id`); if not, it returns 400 so the DB never stores invalid or slug-style ids. In production, outreach comes from the site (users record from member cards), so `member_id` is always the canonical id from the loaded members data.
+- **Seed:** `scripts/seed_outreach.py` uses the same profile/env as the app; runs `init_db()`, then gets-or-creates user for the backlog email (`funky_mama11@gmail.com`) and inserts `OutreachEvent` rows only when the rep name **resolves to a canonical member id** (from cache/mocks members.json). Unresolved names are skipped (no slug fallback), so the DB stays consistent. Re-running seed deletes existing outreach events for that user before inserting, so it is idempotent. Use the same `ILGA_PROFILE` (or same `ILGA_DB_PATH`) for app and seed. In dev, the seed also inserts **"this week"** and mock-advocate events with **hardcoded numeric member_ids** so the landing ticker and heat pills work; all use canonical ids.
 
 ### Read paths (where DB data is used)
 
@@ -66,31 +67,34 @@ The **fire pill** (🔥 N) in the corner of each advocacy member card is **data-
 
 ## Scan: potential issues and mitigations
 
-1. **Migration idempotency**  
-   `init_db()` runs `ALTER TABLE outreach_events ADD COLUMN ...` for `contact_name`, `support_score`, `constituent`. Failures (e.g. column already exists) are caught and ignored. **Risk:** If a future ALTER fails for a different reason (e.g. disk full), we swallow it. **Mitigation:** Tests run `init_db()` twice and assert tables/columns exist; no crash on second run.
+1. **Schema migrations (Alembic)**  
+   On startup, `init_db()` runs Alembic migrations to head when `alembic.ini` exists (project root); otherwise it falls back to `create_all` + ALTERs (e.g. temp DB in tests). New schema changes go in new migration files under `alembic/versions/`. **Existing DBs** created before Alembic: run once from project root: `alembic stamp head` (or `alembic stamp 20260221000000`), so the DB is marked at the current revision and future `upgrade head` does nothing until you add new migrations.
 
-2. **member_id length**  
-   `OutreachEvent.member_id` is `String(32)`. The router does not truncate. SQLite stores arbitrary length; the 32-char limit is schema/documentation. **Risk:** Overlong IDs could affect downstream reporting. **Mitigation:** Tests use valid-length IDs; optional follow-up: truncate in router to 32.
+2. **ALTER fallback (duplicate column only)**  
+   When using the fallback (no Alembic), `init_db()` runs ALTERs for legacy columns. Only `OperationalError` with "duplicate column name" (or "already exists") is ignored; other failures (e.g. disk full) are re-raised.
 
-3. **Verify-code race**  
+3. **member_id consistency**
+   `OutreachEvent.member_id` must be a **canonical member id** (same as `Member.id` from members data). The record endpoint rejects unknown ids (400) and truncates to 32 chars. The seed script only inserts events when the rep name resolves to an id (no slug fallback). **Mitigation:** Record validates; seed skips unresolved names.
+
+4. **Verify-code race**  
    Two concurrent requests with the same valid code could both pass the `used == False` check before either commits. **Risk:** Same code used twice. **Mitigation:** Low likelihood for 6-digit codes; tests assert that after one successful verify the code is marked used (sequential).
 
-4. **Session handling**  
+5. **Session handling**  
    `get_db()` yields a session; FastAPI closes it after the request. Uncommitted changes are rolled back on close. **Risk:** None identified. **Mitigation:** Tests assert commit by reading back after record.
 
-5. **Support score / constituent parsing**  
+6. **Support score / constituent parsing**  
    `_parse_support_score` accepts 1–5 only; `_parse_constituent` accepts 1/0, true/false, yes/no. **Risk:** Invalid values stored as NULL; acceptable. **Mitigation:** Unit tests for parsing and API round-trip.
 
-6. **Stats with no events**  
+7. **Stats with no events**  
    `GET /outreach/stats/{member_id}` with no rows returns `calls: 0, emails: 0, no_answers: 0, total: 0`. **Mitigation:** Test covers empty stats.
 
-7. **my-history limit**  
+8. **my-history limit**  
    History is capped at 100 events, newest first. **Mitigation:** Documented; test can assert limit and ordering.
 
-8. **SQL injection**  
+9. **SQL injection**  
    All queries use SQLAlchemy ORM or `select()` with parameters. No raw user input in SQL. **Risk:** None. **Mitigation:** N/A.
 
-9. **Timezone**  
+10. **Timezone**  
    `created_at` and `AuthCode.expires_at` use `DateTime(timezone=True)` and `_utcnow()`. **Mitigation:** Tests assert events have `created_at` and history returns ISO format.
 
 10. **Boolean in SQLite**  
@@ -100,7 +104,7 @@ The **fire pill** (🔥 N) in the corner of each advocacy member card is **data-
 
 ## Test coverage
 
-- **tests/test_db.py** — `init_db()` (tables + migrations idempotent), `get_db()` yields session, schema (columns exist).
+- **tests/test_db.py** — `init_db()` (tables + fallback idempotent when no Alembic), `get_db()` yields session, schema (columns exist).
 - **tests/test_auth_outreach.py** — Auth flow (request-code → verify-code → /me, logout), outreach record (unauthenticated 401, valid record, support_score/constituent/contact_name/notes), stats (empty and with data), my-history (401 when anonymous, list and ordering), parsing helpers for support_score and constituent.
 
 Run: `make test` or `pytest tests/test_db.py tests/test_auth_outreach.py -v`.

@@ -20,6 +20,7 @@ from pathlib import Path
 import requests
 
 from . import config as cfg
+from .data_source import get_data_dir, is_using_mocks
 
 LOGGER = logging.getLogger(__name__)
 
@@ -243,7 +244,6 @@ def _load_cache(cache_dir: Path) -> dict[str, ZipDistrictInfo] | None:
 
 def load_zip_crosswalk(
     *,
-    seed_mode: bool | None = None,
     cache_dir: Path | None = None,
     force_refresh: bool = False,
 ) -> dict[str, ZipDistrictInfo]:
@@ -251,17 +251,15 @@ def load_zip_crosswalk(
 
     Resolution order:
 
-    1. If ``seed_mode`` is true (or ``cfg.SEED_MODE``), return the hardcoded
-       seed dictionary immediately (no network, no cache).
-    2. If a cache file exists and ``force_refresh`` is false, load from cache.
-    3. Otherwise download Census files, build the crosswalk, cache it, and return.
+    1. If the current data dir has zip_to_district.json, load from there.
+    2. If using mocks (dev with no cache/dev data), return hardcoded seed.
+    3. If a cache file exists and force_refresh is false, load from cache_dir.
+    4. Otherwise download Census files, build, cache, and return.
 
     Parameters
     ----------
-    seed_mode:
-        Override for ``cfg.SEED_MODE``.  When ``None``, reads from config.
     cache_dir:
-        Override for ``cfg.CACHE_DIR``.
+        Where to read/write cache when not using the data dir. Defaults to cfg.CACHE_DIR.
     force_refresh:
         When true, ignore cache and re-download from Census.
 
@@ -269,37 +267,35 @@ def load_zip_crosswalk(
     -------
     dict mapping 5-digit ZCTA strings to :class:`ZipDistrictInfo`.
     """
-    if seed_mode is None:
-        seed_mode = cfg.SEED_MODE
     if cache_dir is None:
         cache_dir = cfg.CACHE_DIR
 
-    # Seed mode: try mocks/dev/ first (snapshot covers all 40 mock members' districts).
-    if seed_mode:
-        mock_path = cfg.MOCK_DEV_DIR / _CACHE_FILE
-        if mock_path.exists():
-            try:
-                with open(mock_path, encoding="utf-8") as f:
-                    data = json.load(f)
-                result = {zcta: ZipDistrictInfo(**info) for zcta, info in data.items()}
-                if result:
-                    LOGGER.info(
-                        "ZIP crosswalk: using mocks/dev (%d ZIPs covering mock districts).",
-                        len(result),
-                    )
-                    return result
-            except Exception:
-                pass
-        LOGGER.info("ZIP crosswalk: using seed-mode fallback (%d ZIPs).", len(_SEED_CROSSWALK))
+    data_dir = get_data_dir()
+    data_path = data_dir / _CACHE_FILE
+    if data_path.exists():
+        try:
+            with open(data_path, encoding="utf-8") as f:
+                data = json.load(f)
+            result = {zcta: ZipDistrictInfo(**info) for zcta, info in data.items()}
+            if result:
+                LOGGER.info(
+                    "ZIP crosswalk: using %s (%d ZIPs).",
+                    data_path,
+                    len(result),
+                )
+                return result
+        except Exception:
+            pass
+
+    if is_using_mocks():
+        LOGGER.info("ZIP crosswalk: using seed fallback (%d ZIPs).", len(_SEED_CROSSWALK))
         return dict(_SEED_CROSSWALK)
 
-    # Try cache first.
     if not force_refresh:
         cached = _load_cache(cache_dir)
         if cached is not None:
             return cached
 
-    # Build from Census files.
     try:
         crosswalk = build_zip_to_district()
         _save_cache(crosswalk, cache_dir)

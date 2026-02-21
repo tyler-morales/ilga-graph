@@ -37,7 +37,7 @@ LOGGER = logging.getLogger("refresh_photos")
 
 
 def main() -> int:
-    cached = load_normalized_cache(seed_fallback=False)
+    cached = load_normalized_cache()
     if cached is None:
         LOGGER.error(
             "No cache found. Need cache/members.json and cache/bills.json. "

@@ -21,7 +21,8 @@ from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from ..config import BASE_URL, CACHE_DIR, GA_ID, MOCK_DEV_DIR, SESSION_ID
+from ..config import BASE_URL, CACHE_DIR, GA_ID, SESSION_ID
+from ..data_source import get_data_dir
 from ..models import ActionEntry, Bill, VoteEvent, WitnessSlip
 from ..normalize import normalize_chamber, normalize_date, validate_bill_cache
 from ._log import log_phase, log_progress
@@ -974,7 +975,6 @@ def scrape_all_bills(
     request_delay: float = 0.5,
     max_workers: int = 3,
     use_cache: bool = True,
-    seed_fallback: bool = False,
     checkpoint_interval: int = 50,
 ) -> dict[str, Bill]:
     """Scrape BillStatus pages for all bills in the index.
@@ -988,14 +988,11 @@ def scrape_all_bills(
         is not lost if the scrape is interrupted mid-run.  Set to 0 to
         disable checkpointing.
     """
-    # Try cache first
     if use_cache:
-        cached = load_bill_cache(seed_fallback=seed_fallback)
+        cached = load_bill_cache()
         if cached is not None:
             return cached
 
-    # Load existing cache to preserve vote/slip data even when not
-    # using cache as the primary source (e.g. full re-scrape).
     _existing_cache = load_bill_cache() or {}
 
     sess = session or _build_session()
@@ -1201,28 +1198,18 @@ def save_bill_cache(bills: dict[str, Bill]) -> None:
     LOGGER.info("Saved %d bills to %s", len(data), BILLS_CACHE_FILE)
 
 
-def load_bill_cache(*, seed_fallback: bool = False) -> dict[str, Bill] | None:
-    """Load bills from cache/bills.json (or mocks/dev/ if seed_fallback)."""
-    path = BILLS_CACHE_FILE
+def load_bill_cache() -> dict[str, Bill] | None:
+    """Load bills from the current data dir (cache or mocks)."""
+    path = get_data_dir() / "bills.json"
     if not path.exists():
-        if seed_fallback:
-            seed_path = MOCK_DEV_DIR / "bills.json"
-            if seed_path.exists():
-                LOGGER.info("Loading bill cache from seed: %s", seed_path)
-                path = seed_path
-            else:
-                return None
-        else:
-            return None
+        return None
 
     with open(path, encoding="utf-8") as f:
         raw = json.load(f)
 
-    # Validate cache schema before loading
     validate_bill_cache(raw)
-
     bills = {lid: _bill_from_dict(d) for lid, d in raw.items()}
-    LOGGER.info("Loaded %d bills from cache (%s).", len(bills), path)
+    LOGGER.info("Loaded %d bills from %s.", len(bills), path)
     return bills
 
 

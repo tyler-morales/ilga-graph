@@ -27,37 +27,32 @@ pip install -e ".[dev,docs,ml]"
 
 ## Run the app
 
-Data is **served from cache** (no scraping on startup when using `make dev` or `make run`).
+Data is **served from cache or mocks** (no scraping on startup when using `make dev` or `make serve`).
 
 | Command | What it does |
 |---------|----------------|
-| `make dev` | Start the app in **dev mode** at **http://127.0.0.1:8000** (auto-reload, seed fallback if no cache). |
+| `make dev` | Start the app in **dev mode** at **http://127.0.0.1:8000** (auto-reload). Uses `cache/dev/` if present, else `mocks/dev/`. |
 | `make serve` | Start in **prod mode** (cache only, no reload). |
 
-### Dev vs prod: where data comes from
+### Where does data come from?
 
-| Mode | Command | Data source | Who writes it |
-|------|---------|-------------|----------------|
-| **Dev** | `make dev` | `cache/dev/` → if empty, **`mocks/dev/`** (seed) | You can write to `cache/dev/`; mocks are committed, never auto-written by the app |
-| **Prod** | `make serve` | **`cache/`** only | `make scrape` |
+- **Prod:** Legislative data comes from `cache/` only. Run `make scrape` to populate it.
+- **Dev:** Legislative data comes from one place: **`cache/dev/`** if it has data (e.g. after `make dev-cache`), otherwise **`mocks/dev/`**. The app never writes to mocks.
+- **Outreach** (calls, emails) lives in the SQLite DB. To populate the dev DB with sample outreach, run `make seed-outreach` once (same profile as the app).
 
-- **Cached data does not flow into mocks.** Mocks are a static, hand-maintained (or snapshot) subset committed to the repo. The app only *reads* from mocks when dev cache is empty; it never writes to mocks.
-- **Simple workflow:** New contributor → `make dev` (uses mocks, no scrape). When ready for full data locally → `make scrape` then `make serve`.
-- **Refreshing mocks from prod cache:** Run `make snapshot-mocks` after a full scrape to sample `cache/` and write a subset to `mocks/dev/`. Commit the result so everyone gets an up-to-date dev seed. See [Snapshot mocks from cache](#snapshot-mocks-from-cache) below.
+Full detail: [Data and environments](development/data-and-environments.md).
 
-### Data directory separation
+### Quick reference
 
 | Directory | Used by | Written by |
 |-----------|---------|------------|
-| `cache/` | `make serve` (prod) | `make scrape` |
-| `cache/dev/` | `make dev` | Optional (disposable); if empty, fallback to mocks |
-| `mocks/dev/` | Seed for dev when `cache/dev/` empty | You (commit) or `make snapshot-mocks` |
+| `cache/` | Prod app | `make scrape` |
+| `cache/dev/` | Dev app (optional) | `make dev-cache` or manual |
+| `mocks/dev/` | Dev app when `cache/dev/` empty | You (commit) or `make snapshot-mocks` |
 
-- `cache/` is **prod only** — only `make scrape` writes to it. Dev never touches it.
-- `cache/dev/` is optional. If empty, dev automatically uses `mocks/dev/`.
-- Run `make dev-reset` to clear `cache/dev/` and start fresh from seed data.
-
-The mock data in `mocks/dev/` includes a small set of members, bills (with action history and vote events), and committees so that advocacy, committee stats, and influence features work in dev without a full scrape.
+- **Quick dev (no scrape):** `make dev` — uses `mocks/dev/` if `cache/dev/` is empty.
+- **Dev with full cache:** Run `make scrape`, then `make dev-cache`, then `make dev`.
+- **Reset dev to mocks:** `make dev-reset` then `make dev`.
 
 ---
 
@@ -117,9 +112,10 @@ Opens at **http://127.0.0.1:8001** (port 8001 so it doesn’t clash with the app
 
 | Goal | Steps |
 |------|--------|
-| **Quick dev (no scrape)** | `make install` → `make dev` (uses seed from `mocks/dev/` if `cache/dev/` is empty). |
-| **Reset dev to seed** | `make dev-reset` → `make dev` (clears `cache/dev/`, falls back to `mocks/dev/`). |
-| **Full local data** | `make scrape` → `make serve` (prod reads from `cache/`). |
+| **Quick dev (no scrape)** | `make install` → `make dev` (uses `mocks/dev/` if `cache/dev/` is empty). |
+| **Dev with full scraped data** | `make scrape` → `make dev-cache` → `make dev`. |
+| **Reset dev to mocks** | `make dev-reset` → `make dev`. |
+| **Full local data (prod)** | `make scrape` → `make serve`. |
 | **Docs + app** | Terminal 1: `make dev`. Terminal 2: `make docs-serve`. App: 8000, Docs: 8001. |
 | **Before a PR** | `make lint` and `make test`. |
 
@@ -127,6 +123,7 @@ Opens at **http://127.0.0.1:8001** (port 8001 so it doesn’t clash with the app
 
 ## Next
 
+- [Data and environments](development/data-and-environments.md) — Where data comes from and make targets.
 - [App overview](features/app-overview.md) — What’s in the app (Advocacy, Power Map, Intelligence, GraphQL).
 - [CLI reference](reference/cli-make.md) — All `make` targets.
 - [Environment variables](reference/environment-variables.md) — Config and profiles.

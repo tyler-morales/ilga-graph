@@ -20,17 +20,15 @@ from urllib.parse import parse_qs, urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from ..config import CACHE_DIR, MOCK_DEV_DIR
+from ..config import CACHE_DIR
+from ..data_source import get_data_dir
 from ..models import WitnessSlip
 
 LOGGER = logging.getLogger(__name__)
 
 EXPORT_BASE = "https://my.ilga.gov/Legislation/BillStatus/ExportWitnessSlips"
 
-# ── Cache / seed paths (derived from config) ─────────────────────────────────
-
 WS_CACHE_FILE = CACHE_DIR / "witness_slips.json"
-WS_MOCK_DEV_FILE = MOCK_DEV_DIR / "witness_slips.json"
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -219,19 +217,15 @@ def scrape_witness_slips(
 # ── Cache helpers ─────────────────────────────────────────────────────────────
 
 
-def _load_ws_cache(*, seed_fallback: bool = False) -> list[WitnessSlip] | None:
-    """Load witness slips from disk: cache/ first, then mocks/dev/ if requested."""
-    if WS_CACHE_FILE.exists():
-        with open(WS_CACHE_FILE, encoding="utf-8") as f:
-            data = json.load(f)
-        LOGGER.info("Loaded %d witness slips from cache (%s).", len(data), WS_CACHE_FILE)
-        return [WitnessSlip(**ws) for ws in data]
-    if seed_fallback and WS_MOCK_DEV_FILE.exists():
-        with open(WS_MOCK_DEV_FILE, encoding="utf-8") as f:
-            data = json.load(f)
-        LOGGER.info("Loaded %d witness slips from mocks/dev (%s).", len(data), WS_MOCK_DEV_FILE)
-        return [WitnessSlip(**ws) for ws in data]
-    return None
+def _load_ws_cache() -> list[WitnessSlip] | None:
+    """Load witness slips from the current data dir (cache or mocks)."""
+    path = get_data_dir() / "witness_slips.json"
+    if not path.exists():
+        return None
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    LOGGER.info("Loaded %d witness slips from %s.", len(data), path)
+    return [WitnessSlip(**ws) for ws in data]
 
 
 def _save_ws_cache(slips: list[WitnessSlip]) -> None:
@@ -251,11 +245,8 @@ def scrape_all_witness_slips(
     timeout: int = 20,
     request_delay: float = 0.5,
     use_cache: bool = True,
-    seed_fallback: bool = False,
 ) -> list[WitnessSlip]:
     """Scrape witness slips for a list of bill status URLs.
-
-    Uses the same cache-first / seed-fallback pattern as vote scraping.
 
     Parameters
     ----------
@@ -268,13 +259,10 @@ def scrape_all_witness_slips(
     request_delay:
         Delay between requests in seconds.
     use_cache:
-        If True, load from cache or seed (when seed_fallback) if available.
-    seed_fallback:
-        If True and cache/ is missing, load from mocks/dev/witness_slips.json.
+        If True, load from the current data dir if available.
     """
-    # Check cache first, then seed when requested
     if use_cache:
-        cached = _load_ws_cache(seed_fallback=seed_fallback)
+        cached = _load_ws_cache()
         if cached is not None:
             return cached
 
