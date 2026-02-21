@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
@@ -27,6 +28,8 @@ from ..member_lookup import (
     is_constituent_for_zip_member,
 )
 from ..routers.outreach import get_outreach_aggregate
+
+_ZIP_RE = re.compile(r"^\d{5}$")
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
 _LETTER_PDF_PATH = (
@@ -245,6 +248,8 @@ async def advocacy_index(
 ):
     """Render the advocacy search page. Accepts dev deep-link params when ?dev is present."""
     zip_param = (zip or "").strip()
+    if zip_param and not _ZIP_RE.match(zip_param):
+        zip_param = ""
     in_district = zip_param in state.zip_to_district if zip_param else False
     member_count = len(state.members)
     zip_count = len(state.zip_to_district)
@@ -267,8 +272,8 @@ async def advocacy_index(
         "calls_this_week": calls_this_week,
         "features": cfg.get_client_features(),
     }
-    if zip:
-        ctx["zip"] = zip
+    if zip_param:
+        ctx["zip"] = zip_param
     elif cfg.DEV_MODE:
         ctx["zip"] = "60601"
     elif is_using_mocks():
@@ -355,7 +360,8 @@ async def advocacy_drawer(
     user: User | None = Depends(get_current_user_optional),
 ):
     """Return drawer body: view=call (script + form) or view=email (template)."""
-    zip_code = (request.query_params.get("zip") or "").strip()
+    raw_zip = (request.query_params.get("zip") or "").strip()
+    zip_code = raw_zip if _ZIP_RE.match(raw_zip) else ""
     photo_url_param = (request.query_params.get("photo_url") or "").strip()
     target_type_param = (request.query_params.get("target_type") or "").strip().upper()
     member_id_stripped = member_id.strip() if member_id else ""
@@ -467,7 +473,8 @@ async def advocacy_drawer(
 async def advocacy_call_wrapup(request: Request, call_id: str):
     """Wrap-up from call: swap drawer to Email view (prefilled or copy-only)."""
     form = await request.form()
-    zip_code = (form.get("zip") or "").strip()
+    raw_zip = (form.get("zip") or "").strip()
+    zip_code = raw_zip if _ZIP_RE.match(raw_zip) else ""
     staffer_name = (form.get("staffer_name") or "").strip()
     email_address = (form.get("email_address") or "").strip()
     next_step = (form.get("next_step") or "").strip()
@@ -562,7 +569,8 @@ async def advocacy_call_wrapup(request: Request, call_id: str):
 async def advocacy_call_no_answer(request: Request, call_id: str):
     """No-answer / voicemail outcome: return guidance partial with next-step CTAs."""
     form = await request.form()
-    zip_code = (form.get("zip") or "").strip()
+    raw_zip = (form.get("zip") or "").strip()
+    zip_code = raw_zip if _ZIP_RE.match(raw_zip) else ""
     outcome = (form.get("outcome") or "no_answer").strip()
     member_id = call_id.strip()
     member = find_member_by_id(state, member_id) if member_id else None
@@ -584,7 +592,7 @@ async def check_constituent(member_id: str = "", zip: str = ""):
     """Return whether the given ZIP is in the given member's district (constituent checkbox)."""
     zip_code = (zip or "").strip()
     member_id_stripped = (member_id or "").strip()
-    if not member_id_stripped or not zip_code:
+    if not member_id_stripped or not zip_code or not _ZIP_RE.match(zip_code):
         return JSONResponse({"is_constituent": False})
     member = find_member_by_id(state, member_id_stripped)
     is_constituent = is_constituent_for_zip_member(state, zip_code, member)
@@ -617,6 +625,28 @@ async def advocacy_search(
     zip_code = zip_code.strip()
     category = category.strip()
     is_htmx = request.headers.get("HX-Request") == "true"
+
+    if not _ZIP_RE.match(zip_code):
+        error = "Please enter a valid 5-digit Illinois ZIP code."
+        tpl = "_results_partial.html" if is_htmx else "index.html"
+        ctx_error: dict[str, Any] = {
+            "request": request,
+            "title": cfg.SITE_NAME,
+            **_hero_context(),
+            "categories": CATEGORY_CHOICES,
+            "zip": "",
+            "category": category or "Transportation",
+            "error": error,
+        }
+        if not is_htmx:
+            try:
+                agg = await get_outreach_aggregate(db)
+                ctx_error["calls_total"] = agg["calls_total"]
+                ctx_error["calls_this_week"] = agg["calls_this_week"]
+            except Exception:
+                ctx_error["calls_total"] = 0
+                ctx_error["calls_this_week"] = 0
+        return templates.TemplateResponse(tpl, ctx_error)
 
     district_info = state.zip_to_district.get(zip_code)
     if district_info is None:
