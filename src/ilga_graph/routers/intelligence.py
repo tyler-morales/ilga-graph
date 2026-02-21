@@ -26,6 +26,7 @@ templates.env.globals["app_base_url"] = cfg.APP_BASE_URL
 templates.env.globals["site_name"] = cfg.SITE_NAME
 templates.env.globals["meta_description"] = cfg.META_DESCRIPTION
 templates.env.globals["og_image_url"] = cfg.OG_IMAGE_URL
+templates.env.globals["umami_enabled"] = cfg.PROFILE == "prod" and bool(cfg.UMAMI_WEBSITE_ID)
 templates.env.globals["umami_website_id"] = cfg.UMAMI_WEBSITE_ID
 templates.env.globals["umami_script_url"] = cfg.UMAMI_SCRIPT_URL
 templates.env.globals["show_beta_banner"] = cfg.BETA_BANNER
