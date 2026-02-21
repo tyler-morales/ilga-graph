@@ -7,6 +7,7 @@ from pathlib import Path
 from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
 
+from .. import advocacy_helpers as ah
 from ..app_state import state
 from ..constants import CATEGORY_CHOICES, CATEGORY_COMMITTEES
 from ..member_lookup import find_member_by_district
@@ -107,13 +108,7 @@ async def graph_data(
                 }
             )
 
-        party_lower = (member.party or "").lower()
-        if "republican" in party_lower:
-            party_abbr = "R"
-        elif "democrat" in party_lower:
-            party_abbr = "D"
-        else:
-            party_abbr = member.party[:1] if member.party else ""
+        party_abbr = ah.party_abbr_for_member(member)
 
         is_topic_relevant = member.id in topic_member_ids if topic_member_ids else False
         is_your_legislator = member.id in your_legislator_ids

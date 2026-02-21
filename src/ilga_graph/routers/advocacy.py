@@ -20,7 +20,11 @@ from ..constants import CATEGORY_CHOICES, CATEGORY_COMMITTEES
 from ..db import get_db
 from ..db_models import OutreachEvent, User
 from ..dependencies import get_current_user_optional
-from ..member_lookup import find_member_by_district, find_member_by_id
+from ..member_lookup import (
+    find_member_by_district,
+    find_member_by_id,
+    is_constituent_for_zip_member,
+)
 from ..routers.outreach import get_outreach_aggregate
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -47,6 +51,28 @@ templates.env.globals["umami_website_id"] = cfg.UMAMI_WEBSITE_ID
 templates.env.globals["umami_script_url"] = cfg.UMAMI_SCRIPT_URL
 templates.env.globals["show_beta_banner"] = cfg.BETA_BANNER
 templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
+
+_HERO_SUBHEAD = (
+    "Illinois is currently blocking registration for federally lawful Kei vehicles "
+    "due to a statutory gap. You can help fix it—contact your legislator with a "
+    "pre-written script in under a minute."
+)
+
+
+def _hero_context() -> dict[str, Any]:
+    """Shared hero headline/subhead for advocacy index and search error response."""
+    return {
+        "hero_headline": "Fix Illinois Law. Allow Kei Vehicle Registration.",
+        "hero_headline_line1": "Fix Illinois Law.",
+        "hero_headline_line1_prefix": "",
+        "hero_headline_line1_highlight": "Fix",
+        "hero_headline_line1_suffix": " Illinois Law.",
+        "hero_headline_line2": "Allow Kei Vehicle Registration.",
+        "hero_headline_line2_prefix": "Allow ",
+        "hero_headline_highlight": "Kei Vehicle",
+        "hero_headline_line2_suffix": " Registration.",
+        "hero_subhead": _HERO_SUBHEAD,
+    }
 
 
 async def _build_search_results_context(
@@ -229,18 +255,8 @@ async def advocacy_index(
         calls_this_week = 0
     ctx: dict[str, Any] = {
         "request": request,
-        "title": "Kei Truck Freedom",
-        "hero_headline": "Fix Illinois Law. Allow Kei Vehicle Registration.",
-        "hero_headline_line1": "Fix Illinois Law.",
-        "hero_headline_line2": "Allow Kei Vehicle Registration.",
-        "hero_headline_line2_prefix": "Allow ",
-        "hero_headline_highlight": "Kei Vehicle",
-        "hero_headline_line2_suffix": " Registration.",
-        "hero_subhead": (
-            "Illinois is currently blocking registration for federally lawful kei vehicles "
-            "due to a statutory gap. You can help fix it—contact your legislator with a "
-            "pre-written script in under a minute."
-        ),
+        "title": cfg.SITE_NAME,
+        **_hero_context(),
         "categories": CATEGORY_CHOICES,
         "member_count": member_count,
         "zip_count": zip_count,
@@ -345,24 +361,7 @@ async def advocacy_drawer(
             {"detail": "Legislator not found."},
             status_code=404,
         )
-    # Constituent checkbox: checked only when selected member is user's rep or senator for this zip
-    is_constituent = False
-    if zip_code and member:
-        district_info = state.zip_to_district.get(zip_code)
-        if district_info:
-            senator_member = (
-                find_member_by_district(state, "senate", district_info.il_senate)
-                if district_info.il_senate
-                else None
-            )
-            rep_member = (
-                find_member_by_district(state, "house", district_info.il_house)
-                if district_info.il_house
-                else None
-            )
-            is_constituent = (senator_member and member.id == senator_member.id) or (
-                rep_member and member.id == rep_member.id
-            )
+    is_constituent = is_constituent_for_zip_member(state, zip_code, member)
     legislator_name = member.name if member else ""
     phone = None
     if member:
@@ -410,14 +409,7 @@ async def advocacy_drawer(
             call_date="",
         )
         legislator_display_name = ah.get_legislator_display_name(legislator_name, chamber, district)
-        party_abbr = ""
-        if member and (member.party or "").lower():
-            if "republican" in (member.party or "").lower():
-                party_abbr = "R"
-            elif "democrat" in (member.party or "").lower():
-                party_abbr = "D"
-            else:
-                party_abbr = (member.party or "")[:1]
+        party_abbr = ah.party_abbr_for_member(member)
         return templates.TemplateResponse(
             "_advocacy_drawer_email.html",
             {
@@ -486,23 +478,7 @@ async def advocacy_call_wrapup(request: Request, call_id: str):
     call_date = (form.get("call_date") or "").strip()
     chamber = getattr(member, "chamber", None) if member else None
     district = getattr(member, "district", None) if member else None
-    is_constituent = False
-    if zip_code and member:
-        district_info = state.zip_to_district.get(zip_code)
-        if district_info:
-            senator_member = (
-                find_member_by_district(state, "senate", district_info.il_senate)
-                if district_info.il_senate
-                else None
-            )
-            rep_member = (
-                find_member_by_district(state, "house", district_info.il_house)
-                if district_info.il_house
-                else None
-            )
-            is_constituent = (senator_member and member.id == senator_member.id) or (
-                rep_member and member.id == rep_member.id
-            )
+    is_constituent = is_constituent_for_zip_member(state, zip_code, member)
     subject_constituent = ah.build_email_subject_line(zip_code, variant="constituent")
     subject_general = ah.build_email_subject_line(zip_code, variant="general")
     body = ah.build_after_call_email_body(
@@ -524,14 +500,7 @@ async def advocacy_call_wrapup(request: Request, call_id: str):
 
     contact_name = staffer or ""
     legislator_display_name = ah.get_legislator_display_name(legislator_name, chamber, district)
-    party_abbr = ""
-    if member and (member.party or "").lower():
-        if "republican" in (member.party or "").lower():
-            party_abbr = "R"
-        elif "democrat" in (member.party or "").lower():
-            party_abbr = "D"
-        else:
-            party_abbr = (member.party or "")[:1]
+    party_abbr = ah.party_abbr_for_member(member)
     if recipient:
         return templates.TemplateResponse(
             "_advocacy_drawer_email.html",
@@ -614,24 +583,7 @@ async def check_constituent(member_id: str = "", zip: str = ""):
     if not member_id_stripped or not zip_code:
         return JSONResponse({"is_constituent": False})
     member = find_member_by_id(state, member_id_stripped)
-    if not member:
-        return JSONResponse({"is_constituent": False})
-    district_info = state.zip_to_district.get(zip_code)
-    if not district_info:
-        return JSONResponse({"is_constituent": False})
-    senator_member = (
-        find_member_by_district(state, "senate", district_info.il_senate)
-        if district_info.il_senate
-        else None
-    )
-    rep_member = (
-        find_member_by_district(state, "house", district_info.il_house)
-        if district_info.il_house
-        else None
-    )
-    is_constituent = (senator_member and member.id == senator_member.id) or (
-        rep_member and member.id == rep_member.id
-    )
+    is_constituent = is_constituent_for_zip_member(state, zip_code, member)
     return JSONResponse({"is_constituent": is_constituent})
 
 
@@ -672,20 +624,10 @@ async def advocacy_search(
             sample = sorted(state.zip_to_district.keys())[:6]
             error += f" In dev mode, try ZIPs such as: {', '.join(sample)}."
         tpl = "_results_partial.html" if is_htmx else "index.html"
-        ctx_error: dict[str, Any] = {
+        ctx_error = {
             "request": request,
-            "title": "Kei Truck Freedom",
-            "hero_headline": "Fix Illinois Law. Allow Kei Vehicle Registration.",
-            "hero_headline_line1": "Fix Illinois Law.",
-            "hero_headline_line2": "Allow Kei Vehicle Registration.",
-            "hero_headline_line2_prefix": "Allow ",
-            "hero_headline_highlight": "Kei Vehicle",
-            "hero_headline_line2_suffix": " Registration.",
-            "hero_subhead": (
-                "Illinois is currently blocking registration for federally lawful kei vehicles "
-                "due to a statutory gap. You can help fix it—contact your legislator with a "
-                "pre-written script in under a minute."
-            ),
+            "title": cfg.SITE_NAME,
+            **_hero_context(),
             "categories": CATEGORY_CHOICES,
             "zip": zip_code,
             "category": category or "Transportation",
@@ -707,7 +649,7 @@ async def advocacy_search(
         tpl,
         {
             "request": request,
-            "title": "Kei Truck Freedom",
+            "title": cfg.SITE_NAME,
             "categories": CATEGORY_CHOICES,
             **results_ctx,
         },

@@ -29,7 +29,7 @@
 |------------|------------------------------|--------|
 | 2026-02-20 | Truck animation → bug report | Removed all ZIP/member-cards loading behavior; HTMX direct swap. Bug report: truck + status during submit via fetch; success page (?submitted=1) is green box only, no truck. Fix: server responds in &lt;20ms so redirect was at 600ms—animation never visible. Now 3.5s truck animation with dashed horizontal path; truck drives left → stops at center ("Picking up bug") → drives to end ("Sent!"); 🐛 at center fades when truck stops (picked up). Status steps: "Sending…" → "Picking up bug" (1.1s) → "Sent!" (2.8s). base.css report-bug-truck-path (dashed), report-bug-bug, report-bug-truck-drive 3-phase keyframes; report_bug.html statusSteps, setTimeout timing. Cleanup: responsive track (width 100%, max 280px, min 200px); --report-bug-truck-duration; prefers-reduced-motion (no movement, bug fades only); small-screen smaller emoji; JS TRUCK_DURATION_MS, clearStatusTimers before redirect. |
 | 2026-02-20 | Beta banner (minimal)        | Solid #f0f0f0, max-width 1120px to match .container, no gradient/animation, minimal text + link + dismiss; responsive padding to align. base.css. |
-| 2026-02-20 | Micro-interactions (confetti-like) | Pop/thunk on key moments: "I sent it!" (pop+shimmer), End call (thunk), card Called!/Emailed! (pop), reminder Copy/Calendar (pop). Report-bug success has no animation. base.css keyframes + utilities; advocacy-email, advocacy-form, index.html. prefers-reduced-motion respected. |
+| 2026-02-20 | Micro-interactions (confetti-like) | Pop/thunk on key moments: "I sent it!" (pop+shimmer), End call (thunk), card Called!/Emailed! (pop), reminder Copy/Calendar (pop). **Start My Outreach** CTA: canvas-confetti on click (origin at button), amber/gold palette; confetti script in base.html head; prefers-reduced-motion skips confetti. Report-bug success has no animation. base.css keyframes + utilities; advocacy-email, advocacy-form, index.html. prefers-reduced-motion respected. |
 | 2026-02-20 | Beta banner + in-app bug report | Site-wide dismissible bar; “Report a bug” → in-app form at /report-bug (no GitHub/service). Form: description, optional email, stored in bug_reports; optional email to BETA_BANNER_EMAIL if SMTP set. Email body: timestamp, email, issue, page, screenshot (inline + link or “No image sent”), IP/User-Agent. Override with FEEDBACK_URL or EMAIL for external/mailto. |
 | 2026-02-20 | Bug nudge in advocacy drawer | No longer in drawer header. Call: "Something went wrong? Report a bug" at end of script (after End call) and in voicemail (_advocacy_drawer_call). Email: same copy under action bar (Open in your email app / I sent it) (_advocacy_drawer_email). No-answer drawer same copy. Gated on show_beta_banner and beta_banner_feedback_url. advocacy-drawer.css .drawer-bug-nudge, .gmail-bug-nudge. |
 | 2026-02-20 | Form submission security     | CSRF (double-submit cookie XSRF-TOKEN + body), rate limiting (bug report, request-code, verify-code), page_url validation (http/https only). /report-bug exempt from API key. security.py; docs env vars + Security section. |
@@ -41,23 +41,29 @@
 | 2026-02-20 | Recommendation chip tooltips | Tippy.js: one tooltip at a time, appendTo body, theme recommendation-chip; Popper 2 + Tippy 6. |
 | 2026-02-20 | Power Broker logic           | Chair for topic (default Transportation) or highest Moneyball outside district; exclude_senate_district/exclude_house_district. |
 | 2026-02-20 | Potential Ally removed       | 3 cards only: Your Senator, Your Rep, Power Broker; seating redo later. |
-| 2026-02-20 | The Land of Kei branding     | SITE_NAME, META_DESCRIPTION, footer, auth email, .env.example, docs. |
+| 2026-02-20 | The Land of Kei branding     | SITE_NAME, META_DESCRIPTION, footer, auth email, .env.example, docs. Advocacy page title now uses ILGA_SITE_NAME ("{{ site_name }} — Find Your Targets"). |
 | 2026-02-20 | Dev ZIP autofill             | ILGA_DEV_MODE=1 autofills hero ZIP 60601 when no ?zip=. |
 | 2026-02-20 | Auth strip outreach progress | Signed-in users see "Called X legislators and sent Y emails" under verified email. GET /outreach/my-stats; refresh on sign-in and after recording call/email. index.html #auth-strip-progress, advocacy-form.css .auth-strip-progress. |
 | 2026-02-20 | ZIP in URL on search         | history.replaceState ?zip=XXXXX on form submit; shareable links. |
 | 2026-02-20 | Member cards enter animation | card-fade-slide-up stagger; prefers-reduced-motion respected. |
 | 2026-02-20 | Hero copy refresh             | Subhead: statutory gap + pre-written script in under a minute; ticker "Join X+ Illinois residents who've already taken action this week"; CTA "Start My Outreach". advocacy.py hero_subhead (2 places), index.html ticker + find-btn. |
+| 2026-02-20 | Hero animation sequence       | Sharpie fades in first on load (0s); after --hero-highlight-delay (0.5s) the underline/highlighter reveal runs. advocacy-form.css: .advocacy-hero --hero-highlight-delay, .hero-headline-mark::after animation-delay. |
+| 2026-02-20 | Hero "Fix" sharpie circle     | Sharpie PNG overlay around word "Fix" in hero line 1. advocacy.py hero_headline_line1_* vars; index.html .hero-headline-sharpie-wrap + img sharpie.png; advocacy-form.css .hero-headline-sharpie, scale/position fixed to word. |
+| 2026-02-20 | Hero headline responsive size | Desktop unchanged (clamp 1.75rem–2.75rem). Tablet ≤768px: clamp(2.25rem, 6.5vw, 3.5rem). Phone ≤480px: clamp(2rem, 11vw, 3.25rem). advocacy-form.css .hero-headline in media queries — max-width-as-possible at small breakpoints. |
 | 2026-02-20 | Hardball advocacy landing    | Threat headline, Anton/Impact, two-column hero, CTA "Start My Outreach", ticker, trust badges, hero alignment. |
 | 2026-02-20 | Refactor round               | Intelligence/explore routers, CSS split; main ~1700 lines. |
 | 2026-02-20 | Advocacy router cleanup      | Removed debug logging; E501/F401 fixed; lint + test pass. |
-| 2026-02-20 | Drawer close-then-open       | Open another drawer → close first, then open after 320ms. |
+| 2026-02-20 | Drawer open/close animation  | Snappy slide: --drawer-duration 0.28s, --drawer-ease cubic-bezier(0.33,1,0.68,1); overlay + panel in sync; no fade-in on panel. prefers-reduced-motion: 0.01s. advocacy-drawer.css. |
+| 2026-02-20 | Drawer close-then-open       | Open another drawer → close first, then open after 300ms (DRAWER_CLOSE_MS). |
 | 2026-02-20 | Call drawer overflow         | overflow-x hidden, min-width 0, word-break on mobile. |
 | 2026-02-20 | Mobile drawer URL/scroll     | 95dvh, overscroll-behavior contain, body scroll lock + restore. |
 | 2026-02-20 | Advocacy mobile responsiveness | Media queries moved from base.css into advocacy-drawer/cards/form. |
 | 2026-02-20 | Post-prod                    | OG/Twitter cards, canonical, Umami, security headers, advocacy SEO globals. |
 | 2026-02-20 | Automated deploy Vultr       | Push main → CI → SSH deploy; DEPLOY_HOST/USER/SSH_KEY. |
 | 2026-02-19 | Deployment prep              | Lint, Procfile, status-report, deployment.md, vultr-deployment-guide, startup banner URLs. |
+| 2026-02-20 | Typography normalization     | Removed fixed/inconsistent text sizes and styles that caused bugs. variables.css: added --line-height-tight. All static/css: font-size and line-height use design tokens (--font-size-base, --font-size-body, --font-size-label, --font-size-sm, --font-size-xs, --font-size-h1, --font-size-h2, --line-height-body, --line-height-tight). No more px line-heights or arbitrary em/rem; hero clamp() kept for responsive headlines. base, advocacy-cards, advocacy-drawer, advocacy-form, advocacy-email, intelligence-dashboard, intelligence-tables. |
 | 2026-02-20 | Mobile experience overhaul  | Typography: variables.css font-size tokens, :root 17px at 480px; base.css body/headings use tokens. Cards: rem-based mobile text, larger member photos (96/88px), 44px touch targets (card-details-toggle, beta-banner-dismiss). Drawer/email: larger drawer photo (80px), bumped smallest font sizes. Intelligence: responsive summary grid, .intel-table-scroll-wrap, font-size floor 0.8rem at 480px. Templates: explanation partial classes, predictions/bill inline font-sizes to rem. |
+| 2026-02-20 | Mobile typography scale-up   | variables.css: at 480px base 18px, h1 2rem, h2 1.375rem, body/label tokens. Hero: .hero-inner full-width on phone; .hero-headline 1.875rem (phone) / 1.75rem (tablet), eyebrow/subhead larger. base.css: explicit body/h1/h2/footer at 480px. advocacy-drawer.css: mobile labels 0.9375rem, panel title 1.2rem. Branch: feature/mobile-typography. |
 | 2026-02-20 | Moneyball help circle (mobile) | .moneyball-help no longer forced to 44px on mobile; stays content-sized (1.1em) so circle fits the "?" only. advocacy-cards.css. |
 | 2026-02-20 | Badges keyboard-accessible   | tabindex=0, role=button, aria-label; Tippy focus trigger; focus ring. |
 | 2026-02-19 | Accessibility pass           | Drawer role=dialog, focus trap, landmarks, role=alert/status. |
@@ -107,6 +113,8 @@
 
 | Topic                          | Summary |
 |--------------------------------|--------|
+| Advocacy/router cleanup        | `member_lookup.is_constituent_for_zip_member(state, zip_code, member)`; `advocacy_helpers.party_abbr_for_member(member)`; shared `_hero_context()` in advocacy router. Replaced 4× is_constituent blocks, 3× party_abbr blocks, 2× hero dicts; explore uses party_abbr_for_member. |
+| Pre-push cleanup               | Removed leftover hero-image debug instrumentation (fetch to localhost:7246/ingest) from index.html; tests 303 pass, lint clean. |
 | Full-text feature caps         | FULLTEXT_MAX_FEATURES 400, FULLTEXT_MAX_TOKENS 2000; env overrides. |
 | ML Step 3 tuning                | n_iter 20, trimmed grid, verbose=2, ILGA_ML_SKIP_TUNE=1. |
 | Smart tiered index scanning     | <24h skip, <7d tail-only, >7d full; scrape_metadata timestamps. |

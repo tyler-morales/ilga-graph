@@ -80,7 +80,7 @@ a:visited {
   padding-top: 12px;
   padding-bottom: 8px;
   border-top: 1px solid #ccc;
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
   color: #555;
   text-align: center;
 }
@@ -96,11 +96,27 @@ a:visited {
 
 .footer-links a {
   color: var(--link-color, #5a2d82);
-  text-decoration: underline;
+  text-decoration: none;
+  position: relative;
+  display: inline-block;
+}
+
+.footer-links a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2px;
+  height: 1px;
+  background: currentColor;
 }
 
 .footer-links a:hover {
   text-decoration: none;
+}
+
+.footer-links a:hover::after {
+  opacity: 0;
 }
 
 .footer-links a:focus {
@@ -109,7 +125,7 @@ a:visited {
 }
 
 .footer-disclaimer {
-  font-size: 0.8em;
+  font-size: var(--font-size-sm);
   color: #888;
   text-align: center;
   white-space: nowrap;
@@ -133,7 +149,7 @@ a:visited {
   flex-wrap: wrap;
   gap: 0 0.5em;
   font-family: var(--font-sans);
-  font-size: 0.875rem;
+  font-size: var(--font-size-label);
   color: #2d3748;
   background: linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fcd34d 100%);
   border: 1px solid #f59e0b;
@@ -184,13 +200,27 @@ a:visited {
 .beta-banner-link {
   color: #92400e;
   font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  text-decoration: none;
+  position: relative;
+  display: inline-block;
+}
+
+.beta-banner-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2px;
+  height: 2px;
+  background: currentColor;
 }
 
 .beta-banner-link:hover {
   color: #78350f;
-  text-decoration: none;
+}
+
+.beta-banner-link:hover::after {
+  opacity: 0;
 }
 
 .beta-banner-link:focus {
@@ -362,7 +392,7 @@ a:visited {
 
 .report-bug-hint {
   display: block;
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
   color: #666;
   margin-top: 0.25rem;
 }
@@ -374,7 +404,7 @@ a:visited {
 .report-bug-submit-error {
   color: #c00;
   margin: 0 0 0.75rem 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-body);
 }
 
 .report-bug-submit-error[hidden] {
@@ -436,7 +466,7 @@ a:visited {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  font-size: 1.5rem;
+  font-size: var(--font-size-h2);
   line-height: 1;
   z-index: 0;
   opacity: 1;
@@ -447,7 +477,7 @@ a:visited {
   left: 0;
   top: 50%;
   transform: translateY(-50%) scaleX(-1);
-  font-size: 2.5rem;
+  font-size: var(--font-size-h1);
   line-height: 1;
   display: inline-block;
   z-index: 1;
@@ -526,11 +556,11 @@ a:visited {
 
 @media (max-width: 380px) {
   .report-bug-truck {
-    font-size: 2rem;
+    font-size: var(--font-size-h1);
   }
 
   .report-bug-bug {
-    font-size: 1.25rem;
+    font-size: var(--font-size-h2);
   }
 }
 
@@ -553,7 +583,7 @@ a:visited {
 }
 
 .report-bug-sending-status {
-  font-size: 1rem;
+  font-size: var(--font-size-base);
   font-weight: 500;
   color: #555;
   margin: 0;
@@ -591,14 +621,14 @@ ML Intelligence Dashboard
 
 .intel-section-header p {
   color: #666;
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
 }
 
 /* ── Tables ── */
 .intel-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85em;
+  font-size: var(--font-size-body);
   margin: 8px 0 16px;
 }
 
@@ -607,7 +637,7 @@ ML Intelligence Dashboard
   border: 1px solid #ccc;
   padding: 6px 8px;
   text-align: left;
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
   white-space: nowrap;
 }
 
@@ -622,7 +652,7 @@ ML Intelligence Dashboard
 }
 
 .intel-table-compact {
-  font-size: 0.82em;
+  font-size: var(--font-size-sm);
 }
 
 .intel-table-compact td,
@@ -643,7 +673,7 @@ ML Intelligence Dashboard
 
 .reason-cell {
   max-width: 200px;
-  font-size: 0.88em;
+  font-size: var(--font-size-label);
   color: #555;
 }
 
@@ -668,10 +698,10 @@ ML Intelligence Dashboard
 .score-text {
   position: relative;
   z-index: 1;
-  font-size: 0.8em;
+  font-size: var(--font-size-sm);
   font-weight: bold;
   padding: 0 4px;
-  line-height: 18px;
+  line-height: var(--line-height-tight);
 }
 
 .score-high {
@@ -713,7 +743,7 @@ ML Intelligence Dashboard
 
 .influence-signal-tag {
   display: inline-block;
-  font-size: 0.7em;
+  font-size: var(--font-size-xs);
   padding: 1px 5px;
   margin: 1px 2px;
   background: #e8f0fe;
@@ -741,7 +771,7 @@ ML Intelligence Dashboard
 }
 
 .intel-coalition-stats {
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
   color: #555;
   margin-bottom: 0.5em;
 }
@@ -752,13 +782,13 @@ ML Intelligence Dashboard
 
 .intel-coalition-leader,
 .intel-coalition-bridge {
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
   margin: 0.3em 0;
 }
 
 .intel-note {
   color: #888;
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
 }
 
 /* ── Responsive: tablet and below (full-width white, no beige) ── */
@@ -777,9 +807,36 @@ ML Intelligence Dashboard
   }
 }
 
+/* 480px–570px: tighter horizontal padding so hero/content use more width (reduces side white space) */
+@media (max-width: 570px) {
+  .container {
+    padding: 16px 14px;
+  }
+}
+
 /* ── Responsive: phone ── */
 @media (max-width: 480px) {
   .container {
     padding: 12px 14px;
+  }
+
+  body {
+    font-size: var(--font-size-base);
+  }
+
+  h1 {
+    font-size: var(--font-size-h1);
+  }
+
+  h2 {
+    font-size: var(--font-size-h2);
+  }
+
+  .footer {
+    font-size: var(--font-size-body);
+  }
+
+  .footer-disclaimer {
+    font-size: var(--font-size-label);
   }
 }

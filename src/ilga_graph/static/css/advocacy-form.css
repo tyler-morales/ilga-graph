@@ -1,6 +1,8 @@
 /* ── Form ── */
 /* ── Advocacy Hero (hardball: bold sans, poster layout, high-contrast CTA) ── */
 .advocacy-hero {
+  --hero-highlight-delay: 0.5s;
+  /* Stagger: sharpie fades in first, then highlight animates */
   background: #fff;
   color: #222;
   padding: 24px 0 32px;
@@ -10,20 +12,14 @@
 }
 
 .hero-inner {
-  max-width: 680px;
+  max-width: 100%;
   margin: 0 auto;
-}
-
-@media (min-width: 768px) {
-  .hero-inner {
-    max-width: 1000px;
-  }
 }
 
 .hero-eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  font-size: 0.78em;
+  font-size: var(--font-size-sm);
   color: #555;
   margin: 0 0 8px;
   font-family: var(--font-sans);
@@ -35,12 +31,75 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   margin: 0 0 12px;
-  padding-bottom: 8px;
-  border-bottom: 3px solid #333;
+  padding-bottom: 18px;
+  border-bottom: 4px solid #333;
   line-height: 1.2;
 }
 
-/* Sharpie-style underline for highlighted phrase (e.g. "Kei Vehicle") */
+/* Desktop: scale headline to fill width; cap keeps two lines (no wrap on line 2) */
+@media (min-width: 769px) {
+  .hero-headline {
+    font-size: clamp(2.5rem, 5.5vw, 4.25rem);
+  }
+}
+
+/* Sharpie circle around "Fix" in hero line 1 */
+.hero-headline-sharpie-wrap {
+  position: relative;
+  display: inline-block;
+  z-index: 0;
+}
+
+@keyframes hero-sharpie-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Sharpie fades in first on page load; highlight is delayed via --hero-highlight-delay */
+.hero-headline-sharpie {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(1.0);
+  width: 1.9em;
+  height: 1.9em;
+  object-fit: contain;
+  pointer-events: none;
+  z-index: 1;
+  animation: hero-sharpie-fade-in 1.4s ease-in-out 0s forwards;
+}
+
+.hero-headline-sharpie-text {
+  position: relative;
+  z-index: 2;
+}
+
+/* Sharpie-style underline for highlighted phrase (e.g. "kei vehicles") — animates left to right */
+@keyframes hero-mark-reveal {
+  from {
+    transform: rotate(2.0deg) scaleX(0);
+  }
+
+  to {
+    transform: rotate(2.0deg) scaleX(1);
+  }
+}
+
+@keyframes hero-mark-reveal-highlight {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
 .hero-headline-mark {
   position: relative;
   z-index: 0;
@@ -55,10 +114,12 @@
   bottom: .03em;
   height: 1.2em;
   background: rgb(246 255 37 / 45%);
-  transform: rotate(3.1deg);
-  transform-origin: center;
+  transform-origin: left center;
+  transform: rotate(2deg) scaleX(0);
+  /* Initial state so bar is hidden during animation-delay */
   border-radius: 2px;
   z-index: -1;
+  animation: hero-mark-reveal 0.55s ease-out var(--hero-highlight-delay, 0.5s) forwards;
 }
 
 /* Optional: highlighter-marker style (use .hero-headline-mark.hero-headline-mark--highlight on the span to switch) */
@@ -66,7 +127,10 @@
   height: 0.7em;
   bottom: 0.02em;
   background: rgba(255, 235, 120, 0.55);
-  transform: none;
+  transform: scaleX(0);
+  /* Initial state so bar is hidden during animation-delay */
+  animation-name: hero-mark-reveal-highlight;
+  animation-delay: var(--hero-highlight-delay, 0.5s);
   border-radius: 2px;
 }
 
@@ -158,7 +222,7 @@
 
 .hero-ticker {
   font-family: var(--font-sans);
-  font-size: 1rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: #222;
   margin: 0 0 16px;
@@ -168,7 +232,7 @@
 }
 
 .hero-ticker [aria-hidden="true"] {
-  font-size: 1.15em;
+  font-size: var(--font-size-body);
   color: var(--color-hero-cta);
 }
 
@@ -189,7 +253,7 @@
   display: block;
   font-weight: bold;
   margin-bottom: 5px;
-  font-size: 0.88em;
+  font-size: var(--font-size-label);
   text-align: left;
   color: #333;
   font-family: var(--font-sans);
@@ -219,7 +283,7 @@
 .hero-form input[type="text"] {
   width: 100%;
   box-sizing: border-box;
-  font-size: 1.1em;
+  font-size: var(--font-size-body);
   padding: 12px 14px;
   border: 2px solid #ccc;
   background: #fff;
@@ -244,7 +308,7 @@
 }
 
 .hero-form button {
-  font-size: 1.05em;
+  font-size: var(--font-size-body);
   padding: 12px 24px;
   background: var(--color-hero-cta);
   color: #fff;
@@ -271,7 +335,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px 16px;
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
   color: #555;
   margin-top: 12px;
   font-family: var(--font-sans);
@@ -282,7 +346,7 @@
 }
 
 .hero-trust {
-  font-size: 0.78em;
+  font-size: var(--font-size-sm);
   color: #666;
   margin-top: 4px;
 }
@@ -293,7 +357,7 @@
 
 .hero-meta {
   font-family: var(--font-sans);
-  font-size: 0.95rem;
+  font-size: var(--font-size-body);
   color: #666;
   margin-top: 12px;
   text-align: center;
@@ -321,7 +385,7 @@
 }
 
 .auth-strip {
-  font-size: 0.8em;
+  font-size: var(--font-size-sm);
   color: #555;
   margin-top: 8px;
 }
@@ -392,14 +456,14 @@
 }
 
 .auth-strip-progress {
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
   color: #555;
   margin-top: 2px;
 }
 
 .hero-signin-inline {
   font-family: var(--font-sans);
-  font-size: 1rem;
+  font-size: var(--font-size-base);
   margin-top: 22px;
   display: flex;
   flex-direction: column;
@@ -448,7 +512,7 @@
 
 .hero-signin-inline .hero-signin-input {
   font-family: var(--font-sans);
-  font-size: 0.95rem;
+  font-size: var(--font-size-body);
   padding: 5px 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -462,7 +526,7 @@
   padding: 5px 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 1.5em;
+  font-size: var(--font-size-h2);
   letter-spacing: 0.15em;
   min-width: 12ch;
   width: 12ch;
@@ -473,7 +537,7 @@
 
 .hero-signin-inline .hero-signin-btn {
   font-family: var(--font-sans);
-  font-size: 0.95rem;
+  font-size: var(--font-size-body);
   padding: 5px 12px;
   min-height: 2.25rem;
   box-sizing: border-box;
@@ -499,7 +563,7 @@
 
 .hero-signin-code-hint {
   font-family: var(--font-sans);
-  font-size: 1rem;
+  font-size: var(--font-size-base);
   color: #555;
 }
 
@@ -527,7 +591,7 @@
 
 .hero-signin-error {
   font-family: var(--font-sans);
-  font-size: 0.9rem;
+  font-size: var(--font-size-label);
   font-weight: 400;
   color: var(--color-error);
   display: block;
@@ -549,7 +613,7 @@
 
 .hero-signin-resend {
   font-family: var(--font-sans);
-  font-size: 0.875rem;
+  font-size: var(--font-size-label);
   background: none;
   border: none;
   color: #1a73e8;
@@ -570,7 +634,7 @@
 
 .hero-signin-cancel {
   font-family: var(--font-sans);
-  font-size: 0.875rem;
+  font-size: var(--font-size-label);
   background: none;
   border: none;
   color: #555;
@@ -642,7 +706,7 @@
 }
 
 .outreach-count {
-  font-size: 0.8em;
+  font-size: var(--font-size-sm);
   color: #555;
 }
 
@@ -654,7 +718,7 @@
   flex: 1 1 0;
   min-width: 0;
   padding: 10px 12px;
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
   font-weight: 600;
   border: none;
   border-radius: 6px;
@@ -705,7 +769,7 @@
   display: inline-flex;
   align-items: center;
   padding: 10px 12px;
-  font-size: 0.9em;
+  font-size: var(--font-size-label);
   font-weight: 600;
   color: #6b7280;
 }
@@ -746,7 +810,7 @@
 .outreach-row-hint {
   padding: 0;
   width: 100%;
-  font-size: 0.8em;
+  font-size: var(--font-size-sm);
   color: #6b7280;
   line-height: 1.35;
   text-align: right;
@@ -791,7 +855,7 @@
 
 /* ── Power signal chips ── */
 .chips-label {
-  font-size: 0.85em;
+  font-size: var(--font-size-label);
   font-weight: 600;
   color: #555;
   margin: 10px 0 4px 0;
@@ -817,7 +881,7 @@
   align-items: center;
   flex: 0 1 auto;
   gap: 6px;
-  font-size: 0.88em;
+  font-size: var(--font-size-label);
   font-weight: 500;
   color: #111;
   padding: 4px 10px;
@@ -853,12 +917,40 @@
     padding: 16px 0 24px;
   }
 
+  /* Keep headline to max 3 lines on small screens */
   .hero-headline {
-    font-size: 1.4em;
+    font-size: clamp(2rem, 5.5vw, 3rem);
+  }
+
+  .hero-eyebrow {
+    font-size: var(--font-size-base);
+  }
+
+  .hero-subhead {
+    font-size: var(--font-size-h2);
+    line-height: 1.5;
   }
 
   .hero-form {
     padding: 16px 18px;
+  }
+
+  .hero-form label {
+    font-size: var(--font-size-body);
+  }
+
+  .hero-form input[type="text"],
+  .hero-form select {
+    font-size: var(--font-size-body);
+  }
+
+  .hero-trust-badges {
+    font-size: var(--font-size-body);
+  }
+
+  .hero-meta,
+  .hero-meta-line {
+    font-size: var(--font-size-body);
   }
 
   .hero-form-row {
@@ -872,7 +964,7 @@
 
   .hero-field-btn button {
     width: 100%;
-    font-size: 1.05em;
+    font-size: var(--font-size-body);
     padding: 10px 24px;
     min-height: 2.75rem;
   }
@@ -974,7 +1066,7 @@
 
   .outreach-btn {
     min-height: 2.75rem;
-    font-size: 0.95em;
+    font-size: var(--font-size-body);
     padding: 12px 14px;
   }
 
@@ -989,32 +1081,48 @@
 
 /* ── Responsive: phone ── */
 @media (max-width: 480px) {
+  .hero-inner {
+    max-width: 100%;
+  }
+
+  /* Headline: max 3 lines on phone */
+  .hero-headline {
+    font-size: clamp(1.75rem, 8.5vw, 2.75rem);
+    width: 100%;
+    line-height: 1.2;
+  }
+
+  .hero-eyebrow {
+    font-size: var(--font-size-body);
+  }
+
   .hero-image {
     max-width: 100%;
     height: auto;
   }
 
-  .hero-headline {
-    font-size: 1.3em;
-  }
-
   .hero-subhead {
-    font-size: 1em;
+    font-size: var(--font-size-h2);
     line-height: 1.5;
   }
 
   .hero-form label {
-    font-size: 0.92em;
+    font-size: var(--font-size-body);
+  }
+
+  .hero-form input[type="text"],
+  .hero-form select {
+    font-size: var(--font-size-h2);
   }
 
   .hero-form button {
-    font-size: 1.05em;
+    font-size: var(--font-size-body);
     padding: 12px 24px;
     min-height: 3rem;
   }
 
   .hero-trust {
-    font-size: 0.8em;
+    font-size: var(--font-size-body);
   }
 
   .hero-trust .trust-sep {
@@ -1026,14 +1134,19 @@
     margin: 2px 0;
   }
 
-  .hero-meta {
-    font-size: 0.95rem;
+  .hero-meta,
+  .hero-meta-line {
+    font-size: var(--font-size-body);
+  }
+
+  .hero-trust-badges {
+    font-size: var(--font-size-base);
   }
 
   .outreach-btn {
     flex: 1 1 0;
     min-height: 3rem;
-    font-size: 1em;
+    font-size: var(--font-size-body);
     padding: 12px 16px;
   }
 
