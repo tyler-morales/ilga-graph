@@ -1,6 +1,7 @@
 /* ── Form ── */
 /* ── Advocacy Hero (hardball: bold sans, poster layout, high-contrast CTA) ── */
 .advocacy-hero {
+  --hero-highlight-delay: 0.5s; /* Stagger: sharpie fades in first, then highlight animates */
   background: #fff;
   color: #222;
   padding: 24px 0 32px;
@@ -10,14 +11,8 @@
 }
 
 .hero-inner {
-  max-width: 680px;
+  max-width: 100%;
   margin: 0 auto;
-}
-
-@media (min-width: 768px) {
-  .hero-inner {
-    max-width: 1000px;
-  }
 }
 
 .hero-eyebrow {
@@ -40,7 +35,62 @@
   line-height: 1.2;
 }
 
-/* Sharpie-style underline for highlighted phrase (e.g. "Kei Vehicle") */
+/* Sharpie circle around "Fix" in hero line 1 */
+.hero-headline-sharpie-wrap {
+  position: relative;
+  display: inline-block;
+  z-index: 0;
+}
+
+@keyframes hero-sharpie-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Sharpie fades in first on page load; highlight is delayed via --hero-highlight-delay */
+.hero-headline-sharpie {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(1.0);
+  width: 1.9em;
+  height: 1.9em;
+  object-fit: contain;
+  pointer-events: none;
+  z-index: 1;
+  animation: hero-sharpie-fade-in 1.4s ease-in-out 0s forwards;
+}
+
+.hero-headline-sharpie-text {
+  position: relative;
+  z-index: 2;
+}
+
+/* Sharpie-style underline for highlighted phrase (e.g. "kei vehicles") — animates left to right */
+@keyframes hero-mark-reveal {
+  from {
+    transform: rotate(2.0deg) scaleX(0);
+  }
+
+  to {
+    transform: rotate(2.0deg) scaleX(1);
+  }
+}
+
+@keyframes hero-mark-reveal-highlight {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
 .hero-headline-mark {
   position: relative;
   z-index: 0;
@@ -55,10 +105,11 @@
   bottom: .03em;
   height: 1.2em;
   background: rgb(246 255 37 / 45%);
-  transform: rotate(3.1deg);
-  transform-origin: center;
+  transform-origin: left center;
+  transform: rotate(2deg) scaleX(0); /* Initial state so bar is hidden during animation-delay */
   border-radius: 2px;
   z-index: -1;
+  animation: hero-mark-reveal 0.55s ease-out var(--hero-highlight-delay, 0.5s) forwards;
 }
 
 /* Optional: highlighter-marker style (use .hero-headline-mark.hero-headline-mark--highlight on the span to switch) */
@@ -66,7 +117,9 @@
   height: 0.7em;
   bottom: 0.02em;
   background: rgba(255, 235, 120, 0.55);
-  transform: none;
+  transform: scaleX(0); /* Initial state so bar is hidden during animation-delay */
+  animation-name: hero-mark-reveal-highlight;
+  animation-delay: var(--hero-highlight-delay, 0.5s);
   border-radius: 2px;
 }
 
@@ -999,8 +1052,6 @@
 @media (max-width: 480px) {
   .hero-inner {
     max-width: 100%;
-    padding-left: 16px;
-    padding-right: 16px;
   }
 
   .hero-headline {

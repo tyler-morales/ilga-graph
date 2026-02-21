@@ -379,6 +379,25 @@
   color: #666;
   cursor: pointer;
   padding: 4px 0;
+  list-style: none;
+  user-select: none;
+}
+
+.card-details-toggle::-webkit-details-marker,
+.card-details-toggle::marker {
+  display: none;
+  content: none;
+}
+
+.card-details-toggle::after {
+  content: " \25bc";
+  font-size: 0.75em;
+  color: #666;
+  margin-left: 4px;
+}
+
+.card-details[open] .card-details-toggle::after {
+  content: " \25b2";
 }
 
 .card-details-toggle:hover {

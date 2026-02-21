@@ -1,4 +1,10 @@
 /* ── Phone script slide-over panel ── */
+/* Snappy easing: quick start, smooth decelerate at end */
+:root {
+    --drawer-ease: cubic-bezier(0.33, 1, 0.68, 1);
+    --drawer-duration: 0.28s;
+}
+
 .phone-overlay {
     position: fixed;
     inset: 0;
@@ -6,7 +12,7 @@
     z-index: 9998;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.45s ease;
+    transition: opacity var(--drawer-duration) var(--drawer-ease);
 }
 
 .phone-overlay.open {
@@ -24,7 +30,7 @@
     background: #fff;
     z-index: 9999;
     transform: translateX(100%);
-    transition: transform 0.5s ease;
+    transition: transform var(--drawer-duration) var(--drawer-ease);
     display: flex;
     flex-direction: column;
     overflow-x: hidden;
@@ -38,6 +44,15 @@
 
 .phone-panel.open {
     transform: translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .phone-overlay {
+        transition-duration: 0.01s;
+    }
+    .phone-panel {
+        transition-duration: 0.01s;
+    }
 }
 
 .phone-panel-close {
@@ -2195,10 +2210,24 @@
 }
 .drawer-bug-nudge-link {
     color: #374151;
-    text-decoration: underline;
+    text-decoration: none;
+    position: relative;
+    display: inline-block;
+}
+.drawer-bug-nudge-link::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 2px;
+    height: 1px;
+    background: currentColor;
 }
 .drawer-bug-nudge-link:hover {
     color: #111;
+}
+.drawer-bug-nudge-link:hover::after {
+    opacity: 0;
 }
 .drawer-bug-nudge-link:focus {
     outline: 2px solid #333;

@@ -96,11 +96,27 @@ a:visited {
 
 .footer-links a {
   color: var(--link-color, #5a2d82);
-  text-decoration: underline;
+  text-decoration: none;
+  position: relative;
+  display: inline-block;
+}
+
+.footer-links a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2px;
+  height: 1px;
+  background: currentColor;
 }
 
 .footer-links a:hover {
   text-decoration: none;
+}
+
+.footer-links a:hover::after {
+  opacity: 0;
 }
 
 .footer-links a:focus {
@@ -184,13 +200,27 @@ a:visited {
 .beta-banner-link {
   color: #92400e;
   font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  text-decoration: none;
+  position: relative;
+  display: inline-block;
+}
+
+.beta-banner-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2px;
+  height: 2px;
+  background: currentColor;
 }
 
 .beta-banner-link:hover {
   color: #78350f;
-  text-decoration: none;
+}
+
+.beta-banner-link:hover::after {
+  opacity: 0;
 }
 
 .beta-banner-link:focus {
