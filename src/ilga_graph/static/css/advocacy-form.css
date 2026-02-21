@@ -233,7 +233,7 @@
 }
 
 .hero-ticker [aria-hidden="true"] {
-  font-size: var(--font-size-body);
+  font-size: var(--font-size-h2);
   color: var(--color-hero-cta);
 }
 
