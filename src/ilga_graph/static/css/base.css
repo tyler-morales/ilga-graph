@@ -807,6 +807,13 @@ ML Intelligence Dashboard
   }
 }
 
+/* 480px–570px: tighter horizontal padding so hero/content use more width (reduces side white space) */
+@media (max-width: 570px) {
+  .container {
+    padding: 16px 14px;
+  }
+}
+
 /* ── Responsive: phone ── */
 @media (max-width: 480px) {
   .container {

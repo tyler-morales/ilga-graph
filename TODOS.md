@@ -41,7 +41,7 @@
 | 2026-02-20 | Recommendation chip tooltips | Tippy.js: one tooltip at a time, appendTo body, theme recommendation-chip; Popper 2 + Tippy 6. |
 | 2026-02-20 | Power Broker logic           | Chair for topic (default Transportation) or highest Moneyball outside district; exclude_senate_district/exclude_house_district. |
 | 2026-02-20 | Potential Ally removed       | 3 cards only: Your Senator, Your Rep, Power Broker; seating redo later. |
-| 2026-02-20 | The Land of Kei branding     | SITE_NAME, META_DESCRIPTION, footer, auth email, .env.example, docs. |
+| 2026-02-20 | The Land of Kei branding     | SITE_NAME, META_DESCRIPTION, footer, auth email, .env.example, docs. Advocacy page title now uses ILGA_SITE_NAME ("{{ site_name }} — Find Your Targets"). |
 | 2026-02-20 | Dev ZIP autofill             | ILGA_DEV_MODE=1 autofills hero ZIP 60601 when no ?zip=. |
 | 2026-02-20 | Auth strip outreach progress | Signed-in users see "Called X legislators and sent Y emails" under verified email. GET /outreach/my-stats; refresh on sign-in and after recording call/email. index.html #auth-strip-progress, advocacy-form.css .auth-strip-progress. |
 | 2026-02-20 | ZIP in URL on search         | history.replaceState ?zip=XXXXX on form submit; shareable links. |
@@ -49,6 +49,7 @@
 | 2026-02-20 | Hero copy refresh             | Subhead: statutory gap + pre-written script in under a minute; ticker "Join X+ Illinois residents who've already taken action this week"; CTA "Start My Outreach". advocacy.py hero_subhead (2 places), index.html ticker + find-btn. |
 | 2026-02-20 | Hero animation sequence       | Sharpie fades in first on load (0s); after --hero-highlight-delay (0.5s) the underline/highlighter reveal runs. advocacy-form.css: .advocacy-hero --hero-highlight-delay, .hero-headline-mark::after animation-delay. |
 | 2026-02-20 | Hero "Fix" sharpie circle     | Sharpie PNG overlay around word "Fix" in hero line 1. advocacy.py hero_headline_line1_* vars; index.html .hero-headline-sharpie-wrap + img sharpie.png; advocacy-form.css .hero-headline-sharpie, scale/position fixed to word. |
+| 2026-02-20 | Hero headline responsive size | Desktop unchanged (clamp 1.75rem–2.75rem). Tablet ≤768px: clamp(2.25rem, 6.5vw, 3.5rem). Phone ≤480px: clamp(2rem, 11vw, 3.25rem). advocacy-form.css .hero-headline in media queries — max-width-as-possible at small breakpoints. |
 | 2026-02-20 | Hardball advocacy landing    | Threat headline, Anton/Impact, two-column hero, CTA "Start My Outreach", ticker, trust badges, hero alignment. |
 | 2026-02-20 | Refactor round               | Intelligence/explore routers, CSS split; main ~1700 lines. |
 | 2026-02-20 | Advocacy router cleanup      | Removed debug logging; E501/F401 fixed; lint + test pass. |

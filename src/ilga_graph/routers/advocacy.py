@@ -229,7 +229,7 @@ async def advocacy_index(
         calls_this_week = 0
     ctx: dict[str, Any] = {
         "request": request,
-        "title": "Kei Truck Freedom",
+        "title": cfg.SITE_NAME,
         "hero_headline": "Fix Illinois Law. Allow Kei Vehicle Registration.",
         "hero_headline_line1": "Fix Illinois Law.",
         "hero_headline_line1_prefix": "",
@@ -240,7 +240,7 @@ async def advocacy_index(
         "hero_headline_highlight": "Kei Vehicle",
         "hero_headline_line2_suffix": " Registration.",
         "hero_subhead": (
-            "Illinois is currently blocking registration for federally lawful kei vehicles "
+            "Illinois is currently blocking registration for federally lawful Kei vehicles "
             "due to a statutory gap. You can help fix it—contact your legislator with a "
             "pre-written script in under a minute."
         ),
@@ -677,7 +677,7 @@ async def advocacy_search(
         tpl = "_results_partial.html" if is_htmx else "index.html"
         ctx_error: dict[str, Any] = {
             "request": request,
-            "title": "Kei Truck Freedom",
+            "title": cfg.SITE_NAME,
             "hero_headline": "Fix Illinois Law. Allow Kei Vehicle Registration.",
             "hero_headline_line1": "Fix Illinois Law.",
             "hero_headline_line1_prefix": "",
@@ -688,7 +688,7 @@ async def advocacy_search(
             "hero_headline_highlight": "Kei Vehicle",
             "hero_headline_line2_suffix": " Registration.",
             "hero_subhead": (
-                "Illinois is currently blocking registration for federally lawful kei vehicles "
+                "Illinois is currently blocking registration for federally lawful Kei vehicles "
                 "due to a statutory gap. You can help fix it—contact your legislator with a "
                 "pre-written script in under a minute."
             ),
@@ -713,7 +713,7 @@ async def advocacy_search(
         tpl,
         {
             "request": request,
-            "title": "Kei Truck Freedom",
+            "title": cfg.SITE_NAME,
             "categories": CATEGORY_CHOICES,
             **results_ctx,
         },
