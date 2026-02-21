@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import html
 import json
 import logging
@@ -310,8 +311,6 @@ async def _verify_turnstile(token: str | None, remote_ip: str) -> bool:
     """
     if not token or not cfg.TURNSTILE_SECRET_KEY:
         return False
-    import asyncio
-
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, _verify_turnstile_sync, token, remote_ip)
 
