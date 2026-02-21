@@ -26,12 +26,9 @@
             <div class="hero-action">
                 <p class="hero-subhead">{{ hero_subhead }}</p>
                 <p class="hero-ticker" aria-live="polite">
-                    {% if calls_this_week|default(0) > 0 %}
-                    Join <strong aria-hidden="true">{{ calls_this_week }}</strong>+ Illinois residents who've already
-                    taken action this week.
-                    {% elif calls_total|default(0) > 0 %}
-                    Join <strong aria-hidden="true">{{ calls_total }}</strong>+ Illinois residents who've taken action.
-                    Add yours.
+                    {% if calls_total|default(0) > 0 %}
+                    Join <strong aria-hidden="true">{{ calls_total }}</strong>+ Illinois residents who've already
+                    taken action.
                     {% else %}
                     Join Illinois residents taking action—enter your ZIP to start.
                     {% endif %}
