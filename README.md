@@ -1,105 +1,182 @@
-# ILGA Graph POC
+# The Land of Kei — ILGA Graph
 
-A proof-of-concept that scrapes the [Illinois General Assembly](https://www.ilga.gov/) website, models legislative data (members, committees, bills), exports it as an interlinked [Obsidian](https://obsidian.md/) vault with database views, and serves it through a GraphQL API.
+A full-stack web application that helps Illinois residents advocate for a statutory fix so highway-capable Kei vehicles can be titled and registered (625 ILCS 5/3-401(c-1)). Enter a ZIP code to find your senator, representative, and a high-impact power broker — then call or email them using a pre-written script in under a minute.
+
+Behind the scenes the app scrapes the [Illinois General Assembly](https://www.ilga.gov/) website, models legislative data (members, committees, bills, votes, witness slips), runs an ML analytics pipeline, and exposes everything through a GraphQL API. It also exports an interlinked [Obsidian](https://obsidian.md/) vault for offline research.
 
 ## Architecture Overview
 
 ```mermaid
 flowchart LR
-    subgraph scraping [Scraper]
-        Cache["JSON Cache - cache/"]
-        FetchMembers["fetch_members + scrape_details"]
-        FetchCommittees["fetch_committees_index + fetch_committee_rosters"]
-        FetchBills["fetch_committee_bills"]
+    subgraph scraping [Scrapers]
+        Cache["JSON Cache — cache/"]
+        FetchMembers["members.py — roster + detail pages"]
+        FetchBills["bills.py — bill index + metadata"]
+        FetchVotes["votes.py — roll-call vote events"]
+        FetchSlips["witness_slips.py — public witness slips"]
     end
-    subgraph models [Models]
+    subgraph models [Models / ETL]
         Member["Member dataclass"]
         Committee["Committee dataclass"]
         Bill["Bill dataclass"]
+        ETL["etl.py — orchestrate scrape → model → export"]
+    end
+    subgraph ml [ML Pipeline]
+        Analytics["analytics.py — scorecards, Moneyball"]
+        Influence["influence.py — True Influence Engine"]
+        Predictions["ml/bill_predictor.py — outcome model"]
+        Coalitions["ml/coalitions.py — voting coalitions"]
     end
     subgraph export [Exporter]
         MemberMD["Members/*.md"]
         CommitteeMD["Committees/*.md"]
         BillMD["Bills/*.md"]
-        IndexMD["ILGA_Member_Index.md"]
         BaseFiles["*.base views"]
     end
-    subgraph api [GraphQL API]
-        GQLTypes["MemberType / BillType / OfficeType / CareerRangeType"]
-        GQLQuery["Query.members / Query.member / Query.bills / Query.bill"]
+    subgraph webui [Web UI — SSR]
+        Advocacy["/advocacy — ZIP → find targets → call/email drawer"]
+        Intelligence["/intelligence — bill analytics dashboard"]
+        Explore["/explore — Legislative Power Map"]
+        DevPlayground["/dev/playground — component sandbox (dev only)"]
     end
-    subgraph vault [Obsidian Vault]
-        Wikilinks["wikilinks + tags + frontmatter"]
-        BasesViews["Bases database views"]
+    subgraph api [GraphQL API — /graphql]
+        GQLQuery["members / bills / votes / witnessSlips\nmoneyballLeaderboard / billVoteTimeline\nmetricsGlossary / search / allVoteEvents"]
+    end
+    subgraph db [Database — SQLite]
+        Auth["email-code auth"]
+        Outreach["OutreachEvent — calls & emails logged"]
     end
     Cache -->|"load/save"| FetchMembers
+    Cache -->|"load/save"| FetchBills
     FetchMembers --> Member
-    FetchCommittees --> Committee
     FetchBills --> Bill
+    FetchVotes --> Bill
+    FetchSlips --> Bill
+    ETL --> Member
+    ETL --> Committee
+    Member --> Analytics
+    Bill --> Analytics
+    Analytics --> Influence
+    Analytics --> Predictions
+    Analytics --> Coalitions
     Member --> MemberMD
     Committee --> CommitteeMD
     Bill --> BillMD
-    Member --> IndexMD
-    MemberMD --> Wikilinks
-    CommitteeMD --> Wikilinks
-    BillMD --> Wikilinks
-    BaseFiles --> BasesViews
-    Member --> GQLTypes
-    Bill --> GQLTypes
-    GQLTypes --> GQLQuery
+    Member --> GQLQuery
+    Bill --> GQLQuery
+    Analytics --> GQLQuery
+    GQLQuery --> Advocacy
+    GQLQuery --> Intelligence
+    GQLQuery --> Explore
+    db --> Outreach
+    Outreach --> Advocacy
 ```
 
 ## Data Flow
 
-1. **Startup** -- The FastAPI app boots and `run_etl()` fires during the lifespan hook.
-2. **Scrape** -- `ILGAScraper` hits `ilga.gov` to pull member listings, detail pages, committee indices, committee rosters, and committee bill assignments. Requests are parallelized with `ThreadPoolExecutor`. Results are cached as JSON in `cache/` so repeat runs skip the network.
+1. **Startup** -- The FastAPI app boots; `lifespan()` in `startup.py` runs `run_etl()` then `init_db()`.
+2. **Scrape** -- Scrapers in `src/ilga_graph/scrapers/` hit `ilga.gov` to pull members, bills, committee rosters, roll-call votes, and witness slips. Requests are parallelized with `ThreadPoolExecutor`. Results are cached as JSON in `cache/` so repeat runs skip the network.
 3. **Model** -- Raw HTML is parsed (BeautifulSoup) into Python dataclasses: `Member`, `Committee`, `Bill`, `Office`, `CareerRange`, and `CommitteeMemberRole`.
-4. **Export** -- `ObsidianExporter` writes each member, committee, and bill as a Markdown file inside `ILGA_Graph_Vault/`. Files use Obsidian `[[wikilinks]]` so members link to their committees and bills, committees link to their members and bills, and bills link to their sponsors. Frontmatter tags power Obsidian's graph view. The exporter also generates `.base` database view files for sortable/filterable tables.
-5. **Serve** -- The same in-memory data is exposed through a Strawberry GraphQL API at `/graphql`, supporting queries for members and bills with sorting and date-range filtering.
+4. **ML Analytics** -- `analytics.py` computes legislative scorecards and Moneyball profiles. The `ml/` sub-package runs bill-outcome predictions, coalition detection, and graph embeddings. Results are stored in `processed/` as Parquet files and cached in memory.
+5. **Export** -- `ObsidianExporter` writes each member, committee, and bill as a Markdown file inside `ILGA_Graph_Vault/`. Files use Obsidian `[[wikilinks]]` so members link to their committees and bills, committees link to their members and bills, and bills link to their sponsors. Frontmatter tags power Obsidian's graph view. The exporter also generates `.base` database view files for sortable/filterable tables.
+6. **Serve** -- The same in-memory data is exposed through a Strawberry GraphQL API at `/graphql` and through server-side-rendered HTML pages powered by Jinja2 and HTMX.
+
+## Web Application
+
+The app serves several user-facing pages in addition to the GraphQL API:
+
+| Route | Description |
+|-------|-------------|
+| `/` (redirects to `/advocacy`) | Landing page |
+| `/advocacy` | **Advocacy tool** — enter a ZIP code to find your senator, representative, and a high-impact power broker. Opens a call or email drawer with a pre-written script. Tracks outreach actions in the database (requires sign-in). |
+| `/intelligence` | **Intelligence dashboard** — bill analytics, win-probability predictions, voting coalitions, witness slip heat, True Influence scores, and anomaly detection. |
+| `/intelligence/member/<name>` | Deep-dive page for a single legislator (full scorecard, Moneyball profile, vote history). |
+| `/intelligence/bill/<number>` | Deep-dive page for a single bill (timeline, vote events, witness slips). |
+| `/explore` | **Legislative Power Map** — interactive visualization of member influence and network relationships. |
+| `/graphql` | Strawberry GraphQL playground + API endpoint. |
+| `/report-bug` | In-app bug report form (stores to DB; optional email via SMTP). |
+| `/privacy`, `/terms` | Legal pages. |
+| `/dev/playground` | Component sandbox — call/email drawer, truck animation, etc. (dev mode only). |
 
 ## Project Structure
 
 ```
-ilga_graph_poc/
+ilga-graph/
 ├── src/ilga_graph/
-│   ├── __init__.py
-│   ├── main.py          # FastAPI app, ETL orchestration, GraphQL endpoint
-│   ├── scraper.py        # ILGAScraper — web scraping + caching
-│   ├── models.py         # Dataclass domain models
-│   ├── schema.py         # Strawberry GraphQL types + sort/filter enums
-│   ├── vote_timeline.py  # Bill vote timeline computation (extracted from main)
-│   └── exporter.py       # ObsidianExporter — Markdown vault + Bases generator
-├── scripts/              # CLI utilities
-│   ├── generate_seed.py  # Generate mocks/dev/ from cache/
-│   └── scrape.py         # Standalone scrape without starting the server
-├── mocks/                # Mock data by type (committed)
-│   └── dev/              # Dev sandbox (instant startup, no scraping)
-│       ├── members.json  # 20 members (metadata + bill_ids + committee codes)
-│       ├── bills.json   # 100 most recent bills
-│       ├── committees.json
-│       └── vote_events.json
-├── tests/                # pytest test suite
-│   ├── conftest.py       # Shared fixtures
-│   ├── test_models.py    # Dataclass construction tests
-│   ├── test_exporter.py  # Rendering and frontmatter tests
-│   └── test_main.py      # Date parsing and helper tests
-├── ILGA_Graph_Vault/     # Generated Obsidian vault (output)
-│   ├── Members/          # One .md file per legislator
-│   ├── Committees/       # One .md file per committee
-│   ├── Bills/            # One .md file per bill
-│   ├── Bills by Date.base    # Bases view: bills sorted/grouped by date
-│   └── Members by Career.base # Bases view: members sorted by career start
-├── cache/                # Full scraped cache (auto-created, git-ignored)
-│   ├── members.json      # All members (metadata + bill_ids)
-│   ├── bills.json        # All unique bills (deduplicated by leg_id)
-│   ├── committees.json   # All committees (flat list)
-│   ├── committee_rosters.json  # Committee member roles (production only)
-│   ├── committee_bills.json    # Committee bill assignments (production only)
-│   └── vote_events.json  # Cached roll-call vote data
-├── .startup_timings.csv  # Startup performance log (auto-created, git-ignored)
-├── Makefile              # Dev workflow commands
-├── PERFORMANCE.md        # Performance notes and bottleneck analysis
-├── TODOS.md              # Project roadmap and completed items
+│   ├── main.py               # FastAPI app, GraphQL mount, static files, error handlers
+│   ├── startup.py            # Lifespan hook: ETL → DB init → startup banner
+│   ├── etl.py                # run_etl() — orchestrates scrape → model → export
+│   ├── app_state.py          # AppState singleton holding in-memory members/bills/committees
+│   ├── config.py             # All env-var settings (profile system: dev / prod)
+│   ├── constants.py          # CATEGORY_CHOICES, CATEGORY_COMMITTEES, etc.
+│   ├── models.py             # Dataclass domain models (Member, Bill, Committee, …)
+│   ├── schema.py             # Strawberry GraphQL types + sort/filter enums
+│   ├── graphql_query.py      # GraphQL Query resolvers (members, bills, votes, search, …)
+│   ├── loaders.py            # DataLoader factories for batched GraphQL queries
+│   ├── scraper.py            # Legacy ILGAScraper shim (delegates to scrapers/)
+│   ├── scrapers/             # Modular scrapers
+│   │   ├── bills.py          #   Bill index + metadata
+│   │   ├── votes.py          #   Roll-call vote events
+│   │   ├── witness_slips.py  #   Public witness slips
+│   │   └── full_text.py      #   Full bill text PDFs
+│   ├── exporter.py           # ObsidianExporter — Markdown vault + Bases generator
+│   ├── analytics.py          # Legislative scorecards, Moneyball v2
+│   ├── analytics_cache.py    # Persist analytics results to processed/
+│   ├── moneyball.py          # Moneyball composite score computation
+│   ├── influence.py          # True Influence Engine (eigenvector centrality + heuristics)
+│   ├── vote_timeline.py      # Bill vote timeline computation
+│   ├── voting_record.py      # Member vote history helpers
+│   ├── metrics_definitions.py # Definitions exposed via metricsGlossary GraphQL query
+│   ├── ml/                   # ML pipeline
+│   │   ├── bill_predictor.py #   Bill outcome prediction (XGBoost)
+│   │   ├── coalitions.py     #   Voting coalition detection
+│   │   ├── node_embedder.py  #   Node2Vec co-sponsorship graph embeddings
+│   │   ├── anomaly_detection.py # Outlier scoring
+│   │   ├── features.py       #   Feature engineering
+│   │   ├── rule_engine.py    #   Bill-to-law process rules
+│   │   └── …                 #   (active_learner, backtester, explainer, …)
+│   ├── routers/              # FastAPI route groups
+│   │   ├── advocacy.py       #   /advocacy — landing, search, drawer
+│   │   ├── intelligence.py   #   /intelligence — dashboard + deep-dives
+│   │   ├── explore.py        #   /explore — Legislative Power Map
+│   │   ├── bills.py          #   /bills — bill SHAP / analytics endpoints
+│   │   ├── outreach.py       #   /outreach — stats aggregation
+│   │   ├── auth.py           #   /auth — email-code sign-in
+│   │   ├── feedback.py       #   /report-bug
+│   │   ├── dev.py            #   /dev — playground (dev only)
+│   │   ├── admin.py          #   /logs, /health, /api/dev/members
+│   │   ├── legal.py          #   /privacy, /terms
+│   │   └── site.py           #   /, sitemap, robots, favicon, 404 catch-all
+│   ├── db.py                 # Async SQLite engine + session factory (aiosqlite)
+│   ├── db_models.py          # SQLAlchemy ORM models (User, OutreachEvent, BugReport, …)
+│   ├── security.py           # CSRF, rate limiting, photo URL validation
+│   ├── middleware.py         # CORS, API key, request logging, CSRF, HSTS, CSP
+│   ├── dependencies.py       # FastAPI dependency injection helpers
+│   ├── advocacy_helpers.py   # Shared advocacy logic (find targets, drawer context)
+│   ├── member_lookup.py      # find_member_by_district(), find_member_by_id(), …
+│   ├── intelligence_helpers.py # Canonical org names, bill description helpers
+│   ├── search.py             # Cross-entity search (members + bills + committees)
+│   ├── seating.py            # Chamber seating / district helpers
+│   ├── zip_crosswalk.py      # ZIP → district mapping
+│   ├── date_parse.py         # Date parsing utilities
+│   ├── normalize.py          # Name / text normalization
+│   ├── data_source.py        # Detect mock vs real cache
+│   ├── startup_banner.py     # Startup timing banner printed to stderr
+│   ├── run_log.py            # .run_log.jsonl append helpers
+│   ├── templates/            # Jinja2 HTML templates
+│   └── static/               # CSS, images, advocacy PDFs
+├── scripts/                  # CLI utilities (scrape, ml_run, snapshot_mocks, …)
+├── mocks/dev/                # Committed seed data (20 members, 100 bills, …)
+├── tests/                    # pytest test suite
+├── graphql/                  # Example GraphQL queries + README
+├── docs/                     # MkDocs documentation site
+├── processed/                # ML output Parquet files (auto-created, git-ignored)
+├── ILGA_Graph_Vault/         # Generated Obsidian vault (output)
+├── cache/                    # Scraped JSON cache (auto-created, git-ignored)
+├── data/                     # SQLite DB files (auto-created, git-ignored)
+├── Makefile                  # Dev workflow commands
+├── PERFORMANCE.md            # Performance notes and bottleneck analysis
+├── TODOS.md                  # Project roadmap and completed items
 ├── pyproject.toml
 └── README.md
 ```
@@ -119,14 +196,15 @@ Plain Python dataclasses that form the domain model:
 | `CareerRange`         | A year-range entry in a member's career timeline       |
 | `CommitteeMemberRole` | Represents a member's role on a specific committee roster |
 
-### `scraper.py`
+### `scrapers/`
 
-`ILGAScraper` handles all interaction with ilga.gov:
+Modular scrapers, each in its own file:
 
-- **Member scraping** -- Fetches the member listing page, extracts profile URLs, then scrapes each detail page in parallel. Extracts name, party, district, bio, career timeline, committees, associated members, offices, and email.
-- **Committee scraping** -- Fetches the committee index table, each committee's member roster, and committee bill assignments.
-- **Normalized caching** -- Stores members and bills in separate JSON files (`cache/members.json` + `cache/bills.json`), with members referencing bills by `leg_id` instead of embedding full objects. This reduces cache size by ~70% (from ~12.7 MB to ~3.5 MB). On load, bill relationships are hydrated in memory.
-- **Name map** -- Maintains a normalized name-to-ID mapping to resolve wikilink references across the vault.
+- **`scrapers/bills.py`** -- Fetches the bill index (paginated), scrapes each bill's metadata page in parallel, and normalizes sponsor names. Supports incremental (new/changed only), full-text, and skip-votes modes.
+- **`scrapers/votes.py`** -- Scrapes roll-call vote pages and parses member vote lists (Yea/Nay/Present/NV).
+- **`scrapers/witness_slips.py`** -- Fetches public witness slip submissions for each bill and paginates through them.
+- **`scrapers/full_text.py`** -- Downloads and caches full bill text PDFs.
+- **`scraper.py`** -- Legacy `ILGAScraper` that now delegates to the above modules plus handles member and committee scraping. Maintains a normalized name→ID map and stores a denormalized JSON cache (~70% smaller than embedding full bill objects in each member).
 
 ### `exporter.py`
 
@@ -140,9 +218,34 @@ Plain Python dataclasses that form the domain model:
 - **Legislative scorecard** — Each member note includes a scorecard that separates substantive bills (HB/SB) from ceremonial resolutions (HR/SR/HJR/SJR), and computes *law heat*, *law success rate*, *magnet score* (avg co-sponsors per law), and *bridge score* (% of laws with cross-party co-sponsorship). A **Scorecard Guide** in the vault explains each metric and how to interpret the numbers; see `ILGA_Graph_Vault/Scorecard Guide.md`.
 - Cleans up stale `.md` files on re-export so the vault stays in sync.
 
-### `schema.py`
+### `analytics.py` / `moneyball.py` / `influence.py`
 
-Strawberry GraphQL type definitions and enums:
+Analytics layer that runs after loading:
+
+- **`analytics.py`** -- Computes `ScorecardStats` (substantive vs. ceremonial bill counts, passage rate, co-sponsor metrics) and `MoneyballProfile` for every member. Results are cached to `processed/` as Parquet via `analytics_cache.py`.
+- **`moneyball.py`** -- Computes the 0–100 Moneyball composite score used to rank legislators (passage rate + pipeline depth + co-sponsor pull + cross-party rate + network centrality + institutional role bonus). Exact weights and definitions are in `metrics_definitions.py` and exposed via the `metricsGlossary` GraphQL query.
+- **`influence.py`** -- True Influence Engine: eigenvector centrality over the co-sponsorship graph, blended with Moneyball and institutional role to produce a final influence rank.
+
+### `ml/`
+
+Optional ML pipeline (install with `pip install -e ".[ml]"` or `make ml-setup`):
+
+| Module | Purpose |
+|--------|---------|
+| `bill_predictor.py` | XGBoost model predicting bill outcome (pass / fail / stall) |
+| `coalitions.py` | Voting coalition detection via clustering |
+| `node_embedder.py` | Node2Vec graph embeddings over the co-sponsorship network |
+| `anomaly_detection.py` | Outlier scoring for unusual voting patterns |
+| `features.py` | Feature engineering from bill/member dataclasses |
+| `rule_engine.py` | Deterministic bill-to-law process rules (committee → floor path) |
+| `action_classifier.py` | Classify bill actions into pipeline stages (0–6) |
+| `explainer.py` | SHAP-based explanations for model predictions |
+
+Run the full pipeline with `make ml-run` or trigger it automatically via `make scrape`.
+
+### `schema.py` / `graphql_query.py`
+
+`schema.py` contains Strawberry GraphQL type definitions and enums. `graphql_query.py` holds the `Query` class with all resolvers:
 
 | Type / Enum            | Purpose                                                  |
 |------------------------|----------------------------------------------------------|
@@ -159,25 +262,39 @@ Strawberry GraphQL type definitions and enums:
 | `LeaderboardSortField` | Enum: `MONEYBALL_SCORE`, `EFFECTIVENESS_SCORE`, `PIPELINE_DEPTH`, etc. -- analytics sorts |
 | `SortOrder`            | Enum: `ASC`, `DESC`                                      |
 
+### `db.py` / `db_models.py`
+
+Async SQLite database (SQLAlchemy + aiosqlite, migrations via Alembic):
+
+| ORM Model | Purpose |
+|-----------|---------|
+| `User` | Authenticated user (email + verified flag) |
+| `OutreachEvent` | One call or email to a legislator (user + member + type + timestamp) |
+| `BugReport` | In-app bug reports submitted via `/report-bug` |
+
+The `dev` profile uses `data/ilga_dev.db` (seeded with mock outreach data); `prod` uses `data/ilga.db`.
+
+### `routers/`
+
+FastAPI route groups — each file owns one feature area:
+
+| Router | Mount | Description |
+|--------|-------|-------------|
+| `site.py` | `/` | Landing redirect, sitemap, robots.txt, favicon, 404 catch-all |
+| `advocacy.py` | `/advocacy` | ZIP search, target finder, call/email drawer, outreach recording |
+| `intelligence.py` | `/intelligence` | Analytics dashboard, member/bill deep-dives |
+| `explore.py` | `/explore` | Legislative Power Map |
+| `bills.py` | `/bills` | SHAP / bill analytics endpoints |
+| `outreach.py` | `/outreach` | Aggregated outreach stats |
+| `auth.py` | `/auth` | Email-code sign-in / sign-out |
+| `feedback.py` | `/report-bug` | In-app bug report form |
+| `dev.py` | `/dev` | Component playground (dev only) |
+| `admin.py` | `/logs`, `/health` | Run log viewer, health check, dev members endpoint |
+| `legal.py` | `/privacy`, `/terms` | Legal pages |
+
 ### `main.py`
 
-Ties everything together:
-
-- **ETL** -- `run_etl()` calls the scraper, then the exporter.
-- **AppState** -- Holds the in-memory member/bill lists and lookup dicts populated at startup.
-- **FastAPI** -- Mounts a Strawberry `GraphQLRouter` at `/graphql` with eight queries:
-
-| Query | Parameters | Description |
-|-------|-----------|-------------|
-| `member(name)` | `name` (required) | Look up a single member by exact name |
-| `members(sortBy, sortOrder, chamber)` | `sortBy`: `CAREER_START` or `NAME`; `sortOrder`: `ASC` or `DESC`; `chamber`: optional filter | List all members with optional sorting |
-| `moneyballLeaderboard(chamber, excludeLeadership, limit, sortBy, sortOrder)` | `chamber`: optional; `excludeLeadership`: bool; `limit`: int (default 25); `sortBy`: `LeaderboardSortField`; `sortOrder`: `ASC` or `DESC` | Ranked list by Moneyball Score or any analytics metric. Use `chamber="House", excludeLeadership=true, limit=1` to get the MVP. |
-| `bill(number)` | `number` (required, e.g. `"SB1527"`) | Look up a single bill by number |
-| `bills(sortBy, sortOrder, dateFrom, dateTo)` | `sortBy`: `LAST_ACTION_DATE` or `BILL_NUMBER`; `sortOrder`: `ASC` or `DESC`; `dateFrom`/`dateTo`: ISO date strings (`YYYY-MM-DD`) | List bills with optional sorting and date-range filtering |
-| `votes(billNumber)` | `billNumber` (required) | All vote events for a specific bill (floor + committee) |
-| `billVoteTimeline(billNumber, chamber)` | `billNumber` and `chamber` (both required) | Full vote timeline tracking every member's journey across committee and floor events |
-| `allVoteEvents(voteType, chamber)` | Both optional filters | All scraped vote events, optionally filtered by type and chamber |
-| `metricsGlossary` | *(none)* | Definitions of every metric (empirical and derived) so UIs can show "what does this mean?" |
+Thin entry point (~270 lines): creates the FastAPI app, mounts the GraphQL router, registers all sub-routers, sets up Jinja2 and static file serving, and attaches global exception handlers (HTTPException → HTML/JSON, unhandled → 500 page).
 
 ### Metrics: empirical vs derived
 
@@ -247,34 +364,46 @@ Data is scraped once into `cache/`; the API then **serves only from cache** (no 
 
 | Step | Command | What it does |
 |------|---------|--------------|
-| **Scrape (choose size)** | `make scrape` | Prod-style: all members, 300 SB + 300 HB. |
-| | `make scrape-200` | Test pagination: 200 SB + 200 HB (2 range pages per type). |
-| | `make scrape-full` | Full index: all ~9600+ bills (slow; many range pages + detail fetches). |
-| | `make scrape-dev` | Light: 20 members/chamber, 100 SB + 100 HB, fast. |
-| **Serve** | `make dev` | Start API in dev mode (cache load; dev export cap keeps startup lighter). |
-| | `make dev-full` | Start API from full cache in dev shell (no dev caps, no seed fallback). |
-| | `make run` | Start API in prod mode (cache only). |
+| **Scrape** | `make scrape` | Smart/tiered: full walk if no cache or >7 days old; else tail-only. Scrapes members + bills + votes + slips, then runs the ML pipeline. |
+| | `make scrape FULL=1` | Force a full bill index walk (all ~125 pages), then scrape. Use for a new session or "refresh all." |
+| | `make scrape-full` | Nuke cache + full index (`FRESH=1 FULL=1`). Use when members or data look wrong. |
+| | `make scrape-full-members` | Re-fetch the full member roster from ILGA (~177). Keeps existing bills cache. |
+| **Serve** | `make dev` | Start app in dev mode (auto-reload, seed fallback, DEV_MODE=1). |
+| | `make serve` | Start app in prod mode (`ILGA_PROFILE=prod`). |
 
 **Typical flows:**
 
-- **Quick dev:** `make scrape-dev` then `make dev` — small cache, fast iteration.
-- **See pagination:** `make scrape-200` then `make dev` — 200 SB + 200 HB from index (2 range pages per type).
-- **Full dev / prod:** `make scrape` then `make dev-full` or `make run` — full cached dataset.
-- **Complete data:** `make scrape-full` (takes a long time) then serve as above.
+- **Quick dev (no network):** `make dev` — uses `mocks/dev/` seed data automatically (no scrape needed).
+- **Real data, fast iteration:** `make scrape` then `make dev` — fresh cache, hot reload.
+- **Production deploy:** `make scrape` then `make serve`.
 
-If you run `make dev` or `make run` with no cache, the server will try to load from cache and, in dev, fall back to `mocks/dev/` when available.
+If you run `make dev` with no cache, the server falls back to `mocks/dev/` automatically.
+
+### ML Pipeline
+
+```bash
+make ml-setup       # pip install -e ".[ml]" — install ML extras
+make ml-run         # full pipeline: cache → parquet → scores → predictions
+make ml-pipeline    # data pipeline only: cache/*.json → processed/*.parquet
+make ml-predict     # bill outcome prediction only
+make ml-embed       # Node2Vec graph embeddings (co-sponsorship network)
+make ml-resolve     # entity resolution (interactive; AUTO=1 for no prompts)
+```
+
+`make scrape` automatically runs the ML pipeline after scraping.
 
 ### Other commands
 
 ```bash
-make export         # re-export vault from cache (no scrape)
-make seed           # regenerate mocks/dev/ from current cache
-make scrape-incremental   # only new/changed bills
-make test           # pytest
-make lint           # ruff check + format check
-make lint-fix       # auto-fix
-make pre-commit     # run pre-commit on all files (ruff + pytest; same as hook)
-make clean          # remove cache/ and vault files
+make snapshot-mocks    # sample cache/ into mocks/dev/ (commit to refresh seed)
+make smoke-outreach    # smoke test: auth + record call/email (no server needed)
+make logs              # terminal run-log dashboard (last 20 entries)
+make export            # re-export Obsidian vault from cache (no scrape)
+make test              # pytest
+make lint              # ruff check + format check
+make lint-fix          # auto-fix
+make pre-commit        # run pre-commit on all files (ruff + pytest; same as hook)
+make clean             # remove cache/, processed/ parquet, and vault files
 ```
 
 **Before opening a PR:** run `make lint` and `make test` (or `make pre-commit` if you use the hooks).
@@ -328,17 +457,24 @@ All variables:
 | `ILGA_GA_ID` | `18` | General Assembly ID (104th GA). |
 | `ILGA_SESSION_ID` | `114` | Session ID. |
 | `ILGA_BASE_URL` | `https://www.ilga.gov/` | ILGA site base URL. |
+| `ILGA_APP_BASE_URL` | `http://127.0.0.1:8000` | Public URL of this app (startup banner, sitemap, OG cards). |
+| `ILGA_SITE_NAME` | `The Land of Kei` | Site name shown in page titles and footer. |
 | `ILGA_CACHE_DIR` | `cache` | Directory for scraped JSON cache. |
 | `ILGA_MOCK_DIR` | `mocks/dev` | Seed/mock data directory. |
-| `ILGA_DEV_MODE` | *profile* | `1` = lighter scrape, faster delays; `0` = production. |
+| `ILGA_DB_PATH` | *profile* | SQLite DB path (`data/ilga_dev.db` dev, `data/ilga.db` prod). |
+| `ILGA_DEV_MODE` | *profile* | `1` = lighter scrape, faster delays, dev UI hints; `0` = production. |
 | `ILGA_SEED_MODE` | *profile* | `1` = use seed when cache missing; `0` = require cache or live scrape. |
 | `ILGA_INCREMENTAL` | `0` | `1` = incremental bill scrape (new/changed only). |
-| `ILGA_LOAD_ONLY` | `0` | When `1`, API only loads from cache (no scrape on startup). `make dev` and `make run` set this. |
+| `ILGA_LOAD_ONLY` | `0` | When `1`, API only loads from cache (no scrape on startup). `make dev` and `make serve` set this. |
 | `ILGA_MEMBER_LIMIT` | `0` | Max members per chamber (0 = all). |
-| `ILGA_TEST_MEMBER_URL` | *(empty)* | Optional single member URL for testing. |
-| `ILGA_TEST_MEMBER_CHAMBER` | `Senate` | Chamber for the test member URL. |
 | `ILGA_CORS_ORIGINS` | *profile* | Comma-separated CORS origins. |
 | `ILGA_API_KEY` | *(empty)* | If set, non-exempt routes require `X-API-Key` header. |
+| `ILGA_CSP_ENFORCE` | `0` | `1` = enforce Content-Security-Policy (default: report-only). |
+| `ILGA_HSTS_ENABLED` | `0` | `1` = add `Strict-Transport-Security` header (HTTPS only). |
+| `ILGA_BETA_BANNER` | `0` | `1` = show site-wide beta banner. |
+| `ILGA_TURNSTILE_SITE_KEY` | *(empty)* | Cloudflare Turnstile site key (optional; enables CAPTCHA on bug report form). |
+| `ILGA_TURNSTILE_SECRET_KEY` | *(empty)* | Cloudflare Turnstile secret key. |
+| `ILGA_UMAMI_WEBSITE_ID` | *(empty)* | Umami analytics website ID (injected in prod when set). |
 | `ILGA_VOTE_BILL_URLS` | *(built-in list)* | Comma-separated bill status URLs for votes/slips. |
 
 ## Migration: Normalized Cache (v2)
@@ -435,14 +571,24 @@ List members sorted by career start:
 
 ## Tech Stack
 
-| Layer        | Technology                            |
-|--------------|---------------------------------------|
-| Web Scraping | `requests` + `beautifulsoup4`         |
-| Concurrency  | `concurrent.futures.ThreadPoolExecutor` |
-| Data Models  | Python `dataclasses`                  |
-| Validation   | `pydantic`                            |
-| API          | `FastAPI` + `Strawberry GraphQL`      |
-| Export       | Custom Obsidian Markdown + Bases generator |
-| Caching      | JSON files on disk (`cache/`)          |
-| Testing      | `pytest`                              |
-| Linting      | `ruff`                                |
+| Layer              | Technology                                         |
+|--------------------|----------------------------------------------------|
+| Web Framework      | `FastAPI`                                          |
+| GraphQL            | `Strawberry GraphQL`                               |
+| Templating         | `Jinja2` (SSR HTML pages)                         |
+| Frontend           | `HTMX` (dynamic partials, no build step)           |
+| Web Scraping       | `requests` + `beautifulsoup4`                      |
+| Concurrency        | `concurrent.futures.ThreadPoolExecutor`            |
+| Data Models        | Python `dataclasses`                               |
+| Validation         | `pydantic`                                         |
+| Database           | `SQLite` via `SQLAlchemy` async + `aiosqlite`       |
+| Migrations         | `Alembic`                                          |
+| ML                 | `XGBoost`, `scikit-learn`, `node2vec`, `shap`      |
+| Data Pipeline      | `pandas` + `pyarrow` (Parquet)                     |
+| Export             | Custom Obsidian Markdown + Bases generator         |
+| Caching            | JSON files on disk (`cache/`)                      |
+| Testing            | `pytest`                                           |
+| Linting            | `ruff`                                             |
+| Documentation      | `MkDocs Material`                                  |
+| Analytics (opt.)   | `Umami` (self-hosted or cloud)                     |
+| CAPTCHA (opt.)     | `Cloudflare Turnstile`                             |
