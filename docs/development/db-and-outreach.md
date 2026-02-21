@@ -35,7 +35,7 @@ This doc summarizes the DB implementation, potential issues, and how tests verif
 ### Read paths (where DB data is used)
 
 - **Auth:** verify-code and GET /auth/me read `auth_codes` and `users`.
-- **Outreach:** GET /outreach/stats/{member_id}, GET /outreach/interest-poll/{member_id} (public), GET /outreach/my-history (auth required).
+- **Outreach:** GET /outreach/stats/{member_id}, GET /outreach/interest-poll/{member_id} (public), GET /outreach/my-stats and GET /outreach/my-history (auth required).
 - **Advocacy:** Drawer checks whether the current user has called this member (count from `outreach_events`). Results page builds `user_called_member_ids` / `user_emailed_member_ids` (for "Reached out" pill) and **outreach_heat** (count of distinct users who reached out per member) for the **fire pill** on each card.
 
 ### Fire pill on member cards (data-driven)

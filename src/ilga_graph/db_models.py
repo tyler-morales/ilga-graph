@@ -60,3 +60,17 @@ class OutreachEvent(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     __table_args__ = (Index("ix_outreach_member_kind", "member_id", "kind"),)
+
+
+class BugReport(Base):
+    """In-app bug report from the beta banner (no GitHub/email required)."""
+
+    __tablename__ = "bug_reports"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    reporter_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    page_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    # JSON array of stored image filenames (under BUG_REPORT_UPLOAD_DIR).
+    attachment_paths: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

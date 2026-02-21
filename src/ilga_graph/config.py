@@ -92,6 +92,40 @@ OG_IMAGE_URL: str = (
     _OG_IMAGE_OVERRIDE if _OG_IMAGE_OVERRIDE else f"{APP_BASE_URL}/static/og-image.png"
 )
 
+# ── Beta banner (site-wide notice) ───────────────────────────────────────────
+# When 1, base template shows a small "new site, may have bugs" bar with Report a bug link.
+BETA_BANNER: bool = _env("ILGA_BETA_BANNER", "0") == "1"
+# URL for "Report a bug" (e.g. Google Form, GitHub Issues). If set, banner link goes here.
+BETA_BANNER_FEEDBACK_URL: str = _env("ILGA_BETA_BANNER_FEEDBACK_URL", "").strip()
+# When someone submits the in-app form at /report-bug, an email is sent here if SMTP is configured.
+# Banner link is unaffected; it goes to /report-bug (or FEEDBACK_URL if set).
+BETA_BANNER_EMAIL: str = _env("ILGA_BETA_BANNER_EMAIL", "").strip()
+
+
+def _beta_banner_report_url() -> str:
+    """Report a bug link: external URL or in-app form at /report-bug."""
+    if BETA_BANNER_FEEDBACK_URL:
+        return BETA_BANNER_FEEDBACK_URL
+    return "/report-bug"
+
+
+# Resolved URL passed to templates.
+BETA_BANNER_REPORT_URL: str = _beta_banner_report_url()
+# Bug report image uploads (optional). Empty = no uploads. Dir created on first report with image.
+BUG_REPORT_UPLOAD_DIR: str = _env("ILGA_BUG_REPORT_UPLOAD_DIR", "data/bug_report_uploads").strip()
+BUG_REPORT_MAX_IMAGE_BYTES: int = int(_env("ILGA_BUG_REPORT_MAX_IMAGE_MB", "5")) * 1024 * 1024
+
+# Rate limits (per key: IP or IP+email). In-memory; resets on process restart.
+RATE_LIMIT_BUG_REPORT_PER_HOUR: int = int(_env("ILGA_RATE_LIMIT_BUG_REPORT_PER_HOUR", "10"))
+RATE_LIMIT_REQUEST_CODE_PER_15MIN: int = int(_env("ILGA_RATE_LIMIT_REQUEST_CODE_PER_15MIN", "3"))
+RATE_LIMIT_VERIFY_CODE_PER_15MIN: int = int(_env("ILGA_RATE_LIMIT_VERIFY_CODE_PER_15MIN", "10"))
+
+# Cloudflare Turnstile (optional). Free tier: 1M requests/month. When both keys are set,
+# the bug report form shows the widget and server verifies the token.
+# Dashboard: https://dash.cloudflare.com/?to=/:account/turnstile
+TURNSTILE_SITE_KEY: str = _env("ILGA_TURNSTILE_SITE_KEY", "").strip()
+TURNSTILE_SECRET_KEY: str = _env("ILGA_TURNSTILE_SECRET_KEY", "").strip()
+
 # ── Analytics (Umami) ───────────────────────────────────────────────────────
 # When set (e.g. in prod), base template injects the script. Get ID from Umami Cloud → Add website.
 UMAMI_WEBSITE_ID: str = _env("ILGA_UMAMI_WEBSITE_ID", "").strip()
@@ -118,15 +152,7 @@ LOAD_ONLY: bool = _env("ILGA_LOAD_ONLY") == "1"
 
 # ── Feature flags (single source of truth; profile defaults, ILGA_FEATURE_* overrides) ─
 # Each entry: key (JS/template), env_var, dev_default, prod_default, expose_to_client.
-_FEATURE_REGISTRY: list[dict[str, str | bool]] = [
-    {
-        "key": "zip_loading_animation",
-        "env_var": "ILGA_FEATURE_ZIP_LOADING_ANIMATION",
-        "dev_default": "1",
-        "prod_default": "0",
-        "expose_to_client": True,
-    },
-]
+_FEATURE_REGISTRY: list[dict[str, str | bool]] = []
 
 
 def _feature_value(entry: dict[str, str | bool]) -> bool:

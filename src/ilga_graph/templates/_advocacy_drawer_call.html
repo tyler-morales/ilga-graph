@@ -120,6 +120,9 @@
             </svg>
             End call
         </button>
+        {% if show_beta_banner and beta_banner_feedback_url %}
+        <p class="drawer-bug-nudge">Something went wrong? <a href="{{ beta_banner_feedback_url }}" class="drawer-bug-nudge-link" target="_blank" rel="noopener noreferrer">Report a bug</a></p>
+        {% endif %}
 
         {# In-chat wrap up: staggered bubbles — Nice work → (2s) poll → (after choice) results + draft link #}
         <div class="drawer-wrapup-inline" id="drawer-wrapup-inline" hidden>
@@ -243,6 +246,9 @@
             </svg>
             End call
         </button>
+        {% if show_beta_banner and beta_banner_feedback_url %}
+        <p class="drawer-bug-nudge drawer-bug-nudge-vm">Something went wrong? <a href="{{ beta_banner_feedback_url }}" class="drawer-bug-nudge-link" target="_blank" rel="noopener noreferrer">Report a bug</a></p>
+        {% endif %}
     </div>
 
 </div>

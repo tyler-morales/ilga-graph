@@ -7,14 +7,14 @@
     <h2>Bill Outcome Predictions</h2>
     <p class="intel-prediction-totals">Showing <strong id="predictions-visible-count">{{ predictions|length }}</strong> of <strong id="predictions-total-count">{{ predictions|length }}</strong> bills</p>
     <details class="intel-scores-explained" style="margin-bottom: 10px;">
-        <summary style="cursor: pointer; color: #555; font-size: 0.9em;">What do P(Advance), P(Law), and Forecast mean?</summary>
-        <ul style="margin: 8px 0 0 1.2em; font-size: 0.85em; color: #555; line-height: 1.5;">
+        <summary style="cursor: pointer; color: #555; font-size: 1rem;">What do P(Advance), P(Law), and Forecast mean?</summary>
+        <ul style="margin: 8px 0 0 1.2em; font-size: 0.95rem; color: #555; line-height: 1.5;">
             <li><strong>P(Advance)</strong> — Chance this bill <em>ever</em> reaches a positive milestone (passes committee, floor, etc.). One model for all bills; not “next step.” So a bill already at “Passed Both” can still show a lower P(Advance) if it looks like bills that often stall.</li>
             <li><strong>P(Law)</strong> — Chance this bill <em>becomes law</em>, given where it is now (stage, momentum, delays). Bills already at Passed Both / Governor usually have high P(Law).</li>
             <li><strong>Forecast</strong> — “Would this bill become law?” using <em>only</em> intro-day info (sponsor, topic, committee). No progress or staleness. Compare to P(Law) to see how much current momentum matters.</li>
         </ul>
     </details>
-    <p style="font-size: 0.85em; color: #666;">Predicted destination (→ Law, → Floor, Stuck), pipeline stage, stuck analysis. Forecasts (outcome not yet known) in <em>italics</em>. Closed bills show actual outcomes. Click column headers to sort.</p>
+    <p style="font-size: 0.95rem; color: #666;">Predicted destination (→ Law, → Floor, Stuck), pipeline stage, stuck analysis. Forecasts (outcome not yet known) in <em>italics</em>. Closed bills show actual outcomes. Click column headers to sort.</p>
 </div>
 
 {# Search + grouped quick filters #}

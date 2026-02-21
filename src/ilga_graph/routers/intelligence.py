@@ -28,6 +28,8 @@ templates.env.globals["meta_description"] = cfg.META_DESCRIPTION
 templates.env.globals["og_image_url"] = cfg.OG_IMAGE_URL
 templates.env.globals["umami_website_id"] = cfg.UMAMI_WEBSITE_ID
 templates.env.globals["umami_script_url"] = cfg.UMAMI_SCRIPT_URL
+templates.env.globals["show_beta_banner"] = cfg.BETA_BANNER
+templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
 
 # Procedural/routing committees: bills are assigned here after passing substantive
 # committees (e.g. "Referred to Rules * Reports"). "Advanced" in our pipeline

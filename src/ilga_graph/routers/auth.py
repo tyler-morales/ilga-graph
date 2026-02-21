@@ -15,7 +15,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 
-from fastapi import APIRouter, Depends, Form
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +24,12 @@ from .. import config as cfg
 from ..db import get_db
 from ..db_models import AuthCode, User
 from ..dependencies import create_session_token, get_current_user_optional
+from ..security import (
+    CSRF_COOKIE_NAME,
+    rate_limit_request_code,
+    rate_limit_verify_code,
+    validate_csrf_token,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -93,12 +99,33 @@ async def _send_code_email(email: str, code: str) -> None:
     LOGGER.info("Auth code sent to %s via %s:%d", email, cfg.SMTP_HOST, cfg.SMTP_PORT)
 
 
+def _client_ip(request: Request) -> str:
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else ""
+
+
 @router.post("/request-code")
 async def request_code(
+    request: Request,
     email: str = Form(...),
+    csrf_token: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
     """Generate a 6-digit code and send it to the user's email."""
+    cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
+    if not validate_csrf_token(csrf_token, cookie_token):
+        return JSONResponse(
+            {"ok": False, "error": "Invalid or expired security token. Reload the page."},
+            status_code=403,
+        )
+    client_ip = _client_ip(request)
+    if not rate_limit_request_code(client_ip, email):
+        return JSONResponse(
+            {"ok": False, "error": "Too many attempts. Try again later."},
+            status_code=429,
+        )
     email = email.strip().lower()
     if not email or "@" not in email:
         return JSONResponse({"ok": False, "error": "Invalid email"}, status_code=400)
@@ -132,11 +159,25 @@ async def request_code(
 
 @router.post("/verify-code")
 async def verify_code(
+    request: Request,
     email: str = Form(...),
     code: str = Form(...),
+    csrf_token: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
     """Verify the 6-digit code.  On success: create/get user, set session cookie."""
+    cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
+    if not validate_csrf_token(csrf_token, cookie_token):
+        return JSONResponse(
+            {"ok": False, "error": "Invalid or expired security token. Reload the page."},
+            status_code=403,
+        )
+    client_ip = _client_ip(request)
+    if not rate_limit_verify_code(client_ip):
+        return JSONResponse(
+            {"ok": False, "error": "Too many attempts. Try again later."},
+            status_code=429,
+        )
     email = email.strip().lower()
     code = code.strip()
     now = datetime.now(timezone.utc)

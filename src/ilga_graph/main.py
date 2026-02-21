@@ -40,6 +40,7 @@ from .routers.advocacy import router as _advocacy_router
 from .routers.auth import router as _auth_router
 from .routers.bills import router as _bills_router
 from .routers.explore import router as _explore_router
+from .routers.feedback import router as _feedback_router
 from .routers.intelligence import router as _intelligence_router
 from .routers.outreach import router as _outreach_router
 from .run_log import append_startup_run, get_log_path, load_recent_runs
@@ -76,6 +77,11 @@ from .scrapers.bills import load_bill_cache
 from .search import EntityType as SearchEntityTypeEnum
 from .search import search_all
 from .seating import process_seating
+from .security import (
+    CSRF_COOKIE_NAME,
+    CSRF_MAX_AGE_SECONDS,
+    generate_csrf_token,
+)
 from .startup_banner import _Colors, format_startup_table, log_startup_timing
 from .vote_name_normalizer import normalize_vote_events
 from .vote_timeline import compute_bill_vote_timeline
@@ -1539,6 +1545,8 @@ templates.env.globals["og_image_url"] = cfg.OG_IMAGE_URL
 templates.env.globals["umami_enabled"] = cfg.PROFILE == "prod" and bool(cfg.UMAMI_WEBSITE_ID)
 templates.env.globals["umami_website_id"] = cfg.UMAMI_WEBSITE_ID
 templates.env.globals["umami_script_url"] = cfg.UMAMI_SCRIPT_URL
+templates.env.globals["show_beta_banner"] = cfg.BETA_BANNER
+templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
 
 
 @app.get("/", include_in_schema=False)
@@ -1580,6 +1588,7 @@ async def _api_key_middleware(request: Request, call_next) -> Response:  # type:
             and not path.startswith("/advocacy")
             and not path.startswith("/auth")
             and not path.startswith("/outreach")
+            and not path.startswith("/report-bug")
             and not path.startswith("/explore")
             and not path.startswith("/intelligence")
             and not path.startswith("/api/graph")
@@ -1594,6 +1603,26 @@ async def _api_key_middleware(request: Request, call_next) -> Response:  # type:
                     content={"detail": "Invalid or missing API key"},
                 )
     return await call_next(request)
+
+
+# ── CSRF cookie middleware ───────────────────────────────────────────────────
+@app.middleware("http")
+async def _csrf_cookie_middleware(request: Request, call_next) -> Response:  # type: ignore[no-untyped-def]
+    """Set XSRF-TOKEN cookie and request.state.csrf_token for form/fetch POST protection."""
+    token = generate_csrf_token()
+    request.state.csrf_token = token  # type: ignore[attr-defined]
+    response: Response = await call_next(request)
+    if hasattr(response, "set_cookie"):
+        response.set_cookie(
+            key=CSRF_COOKIE_NAME,
+            value=token,
+            max_age=CSRF_MAX_AGE_SECONDS,
+            path="/",
+            httponly=False,  # So JS can read and send in body/header for fetch()
+            samesite="strict",
+            secure=cfg.PROFILE == "prod",
+        )
+    return response
 
 
 # ── Security headers middleware ──────────────────────────────────────────────
@@ -1686,6 +1715,7 @@ app.include_router(graphql_app, prefix="/graphql")
 
 app.include_router(_advocacy_router, prefix="/advocacy")
 app.include_router(_auth_router)
+app.include_router(_feedback_router)
 app.include_router(_bills_router, prefix="/api")
 app.include_router(_explore_router)
 app.include_router(_intelligence_router, prefix="/intelligence")

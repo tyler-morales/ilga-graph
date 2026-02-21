@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+{% block title %}Report a bug — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="report-bug-page">
+    <h1>Report a bug</h1>
+    <p class="report-bug-intro">Something not working? Tell us what happened so we can fix it.</p>
+
+    {% if submitted %}
+    <div class="report-bug-success" role="status" aria-live="polite">
+        <p><strong>Thanks.</strong> Your report was saved. We’ll look into it.</p>
+        <p><a href="/advocacy">Back to advocacy</a></p>
+    </div>
+    {% else %}
+    <div class="report-bug-sending" id="report-bug-sending" aria-live="polite" aria-busy="false" hidden>
+        <div class="report-bug-truck-wrap" aria-hidden="true">
+            <div class="report-bug-truck-track">
+                <span class="report-bug-truck-path" aria-hidden="true"></span>
+                <span class="report-bug-bug" aria-hidden="true">🐛</span>
+                <span class="report-bug-truck">🚚</span>
+            </div>
+        </div>
+        <p class="report-bug-sending-status" id="report-bug-sending-status">Sending…</p>
+    </div>
+    <div class="report-bug-form-section" id="report-bug-form-section">
+    <p class="report-bug-submit-error" id="report-bug-submit-error" role="alert" hidden></p>
+    {% if request.query_params.get('error') == 'csrf' %}
+    <div class="report-bug-error" role="alert">
+        <p>Your session expired or the form was submitted from another site. Please reload the page and try again.</p>
+    </div>
+    {% endif %}
+    {% if request.query_params.get('error') == 'rate' %}
+    <div class="report-bug-error" role="alert">
+        <p>Too many reports from your connection. Please try again later.</p>
+    </div>
+    {% endif %}
+    {% if request.query_params.get('error') == 'captcha' %}
+    <div class="report-bug-error" role="alert">
+        <p>Security check failed or expired. Please reload the page and try again.</p>
+    </div>
+    {% endif %}
+    {% if request.query_params.get('error') == 'description_short' %}
+    <div class="report-bug-error" role="alert">
+        <p>Please describe what went wrong in at least {{ description_min_length }} characters.</p>
+    </div>
+    {% endif %}
+    {% if request.query_params.get('error') == 'email_invalid' %}
+    <div class="report-bug-error" role="alert">
+        <p>Please enter a valid email address (for example, you@example.com) or leave it blank.</p>
+    </div>
+    {% endif %}
+    <form id="report-bug-form" action="/report-bug" method="post" class="report-bug-form" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" autocomplete="off">
+        <div class="report-bug-field {% if request.query_params.get('error') == 'description_short' %}report-bug-field--error{% endif %}" id="report-bug-field-description">
+            <label for="description">What went wrong? (required)</label>
+            <textarea id="description" name="description" rows="4" required maxlength="10000"
+                placeholder="e.g. After I entered my ZIP, the page went blank."
+                aria-required="true"
+                aria-invalid="{% if request.query_params.get('error') == 'description_short' %}true{% else %}false{% endif %}"
+                aria-describedby="description-hint"></textarea>
+            <span id="description-hint" class="report-bug-hint {% if request.query_params.get('error') == 'description_short' %}report-bug-hint--error{% endif %}" role="status" aria-live="polite">At least {{ description_min_length }} characters.</span>
+        </div>
+        <div class="report-bug-field {% if request.query_params.get('error') == 'email_invalid' %}report-bug-field--error{% endif %}" id="report-bug-field-email">
+            <label for="reporter_email">Your email (optional — if you want a reply)</label>
+            <input type="email" id="reporter_email" name="reporter_email" maxlength="320"
+                placeholder="you@example.com" autocomplete="email"
+                aria-invalid="{% if request.query_params.get('error') == 'email_invalid' %}true{% else %}false{% endif %}"
+                aria-describedby="email-hint email-error">
+            <span id="email-hint" class="report-bug-hint">Leave blank if you don’t need a reply.</span>
+            <p class="report-bug-field-error" id="email-error" role="alert" aria-live="polite" {% if request.query_params.get('error') != 'email_invalid' %}hidden{% endif %}>Please enter a valid email address (e.g. you@example.com) or leave the field empty.</p>
+        </div>
+        <div class="report-bug-field">
+            <label for="image">Screenshot (optional)</label>
+            <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/gif,image/webp"
+                aria-describedby="image-hint">
+            <span id="image-hint" class="report-bug-hint">JPEG, PNG, GIF or WebP, max 5 MB.</span>
+        </div>
+        <input type="hidden" name="page_url" id="page_url" value="">
+        {% if turnstile_site_key %}
+        <div class="report-bug-turnstile" aria-describedby="turnstile-hint">
+            <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-theme="light"></div>
+            <span id="turnstile-hint" class="report-bug-hint">Security check to reduce spam.</span>
+        </div>
+        {% endif %}
+        <button type="submit" class="report-bug-submit">Submit report</button>
+    </form>
+    </div>
+    {% endif %}
+</div>
+{% if turnstile_site_key %}
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+{% endif %}
+<script>
+    (function() {
+        var input = document.getElementById('page_url');
+        if (input && document.referrer) input.value = document.referrer;
+
+        var form = document.getElementById('report-bug-form');
+        var formSection = document.getElementById('report-bug-form-section');
+        var sendingEl = document.getElementById('report-bug-sending');
+        var statusEl = document.getElementById('report-bug-sending-status');
+        if (!form || !formSection || !sendingEl || !statusEl) return;
+
+        var statusSteps = ['Sending…', 'Picking up bug', 'Sent!'];
+        var TRUCK_DURATION_MS = 3500;
+        var minShowingMs = TRUCK_DURATION_MS + 400;
+        var statusAtPickupMs = 1100;
+        var statusAtSentMs = 2800;
+
+        var submitErrorEl = document.getElementById('report-bug-submit-error');
+        var descriptionEl = document.getElementById('description');
+        var descriptionHintEl = document.getElementById('description-hint');
+        var descriptionFieldEl = document.getElementById('report-bug-field-description');
+        var emailEl = document.getElementById('reporter_email');
+        var emailErrorEl = document.getElementById('email-error');
+        var emailFieldEl = document.getElementById('report-bug-field-email');
+        var minLen = {{ description_min_length }};
+
+        function isValidEmail(val) {
+            var s = (val || '').trim();
+            if (s.length === 0) return true;
+            if (s.length > 320) return false;
+            var at = s.indexOf('@');
+            if (at <= 0 || at === s.length - 1) return false;
+            var local = s.slice(0, at);
+            var domain = s.slice(at + 1);
+            if (local.length > 64 || domain.length < 4 || domain.length > 253) return false;
+            if (domain.indexOf('.') === -1) return false;
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(s);
+        }
+
+        function updateDescriptionHintError() {
+            if (!descriptionHintEl || !descriptionEl) return;
+            var len = descriptionEl.value.trim().length;
+            var left = Math.max(0, minLen - len);
+            descriptionHintEl.textContent = left === 1 ? '1 character left.' : left + ' characters left.';
+            descriptionHintEl.classList.add('report-bug-hint--error');
+        }
+
+        function setDescriptionError(show) {
+            if (!descriptionFieldEl || !descriptionEl || !descriptionHintEl) return;
+            if (show) {
+                updateDescriptionHintError();
+                descriptionFieldEl.classList.add('report-bug-field--error');
+                descriptionEl.setAttribute('aria-invalid', 'true');
+            } else {
+                descriptionHintEl.textContent = '';
+                descriptionHintEl.classList.remove('report-bug-hint--error');
+                descriptionFieldEl.classList.remove('report-bug-field--error');
+                descriptionEl.setAttribute('aria-invalid', 'false');
+            }
+        }
+
+        function setEmailError(show) {
+            if (!emailFieldEl || !emailEl || !emailErrorEl) return;
+            if (show) {
+                emailFieldEl.classList.add('report-bug-field--error');
+                emailEl.setAttribute('aria-invalid', 'true');
+                emailErrorEl.hidden = false;
+            } else {
+                emailFieldEl.classList.remove('report-bug-field--error');
+                emailEl.setAttribute('aria-invalid', 'false');
+                emailErrorEl.hidden = true;
+            }
+        }
+
+        function showFormAgain(errMessage) {
+            sendingEl.hidden = true;
+            sendingEl.classList.remove('is-sending');
+            sendingEl.setAttribute('aria-busy', 'false');
+            formSection.hidden = false;
+            statusEl.textContent = statusSteps[0];
+            if (submitErrorEl) {
+                submitErrorEl.hidden = !errMessage;
+                if (errMessage) submitErrorEl.textContent = errMessage;
+            }
+        }
+
+        if (descriptionEl) {
+            descriptionEl.addEventListener('input', function() {
+                var len = descriptionEl.value.trim().length;
+                if (len >= minLen) setDescriptionError(false);
+                else if (descriptionFieldEl && descriptionFieldEl.classList.contains('report-bug-field--error')) updateDescriptionHintError();
+            });
+            descriptionEl.addEventListener('blur', function() {
+                var len = descriptionEl.value.trim().length;
+                if (len < minLen) setDescriptionError(true);
+                else setDescriptionError(false);
+            });
+        }
+        if (descriptionFieldEl && descriptionFieldEl.classList.contains('report-bug-field--error') && descriptionHintEl && descriptionEl) {
+            var len = descriptionEl.value.trim().length;
+            var left = Math.max(0, minLen - len);
+            descriptionHintEl.textContent = left === 1 ? '1 character left.' : left + ' characters left.';
+        }
+        if (emailEl) {
+            emailEl.addEventListener('input', function() {
+                if (isValidEmail(emailEl.value)) setEmailError(false);
+            });
+            emailEl.addEventListener('blur', function() {
+                if (isValidEmail(emailEl.value)) setEmailError(false);
+            });
+        }
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (submitErrorEl) { submitErrorEl.hidden = true; submitErrorEl.textContent = ''; }
+            var desc = (descriptionEl && descriptionEl.value) ? descriptionEl.value.trim() : '';
+            if (desc.length < minLen) {
+                setDescriptionError(true);
+                if (descriptionEl) { descriptionEl.focus(); }
+                return false;
+            }
+            setDescriptionError(false);
+            var emailVal = (emailEl && emailEl.value) ? emailEl.value.trim() : '';
+            if (emailVal.length > 0 && !isValidEmail(emailVal)) {
+                setEmailError(true);
+                if (emailEl) { emailEl.focus(); }
+                return false;
+            }
+            setEmailError(false);
+            formSection.hidden = true;
+            sendingEl.hidden = false;
+            sendingEl.setAttribute('aria-busy', 'true');
+            statusEl.textContent = statusSteps[0];
+            var t1 = setTimeout(function() { statusEl.textContent = statusSteps[1]; }, statusAtPickupMs);
+            var t2 = setTimeout(function() { statusEl.textContent = statusSteps[2]; }, statusAtSentMs);
+            function clearStatusTimers() {
+                clearTimeout(t1);
+                clearTimeout(t2);
+            }
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                    sendingEl.classList.add('is-sending');
+                });
+            });
+
+            var fd = new FormData(form);
+            var submitTime = Date.now();
+            fetch(form.action, { method: 'POST', body: fd, redirect: 'manual' })
+                .then(function(res) {
+                    if (res.status >= 400) {
+                        clearStatusTimers();
+                        showFormAgain('Something went wrong. Please try again.');
+                        return;
+                    }
+                    var goTo = form.action + '?submitted=1';
+                    if (res.status === 303 || res.status === 302) {
+                        var loc = res.headers.get('Location');
+                        if (loc) goTo = loc;
+                    }
+                    var elapsed = Date.now() - submitTime;
+                    var redirectDelay = Math.max(500, minShowingMs - elapsed);
+                    setTimeout(function() {
+                        clearStatusTimers();
+                        window.location.href = goTo;
+                    }, redirectDelay);
+                    if (res.type === 'opaqueredirect' || res.status === 0) return;
+                })
+                .catch(function() {
+                    clearStatusTimers();
+                    showFormAgain('Something went wrong. Please try again.');
+                });
+            return false;
+        });
+    })();
+</script>
+{% endblock %}

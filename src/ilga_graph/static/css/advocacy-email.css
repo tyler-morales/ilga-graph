@@ -801,6 +801,11 @@ color: #137333;
 border-color: #81c995;
 pointer-events: none;
 }
+@media (prefers-reduced-motion: no-preference) {
+.gmail-sent-btn.sent-done {
+  animation: micro-pop 0.4s ease-out, success-shimmer 0.5s ease-out;
+}
+}
 .gmail-sent-btn.sent-done svg {
 stroke: #137333;
 }
@@ -890,6 +895,17 @@ padding: 8px 14px;
 }
 .gmail-action-bar {
 padding: 12px 14px;
+}
+.gmail-copy-link {
+font-size: 0.9rem !important;
+}
+.gmail-copy-btn,
+.gmail-from-code-hint,
+.gmail-from-code-error {
+font-size: 0.9rem;
+}
+.gmail-toolbar {
+font-size: 0.95em;
 }
 }
 /* Legacy email drawer (for reference / fallback) */

@@ -214,3 +214,6 @@
         </button>
     </div>
 </div>
+{% if show_beta_banner and beta_banner_feedback_url %}
+<p class="drawer-bug-nudge gmail-bug-nudge" id="gmail-bug-nudge">Something went wrong? <a href="{{ beta_banner_feedback_url }}" class="drawer-bug-nudge-link" target="_blank" rel="noopener noreferrer">Report a bug</a></p>
+{% endif %}
