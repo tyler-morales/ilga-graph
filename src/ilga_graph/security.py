@@ -6,9 +6,10 @@
 
 from __future__ import annotations
 
+import hmac
 import logging
 import time
-from collections import defaultdict
+from collections import defaultdict, deque
 
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 
@@ -24,8 +25,8 @@ CSRF_MAX_AGE_SECONDS = 60 * 60  # 1 hour
 
 _csrf_signer = URLSafeTimedSerializer(cfg.AUTH_SECRET)
 
-# In-memory rate limit: key -> list of timestamps (pruned each check).
-_rate_entries: defaultdict[str, list[float]] = defaultdict(list)
+# In-memory rate limit: key -> deque of timestamps (pruned each check).
+_rate_entries: defaultdict[str, deque[float]] = defaultdict(deque)
 
 
 def generate_csrf_token() -> str:
@@ -36,8 +37,21 @@ def generate_csrf_token() -> str:
 
 def validate_csrf_token(token: str | None, cookie_value: str | None) -> bool:
     """Return True if token is present, matches cookie, and is valid (signature + not expired)."""
-    if not token or not cookie_value or token != cookie_value:
+    if not token or not cookie_value or not hmac.compare_digest(token, cookie_value):
         return False
+    try:
+        _csrf_signer.loads(token, max_age=CSRF_MAX_AGE_SECONDS)
+        return True
+    except BadSignature:
+        return False
+
+
+def is_valid_csrf_token(token: str) -> bool:
+    """Return True if the token has a valid signature and has not expired.
+
+    Used by the CSRF middleware to decide whether to reuse an existing cookie
+    token rather than minting a new one on every request.
+    """
     try:
         _csrf_signer.loads(token, max_age=CSRF_MAX_AGE_SECONDS)
         return True
@@ -54,7 +68,7 @@ def rate_limit_check(key: str, window_seconds: int, max_count: int) -> bool:
     cutoff = now - window_seconds
     entries = _rate_entries[key]
     while entries and entries[0] < cutoff:
-        entries.pop(0)
+        entries.popleft()
     if len(entries) >= max_count:
         return False
     entries.append(now)

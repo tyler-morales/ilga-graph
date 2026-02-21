@@ -283,10 +283,8 @@ def _client_ip(request: Request) -> str:
     return ""
 
 
-def _verify_turnstile(token: str | None, remote_ip: str) -> bool:
-    """Verify Turnstile token with Cloudflare. Returns True only if success."""
-    if not token or not cfg.TURNSTILE_SECRET_KEY:
-        return False
+def _verify_turnstile_sync(token: str, remote_ip: str) -> bool:
+    """Blocking Turnstile verification — run via run_in_executor from async callers."""
     try:
         resp = requests.post(
             _TURNSTILE_VERIFY_URL,
@@ -302,6 +300,20 @@ def _verify_turnstile(token: str | None, remote_ip: str) -> bool:
     except Exception:
         LOGGER.exception("Turnstile siteverify failed")
         return False
+
+
+async def _verify_turnstile(token: str | None, remote_ip: str) -> bool:
+    """Verify Turnstile token with Cloudflare asynchronously.
+
+    Delegates the blocking HTTP call to the default thread-pool executor so the
+    event loop is not stalled waiting for the Cloudflare API (up to 10s).
+    """
+    if not token or not cfg.TURNSTILE_SECRET_KEY:
+        return False
+    import asyncio
+
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _verify_turnstile_sync, token, remote_ip)
 
 
 @router.get("/report-bug")
@@ -367,7 +379,7 @@ async def report_bug_submit(
     client_ip = _client_ip(request)
     if not rate_limit_bug_report(client_ip):
         return RedirectResponse("/report-bug?error=rate", status_code=303)
-    if cfg.TURNSTILE_SECRET_KEY and not _verify_turnstile(cf_turnstile_response, client_ip):
+    if cfg.TURNSTILE_SECRET_KEY and not await _verify_turnstile(cf_turnstile_response, client_ip):
         return RedirectResponse("/report-bug?error=captcha", status_code=303)
     description = description.strip()
     if not description or len(description) < BUG_REPORT_DESCRIPTION_MIN_LENGTH:

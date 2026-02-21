@@ -14,6 +14,7 @@ from .security import (
     CSRF_COOKIE_NAME,
     CSRF_MAX_AGE_SECONDS,
     generate_csrf_token,
+    is_valid_csrf_token,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -89,7 +90,8 @@ def register_middleware(app: FastAPI) -> None:
 
     @app.middleware("http")
     async def csrf_cookie_middleware(request: Request, call_next) -> Response:
-        token = generate_csrf_token()
+        existing = request.cookies.get(CSRF_COOKIE_NAME)
+        token = existing if existing and is_valid_csrf_token(existing) else generate_csrf_token()
         request.state.csrf_token = token  # type: ignore[attr-defined]
         response: Response = await call_next(request)
         if hasattr(response, "set_cookie"):
