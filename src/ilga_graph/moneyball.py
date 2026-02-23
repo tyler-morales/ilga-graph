@@ -33,7 +33,8 @@ from .analytics import (
     is_substantive,
     pipeline_depth,
 )
-from .models import Bill, CommitteeMemberRole, Member
+from .cel import compute_les_scores
+from .models import Bill, CommitteeMemberRole, Member, WitnessSlip
 
 # ── Role aggregation ─────────────────────────────────────────────────────────
 
@@ -318,6 +319,11 @@ class MoneyballProfile:
     # ── The composite score ──
     moneyball_score: float = 0.0
 
+    # ── CEL-style Legislative Effectiveness Score ──
+    les: float = 0.0               # Normalized LES (chamber avg = 1)
+    les_benchmark: float = 0.0     # OLS-predicted LES (seniority + majority + chair)
+    les_expectation: str = ""      # "Above", "Meets", or "Below" expectations
+
     # ── Rank (populated by the ranker) ──
     rank_overall: int = 0
     rank_chamber: int = 0
@@ -579,6 +585,7 @@ def compute_moneyball(
     *,
     scorecards: dict[str, MemberScorecard] | None = None,
     weights: MoneyballWeights | None = None,
+    witness_slips: list[WitnessSlip] | None = None,
 ) -> MoneyballReport:
     """Run the full Moneyball analytics pipeline.
 
@@ -591,6 +598,9 @@ def compute_moneyball(
         Built automatically when not supplied.
     weights:
         Optional tuning knobs for the composite score.
+    witness_slips:
+        Optional witness slips used to proxy Substantive & Significant bills
+        for the CEL-style LES computation.
 
     Returns
     -------
@@ -769,6 +779,15 @@ def compute_moneyball(
             max_magnet,
             weights,
         )
+
+    # ── Step 4b: CEL-style Legislative Effectiveness Scores ──
+    les_results = compute_les_scores(members, witness_slips=witness_slips)
+    for member_id, les_result in les_results.items():
+        profile = profiles.get(member_id)
+        if profile is not None:
+            profile.les = les_result.les
+            profile.les_benchmark = les_result.les_benchmark
+            profile.les_expectation = les_result.les_expectation
 
     # ── Step 5: Assign badges ──
     for profile in profiles.values():
