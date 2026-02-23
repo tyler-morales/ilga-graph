@@ -1051,6 +1051,15 @@ font-weight: 600;
 font-size: var(--font-size-label);
 margin-bottom: 4px;
 }
+
+@supports selector(:has(*)) {
+.drawer-form-group:has([aria-invalid="true"]),
+.drawer-form-group:has(.madlib-blank.error) {
+  padding-inline-start: 10px;
+  border-inline-start: 3px solid #d93025;
+  background: #fce8e6;
+}
+}
 .label-optional {
 font-weight: normal;
 color: #666;

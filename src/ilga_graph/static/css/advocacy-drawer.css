@@ -46,6 +46,13 @@
     transform: translateX(0);
 }
 
+@supports (container-type: inline-size) {
+    .phone-panel {
+        container-type: inline-size;
+        container-name: drawer;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .phone-overlay {
         transition-duration: 0.01s;
@@ -342,6 +349,22 @@
     height: 72px;
     margin-left: auto;
     margin-right: auto;
+}
+
+/* aspect-ratio: progressive enhancement so height follows from width */
+@supports (aspect-ratio: 1) {
+    .drawer-call-photo,
+    .drawer-call-photo-placeholder {
+        aspect-ratio: 1;
+        height: auto;
+    }
+    @media (max-width: 480px) {
+        .drawer-call-photo,
+        .drawer-call-photo-placeholder {
+            width: 80px;
+            height: auto;
+        }
+    }
 }
 
 .drawer-call-name {
@@ -2298,6 +2321,39 @@
     .phone-panel-done {
         width: 100%;
         text-align: center;
+    }
+}
+
+/* When drawer is narrow (e.g. split view): same content layout as 480px viewport fallback */
+@supports (container-type: inline-size) {
+    @container drawer (max-width: 480px) {
+        .drawer-call-photo,
+        .drawer-call-photo-placeholder {
+            width: 80px;
+            height: 80px;
+        }
+
+        .chat-label,
+        .drawer-contact-card-label {
+            font-size: var(--font-size-body);
+        }
+
+        .chat-divider span {
+            font-size: var(--font-size-body);
+        }
+
+        .drawer-interest-poll-bubble .chat-label {
+            font-size: var(--font-size-body);
+        }
+
+        .phone-panel-title {
+            padding: 16px 18px 10px;
+            font-size: var(--font-size-h2);
+        }
+
+        .phone-panel-body {
+            padding: 16px 18px;
+        }
     }
 }
 

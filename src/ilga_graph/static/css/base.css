@@ -726,6 +726,19 @@ a:visited {
   border-color: #b52a2a;
 }
 
+@supports selector(:has(*)) {
+  .report-bug-field:has([aria-invalid="true"]) textarea,
+  .report-bug-field:has([aria-invalid="true"]) input[type="email"] {
+    border-color: #c88;
+    background-color: #fefafa;
+  }
+  .report-bug-field:has([aria-invalid="true"]) textarea:focus,
+  .report-bug-field:has([aria-invalid="true"]) input[type="email"]:focus {
+    outline-color: #b52a2a;
+    border-color: #b52a2a;
+  }
+}
+
 .report-bug-hint {
   display: block;
   font-size: var(--font-size-label);

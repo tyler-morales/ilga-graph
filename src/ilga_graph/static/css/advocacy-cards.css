@@ -618,6 +618,12 @@
   opacity: 1;
 }
 
+@supports selector(:has(*)) {
+  .card:has(.heat-score-pill) {
+    padding-inline-end: 12px;
+  }
+}
+
 .card-your-legislator {
   border: 3px solid #b8860b;
   box-shadow:
@@ -700,6 +706,8 @@
 }
 
 .card .member-photo-placeholder {
+  width: 100px;
+  height: 152px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -708,6 +716,32 @@
   font-size: var(--font-size-h2);
   font-weight: 700;
   letter-spacing: 0.02em;
+}
+
+/* aspect-ratio: progressive enhancement so height follows from width */
+@supports (aspect-ratio: 1) {
+  .card .member-photo {
+    aspect-ratio: 100/152;
+    height: auto;
+  }
+  .card .member-photo-placeholder {
+    aspect-ratio: 100/152;
+    height: auto;
+  }
+  @media (max-width: 768px) {
+    .card .member-photo,
+    .card .member-photo-placeholder {
+      width: 96px;
+      height: auto;
+    }
+  }
+  @media (max-width: 480px) {
+    .card .member-photo,
+    .card .member-photo-placeholder {
+      width: 88px;
+      height: auto;
+    }
+  }
 }
 
 /* .card .card-header-right .card-name {
@@ -2161,7 +2195,8 @@ a.vote-bill:visited {
   }
 
   /* Badge stacking/full width is driven by container query (@container card), not viewport */
-  .card .member-photo {
+  .card .member-photo,
+  .card .member-photo-placeholder {
     width: 96px;
     height: 144px;
   }
@@ -2221,7 +2256,8 @@ a.vote-bill:visited {
     max-width: 100%;
   }
 
-  .card .member-photo {
+  .card .member-photo,
+  .card .member-photo-placeholder {
     width: 88px;
     height: 132px;
   }
