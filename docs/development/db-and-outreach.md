@@ -10,7 +10,7 @@ This doc summarizes the DB implementation, potential issues, and how tests verif
 |-----------|------|
 | **db.py** | Async SQLite engine (`ILGA_DB_PATH`), `init_db()` (Alembic upgrade head, or fallback create_all + ALTERs), `get_db()` FastAPI dependency |
 | **alembic/** | Versioned migrations; `alembic upgrade head` creates/updates schema. Schema version stored in `alembic_version` table. |
-| **db_models.py** | `User`, `AuthCode`, `OutreachEvent` (SQLAlchemy ORM) |
+| **db_models.py** | `User` (id, email, **zip_code**, created_at, last_login_at), `AuthCode`, `OutreachEvent` (SQLAlchemy ORM) |
 | **routers/auth.py** | Request code, verify code, logout, `/me` |
 | **routers/outreach.py** | Record event, stats by member, my-history |
 | **dependencies.py** | Session token (itsdangerous), `get_current_user_optional`, `require_user` |
@@ -30,14 +30,14 @@ This doc summarizes the DB implementation, potential issues, and how tests verif
 | **Seed script** | `users`, `outreach_events` | `make seed-outreach` or `python scripts/seed_outreach.py` |
 
 - **Auth:** request-code inserts one `AuthCode`; verify-code finds it, marks used, and gets-or-creates `User`, updates `last_login_at`.
-- **Outreach:** POST /outreach/record (requires auth) inserts one `OutreachEvent` per call/email/no_answer. The server validates that `member_id` refers to a legislator in app state (`find_member_by_id`); if not, it returns 400 so the DB never stores invalid or slug-style ids. In production, outreach comes from the site (users record from member cards), so `member_id` is always the canonical id from the loaded members data.
+- **Outreach:** POST /outreach/record (requires auth) inserts one `OutreachEvent` per call/email/no_answer and, when a valid 5-digit zip is provided, updates the logged-in user's `User.zip_code` so the advocacy page can pre-fill next time. The server validates that `member_id` refers to a legislator in app state (`find_member_by_id`); if not, it returns 400 so the DB never stores invalid or slug-style ids.
 - **Seed:** `scripts/seed_outreach.py` uses the same profile/env as the app; runs `init_db()`, then gets-or-creates user for the backlog email: **prod** → `moratyle@gmail.com`, **dev** → `funky_mama11@gmail.com`. Inserts `OutreachEvent` rows only when the rep name **resolves to a canonical member id** (from cache/mocks members.json). Unresolved names are skipped (no slug fallback), so the DB stays consistent. Re-running seed deletes existing outreach events for that user before inserting, so it is idempotent. Use the same `ILGA_PROFILE` (or same `ILGA_DB_PATH`) for app and seed. In dev, the seed also inserts **"this week"** and mock-advocate events with **hardcoded numeric member_ids** so the landing ticker and heat pills work; all use canonical ids.
 
 ### Read paths (where DB data is used)
 
 - **Auth:** verify-code and GET /auth/me read `auth_codes` and `users`.
 - **Outreach:** GET /outreach/stats/{member_id}, GET /outreach/interest-poll/{member_id} (public), GET /outreach/my-stats and GET /outreach/my-history (auth required).
-- **Advocacy:** Drawer checks whether the current user has called this member (count from `outreach_events`). Results page builds `user_called_member_ids` / `user_emailed_member_ids` (for "Reached out" pill) and **outreach_heat** (count of distinct users who reached out per member) for the **fire pill** on each card. The **landing hero ticker** shows one number: **total unique outreach** (all time) = count of distinct (user_id, member_id) pairs for call/email events (one contact per legislator = one). Copy: "Join X+ Illinois residents who've already taken action."
+- **Advocacy:** When a logged-in user has a saved `User.zip_code` (valid and in district data), the advocacy page pre-fills the hero ZIP and runs the search without requiring a URL param. When they visit with a valid `?zip=` or record outreach with a zip, that zip is saved to `User.zip_code`. Drawer checks whether the current user has called this member (count from `outreach_events`). Results page builds `user_called_member_ids` / `user_emailed_member_ids` (for "Reached out" pill) and **outreach_heat** (count of distinct users who reached out per member) for the **fire pill** on each card. The **landing hero ticker** shows one number: **total outreach actions** (all time) = count of all call/email events. Copy: "Add your voice. X+ outreach actions already made."
 
 ### Fire pill on member cards (data-driven)
 

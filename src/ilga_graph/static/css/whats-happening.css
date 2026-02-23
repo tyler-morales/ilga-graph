@@ -1,0 +1,72 @@
+/**
+ * What's happening — home page only. One row, 3 parts (What / Why / Fix).
+ * Uses .whats-happening-* BEM-style names; section is below hero inside .container.
+ */
+
+/* Tighter gap from hero; top border gives a clear section break so less margin is needed */
+.whats-happening {
+  margin-top: 1.25rem;
+  padding: 1.5rem 0;
+  border-top: 1px solid var(--color-border-light, #e5e5e5);
+}
+
+.whats-happening-title {
+  font-size: var(--font-size-h2, 1.35rem);
+  color: var(--color-text-muted, #444);
+  margin: 0 0 1rem 0;
+  font-weight: 600;
+}
+
+.whats-happening-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem 2rem;
+  margin: 0;
+  padding: 0;
+}
+
+.whats-happening-part {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  background: var(--color-bg-muted, #fafafa);
+  border: 1px solid var(--color-border-light, #ddd);
+  border-radius: 6px;
+}
+
+.whats-happening-label {
+  font-size: var(--font-size-label, 0.875rem);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary, #555);
+  margin: 0 0 0.35em 0;
+}
+
+.whats-happening-label [aria-hidden="true"] {
+  margin-right: 0.35em;
+}
+
+.whats-happening-answer {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text, #222);
+  margin: 0 0 0.75em 0;
+  line-height: 1.35;
+}
+
+.whats-happening-bullet {
+  font-size: var(--font-size-body, 1rem);
+  color: var(--color-text-muted, #444);
+  line-height: 1.5;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .whats-happening-row {
+    grid-template-columns: 1fr;
+  }
+
+  .whats-happening-part {
+    padding: 1rem;
+  }
+}

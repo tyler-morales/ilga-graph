@@ -5,8 +5,8 @@
     <strong>Dev/Seed mode.</strong>
     {% if member_count is defined and member_count < 100 %} Only {{ member_count }} of 177 legislators are loaded. {%
         endif %} {% if zip_count is defined and zip_count < 100 %} District data uses ~{{ zip_count }} demo ZIPs (not
-        full Census). {% endif %} Some districts may show no results. <strong>Good ZIPs to test:</strong> 60601, 60605,
-        60120, 60540, 60201 (all match the dev dataset).
+        full Census). {% endif %} Some districts may show no results. <strong>Good ZIPs to test:</strong> 60007, 60016, 60033,
+        60034, 60068, 60071 (all match the dev dataset).
 </div>
 {% endif %}
 
@@ -29,7 +29,12 @@ user_emailed_member_ids=none, outreach_heat=none) %}
     docs/development/db-and-outreach.md #}
     {% if heat_count > 0 %}
     <span class="heat-score-pill" onclick="this.toggleAttribute('data-expanded')"
-        title="{{ heat_count }} unique outreach advocate{{ 's' if heat_count != 1 else '' }}">🔥 {{ heat_count }}<span
+        title="{{ heat_count }} unique outreach advocate{{ 's' if heat_count != 1 else '' }}">
+        <span class="heat-score-pill-fire" aria-hidden="true">
+            <span class="heat-score-pill-fire-static">🔥</span>
+            <img class="heat-score-pill-fire-animated" src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExMjIzcmVqNmFkOHF6bnphZDdnMHh3MzRjOWo3cnFtN2txNTQ5NGZ2MSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/ewh4ipgPw1bBVj4HI5/giphy.gif" alt="" width="36" height="36" loading="lazy">
+        </span>
+        {{ heat_count }}<span
             class="heat-score-pill-text">&nbsp;unique outreach advocate{{ 's' if heat_count != 1 else ''
             }}</span></span>
     {% endif %}
@@ -679,6 +684,33 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                 </dl>
             </div>
         </details>
+        {% if show_my_outreach|default(false) %}
+        <section class="outreach-sidebar" aria-labelledby="outreach-sidebar-heading">
+            <h2 id="outreach-sidebar-heading" class="outreach-sidebar__title">My Outreach</h2>
+            <p class="outreach-sidebar__summary">You've made <strong>{{ outreach_calls_count|default(0) }}</strong> call{{ outreach_calls_count|default(0) != 1 and 's' or '' }} and <strong>{{ outreach_emails_count|default(0) }}</strong> email{{ outreach_emails_count|default(0) != 1 and 's' or '' }}.</p>
+            <div class="outreach-sidebar__grid" role="list">
+                {% for m in outreach_sidebar|default([]) %}
+                <article class="outreach-sidebar-card {% if m.is_constituent %}outreach-sidebar-card--constituent{% endif %}" role="listitem">
+                    <div class="outreach-sidebar-card__photo-wrap">
+                        {% if m.photo_url %}
+                        <img src="{{ m.photo_url }}" alt="" class="outreach-sidebar-card__photo" width="120" height="112" loading="lazy">
+                        {% else %}
+                        <span class="outreach-sidebar-card__photo outreach-sidebar-card__photo--initials" aria-hidden="true">{% if m.name and m.name.split() %}{{ m.name.split()[0][0] }}{{ m.name.split()[-1][0] }}{% else %}?{% endif %}</span>
+                        {% endif %}
+                    </div>
+                    <div class="outreach-sidebar-card__info">
+                        <p class="outreach-sidebar-card__name">{{ m.name }}</p>
+                        <p class="outreach-sidebar-card__district">{{ m.chamber|capitalize }} &ndash; {{ m.district }}</p>
+                        <div class="outreach-sidebar-card__badges" role="group" aria-label="Outreach type">
+                            {% if m.called %}<span class="outreach-sidebar-card__badge outreach-sidebar-card__badge--call" title="Called">📞</span>{% endif %}
+                            {% if m.emailed %}<span class="outreach-sidebar-card__badge outreach-sidebar-card__badge--email" title="Emailed">✉️</span>{% endif %}
+                        </div>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
     </aside>
     <main class="results-main">
         {% endif %}

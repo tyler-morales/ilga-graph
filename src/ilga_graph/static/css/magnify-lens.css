@@ -1,0 +1,119 @@
+/* ── Magnifying glass lens (advocacy hero): Liquid Glass style, cursor-following ── */
+
+/* JS reads --magnify-size from root when glass is not yet styled (intro first frame). */
+:root {
+  --magnify-size: 150px;
+}
+
+/* Wrapper shrinks to headline so lens only activates over the text, not the whole hero column */
+.hero-headline-lens-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.advocacy-hero .hero-headline {
+  position: relative;
+}
+
+.advocacy-hero .hero-headline.hero-headline--lens-active {
+  cursor: none;
+}
+
+.magnify-lens {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.magnify-lens.magnify-lens--visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Fade-out after intro so the lens does not rest on the headline; headline stays readable. */
+.magnify-lens.magnify-lens--outro {
+  opacity: 0;
+  transition: opacity 0.35s ease-out;
+}
+
+/* Intro: lens sweeps across the entire first headline line; duration set in JS (--magnify-intro-duration). */
+.magnify-lens.magnify-lens--intro {
+  transition: left var(--magnify-intro-duration, 2.2s) ease-in-out,
+    top var(--magnify-intro-duration, 2.2s) ease-in-out,
+    opacity 0.25s ease-out, visibility 0.25s ease-out;
+}
+
+.magnify-lens.magnify-lens--intro .magnify-lens-content {
+  transition: transform var(--magnify-intro-duration, 2.2s) ease-in-out;
+}
+
+/* Single source of truth for lens size; JS reads from .magnify-lens-glass.offsetWidth.
+   Kept modest so the lens reads as a magnifier and does not cover the second line ("Take action"). */
+.magnify-lens-glass {
+  --magnify-scale: 0.5;
+  width: var(--magnify-size);
+  height: var(--magnify-size);
+  border-radius: 50%;
+  overflow: hidden;
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: auto;
+  cursor: none;
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+  background: #fff;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.12),
+    inset 0 0 12px rgba(255, 255, 255, 0.15);
+}
+
+.magnify-lens-glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 30% 20%,
+      rgba(255, 255, 255, 0.4) 0%,
+      transparent 60%);
+}
+
+.magnify-lens-content {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  width: 100%;
+  font-family: var(--font-hero);
+  font-size: inherit;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: inherit;
+  white-space: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .magnify-lens,
+  .magnify-lens-glass {
+    transition: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .magnify-lens {
+    display: none !important;
+  }
+
+  .advocacy-hero .hero-headline.hero-headline--lens-active {
+    cursor: default;
+  }
+}

@@ -401,10 +401,13 @@
   font-size: var(--font-size-xs);
   color: #666;
   margin-left: 4px;
+  display: inline-block;
+  transition: transform 0.25s ease-out;
+  transform-origin: center center;
 }
 
 .card-details[open] .card-details-toggle::after {
-  content: " \25b2";
+  transform: rotate(180deg);
 }
 
 .card-details-toggle:hover {
@@ -544,9 +547,10 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 3px 8px;
+  padding: 4px 10px;
   border-radius: 999px;
-  font-size: var(--font-size-xs);
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: var(--font-size-base);
   font-weight: 500;
   color: #c2410c;
   background: #fff7ed;
@@ -560,6 +564,43 @@
 
 .heat-score-pill:hover {
   background: #ffedd5;
+}
+
+/* Fire icon: fixed-size wrapper; static emoji by default, animated GIF on hover/expanded */
+.heat-score-pill-fire {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.85em;
+  height: 1.85em;
+  flex-shrink: 0;
+}
+
+.heat-score-pill-fire-static {
+  display: inline-block;
+  transition: opacity 0.15s ease;
+}
+
+.heat-score-pill-fire-animated {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.heat-score-pill:hover .heat-score-pill-fire-static,
+.heat-score-pill[data-expanded] .heat-score-pill-fire-static {
+  opacity: 0;
+}
+
+.heat-score-pill:hover .heat-score-pill-fire-animated,
+.heat-score-pill[data-expanded] .heat-score-pill-fire-animated {
+  opacity: 1;
 }
 
 .heat-score-pill-text {
@@ -576,8 +617,11 @@
 }
 
 .card-your-legislator {
-  border: 2px solid #c9a227;
-  box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.2);
+  border: 3px solid #b8860b;
+  box-shadow:
+    0 0 0 1px rgba(184, 134, 11, 0.4),
+    0 0 12px 2px rgba(201, 162, 39, 0.35),
+    0 0 24px 4px rgba(201, 162, 39, 0.2);
 }
 
 /* Desktop: grid [photo | name+badges]; one column-2 cell so no trapped space; align to bottom of image */
@@ -623,8 +667,9 @@
 
 .card .member-photo {
   width: 100px;
-  height: 128px;
+  height: 152px;
   object-fit: cover;
+  object-position: center top;
   border-radius: 8px;
   flex-shrink: 0;
 }
@@ -1375,7 +1420,7 @@ a.vote-bill:visited {
 /* ── Two-column results: fixed aside + scrollable main ── */
 .results-layout {
   display: flex;
-  gap: 20px;
+  gap: 40px;
   margin-top: 12px;
   align-items: flex-start;
   min-width: 0;
@@ -1386,8 +1431,6 @@ a.vote-bill:visited {
   flex-shrink: 0;
   position: sticky;
   top: 12px;
-  max-height: calc(100vh - 24px);
-  overflow-y: auto;
 }
 
 .results-main {
@@ -1478,6 +1521,141 @@ a.vote-bill:visited {
   font-weight: bold;
 }
 
+/* ── Outreach sidebar (My Outreach cards) ── */
+.outreach-sidebar {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.outreach-sidebar__title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: #335;
+}
+
+.outreach-sidebar__summary {
+  margin: 0 0 10px 0;
+  font-size: 0.9375rem;
+  color: #444;
+  line-height: 1.4;
+}
+
+/* Single-column stacked list at all screen sizes; each card is horizontal (photo left, info right). */
+.outreach-sidebar__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.outreach-sidebar-card {
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  padding: 0;
+  background: #fff;
+  border-radius: 12px;
+  border: 2px solid #d1d5db;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.outreach-sidebar-card:focus-within {
+  outline: 2px solid var(--focus-ring-color, #0a84ff);
+  outline-offset: 2px;
+}
+
+.outreach-sidebar-card--constituent {
+  border-width: 3px;
+  border-color: #b8860b;
+  box-shadow:
+    0 0 0 1px rgba(184, 134, 11, 0.4),
+    0 0 12px 2px rgba(201, 162, 39, 0.35),
+    0 0 24px 4px rgba(201, 162, 39, 0.2);
+}
+
+.outreach-sidebar-card__photo-wrap {
+  width: 100px;
+  flex-shrink: 0;
+  align-self: stretch;
+  line-height: 0;
+}
+
+.outreach-sidebar-card__photo {
+  width: 100%;
+  height: 100%;
+  min-height: 100px;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+  border-radius: 10px 0 0 10px;
+}
+
+.outreach-sidebar-card__photo--initials {
+  width: 100%;
+  height: 100%;
+  min-height: 100px;
+  border-radius: 10px 0 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 600;
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.outreach-sidebar-card__info {
+  padding: 10px 12px 12px;
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.outreach-sidebar-card__name {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: #111;
+  line-height: 1.35;
+}
+
+.outreach-sidebar-card__district {
+  margin: 4px 0 0 0;
+  font-size: 0.875rem;
+  color: #555;
+  line-height: 1.35;
+}
+
+.outreach-sidebar-card__badges {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.outreach-sidebar-card__badge {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.outreach-sidebar-card__badge--call {
+  margin-right: 0;
+}
+
+.outreach-sidebar-card__badge--email {
+  margin-right: 0;
+}
+
 .how-it-works .formula-table {
   width: 100%;
   border-collapse: collapse;
@@ -1527,6 +1705,35 @@ a.vote-bill:visited {
 
   .results-aside .how-it-works {
     margin-bottom: 0;
+  }
+
+  .outreach-sidebar-card {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .outreach-sidebar-card__info {
+    padding: 14px 14px 16px;
+  }
+
+  .outreach-sidebar-card__name {
+    font-size: 1.25rem;
+    line-height: 1.3;
+  }
+
+  .outreach-sidebar-card__district {
+    font-size: 1.0625rem;
+    margin-top: 6px;
+  }
+
+  .outreach-sidebar-card__badges {
+    margin-top: 12px;
+    gap: 12px;
+  }
+
+  .outreach-sidebar-card__badge {
+    font-size: 1.75rem;
   }
 
   .card-header {
@@ -1582,11 +1789,16 @@ a.vote-bill:visited {
 
   .card .member-photo {
     width: 96px;
-    height: 122px;
+    height: 144px;
   }
 
   .tooltip-wrap .tooltip-content {
     max-width: min(340px, calc(100vw - 32px));
+  }
+
+  /* Tippy.js tooltips (cloned into body): constrain width on tablet/mobile */
+  .tippy-box {
+    max-width: min(340px, calc(100vw - 32px)) !important;
   }
 }
 
@@ -1637,7 +1849,7 @@ a.vote-bill:visited {
 
   .card .member-photo {
     width: 88px;
-    height: 112px;
+    height: 132px;
   }
 
   .card-details-toggle {
@@ -1645,5 +1857,14 @@ a.vote-bill:visited {
     padding: 10px 0;
     display: inline-flex;
     align-items: center;
+  }
+
+  /* Narrower tooltips on phone for better fit */
+  .tooltip-wrap .tooltip-content {
+    max-width: min(280px, calc(100vw - 24px));
+  }
+
+  .tippy-box {
+    max-width: min(280px, calc(100vw - 24px)) !important;
   }
 }
