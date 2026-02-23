@@ -46,6 +46,19 @@
     <div id="advocacy-drawer-body" class="phone-panel-body"></div>
 </div>
 
+{# Template: drawer "done for this member" state (filled and injected by showDrawerDoneForMember) #}
+<template id="drawer-done-for-member">
+    <div class="drawer-done-for-member" role="status" aria-live="polite">
+        <p class="drawer-done-for-member__message">You're done with <span id="drawer-done-member-name"></span>.</p>
+        <p class="drawer-done-for-member__comeback" id="drawer-done-comeback" hidden>You can come back to send your follow-up email later.</p>
+        <p class="drawer-done-for-member__next-wrap" id="drawer-done-next-wrap">
+            <button type="button" class="drawer-done-for-member__cta" id="drawer-done-next-cta">Call your <span id="drawer-done-next-label"></span></button>
+        </p>
+        <p class="drawer-done-for-member__district-done" id="drawer-done-district-done" hidden>You've completed outreach for your district members.</p>
+        <p class="drawer-done-for-member__broker-nudge" id="drawer-done-broker-nudge" hidden>Optional: call the Power Broker for extra impact.</p>
+    </div>
+</template>
+
 {# Reminder modal: date/time + Google Calendar or email myself; details include link back to this call script #}
 <div id="reminder-modal" class="reminder-modal" role="dialog" aria-labelledby="reminder-modal-title" aria-modal="true"
     hidden>
@@ -82,15 +95,10 @@
 
 <script>
     /* ── Auto-scroll to results only when user just submitted zip (not on plain navigation) ── */
-    // #region agent log
     (function () {
         var results = document.getElementById('results');
         if (!results || results.getAttribute('data-has-initial-results') !== 'true') return;
         var justSubmittedZip = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('__ilga_scroll_to_results') === '1';
-        try {
-            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '0c4473' }, body: JSON.stringify({ sessionId: '0c4473', location: 'index.html:onload-scroll', message: 'results on load', data: { justSubmittedZip: justSubmittedZip, willScroll: justSubmittedZip }, hypothesisId: 'H1', timestamp: Date.now() }) }).catch(function () {});
-        } catch (e) {}
-        // #endregion
         if (!justSubmittedZip) return;
         if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('__ilga_scroll_to_results');
         var params = new URLSearchParams(window.location.search || '');
@@ -278,14 +286,28 @@
             }, { once: true });
         }
     }
+    function initGoalBlockFromStorage() {
+        var resultsEl = document.getElementById('results');
+        var block = resultsEl && resultsEl.querySelector('.outreach-goal');
+        var zip = block ? (block.getAttribute('data-goal-zip') || '').trim() : '';
+        if (!zip && document.getElementById('zip_code')) {
+            var input = document.getElementById('zip_code');
+            zip = (input && input.value && input.value.trim()) || '';
+        }
+        if (!block || _ilgaUserEmail) return;
+        if (zip && typeof updateGoalBlockFromStorage === 'function') updateGoalBlockFromStorage(zip);
+    }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () {
+            if (typeof logGoalListDiagnostic === 'function') logGoalListDiagnostic('load');
             applyCardBioOverflow();
             initRecommendationChipTooltips();
+            initGoalBlockFromStorage();
         });
     } else {
         applyCardBioOverflow();
         initRecommendationChipTooltips();
+        initGoalBlockFromStorage();
     }
 
     /* ── Keep URL in sync with ZIP when user searches (shareable, bookmarkable links) ── */
@@ -302,9 +324,27 @@
         }
     });
 
+    // #region agent log
+    function logGoalListDiagnostic(runId) {
+        var resultsEl = document.getElementById('results');
+        var ol = resultsEl ? resultsEl.querySelector('.outreach-goal__actions') : null;
+        if (!ol) {
+            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'b14c79' }, body: JSON.stringify({ sessionId: 'b14c79', runId: runId || 'run1', hypothesisId: 'H4', location: 'index.html:goal-list-diagnostic', message: 'Goal list not in DOM', data: { found: false }, timestamp: Date.now() }) }).catch(function() {});
+            return;
+        }
+        var cs = window.getComputedStyle(ol);
+        var li = ol.querySelector('li');
+        var liCs = li ? window.getComputedStyle(li) : {};
+        var markerCs = li ? (function() { try { return window.getComputedStyle(li, '::marker'); } catch (e) { return {}; } })() : {};
+        var payload = { sessionId: 'b14c79', runId: runId || 'run1', hypothesisId: 'H1', location: 'index.html:goal-list-diagnostic', message: 'Goal list computed styles', data: { tagName: ol.tagName, className: ol.className, listStyleType: cs.listStyleType, listStylePosition: cs.listStylePosition, paddingLeft: cs.paddingLeft, padding: cs.padding, liDisplay: liCs.display, markerDisplay: markerCs.display, markerContent: markerCs.content }, timestamp: Date.now() };
+        fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'b14c79' }, body: JSON.stringify(payload) }).catch(function() {});
+    }
+    // #endregion
+
     /* ── Scroll to results after htmx swap ── */
     document.body.addEventListener('htmx:afterSwap', function (e) {
         if (e.detail.target && e.detail.target.id === 'results') {
+            if (typeof logGoalListDiagnostic === 'function') logGoalListDiagnostic('htmx-swap');
             applyCardEnterAnimation(e.detail.target);
             setTimeout(function () {
                 applyCardBioOverflow();
@@ -358,6 +398,7 @@
             return;
         }
         drawer.setAttribute('data-member-id', memberId || '');
+        drawer.removeAttribute('data-call-recorded');
         drawer.setAttribute('data-drawer-zip', zipCode || '');
         drawer.setAttribute('data-drawer-constituent', '');
         drawer.setAttribute('data-drawer-photo-url', (photoUrl != null && photoUrl !== '') ? photoUrl : '');
@@ -438,8 +479,11 @@
                 initDrawerConstituentCheckbox(body);
                 initDrawerVoicemailToggle(body);
                 if (view === 'call_wrapup') showWrapupWithMockPoll(body);
+                else restoreDrawerWrapupState(body);
                 var currentStep = body.querySelector('.drawer-call-content') ? 'call' : (body.querySelector('.gmail-compose') ? 'email' : null);
                 if (currentStep) updateDrawerStepStrip(currentStep);
+                var memberId = drawer.getAttribute('data-member-id') || '';
+                if (memberId && currentStep && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, currentStep, 'drawer_opened');
                 initDrawerFocusTrapAndFocus();
             })
             .catch(function () {
@@ -781,8 +825,19 @@
             }, 800);
         }
 
+        var phoneLink = container && container.querySelector('a.drawer-call-number-pill');
+        if (phoneLink) {
+            phoneLink.addEventListener('click', function () {
+                var drawer = document.getElementById('advocacy-drawer');
+                var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
+                if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'call', 'phone_clicked');
+            });
+        }
         if (endCallBtn) {
             endCallBtn.addEventListener('click', function () {
+                var drawer = document.getElementById('advocacy-drawer');
+                var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
+                if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'call', 'end_call_clicked');
                 endCallBtn.classList.add('micro-thunk');
                 setTimeout(function () {
                     endCallBtn.classList.remove('micro-thunk');
@@ -790,18 +845,52 @@
                 }, 160);
             });
         }
-        var reminderBubble = container && container.querySelector('#drawer-voicemail-reminder-bubble');
         if (endCallVmBtn) {
             endCallVmBtn.addEventListener('click', function () {
+                var drawer = document.getElementById('advocacy-drawer');
+                var memberId = (drawer && drawer.getAttribute('data-member-id') || '').trim();
+                if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'call', 'end_call_clicked_vm');
                 endCallVmBtn.classList.add('micro-thunk');
                 setTimeout(function () {
                     endCallVmBtn.classList.remove('micro-thunk');
-                    endCallVmBtn.style.display = 'none';
-                    if (reminderBubble) {
-                        reminderBubble.removeAttribute('hidden');
-                        reminderBubble.classList.add('drawer-voicemail-reminder-just-in');
+                    var drawer = document.getElementById('advocacy-drawer');
+                    var bodyEl = document.getElementById('advocacy-drawer-body');
+                    if (!drawer || !bodyEl) return;
+                    var memberId = (drawer.getAttribute('data-member-id') || '').trim();
+                    if (!memberId) {
+                        bodyEl.innerHTML = '<p class="drawer-error" role="alert">Missing legislator. Close and try again.</p>';
+                        if (typeof initDrawerFocusTrapAndFocus === 'function') initDrawerFocusTrapAndFocus();
+                        return;
                     }
-                    if (pill) pill.classList.add('drawer-call-number-pill-ended');
+                    var zipCode = (typeof getConstituentZip === 'function' ? getConstituentZip() : (drawer.getAttribute('data-drawer-zip') || '')) || '';
+                    var voicemailEl = container && container.querySelector('#drawer-voicemail');
+                    var outcome = (voicemailEl && voicemailEl.getAttribute('hidden') === null) ? 'voicemail' : 'no_answer';
+                    var constAttr = (drawer.getAttribute('data-drawer-constituent') || '').trim();
+                    var constituent = (constAttr === 'true' || constAttr === 'false') ? constAttr : undefined;
+                    recordOutreach(memberId, 'no_answer', zipCode, outcome, '', '', undefined, constituent, undefined);
+                    var formData = new FormData();
+                    formData.append('zip', zipCode);
+                    formData.append('outcome', outcome);
+                    fetch('/advocacy/call/' + encodeURIComponent(memberId) + '/no-answer', {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'same-origin',
+                        headers: { 'Accept': 'text/html' }
+                    })
+                        .then(function (r) {
+                            if (!r.ok) throw new Error('No-answer screen failed');
+                            return r.text();
+                        })
+                        .then(function (html) {
+                            bodyEl.innerHTML = html;
+                            if (typeof htmx !== 'undefined' && htmx.process) htmx.process(bodyEl);
+                            if (typeof initDrawerFocusTrapAndFocus === 'function') initDrawerFocusTrapAndFocus();
+                            if (typeof refreshAdvocacyResults === 'function') refreshAdvocacyResults();
+                        })
+                        .catch(function () {
+                            bodyEl.innerHTML = '<p class="drawer-error" role="alert">Couldn\'t load. Try again.</p>';
+                            if (typeof initDrawerFocusTrapAndFocus === 'function') initDrawerFocusTrapAndFocus();
+                        });
                 }, 160);
             });
         }
@@ -873,6 +962,11 @@
 
         btn.addEventListener('click', function () {
             var isVoicemail = voicemail.getAttribute('hidden') === null;
+            if (!isVoicemail) {
+                var drawer = document.getElementById('advocacy-drawer');
+                var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
+                if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'call', 'voicemail_toggled');
+            }
             setVoicemailMode(!isVoicemail);
         });
 
@@ -1009,6 +1103,18 @@
             if (emailSavedText) emailSavedText.textContent = emailVal;
             if (nameDisplayEl) nameDisplayEl.textContent = nameVal;
             syncCaptureToWrapupForm();
+            var drawer = document.getElementById('advocacy-drawer');
+            var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
+            if (memberId && typeof recordOutreachStep === 'function') {
+                if (showNameSaved && !container.getAttribute('data-step-staffer-done')) {
+                    container.setAttribute('data-step-staffer-done', '1');
+                    recordOutreachStep(memberId, 'call', 'staffer_name_captured');
+                }
+                if (showEmailSaved && !container.getAttribute('data-step-email-done')) {
+                    container.setAttribute('data-step-email-done', '1');
+                    recordOutreachStep(memberId, 'call', 'office_email_captured');
+                }
+            }
         }
 
         function expandEmail() {
@@ -1266,16 +1372,266 @@
                 if (typeof applyCardBioOverflow === 'function') applyCardBioOverflow();
                 if (typeof initRecommendationChipTooltips === 'function') initRecommendationChipTooltips(resultsEl);
                 if (typeof applyCardEnterAnimation === 'function') applyCardEnterAnimation(resultsEl);
+                var zipForGoal = (document.getElementById('zip_code') && document.getElementById('zip_code').value.trim()) || (resultsEl.querySelector('.outreach-goal') && resultsEl.querySelector('.outreach-goal').getAttribute('data-goal-zip'));
+                if (zipForGoal && typeof updateGoalBlockFromStorage === 'function') updateGoalBlockFromStorage(zipForGoal);
             })
             .catch(function () { });
     }
 
-    document.addEventListener('ilga:auth-change', function () {
-        refreshAdvocacyResults();
+    document.addEventListener('ilga:auth-change', function (e) {
+        if (e.detail && e.detail.signedIn && typeof mergeLocalStorageGoalToServer === 'function') {
+            mergeLocalStorageGoalToServer().then(function () {
+                if (typeof refreshAdvocacyResults === 'function') refreshAdvocacyResults();
+            });
+        } else {
+            refreshAdvocacyResults();
+        }
     });
 
-    function recordOutreach(memberId, kind, zipCode, outcome, notes, contactName, supportScore) {
+    document.addEventListener('ilga:goal-updated', function (e) {
+        var zip = e.detail && e.detail.zip;
+        if (zip && typeof updateGoalBlockFromStorage === 'function') updateGoalBlockFromStorage(zip);
+    });
+
+    /* ── Goal sidebar: click ZIP to edit; commit updates hero form, URL, and re-fetches results so goal reflects new district ── */
+    function showGoalZipEdit(displayBtn, editInput) {
+        if (!displayBtn || !editInput) return;
+        var block = displayBtn.closest('.outreach-goal');
+        var currentZip = (block && block.getAttribute('data-goal-zip')) || (editInput.value || '').trim();
+        displayBtn.setAttribute('hidden', '');
+        displayBtn.setAttribute('aria-expanded', 'true');
+        editInput.removeAttribute('hidden');
+        editInput.value = currentZip;
+        editInput.focus();
+    }
+    function hideGoalZipEdit(displayBtn, editInput, revertZip) {
+        if (!displayBtn || !editInput) return;
+        editInput.setAttribute('hidden', '');
+        displayBtn.removeAttribute('hidden');
+        displayBtn.setAttribute('aria-expanded', 'false');
+        if (revertZip != null) displayBtn.textContent = revertZip;
+    }
+    function commitGoalZip(newZip) {
+        if (!/^\d{5}$/.test(newZip)) return false;
+        var form = document.getElementById('advocacy-form');
+        var zipInput = form && (form.querySelector('#zip_code') || form.querySelector('input[name="zip"]'));
+        if (zipInput) zipInput.value = newZip;
+        var url = new URL(window.location.href);
+        url.searchParams.set('zip', newZip);
+        history.replaceState(null, '', url.pathname + url.search);
+        if (typeof refreshAdvocacyResults === 'function') refreshAdvocacyResults();
+        return true;
+    }
+    function setGoalZipStatus(cell, text, visible) {
+        var statusEl = cell && cell.querySelector('.outreach-goal__zip-status');
+        if (!statusEl) return;
+        statusEl.textContent = text || '';
+        if (visible) statusEl.removeAttribute('hidden'); else statusEl.setAttribute('hidden', '');
+    }
+    document.body.addEventListener('click', function (e) {
+        var zipLocate = e.target && e.target.closest && e.target.closest('.outreach-goal__zip-locate');
+        if (zipLocate && zipLocate.closest('#results')) {
+            e.preventDefault();
+            var cell = zipLocate.closest('.outreach-goal__zip-cell');
+            if (!cell) return;
+            if (!navigator.geolocation) {
+                setGoalZipStatus(cell, 'Location not supported', true);
+                setTimeout(function () { setGoalZipStatus(cell, '', false); }, 3000);
+                return;
+            }
+            zipLocate.disabled = true;
+            setGoalZipStatus(cell, 'Locating…', true);
+            navigator.geolocation.getCurrentPosition(
+                function (pos) {
+                    var lat = pos.coords.latitude;
+                    var lon = pos.coords.longitude;
+                    fetch('/advocacy/api/zip-from-coords?lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon), { credentials: 'same-origin' })
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            zipLocate.disabled = false;
+                            if (data && data.zip && /^\d{5}$/.test(data.zip)) {
+                                setGoalZipStatus(cell, '', false);
+                                commitGoalZip(data.zip);
+                            } else {
+                                setGoalZipStatus(cell, 'No ZIP found for this location', true);
+                                setTimeout(function () { setGoalZipStatus(cell, '', false); }, 4000);
+                            }
+                        })
+                        .catch(function () {
+                            zipLocate.disabled = false;
+                            setGoalZipStatus(cell, 'Location unavailable', true);
+                            setTimeout(function () { setGoalZipStatus(cell, '', false); }, 4000);
+                        });
+                },
+                function () {
+                    zipLocate.disabled = false;
+                    setGoalZipStatus(cell, 'Location unavailable', true);
+                    setTimeout(function () { setGoalZipStatus(cell, '', false); }, 4000);
+                },
+                { timeout: 10000, maximumAge: 60000 }
+            );
+            return;
+        }
+        var zipDisplay = e.target && e.target.closest && e.target.closest('.outreach-goal__zip-display');
+        if (zipDisplay && zipDisplay.closest('#results')) {
+            e.preventDefault();
+            var cell = zipDisplay.closest('.outreach-goal__zip-cell');
+            var editInput = cell && cell.querySelector('.outreach-goal__zip-edit');
+            showGoalZipEdit(zipDisplay, editInput);
+            return;
+        }
+        var link = e.target && e.target.closest && e.target.closest('.outreach-goal__action-link');
+        if (!link || !link.closest('#results')) return;
+        e.preventDefault();
+        var memberId = link.getAttribute('data-member-id');
+        var zip = link.getAttribute('data-zip');
+        var action = (link.getAttribute('data-action') || 'call').toLowerCase();
+        var photoUrl = '';
+        var card = document.getElementById('card-' + memberId);
+        if (card) {
+            var img = card.querySelector('.member-photo[src]');
+            if (img) photoUrl = img.getAttribute('src') || '';
+        }
+        openAdvocacyDrawer(action, memberId || '', zip || '', photoUrl, '');
+    });
+
+    document.body.addEventListener('blur', function (e) {
+        var editInput = e.target && e.target.classList && e.target.classList.contains('outreach-goal__zip-edit') ? e.target : null;
+        if (!editInput || !editInput.closest('#results')) return;
+        var cell = editInput.closest('.outreach-goal__zip-cell');
+        var displayBtn = cell && cell.querySelector('.outreach-goal__zip-display');
+        var block = editInput.closest('.outreach-goal');
+        var previousZip = (block && block.getAttribute('data-goal-zip')) || '';
+        var newZip = (editInput.value || '').trim();
+        if (/^\d{5}$/.test(newZip)) {
+            commitGoalZip(newZip);
+        } else {
+            hideGoalZipEdit(displayBtn, editInput, previousZip);
+        }
+    }, true);
+    document.body.addEventListener('keydown', function (e) {
+        var editInput = e.target && e.target.classList && e.target.classList.contains('outreach-goal__zip-edit') ? e.target : null;
+        if (!editInput || !editInput.closest('#results')) return;
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        var newZip = (editInput.value || '').trim();
+        if (/^\d{5}$/.test(newZip)) {
+            commitGoalZip(newZip);
+        } else {
+            var cell = editInput.closest('.outreach-goal__zip-cell');
+            var displayBtn = cell && cell.querySelector('.outreach-goal__zip-display');
+            var block = editInput.closest('.outreach-goal');
+            var previousZip = (block && block.getAttribute('data-goal-zip')) || '';
+            hideGoalZipEdit(displayBtn, editInput, previousZip);
+        }
+    }, true);
+
+    /**
+     * Resolve "other" district member from goal block and current drawer member.
+     * Returns { currentMemberName, otherId, otherLabel, otherMemberName, zip } or null if goal/cards missing.
+     */
+    function getDrawerDoneContext(didEmail) {
+        var drawer = document.getElementById('advocacy-drawer');
+        var body = document.getElementById('advocacy-drawer-body');
+        var goal = document.getElementById('results') && document.getElementById('results').querySelector('.outreach-goal');
+        if (!drawer || !body || !goal) return null;
+        var currentId = (drawer.getAttribute('data-member-id') || '').trim();
+        var zip = (drawer.getAttribute('data-drawer-zip') || '').trim();
+        var senatorId = (goal.getAttribute('data-goal-senator-id') || '').trim();
+        var repId = (goal.getAttribute('data-goal-rep-id') || '').trim();
+        var currentMemberName = '';
+        var callName = body.querySelector('.drawer-call-name');
+        if (callName) currentMemberName = (callName.textContent || '').trim();
+        if (!currentMemberName) {
+            var gmail = body.querySelector('.gmail-compose');
+            if (gmail) currentMemberName = (gmail.getAttribute('data-legislator-name') || '').trim();
+        }
+        if (!currentMemberName) currentMemberName = 'this legislator';
+        var otherId = currentId === senatorId ? repId : senatorId;
+        var otherLabel = currentId === senatorId ? 'Representative' : 'Senator';
+        var otherMemberName = '';
+        if (otherId) {
+            var card = document.getElementById('card-' + otherId);
+            if (card) {
+                var nameEl = card.querySelector('.card-name');
+                if (nameEl) otherMemberName = (nameEl.textContent || '').trim();
+            }
+        }
+        return { currentMemberName: currentMemberName, otherId: otherId, otherLabel: otherLabel, otherMemberName: otherMemberName, zip: zip, didEmail: didEmail };
+    }
+
+    /**
+     * Show the "done for this member" view in the drawer; primary CTA opens other district member's call view.
+     */
+    function showDrawerDoneForMember(currentMemberName, otherMemberId, otherLabel, otherMemberName, zip, didEmail) {
+        var template = document.getElementById('drawer-done-for-member');
+        var body = document.getElementById('advocacy-drawer-body');
+        if (!template || !body) return;
+        var clone = template.content.cloneNode(true);
+        var msgName = clone.querySelector('#drawer-done-member-name');
+        var comeback = clone.querySelector('#drawer-done-comeback');
+        var nextWrap = clone.querySelector('#drawer-done-next-wrap');
+        var cta = clone.querySelector('#drawer-done-next-cta');
+        var nextLabel = clone.querySelector('#drawer-done-next-label');
+        var districtDone = clone.querySelector('#drawer-done-district-done');
+        var brokerNudge = clone.querySelector('#drawer-done-broker-nudge');
+        if (msgName) msgName.textContent = currentMemberName;
+        if (!didEmail && comeback) { comeback.removeAttribute('hidden'); }
+        var otherAlreadyCalled = otherMemberId && typeof getGoalProgress === 'function' && zip && getGoalProgress(zip)[otherMemberId] && getGoalProgress(zip)[otherMemberId].call;
+        /* #region agent log */
+        fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9b1dec'},body:JSON.stringify({sessionId:'9b1dec',location:'index.html:showDrawerDoneForMember',message:'done view CTA',data:{otherId:otherMemberId,zip:zip||'',otherAlreadyCalled:!!otherAlreadyCalled,hideCTA:!!otherAlreadyCalled},timestamp:Date.now(),hypothesisId:'H3'})}).catch(function(){});
+        /* #endregion */
+        if (otherMemberId && otherLabel && !otherAlreadyCalled) {
+            if (nextLabel) nextLabel.textContent = otherLabel;
+            if (cta) {
+                cta.setAttribute('aria-label', 'Call your ' + otherLabel);
+                var photoUrl = '';
+                var card = document.getElementById('card-' + otherMemberId);
+                if (card) {
+                    var img = card.querySelector('.member-photo[src]');
+                    if (img) photoUrl = img.getAttribute('src') || '';
+                }
+                cta.onclick = function () {
+                    closeAdvocacyDrawer();
+                    setTimeout(function () { openAdvocacyDrawer('call', otherMemberId, zip || '', photoUrl, ''); }, DRAWER_CLOSE_MS);
+                };
+            }
+        } else {
+            if (nextWrap) nextWrap.setAttribute('hidden', '');
+            if (districtDone) districtDone.removeAttribute('hidden');
+            var results = document.getElementById('results');
+            if (brokerNudge && results && results.querySelector('.role-broker')) brokerNudge.removeAttribute('hidden');
+        }
+        body.innerHTML = '';
+        body.appendChild(clone);
+        if (cta && otherMemberId) {
+            requestAnimationFrame(function () { try { cta.focus(); } catch (e) {} });
+        }
+        initDrawerFocusTrapAndFocus();
+    }
+
+    /**
+     * Build context from DOM and show drawer done view. Call after "I'll do it later" (didEmail=false) or "I sent it!" (didEmail=true).
+     */
+    function tryShowDrawerDoneForMember(didEmail) {
+        var ctx = getDrawerDoneContext(didEmail);
+        if (!ctx) return;
+        showDrawerDoneForMember(ctx.currentMemberName, ctx.otherId, ctx.otherLabel, ctx.otherMemberName, ctx.zip, ctx.didEmail);
+    }
+
+    function recordOutreachStep(memberId, outreachType, stepSlug) {
         if (!_ilgaUserEmail) return Promise.resolve();
+        var body = new FormData();
+        body.append('member_id', memberId || '');
+        body.append('outreach_type', outreachType || 'call');
+        body.append('step_slug', stepSlug || '');
+        body.append('csrf_token', getCsrfToken());
+        return fetch('/outreach/step', { method: 'POST', body: body, credentials: 'same-origin' })
+            .then(function (r) { return r.json ? r.json() : {}; })
+            .catch(function () { return undefined; });
+    }
+
+    function postOutreachRecord(memberId, kind, zipCode, outcome, notes, contactName, supportScore, constituent, legislatorEmail) {
         var body = new FormData();
         body.append('member_id', memberId || '');
         body.append('kind', kind || 'call');
@@ -1284,18 +1640,27 @@
         body.append('notes', notes || '');
         if (contactName) body.append('contact_name', contactName);
         if (supportScore) body.append('support_score', String(supportScore));
+        if (constituent === 'true' || constituent === 'false') body.append('constituent', constituent);
+        if (legislatorEmail && typeof legislatorEmail === 'string' && legislatorEmail.trim()) body.append('legislator_email', legislatorEmail.trim());
         body.append('csrf_token', getCsrfToken());
         return fetch('/outreach/record', { method: 'POST', body: body, credentials: 'same-origin' })
             .then(function (r) { return r.json ? r.json() : {}; })
+            .catch(function () { return undefined; });
+    }
+    function recordOutreach(memberId, kind, zipCode, outcome, notes, contactName, supportScore, constituent, legislatorEmail) {
+        if (!_ilgaUserEmail) return Promise.resolve();
+        return postOutreachRecord(memberId, kind, zipCode, outcome, notes, contactName, supportScore, constituent, legislatorEmail)
             .then(function (data) {
                 if (data && data.ok && memberId && kind) {
-                    setOutreachDone(memberId, kind);
+                    if (kind === 'call' || kind === 'email') {
+                        setGoalActionDone(zipCode, memberId, kind);
+                        setOutreachDone(memberId, kind);
+                    }
                     refreshAuthStripProgress();
                     refreshAdvocacyResults();
                 }
                 return data;
-            })
-            .catch(function () { return undefined; });
+            });
     }
 
     function setOutreachDone(memberId, kind) {
@@ -1305,14 +1670,158 @@
         var btn = card.querySelector(sel);
         if (!btn || btn.classList.contains('outreach-done')) return;
         var label = kind === 'call' ? 'Called!' : 'Emailed!';
-        var iconSvg = btn.querySelector('.outreach-icon');
-        var span = document.createElement('span');
-        span.className = btn.className + ' outreach-done outreach-done-just-in';
-        span.setAttribute('aria-label', kind === 'call' ? 'You called this legislator' : 'You emailed this legislator');
-        if (iconSvg) span.appendChild(iconSvg.cloneNode(true));
-        span.appendChild(document.createTextNode(' ' + label));
-        btn.parentNode.replaceChild(span, btn);
-        setTimeout(function () { span.classList.remove('outreach-done-just-in'); }, 500);
+        btn.classList.add('outreach-done', 'outreach-done-just-in');
+        btn.setAttribute('aria-label', kind === 'call' ? 'You called this legislator — open to view' : 'You emailed this legislator — open to view');
+        var iconWrap = btn.querySelector('.outreach-icon');
+        var after = iconWrap ? iconWrap.nextSibling : null;
+        if (after && after.nodeType === Node.TEXT_NODE) after.textContent = ' ' + label;
+        else btn.appendChild(document.createTextNode(' ' + label));
+        setTimeout(function () { btn.classList.remove('outreach-done-just-in'); }, 500);
+    }
+
+    var GOAL_STORAGE_PREFIX = 'ilga:goal:';
+    /** On sign-in: transfer localStorage goal progress for current ZIP to server, then clear that ZIP from storage. */
+    function mergeLocalStorageGoalToServer() {
+        if (!_ilgaUserEmail) return Promise.resolve();
+        var zip = typeof getConstituentZip === 'function' ? getConstituentZip() : '';
+        if (!zip || !/^\d{5}$/.test(zip)) return Promise.resolve();
+        var stored = getGoalProgress(zip);
+        var actions = [];
+        for (var mid in stored) {
+            if (!stored[mid]) continue;
+            if (stored[mid].call) actions.push({ memberId: mid, kind: 'call' });
+            if (stored[mid].email) actions.push({ memberId: mid, kind: 'email' });
+        }
+        if (actions.length === 0) return Promise.resolve();
+        return Promise.all(actions.map(function (a) {
+            return postOutreachRecord(a.memberId, a.kind, zip);
+        })).then(function () {
+            try {
+                localStorage.removeItem(GOAL_STORAGE_PREFIX + zip);
+            } catch (e) { /* ignore */ }
+            if (typeof refreshAuthStripProgress === 'function') refreshAuthStripProgress();
+        });
+    }
+    function getGoalProgress(zip) {
+        if (!zip || !/^\d{5}$/.test(zip)) return {};
+        try {
+            var raw = localStorage.getItem(GOAL_STORAGE_PREFIX + zip);
+            return raw ? JSON.parse(raw) : {};
+        } catch (e) {
+            return {};
+        }
+    }
+    function setGoalActionDone(zip, memberId, kind) {
+        if (!zip || !/^\d{5}$/.test(zip) || !memberId || !kind) return;
+        var key = GOAL_STORAGE_PREFIX + zip;
+        var data = getGoalProgress(zip);
+        if (!data[memberId]) data[memberId] = { call: false, email: false };
+        data[memberId][kind] = true;
+        try {
+            localStorage.setItem(key, JSON.stringify(data));
+        } catch (e) { /* quota or disabled */ }
+        document.dispatchEvent(new CustomEvent('ilga:goal-updated', { detail: { zip: zip } }));
+    }
+    function updateGoalBlockFromStorage(zip) {
+        if (_ilgaUserEmail) return;
+        var resultsEl = document.getElementById('results');
+        var block = resultsEl && resultsEl.querySelector('.outreach-goal');
+        if (!block) return;
+        var blockZip = (block.getAttribute('data-goal-zip') || '').trim();
+        var senatorId = (block.getAttribute('data-goal-senator-id') || '').trim();
+        var repId = (block.getAttribute('data-goal-rep-id') || '').trim();
+        var z = zip || blockZip;
+        if (!z) return;
+        var stored = getGoalProgress(z);
+        var hasStoredProgress = (senatorId && stored[senatorId] && (stored[senatorId].call || stored[senatorId].email)) ||
+            (repId && stored[repId] && (stored[repId].call || stored[repId].email));
+        if (!hasStoredProgress) return;
+        var done = 0;
+        var total = 0;
+        function setAction(memberId, kind, doneVal) {
+            var status = block.querySelector('.outreach-goal__action-status[data-goal-member="' + memberId + '"][data-goal-kind="' + kind + '"]');
+            if (!status) return;
+            total++;
+            if (doneVal) done++;
+            var label = kind === 'call' ? (doneVal ? 'Called' : 'Not yet called') : (doneVal ? 'Emailed' : 'Not yet emailed');
+            status.setAttribute('aria-label', label);
+            status.innerHTML = '';
+            var row = status.closest('.outreach-goal__action');
+            if (row) {
+                if (doneVal) {
+                    row.classList.add('outreach-goal__action--done');
+                    var link = row.querySelector('.outreach-goal__action-link');
+                    if (link) link.setAttribute('aria-disabled', 'true');
+                } else {
+                    row.classList.remove('outreach-goal__action--done');
+                    var link = row.querySelector('.outreach-goal__action-link');
+                    if (link) link.removeAttribute('aria-disabled');
+                }
+            }
+        }
+        if (senatorId) {
+            var s = stored[senatorId];
+            setAction(senatorId, 'call', !!(s && s.call));
+            setAction(senatorId, 'email', !!(s && s.email));
+        }
+        if (repId) {
+            var r = stored[repId];
+            setAction(repId, 'call', !!(r && r.call));
+            setAction(repId, 'email', !!(r && r.email));
+        }
+        if (total === 0) return;
+        var bar = block.querySelector('#outreach-goal-bar');
+        var fill = block.querySelector('#outreach-goal-bar-fill');
+        var labelEl = block.querySelector('#outreach-goal-bar-label');
+        if (bar) {
+            bar.setAttribute('aria-valuenow', String(done));
+            bar.setAttribute('aria-valuemax', String(total));
+        }
+        if (fill) fill.style.width = (total ? Math.round((done / total) * 100) : 0) + '%';
+        if (labelEl) labelEl.textContent = done + ' of ' + total + ' actions complete';
+        var nextBlock = block.querySelector('#outreach-goal-next');
+        if (nextBlock) {
+            var firstIncomplete = block.querySelector('.outreach-goal__action:not(.outreach-goal__action--done)');
+            var link = firstIncomplete ? firstIncomplete.querySelector('.outreach-goal__action-link') : null;
+            if (link) {
+                var labelEl2 = firstIncomplete.querySelector('.outreach-goal__action-label');
+                var rolePart = labelEl2 ? labelEl2.textContent.replace(/^(Call|Email)\s+/, '').trim() : '';
+                var actionVerb = link.getAttribute('data-action') === 'call' ? 'Call' : 'Email';
+                nextBlock.textContent = '';
+                nextBlock.appendChild(document.createTextNode('Next: '));
+                var nextLink = link.cloneNode(true);
+                nextLink.textContent = actionVerb + ' your ' + rolePart;
+                nextLink.setAttribute('aria-label', actionVerb + ' your ' + rolePart);
+                nextLink.classList.add('outreach-goal__next-link');
+                nextBlock.appendChild(nextLink);
+                nextBlock.removeAttribute('hidden');
+                nextBlock.removeAttribute('aria-hidden');
+            } else {
+                nextBlock.setAttribute('hidden', '');
+                nextBlock.setAttribute('aria-hidden', 'true');
+            }
+        }
+        if (typeof setOutreachDone === 'function') {
+            for (var mid in stored) {
+                if (!stored[mid]) continue;
+                if (stored[mid].call) setOutreachDone(mid, 'call');
+                if (stored[mid].email) setOutreachDone(mid, 'email');
+            }
+        }
+        /* Sync card-outreach-complete (grayed opacity) for signed-out: card gets class when both call and email done */
+        if (resultsEl) {
+            resultsEl.querySelectorAll('.card[id^="card-"]').forEach(function (card) {
+                var mid = card.id.replace(/^card-/, '');
+                var s = stored[mid];
+                if (!s || !s.call || !s.email) {
+                    card.classList.remove('card-outreach-complete');
+                    card.removeAttribute('aria-label');
+                    return;
+                }
+                card.classList.add('card-outreach-complete');
+                card.setAttribute('aria-label', 'You called and emailed this legislator');
+            });
+        }
     }
 
     function getConstituentZip() {
@@ -1570,6 +2079,20 @@
         var wrap = container && container.querySelector('.gmail-compose');
         if (!wrap) return;
         container.classList.add('drawer-email-open');
+        var nudgeOnInit = wrap.querySelector('#gmail-call-other-nudge');
+        if (nudgeOnInit) nudgeOnInit.setAttribute('hidden', '');
+        /* #region agent log */
+        var _drawer = document.getElementById('advocacy-drawer');
+        var _mid = (_drawer && _drawer.getAttribute('data-member-id')) || '';
+        var _zip = typeof getConstituentZip === 'function' ? getConstituentZip() : '';
+        var _progress = (typeof getGoalProgress === 'function' && _zip) ? getGoalProgress(_zip) : {};
+        var _currentCalled = !!(_mid && _progress[_mid] && _progress[_mid].call);
+        var _callFirstBanner = wrap.querySelector('.gmail-banner-tip');
+        if (_callFirstBanner && _mid && _zip && _currentCalled) {
+            _callFirstBanner.setAttribute('hidden', '');
+        }
+        fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9b1dec'},body:JSON.stringify({sessionId:'9b1dec',location:'index.html:initDrawerEmailActions',message:'email init call-first',data:{hasBanner:!!_callFirstBanner,memberId:_mid,zip:_zip,currentMemberCalled:_currentCalled,hiddenBanner:_currentCalled&&!!_callFirstBanner},timestamp:Date.now(),hypothesisId:'H2'})}).catch(function(){});
+        /* #endregion */
         initDrawerFromAuth(wrap);
 
         var subjectEl = wrap.querySelector('#gmail-subject-text');
@@ -1737,11 +2260,19 @@
         var guide = new EmailGuide(wrap, blanks);
         var startStep = _ilgaUserEmail ? 1 : 0;
         guide.setStep(startStep);
+        if (startStep === 1) {
+            var drawer = document.getElementById('advocacy-drawer');
+            var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
+            if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'email', 'signed_in');
+        }
 
         /* ── Watch auth state to auto-advance past sign_in ── */
         var origGoVerified = window._guideGoVerifiedHook;
         window._guideGoVerifiedHook = function (email) {
             if (guide.step === 0) {
+                var drawer = document.getElementById('advocacy-drawer');
+                var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
+                if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'email', 'signed_in');
                 prefills['CALLER_EMAIL'] = email;
                 var emailBlanks = madlibContainer.querySelectorAll('input[data-madlib-key="CALLER_EMAIL"]');
                 emailBlanks.forEach(function (el) {
@@ -1758,6 +2289,9 @@
         var subjectVerifyBtn = wrap.querySelector('#gmail-subject-verify-btn');
         if (subjectVerifyBtn) {
             subjectVerifyBtn.onclick = function () {
+                var drawer = document.getElementById('advocacy-drawer');
+                var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
+                if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'email', 'subject_confirmed');
                 subjectVerifyBtn.classList.add('verified');
                 var sp = subjectVerifyBtn.querySelector('span');
                 if (sp) sp.textContent = 'Verified';
@@ -1780,6 +2314,9 @@
         blanks.forEach(function (blank) {
             blank.addEventListener('input', function () {
                 if (guide.step === 2 && !firstUnfilledBlank(blanks)) {
+                    var drawer = document.getElementById('advocacy-drawer');
+                    var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
+                    if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'email', 'details_filled');
                     guide.jumpTo('pdf');
                 }
             });
@@ -1801,6 +2338,9 @@
                 if (idx + 1 < blanks.length) {
                     blanks[idx + 1].focus();
                 } else {
+                    var drawer = document.getElementById('advocacy-drawer');
+                    var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
+                    if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'email', 'details_filled');
                     guide.jumpTo('pdf');
                     var pdfLink = wrap.querySelector('#gmail-attachment-link');
                     if (pdfLink) pdfLink.focus();
@@ -1853,6 +2393,9 @@
         var pdfLink = wrap.querySelector('#gmail-attachment-link');
         if (pdfLink) {
             pdfLink.addEventListener('click', function () {
+                var drawer = document.getElementById('advocacy-drawer');
+                var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
+                if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'email', 'pdf_grabbed');
                 guide._pdfClicked = true;
                 guide.jumpTo('open_client');
             });
@@ -1868,6 +2411,9 @@
                     if (first) first.focus();
                     return;
                 }
+                var drawer = document.getElementById('advocacy-drawer');
+                var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
+                if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'email', 'send_clicked');
                 var recipient = getRecipient();
                 var url = 'mailto:' + (recipient ? encodeURIComponent(recipient) : '') +
                     '?subject=' + encodeURIComponent(getSubject()) +
@@ -1886,16 +2432,53 @@
                 var drawer = document.getElementById('advocacy-drawer');
                 var memberId = drawer ? drawer.getAttribute('data-member-id') || '' : '';
                 var zip = getConstituentZip();
-                recordOutreach(memberId, 'email', zip).then(function (data) {
+                if (!_ilgaUserEmail) {
+                    var span = sentBtn.querySelector('span:last-child');
+                    if (span) span.textContent = 'Sign in to save this outreach';
+                    sentBtn.classList.add('sent-signin-nudge');
+                    guide.setStep(0);
+                    var fromRow = wrap.querySelector('#gmail-from-row');
+                    if (fromRow) fromRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    var fromInput = wrap.querySelector('#gmail-from-input');
+                    var fromStateInput = wrap.querySelector('#gmail-from-state-input');
+                    if (fromInput && fromStateInput && !fromStateInput.hidden) fromInput.focus();
+                    return;
+                }
+                setGoalActionDone(zip, memberId, 'email');
+                var constituentVal = (drawer && drawer.getAttribute('data-drawer-constituent') || '').trim();
+                if (constituentVal !== 'true' && constituentVal !== 'false') constituentVal = undefined;
+                recordOutreach(memberId, 'email', zip, '', '', undefined, undefined, constituentVal, undefined).then(function (data) {
                     var span = sentBtn.querySelector('span:last-child');
                     if (data && data.ok) {
                         sentBtn.classList.add('sent-done');
                         if (span) span.textContent = 'Sent!';
                         guide.complete();
-                        var bugNudge = wrap.querySelector('#gmail-bug-nudge');
-                        if (bugNudge) {
-                            bugNudge.removeAttribute('hidden');
-                            bugNudge.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        var mailtoBtn = wrap.querySelector('#gmail-mailto-btn');
+                        if (mailtoBtn) mailtoBtn.setAttribute('hidden', '');
+                        var ctx = typeof getDrawerDoneContext === 'function' ? getDrawerDoneContext(true) : null;
+                        var zip = getConstituentZip();
+                        var otherCallDone = zip && ctx && ctx.otherId && typeof getGoalProgress === 'function' && !!(getGoalProgress(zip)[ctx.otherId] && getGoalProgress(zip)[ctx.otherId].call);
+                        if (ctx && ctx.otherId && ctx.otherLabel && !otherCallDone) {
+                            var nudge = wrap.querySelector('#gmail-call-other-nudge');
+                            var nudgeBtn = wrap.querySelector('#gmail-call-other-btn');
+                            var labelSpan = wrap.querySelector('#gmail-call-other-label');
+                            if (nudge && nudgeBtn && labelSpan) {
+                                labelSpan.textContent = ctx.otherLabel;
+                                nudgeBtn.setAttribute('aria-label', 'Call your ' + ctx.otherLabel);
+                                var photoUrl = '';
+                                var card = document.getElementById('card-' + ctx.otherId);
+                                if (card) {
+                                    var img = card.querySelector('.member-photo[src]');
+                                    if (img) photoUrl = img.getAttribute('src') || '';
+                                }
+                                nudgeBtn.onclick = function () {
+                                    closeAdvocacyDrawer();
+                                    setTimeout(function () {
+                                        openAdvocacyDrawer('call', ctx.otherId, ctx.zip || '', photoUrl, '');
+                                    }, DRAWER_CLOSE_MS);
+                                };
+                                nudge.removeAttribute('hidden');
+                            }
                         }
                     } else if (span) {
                         var isAuthError = data && data.error && String(data.error).toLowerCase().indexOf('authentic') !== -1;
@@ -1903,6 +2486,8 @@
                             sentBtn.classList.add('sent-signin-nudge');
                             span.textContent = 'Sign in to save this outreach';
                             guide.setStep(0);
+                            var fromRowAuth = wrap.querySelector('#gmail-from-row');
+                            if (fromRowAuth) fromRowAuth.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                             setTimeout(function () {
                                 sentBtn.classList.remove('sent-signin-nudge');
                                 span.textContent = 'I sent it!';
@@ -2022,6 +2607,31 @@
         if (wrapupInline) wrapupInline.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
+    function restoreDrawerWrapupState(container) {
+        if (!container) container = document.getElementById('advocacy-drawer-body');
+        var content = container && container.querySelector('.drawer-call-content');
+        var drawer = document.getElementById('advocacy-drawer');
+        if (!content || content.getAttribute('data-call-completed') !== 'true' || !drawer) return;
+        var memberId = (drawer.getAttribute('data-member-id') || '').trim();
+        var supportInput = document.getElementById('support-score-inline');
+        var score = (content.getAttribute('data-call-support-score') || (supportInput && supportInput.value) || '').trim();
+        drawer.setAttribute('data-call-recorded', 'true');
+        var resultsEl = document.getElementById('drawer-interest-poll-results-inline');
+        if (!memberId || !resultsEl) return;
+        fetch('/outreach/interest-poll/' + encodeURIComponent(memberId), { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                renderInterestPollResults(resultsEl, data, score || undefined);
+            })
+            .catch(function () {
+                if (resultsEl && score) {
+                    resultsEl.removeAttribute('hidden');
+                    resultsEl.classList.add('poll-has-results');
+                    resultsEl.innerHTML = '<span class="poll-zero-title">Your call was recorded.</span>';
+                }
+            });
+    }
+
     function renderInterestPollResults(container, data, chosenScore) {
         var total = data && data.total_responses ? data.total_responses : 0;
         var byScore = (data && data.by_score) ? data.by_score : {};
@@ -2103,7 +2713,20 @@
         var resultsEl = getInterestPollResultsContainer(pill);
         var drawer = document.getElementById('advocacy-drawer');
         var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
+        if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'call', 'interest_selected');
         if (memberId && resultsEl) {
+            var body = document.getElementById('advocacy-drawer-body');
+            var zip = getConstituentZip();
+            var nameEl = body && body.querySelector('#drawer-name-capture');
+            var contactName = nameEl ? (nameEl.value || '').trim() : '';
+            if (drawer && drawer.getAttribute('data-call-recorded') !== 'true') {
+                setGoalActionDone(zip, memberId, 'call');
+                var callConstituent = (drawer.getAttribute('data-drawer-constituent') || '').trim();
+                if (callConstituent !== 'true' && callConstituent !== 'false') callConstituent = undefined;
+                recordOutreach(memberId, 'call', zip, '', '', contactName, score, callConstituent, undefined).then(function (data) {
+                    if (data && data.ok && drawer) drawer.setAttribute('data-call-recorded', 'true');
+                });
+            }
             fetch('/outreach/interest-poll/' + encodeURIComponent(memberId), { credentials: 'same-origin' })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
@@ -2151,6 +2774,7 @@
         var body = document.getElementById('advocacy-drawer-body');
         if (!drawer || !body) return;
         var memberId = (drawer.getAttribute('data-member-id') || '').trim();
+        if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'call', 'wrapup_draft_clicked');
         if (!memberId) return;
         var zip = (drawer.getAttribute('data-drawer-zip') || '').trim() || (document.getElementById('zip_code') && document.getElementById('zip_code').value) || '';
         var supportInput = document.getElementById('support-score-inline');
@@ -2214,9 +2838,28 @@
                     initDrawerVoicemailToggle(body);
                 }
                 updateDrawerStepStrip('email');
-                recordOutreach(memberId, 'call', zip, '', nextStepVal, stafferVal, supportVal);
             })
             .catch(showWrapupError);
+    });
+
+    document.body.addEventListener('click', function (e) {
+        var laterBtn = e.target && e.target.closest && (e.target.closest('#drawer-draft-followup-later') || e.target.closest('.drawer-draft-followup-btn-later'));
+        if (!laterBtn) return;
+        e.preventDefault();
+        var drawer = document.getElementById('advocacy-drawer');
+        var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
+        if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'call', 'wrapup_skipped');
+        if (typeof tryShowDrawerDoneForMember === 'function') {
+            tryShowDrawerDoneForMember(false);
+        } else {
+            var ctaBlock = document.getElementById('drawer-draft-followup-cta-block');
+            var msgEl = document.getElementById('drawer-draft-followup-recorded-msg');
+            if (ctaBlock) ctaBlock.setAttribute('hidden', '');
+            if (msgEl) {
+                msgEl.removeAttribute('hidden');
+                msgEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
     });
 
     document.body.addEventListener('htmx:afterSwap', function (e) {
@@ -2237,6 +2880,7 @@
                 initDrawerCapturePulse(body);
                 initDrawerEndCall(body);
                 initDrawerVoicemailToggle(body);
+                restoreDrawerWrapupState(body);
             }
             if (drawer && drawer.classList.contains('open')) initDrawerFocusTrapAndFocus();
         }

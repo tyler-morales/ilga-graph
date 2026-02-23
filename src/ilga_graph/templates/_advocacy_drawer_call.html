@@ -1,6 +1,8 @@
 {# Partial: drawer body for CALL view — iMessage-style script + after-call form. #}
 <div class="drawer-call-content" data-known-email="{{ member_public_email or '' }}"
-    data-drawer-zip="{{ zip_code or '' }}" data-is-constituent="{{ 'true' if is_constituent else 'false' }}">
+    data-email-source="{{ email_source|default('') }}" data-community-verification="{{ community_verification|default('') }}"
+    data-drawer-zip="{{ zip_code or '' }}" data-is-constituent="{{ 'true' if is_constituent else 'false' }}"
+    {% if call_completed %}data-call-completed="true" data-call-support-score="{{ call_support_score or '' }}"{% endif %}>
     <header class="drawer-call-header">
         <div class="drawer-call-header-inner">
             {% if photo_url %}
@@ -14,7 +16,7 @@
             <p class="drawer-call-name">{{ legislator_name or 'Legislator' }}</p>
             {% if phone %}
             <p class="drawer-call-number">
-                <a href="tel:{{ phone }}" class="drawer-call-number-pill">{{ phone }}</a>
+                <a href="tel:{{ phone }}" class="drawer-call-number-pill{% if call_completed %} drawer-call-number-pill-ended{% endif %}">{{ phone }}</a>
             </p>
             {% endif %}
         </div>
@@ -74,7 +76,8 @@
 
         <div class="drawer-name-capture-wrap">
             <input type="text" id="drawer-name-capture" class="drawer-name-capture drawer-capture-input"
-                placeholder="Their name (e.g. the staffer you talked to)" autocomplete="name">
+                placeholder="Their name (e.g. the staffer you talked to)" autocomplete="name"
+                value="{{ call_contact_name|default('', true) }}">
             <div class="drawer-name-saved" aria-hidden="true" title="Tap to edit">
                 <div class="drawer-contact-card">
                     <span class="drawer-contact-card-icon" aria-hidden="true">👤</span>
@@ -110,8 +113,14 @@
                 <span class="drawer-email-saved-pill"><span class="drawer-email-saved-check"
                         aria-hidden="true">✓</span><span class="drawer-email-saved-text"></span></span>
             </div>
+            {% if email_source is defined and email_source == 'community' and member_public_email %}
+            <p class="drawer-email-capture-attribution" role="status" aria-live="polite">
+                From a previous caller — another constituent shared this email.
+            </p>
+            {% endif %}
         </div>
 
+        {% if not call_completed %}
         <button type="button" class="drawer-end-call-btn" id="drawer-end-call">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -120,54 +129,55 @@
             </svg>
             End call
         </button>
+        {% endif %}
         {% if show_beta_banner and beta_banner_feedback_url %}
         <p class="drawer-bug-nudge">Something went wrong? <a href="{{ beta_banner_feedback_url }}" class="drawer-bug-nudge-link" target="_blank" rel="noopener noreferrer">Report a bug</a></p>
         {% endif %}
 
         {# In-chat wrap up: staggered bubbles — Nice work → (2s) poll → (after choice) results + draft link #}
-        <div class="drawer-wrapup-inline" id="drawer-wrapup-inline" hidden>
+        <div class="drawer-wrapup-inline" id="drawer-wrapup-inline" {% if not call_completed %}hidden{% endif %}{% if call_completed %} class="drawer-wrapup-inline-just-in"{% endif %}>
             <div class="chat-bubble chat-them drawer-wrapup-inline-intro">
                 Nice work! 👋 Quick deets so we can draft your follow-up email:
             </div>
             {# Poll bubble: hidden until 2s after Nice work #}
             <div class="chat-bubble chat-them drawer-interest-poll-bubble drawer-bubble-delayed"
-                id="drawer-wrapup-poll-bubble" hidden>
+                id="drawer-wrapup-poll-bubble" {% if not call_completed %}hidden{% endif %}{% if call_completed %} class="drawer-bubble-just-in"{% endif %}>
                 <span class="chat-label">Quick poll</span>
                 <p class="drawer-interest-question">How interested did they seem? Tap one — you’ll see how other
                     advocates rated this office.</p>
-                <input type="hidden" id="support-score-inline" value="">
+                <input type="hidden" id="support-score-inline" value="{{ call_support_score or '' }}">
                 <div class="drawer-interest-poll-results" id="drawer-interest-poll-results-inline" aria-live="polite"
-                    hidden></div>
+                    {% if not call_completed %}hidden{% endif %}></div>
             </div>
             {# Chart bars outside the bubble; constrained to same padding as content #}
-            <div class="drawer-interest-pills-wrap drawer-bubble-delayed" id="drawer-wrapup-poll-pills" hidden>
+            <div class="drawer-interest-pills-wrap drawer-bubble-delayed" id="drawer-wrapup-poll-pills" {% if not call_completed %}hidden{% endif %}{% if call_completed %} class="drawer-bubble-just-in"{% endif %}>
                 <div class="drawer-interest-pills" role="group" aria-label="Interest level">
                     <button type="button" class="drawer-interest-pill drawer-interest-pill-score-1" data-score="1"
-                        data-label="Opposed" aria-pressed="false"><span
+                        data-label="Opposed" aria-pressed="{{ 'true' if call_support_score == 1 else 'false' }}"><span
                             class="drawer-interest-pill-label">Opposed</span><span
                             class="drawer-interest-pill-stats"><span class="drawer-interest-pill-pct"></span><span
                                 class="drawer-interest-pill-count"></span></span><span class="drawer-interest-pill-dot"
                             aria-hidden="true"></span></button>
                     <button type="button" class="drawer-interest-pill drawer-interest-pill-score-2" data-score="2"
-                        data-label="Skeptical" aria-pressed="false"><span
+                        data-label="Skeptical" aria-pressed="{{ 'true' if call_support_score == 2 else 'false' }}"><span
                             class="drawer-interest-pill-label">Skeptical</span><span
                             class="drawer-interest-pill-stats"><span class="drawer-interest-pill-pct"></span><span
                                 class="drawer-interest-pill-count"></span></span><span class="drawer-interest-pill-dot"
                             aria-hidden="true"></span></button>
                     <button type="button" class="drawer-interest-pill drawer-interest-pill-score-3" data-score="3"
-                        data-label="Neutral" aria-pressed="false"><span
+                        data-label="Neutral" aria-pressed="{{ 'true' if call_support_score == 3 else 'false' }}"><span
                             class="drawer-interest-pill-label">Neutral</span><span
                             class="drawer-interest-pill-stats"><span class="drawer-interest-pill-pct"></span><span
                                 class="drawer-interest-pill-count"></span></span><span class="drawer-interest-pill-dot"
                             aria-hidden="true"></span></button>
                     <button type="button" class="drawer-interest-pill drawer-interest-pill-score-4" data-score="4"
-                        data-label="Interested" aria-pressed="false"><span
+                        data-label="Interested" aria-pressed="{{ 'true' if call_support_score == 4 else 'false' }}"><span
                             class="drawer-interest-pill-label">Interested</span><span
                             class="drawer-interest-pill-stats"><span class="drawer-interest-pill-pct"></span><span
                                 class="drawer-interest-pill-count"></span></span><span class="drawer-interest-pill-dot"
                             aria-hidden="true"></span></button>
                     <button type="button" class="drawer-interest-pill drawer-interest-pill-score-5" data-score="5"
-                        data-label="Champion" aria-pressed="false"><span
+                        data-label="Champion" aria-pressed="{{ 'true' if call_support_score == 5 else 'false' }}"><span
                             class="drawer-interest-pill-label">Champion</span><span
                             class="drawer-interest-pill-stats"><span class="drawer-interest-pill-pct"></span><span
                                 class="drawer-interest-pill-count"></span></span><span class="drawer-interest-pill-dot"
@@ -175,20 +185,24 @@
                 </div>
             </div>
             {# Draft follow-up: sticky note (user writing, right-aligned) + button outside #}
-            <div class="drawer-draft-followup-wrap drawer-bubble-delayed" id="drawer-draft-followup-bubble" hidden>
+            <div class="drawer-draft-followup-wrap drawer-bubble-delayed" id="drawer-draft-followup-bubble" {% if not call_completed %}hidden{% endif %}{% if call_completed %} class="drawer-bubble-just-in"{% endif %}>
                 <div class="drawer-draft-followup-note-block">
                     <label class="drawer-note-sticky-input">
                         <span class="drawer-note-sticky-label">Note (optional)</span>
                         <textarea id="wrapup-nextstep-inline" class="drawer-note-sticky-textarea"
                             placeholder="Anything you want to remember from the call…" rows="4"
-                            autocomplete="off"></textarea>
+                            autocomplete="off">{{ call_notes|default('', true) }}</textarea>
                     </label>
                 </div>
-                <div class="drawer-draft-followup-cta-block drawer-draft-followup-cta-staggered"
+                <div class="drawer-draft-followup-cta-block drawer-draft-followup-cta-staggered{% if call_completed %} drawer-draft-followup-cta-visible{% endif %}"
                     id="drawer-draft-followup-cta-block">
                     <button type="button" class="drawer-draft-followup-btn" id="drawer-draft-followup-link">Draft
-                        my follow-up email</button>
+                        your follow-up email</button>
+                    <button type="button" class="drawer-draft-followup-btn-later" id="drawer-draft-followup-later"
+                        aria-label="Skip drafting email for now; call is already recorded">I'll do it later</button>
                 </div>
+                <p class="drawer-draft-followup-recorded-msg" id="drawer-draft-followup-recorded-msg" hidden
+                    aria-live="polite">Call recorded. You can draft an email anytime from this card.</p>
             </div>
         </div>
     </div>
