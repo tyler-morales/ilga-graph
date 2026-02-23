@@ -584,6 +584,20 @@ display: inline-flex;
 align-items: center;
 margin-left: 4px;
 }
+.gmail-banner-dismiss {
+flex-shrink: 0;
+background: none;
+border: none;
+cursor: pointer;
+color: #5f6368;
+padding: 0 0 0 8px;
+font-size: 18px;
+line-height: 1;
+align-self: flex-start;
+}
+.gmail-banner-dismiss:hover {
+color: #202124;
+}
 .gmail-call-other-btn {
 display: inline-flex;
 align-items: center;
@@ -938,23 +952,24 @@ justify-content: center;
 }
 .gmail-action-bar-nudge {
 margin-left: 0;
+width: 100%;
 }
 .gmail-call-other-btn {
 min-width: 0;
-flex: 1;
+width: 100%;
 justify-content: center;
 }
 .gmail-to-chip-text {
 max-width: 200px;
 }
-/* Field rows: allow wrap so label/input/buttons stack on narrow screens */
+/* Field rows: keep label inline with input to reduce vertical space */
 .gmail-field-row {
 flex-wrap: wrap;
 gap: 6px;
 }
 .gmail-field-label {
-flex-basis: 100%;
-min-width: 0;
+flex-basis: auto;
+min-width: 40px; /* slightly narrower than base 52px to save space inline */
 }
 .gmail-from-input-wrap {
 flex-wrap: wrap;
@@ -967,9 +982,6 @@ flex: 1 1 140px;
 }
 .gmail-subject-row {
 flex-wrap: wrap;
-}
-.gmail-subject-row .gmail-field-label {
-flex-basis: auto;
 }
 .gmail-subject-input {
 flex: 1 1 160px;

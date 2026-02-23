@@ -25,14 +25,16 @@
 
     {# ── Friendly reminder: call first if they haven’t already ── #}
     {% if show_call_nudge is defined and show_call_nudge %}
-    <div class="gmail-banner gmail-banner-tip">
-        <span class="gmail-banner-icon">📞</span>
+    <div class="gmail-banner gmail-banner-tip" id="gmail-call-first-banner" role="status" aria-live="polite">
+        <span class="gmail-banner-icon" aria-hidden="true">📞</span>
         <div class="gmail-banner-text">
             <strong>Call first when you can.</strong> It often gets a faster response and you can ask for their best
             email. Switch to
             <button type="button" class="gmail-banner-link" onclick="openAdvocacyDrawerFromDrawer('call')">Call</button>
             above, then come back here to send your email.
         </div>
+        <button type="button" class="gmail-banner-dismiss" aria-label="Dismiss tip"
+            onclick="document.getElementById('gmail-call-first-banner').setAttribute('hidden','')">&#215;</button>
     </div>
     {% endif %}
 
