@@ -131,6 +131,15 @@
                         value="{{ recipient_email or '' }}" placeholder="Email of the office" autocomplete="email"
                         inputmode="email">
                 </div>
+                {% if email_source is defined and email_source == 'community' %}
+                <p class="gmail-to-attribution gmail-to-attribution-community" id="gmail-to-attribution" role="status" aria-live="polite">
+                    {% if community_verification == 'verified_by_community' %}
+                    Verified by multiple constituents who called.
+                    {% else %}
+                    This email was shared by another constituent who called this office.
+                    {% endif %}
+                </p>
+                {% endif %}
                 <div class="gmail-to-state" id="gmail-to-state-chip" hidden>
                     <span
                         class="gmail-from-chip gmail-to-recipient-chip{% if party_abbr == 'D' %} gmail-to-recipient-chip--dem{% elif party_abbr == 'R' %} gmail-to-recipient-chip--rep{% endif %}">
@@ -212,6 +221,12 @@
             </svg>
             <span>I sent it!</span>
         </button>
+        <div class="gmail-action-bar-nudge" id="gmail-call-other-nudge" hidden aria-live="polite">
+            <button type="button" class="gmail-call-other-btn" id="gmail-call-other-btn"
+                aria-label="Call your Senator">
+                Call your <span id="gmail-call-other-label">Senator</span>
+            </button>
+        </div>
     </div>
 </div>
 {% if show_beta_banner and beta_banner_feedback_url %}

@@ -50,6 +50,22 @@ padding: 12px 14px;
 background: #fafafa;
 text-align: center;
 }
+
+@supports (container-type: inline-size) {
+.intel-summary-card {
+  container-type: inline-size;
+  container-name: summary-card;
+}
+@container summary-card (max-width: 200px) {
+  .intel-summary-card {
+    padding: 10px 12px;
+  }
+  .intel-summary-value {
+    font-size: 1.5em;
+  }
+}
+}
+
 .intel-summary-value {
 font-size: 1.8em;
 font-weight: bold;
@@ -108,6 +124,19 @@ border-radius: 6px;
 padding: 1em;
 background: #fafafa;
 }
+
+@supports (container-type: inline-size) {
+.committee-insight-card {
+  container-type: inline-size;
+  container-name: committee-card;
+}
+@container committee-card (max-width: 260px) {
+  .committee-insight-card {
+    padding: 0.75em;
+  }
+}
+}
+
 .committee-insight-card h3 {
 margin: 0 0 0.2em 0;
 font-size: var(--font-size-base);

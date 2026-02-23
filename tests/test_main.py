@@ -2,29 +2,30 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from ilga_graph.main import _member_career_start, _parse_bill_date
+from ilga_graph.date_parse import parse_bill_date
+from ilga_graph.main import _member_career_start
 from ilga_graph.models import CareerRange, Member
 
 
 class TestParseBillDate:
     def test_valid_date(self) -> None:
-        result = _parse_bill_date("6/2/2025")
+        result = parse_bill_date("6/2/2025")
         assert result == datetime(2025, 6, 2)
 
     def test_valid_date_double_digit(self) -> None:
-        result = _parse_bill_date("12/15/2025")
+        result = parse_bill_date("12/15/2025")
         assert result == datetime(2025, 12, 15)
 
     def test_invalid_date_returns_max(self) -> None:
-        result = _parse_bill_date("invalid")
+        result = parse_bill_date("invalid")
         assert result == datetime.max
 
     def test_empty_string_returns_max(self) -> None:
-        result = _parse_bill_date("")
+        result = parse_bill_date("")
         assert result == datetime.max
 
     def test_wrong_format_returns_max(self) -> None:
-        result = _parse_bill_date("2025-06-02")
+        result = parse_bill_date("2025-06-02")
         assert result == datetime.max
 
 

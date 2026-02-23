@@ -12,7 +12,8 @@
             <li><strong>Outreach you save.</strong> When you are signed in and record a call or email (e.g. via “I sent” or “End call”), we store the legislator you contacted, the type of contact (call, email, or no answer), your ZIP code, and any optional details you provide (outcome, notes, contact name, support rating, whether you are a constituent).</li>
             <li><strong>Bug reports.</strong> If you submit a bug report, we store the description, any optional email you provide, the page URL you were on, and any screenshot you attach. The notification we receive (e.g. by email) also includes your IP address and browser information so we can respond and prevent abuse; that information is not stored in our database.</li>
             <li><strong>Analytics.</strong> When analytics is enabled (in production), we use <a href="https://umami.is" target="_blank" rel="noopener noreferrer">Umami</a> to understand how the site is used. Umami may receive data such as page views, referring source, and device or browser type. Umami is cookie-free; data is processed by Umami’s infrastructure according to their practices.</li>
-            <li><strong>Local browser storage.</strong> We use browser session storage for preferences that stay on your device (e.g. whether you dismissed the beta notice). This data is not sent to our servers.</li>
+            <li><strong>Usage and conversion measurement.</strong> We use a first-party session identifier (stored in your browser's session storage only, under the key <code>ilga_anon_sid</code>) to measure how the advocacy flow is used and to compute conversion rates (e.g. what share of people who open the flow go on to complete a call or email). When you sign in, we link that session to your account so we can attribute your earlier steps correctly. We do not sell or share this data with third parties. Step and conversion data are retained for 12 months, then deleted or anonymized.</li>
+            <li><strong>Local browser storage.</strong> We use browser session storage for preferences that stay on your device (e.g. whether you dismissed the beta notice) and for the anonymous session identifier described above. This data is first-party only and is not shared with third parties.</li>
         </ul>
     </section>
 
@@ -22,12 +23,13 @@
             <li>Your sign-in email and last sign-in time are used to identify you and to associate the outreach you choose to save (calls, emails, notes, ratings) with your account.</li>
             <li>Bug report content, optional email, and the IP/browser information in the notification are used only to respond to your report and to prevent abuse.</li>
             <li>Analytics data is used only to improve the site and understand usage patterns.</li>
+            <li>Step and conversion data (from the session identifier above) are used only to understand funnel performance and improve the advocacy experience; we do not use them for advertising or sell them.</li>
         </ul>
     </section>
 
     <section aria-labelledby="privacy-retention">
         <h2 id="privacy-retention">Retention</h2>
-        <p>Verification codes expire quickly (within minutes). We retain account data, outreach you saved, and bug report data as needed to operate the service and until you ask us to delete it or as required by law. IP and browser information in bug report notifications are kept only as part of those notifications (e.g. in our inbox). Our servers may log requests (e.g. IP, time, URL) for security and operation; we do not use such logs to identify you except where needed for abuse prevention or law. Umami retains analytics data according to their plan (e.g. 6 months on the free tier).</p>
+        <p>Verification codes expire quickly (within minutes). We retain account data, outreach you saved, and bug report data as needed to operate the service and until you ask us to delete it or as required by law. Step events and conversion-related data used for funnel measurement are retained for 12 months, then deleted or anonymized. IP and browser information in bug report notifications are kept only as part of those notifications (e.g. in our inbox). Our servers may log requests (e.g. IP, time, URL) for security and operation; we do not use such logs to identify you except where needed for abuse prevention or law. Umami retains analytics data according to their plan (e.g. 6 months on the free tier).</p>
     </section>
 
     <section aria-labelledby="privacy-cookies">

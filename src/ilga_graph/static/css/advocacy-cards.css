@@ -537,6 +537,8 @@
   min-width: 0;
   overflow-wrap: break-word;
   word-wrap: break-word;
+  container-type: inline-size;
+  container-name: card;
 }
 
 /* Heat score pill — expandable fire pill */
@@ -616,12 +618,41 @@
   opacity: 1;
 }
 
+@supports selector(:has(*)) {
+  .card:has(.heat-score-pill) {
+    padding-inline-end: 12px;
+  }
+}
+
 .card-your-legislator {
   border: 3px solid #b8860b;
   box-shadow:
     0 0 0 1px rgba(184, 134, 11, 0.4),
     0 0 12px 2px rgba(201, 162, 39, 0.35),
     0 0 24px 4px rgba(201, 162, 39, 0.2);
+}
+
+/* Card fully outreached (called + emailed): grayed, still interactive */
+.card-outreach-complete {
+  opacity: 0.7;
+  background: #f0f0f0;
+  border-color: #999;
+}
+
+.card-outreach-complete:hover,
+.card-outreach-complete:focus-within {
+  opacity: 0.9;
+  background: #f5f5f5;
+}
+
+.card-outreach-complete.card-your-legislator {
+  border-color: #9a7b2e;
+  background: #f5f3ed;
+}
+
+.card-outreach-complete.card-your-legislator:hover,
+.card-outreach-complete.card-your-legislator:focus-within {
+  background: #f8f6f0;
 }
 
 /* Desktop: grid [photo | name+badges]; one column-2 cell so no trapped space; align to bottom of image */
@@ -675,6 +706,8 @@
 }
 
 .card .member-photo-placeholder {
+  width: 100px;
+  height: 152px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -683,6 +716,32 @@
   font-size: var(--font-size-h2);
   font-weight: 700;
   letter-spacing: 0.02em;
+}
+
+/* aspect-ratio: progressive enhancement so height follows from width */
+@supports (aspect-ratio: 1) {
+  .card .member-photo {
+    aspect-ratio: 100/152;
+    height: auto;
+  }
+  .card .member-photo-placeholder {
+    aspect-ratio: 100/152;
+    height: auto;
+  }
+  @media (max-width: 768px) {
+    .card .member-photo,
+    .card .member-photo-placeholder {
+      width: 96px;
+      height: auto;
+    }
+  }
+  @media (max-width: 480px) {
+    .card .member-photo,
+    .card .member-photo-placeholder {
+      width: 88px;
+      height: auto;
+    }
+  }
 }
 
 /* .card .card-header-right .card-name {
@@ -697,12 +756,30 @@ padding-bottom: 4px;
   align-items: flex-start;
 }
 
+/* Wide card: badges size to content (max-width by content). Narrow card: stack and full width (container query below). */
+
 /* Badge row inside .card-header-col (desktop); no extra vertical space */
 .card-header .card-badge-row {
   margin: 0;
   padding: 0;
   min-height: 0;
   line-height: 1;
+}
+
+/* Narrow card (e.g. single column, tight layout): stack badges and make each full width */
+@container card (max-width: 400px) {
+  .card-badge-row .tooltip-wrap {
+    min-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .card-badge-row .tooltip-wrap > .role-label,
+  .card-badge-row .tooltip-wrap > .power-badge {
+    display: block;
+    width: 100%;
+    text-align: center;
+    box-sizing: border-box;
+  }
 }
 
 .card h3.card-name {
@@ -718,6 +795,44 @@ padding-bottom: 4px;
   font-size: var(--font-size-label);
   color: #555;
   margin-top: 2px;
+}
+
+/* Constituency label (Your Senator / Your Representative): pill above name */
+.card-constituency-wrap {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.card-constituency-label {
+  cursor: help;
+}
+
+.card-constituency-pill {
+  display: inline-block;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+}
+
+.card-constituency-pill.role-senator {
+  background: #e8ecf2;
+  color: #2c3e5a;
+  border-color: #c5cdda;
+}
+
+.card-constituency-pill.role-rep {
+  background: #efe8f2;
+  color: #3e2c4a;
+  border-color: #d4c5dd;
+}
+
+.card-constituency-label:focus-visible,
+.card-constituency-pill:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+  border-radius: 9999px;
 }
 
 /* Desktop only: padding between name line and badges */
@@ -1449,6 +1564,24 @@ a.vote-bill:visited {
   word-break: break-word;
 }
 
+/* ── Your district members (Senator + Rep side-by-side) ── */
+.district-members-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 12px;
+}
+
+.district-members-row__card {
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .district-members-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── How-it-works (sidebar block) ── */
 .how-it-works {
   border: 1px solid #ccd;
@@ -1521,6 +1654,298 @@ a.vote-bill:visited {
   font-weight: bold;
 }
 
+/* ── Your goal (sidebar) ── */
+.outreach-goal {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid #ccd;
+  background: #f8f9fc;
+  font-size: var(--font-size-label);
+}
+
+.outreach-goal__head-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px 0;
+}
+
+.outreach-goal__title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin: 0;
+  color: #335;
+}
+
+.outreach-goal__zip-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: #555;
+  margin-left: auto;
+}
+
+.outreach-goal__zip-row {
+  margin: 0 0 8px 0;
+  font-size: 0.8125rem;
+  color: #555;
+}
+
+.outreach-goal__zip-display {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.outreach-goal__zip-display:hover {
+  color: #335;
+}
+
+.outreach-goal__zip-display:focus {
+  outline: 2px solid #4a7c59;
+  outline-offset: 2px;
+}
+
+.outreach-goal__zip-edit {
+  width: 4.5em;
+  font-size: inherit;
+  padding: 2px 6px;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+}
+
+.outreach-goal__zip-edit:focus {
+  outline: 2px solid #4a7c59;
+  outline-offset: 0;
+  border-color: #4a7c59;
+}
+
+.outreach-goal__zip-locate {
+  font-family: inherit;
+  font-size: inherit;
+  color: #555;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.outreach-goal__zip-locate:hover {
+  color: #335;
+}
+
+.outreach-goal__zip-locate:focus {
+  outline: 2px solid #4a7c59;
+  outline-offset: 2px;
+}
+
+.outreach-goal__zip-locate:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.outreach-goal__zip-locate-icon {
+  font-size: 1em;
+  line-height: 1;
+}
+
+.outreach-goal__zip-status {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.outreach-goal__copy {
+  margin: 0 0 8px 0;
+  line-height: 1.4;
+  color: #444;
+}
+
+.outreach-goal__progress {
+  margin: 0 0 4px 0;
+  font-size: 0.9375rem;
+  color: #333;
+}
+
+.outreach-goal__bar-wrap {
+  margin: 0 0 10px 0;
+}
+
+.outreach-goal__bar-label {
+  margin: 0 0 6px 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.outreach-goal__bar {
+  height: 10px;
+  background: #e0e4ec;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.outreach-goal__bar-fill {
+  height: 100%;
+  min-width: 0;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #4a7c59 0%, #5a9c69 100%);
+  transition: width 0.25s ease-out;
+}
+
+.outreach-goal__actions {
+  list-style: none;
+  margin: 0 0 8px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Numbered steps: use counter so numbers show (native marker is suppressed when li has display:flex / role="list") */
+.outreach-goal__actions.outreach-goal__actions--numbered {
+  list-style: none;
+  counter-reset: goal-step;
+  padding-left: 0;
+}
+
+.outreach-goal__actions.outreach-goal__actions--numbered .outreach-goal__action {
+  counter-increment: goal-step;
+  gap: 4px;
+}
+
+.outreach-goal__actions.outreach-goal__actions--numbered .outreach-goal__action::before {
+  content: counter(goal-step) ".";
+  flex-shrink: 0;
+  width: 1.25em;
+  text-align: right;
+  margin-right: 0;
+  color: inherit;
+}
+
+.outreach-goal__actions.outreach-goal__actions--numbered .outreach-goal__action-status {
+  width: 1em;
+}
+
+.outreach-goal__action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 0.875rem;
+  color: #444;
+  order: 0;
+  transition: opacity 0.3s ease, color 0.3s ease;
+}
+
+.outreach-goal__action--done {
+  order: 1;
+  opacity: 0.6;
+  color: #777;
+}
+
+.outreach-goal__action--done .outreach-goal__action-label {
+  text-decoration: line-through;
+}
+
+.outreach-goal__action--done .outreach-goal__action-label,
+.outreach-goal__action--done .outreach-goal__action-status {
+  color: inherit;
+}
+
+.outreach-goal__action--done .outreach-goal__action-link {
+  color: #888;
+  pointer-events: none;
+  text-decoration: none;
+}
+
+.outreach-goal__action-status {
+  flex-shrink: 0;
+  width: 1.25em;
+  text-align: center;
+}
+
+.outreach-goal__action-label {
+  flex: 1;
+}
+
+.outreach-goal__action-link {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: #335;
+  text-decoration: none;
+}
+
+.outreach-goal__action-link:hover {
+  text-decoration: underline;
+}
+
+.outreach-goal__action-link:focus {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.outreach-goal__next {
+  margin: 10px 0 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #335;
+}
+
+.outreach-goal__next-link {
+  font-weight: 600;
+}
+
+.outreach-goal__detail {
+  margin: 0 0 6px 0;
+  font-size: 0.875rem;
+  color: #555;
+}
+
+.outreach-goal__optional {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #666;
+  font-style: italic;
+}
+
+.outreach-goal__celebration {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e0e4ec;
+}
+
+.outreach-goal__celebration-msg {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #335;
+}
+
+.outreach-goal__celebration .outreach-goal__optional {
+  margin: 0;
+}
+
+.outreach-goal__cta-broker:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
 /* ── Outreach sidebar (My Outreach cards) ── */
 .outreach-sidebar {
   margin-top: 16px;
@@ -1559,7 +1984,7 @@ a.vote-bill:visited {
   min-height: 0;
   padding: 0;
   background: #fff;
-  border-radius: 12px;
+  border-radius: 0;
   border: 2px solid #d1d5db;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   overflow: hidden;
@@ -1580,7 +2005,7 @@ a.vote-bill:visited {
 }
 
 .outreach-sidebar-card__photo-wrap {
-  width: 100px;
+  width: 64px;
   flex-shrink: 0;
   align-self: stretch;
   line-height: 0;
@@ -1589,56 +2014,56 @@ a.vote-bill:visited {
 .outreach-sidebar-card__photo {
   width: 100%;
   height: 100%;
-  min-height: 100px;
+  min-height: 64px;
   object-fit: cover;
   object-position: center top;
   display: block;
-  border-radius: 10px 0 0 10px;
+  border-radius: 0;
 }
 
 .outreach-sidebar-card__photo--initials {
   width: 100%;
   height: 100%;
-  min-height: 100px;
-  border-radius: 10px 0 0 10px;
+  min-height: 64px;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 600;
   background: #e5e7eb;
   color: #374151;
 }
 
 .outreach-sidebar-card__info {
-  padding: 10px 12px 12px;
+  padding: 6px 10px 8px;
   min-width: 0;
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
+  gap: 0;
 }
 
 .outreach-sidebar-card__name {
   margin: 0;
   font-weight: 600;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   color: #111;
-  line-height: 1.35;
+  line-height: 1.3;
 }
 
 .outreach-sidebar-card__district {
-  margin: 4px 0 0 0;
-  font-size: 0.875rem;
+  margin: 2px 0 0 0;
+  font-size: 0.8125rem;
   color: #555;
-  line-height: 1.35;
+  line-height: 1.3;
 }
 
 .outreach-sidebar-card__badges {
-  margin-top: 8px;
+  margin-top: 4px;
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
   align-items: center;
 }
@@ -1714,26 +2139,26 @@ a.vote-bill:visited {
   }
 
   .outreach-sidebar-card__info {
-    padding: 14px 14px 16px;
+    padding: 8px 12px 10px;
   }
 
   .outreach-sidebar-card__name {
-    font-size: 1.25rem;
+    font-size: 1rem;
     line-height: 1.3;
   }
 
   .outreach-sidebar-card__district {
-    font-size: 1.0625rem;
-    margin-top: 6px;
+    font-size: 0.875rem;
+    margin-top: 2px;
   }
 
   .outreach-sidebar-card__badges {
-    margin-top: 12px;
-    gap: 12px;
+    margin-top: 6px;
+    gap: 8px;
   }
 
   .outreach-sidebar-card__badge {
-    font-size: 1.75rem;
+    font-size: 1.25rem;
   }
 
   .card-header {
@@ -1769,25 +2194,9 @@ a.vote-bill:visited {
     max-width: 100%;
   }
 
-  .card-badge-row {
-    flex-direction: column;
-    width: 100%;
-    gap: 8px;
-  }
-
-  .card-badge-row .tooltip-wrap {
-    width: 100%;
-  }
-
-  .card-badge-row .role-label,
-  .card-badge-row .power-badge {
-    display: block;
-    width: 100%;
-    text-align: center;
-    box-sizing: border-box;
-  }
-
-  .card .member-photo {
+  /* Badge stacking/full width is driven by container query (@container card), not viewport */
+  .card .member-photo,
+  .card .member-photo-placeholder {
     width: 96px;
     height: 144px;
   }
@@ -1847,7 +2256,8 @@ a.vote-bill:visited {
     max-width: 100%;
   }
 
-  .card .member-photo {
+  .card .member-photo,
+  .card .member-photo-placeholder {
     width: 88px;
     height: 132px;
   }

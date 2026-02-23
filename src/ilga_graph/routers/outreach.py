@@ -2,23 +2,31 @@
 
 Tracks calls, emails, and no-answer events per authenticated user.
 Anonymous users can still use advocacy but events are not persisted.
+When recording a call with legislator_email and member has no public email,
+the email is stored in community_member_emails for the community layer.
 """
 
 from __future__ import annotations
 
 import logging
+import re
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..app_state import state
 from ..db import get_db
-from ..db_models import OutreachEvent, User
+from ..db_models import CommunityMemberEmail, OutreachEvent, OutreachStepEvent, User
 from ..dependencies import get_current_user_optional
 from ..member_lookup import find_member_by_id
-from ..security import CSRF_COOKIE_NAME, validate_csrf_token
+from ..outreach_steps import is_valid_step
+from ..security import CSRF_COOKIE_NAME, validate_anon_session_id, validate_csrf_token
+
+_LEGISLATOR_EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", re.IGNORECASE)
+_LEGISLATOR_EMAIL_MAX = 320
 
 LOGGER = logging.getLogger(__name__)
 
@@ -49,6 +57,25 @@ def _parse_constituent(raw: str) -> bool | None:
     return None
 
 
+def _normalize_and_validate_legislator_email(raw: str) -> str | None:
+    """Return normalized email if valid (format + length); else None."""
+    s = (raw or "").strip().lower()
+    if not s or len(s) > _LEGISLATOR_EMAIL_MAX:
+        return None
+    if not _LEGISLATOR_EMAIL_RE.match(s):
+        return None
+    local, _, domain = s.partition("@")
+    if (
+        len(local) < 1
+        or len(local) > 64
+        or len(domain) < 4
+        or len(domain) > 253
+        or "." not in domain
+    ):
+        return None
+    return s
+
+
 @router.post("/record")
 async def record_outreach(
     request: Request,
@@ -60,11 +87,15 @@ async def record_outreach(
     contact_name: str = Form(""),
     support_score: str = Form(""),
     constituent: str = Form(""),
+    legislator_email: str = Form(""),
     csrf_token: str | None = Form(None),
     user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ):
-    """Record an outreach event.  Requires authentication."""
+    """Record an outreach event.  Requires authentication.
+    When kind=call and legislator_email is provided and member has no public email,
+    the email is stored in community_member_emails for future constituents.
+    """
     cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
     if not validate_csrf_token(csrf_token, cookie_token):
         return JSONResponse(
@@ -81,7 +112,8 @@ async def record_outreach(
     mid = member_id.strip()[:32]
     if not mid:
         return JSONResponse({"ok": False, "error": "Missing legislator"}, status_code=400)
-    if find_member_by_id(state, mid) is None:
+    member = find_member_by_id(state, mid)
+    if member is None:
         return JSONResponse(
             {"ok": False, "error": "Legislator not found. Please refresh and try again."},
             status_code=400,
@@ -101,11 +133,118 @@ async def record_outreach(
         constituent=_parse_constituent(constituent),
     )
     db.add(event)
+
+    if kind == "call" and not (getattr(member, "email", None) or "").strip():
+        normalized = _normalize_and_validate_legislator_email(legislator_email)
+        if normalized:
+            try:
+                async with db.begin_nested():
+                    db.add(
+                        CommunityMemberEmail(
+                            member_id=mid,
+                            email=normalized,
+                            user_id=user.id,
+                        )
+                    )
+                    await db.flush()
+            except IntegrityError:
+                pass
+
     if zip_val and len(zip_val) == 5 and zip_val.isdigit():
         user.zip_code = zip_val
+
+    # Record funnel step: call_recorded, email_recorded, or no_answer_recorded
+    step_slug = {
+        "call": "call_recorded",
+        "email": "email_recorded",
+        "no_answer": "no_answer_recorded",
+    }[kind]
+    db.add(
+        OutreachStepEvent(
+            user_id=user.id,
+            member_id=mid,
+            outreach_type="call" if kind in ("call", "no_answer") else "email",
+            step_slug=step_slug,
+        )
+    )
+
     await db.commit()
     LOGGER.info("Outreach recorded: user=%s member=%s kind=%s", user.email, member_id, kind)
     return {"ok": True, "event_id": event.id}
+
+
+@router.post("/step")
+async def record_outreach_step(
+    request: Request,
+    member_id: str = Form(...),
+    outreach_type: str = Form(...),
+    step_slug: str = Form(...),
+    session_id: str | None = Form(None),
+    csrf_token: str | None = Form(None),
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
+    """Record a checkpoint step in the call/email funnel.
+
+    Authenticated: store user_id, session_id not persisted.
+    Anonymous: accepted when session_id is present and valid; stored with user_id=NULL.
+    """
+    cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
+    if not validate_csrf_token(csrf_token, cookie_token):
+        return JSONResponse(
+            {"ok": False, "error": "Invalid or expired security token. Reload the page."},
+            status_code=403,
+        )
+
+    outreach_type = outreach_type.strip().lower()
+    if outreach_type not in ("call", "email"):
+        return JSONResponse({"ok": False, "error": "Invalid outreach_type"}, status_code=400)
+    if not is_valid_step(outreach_type, step_slug.strip()):
+        return JSONResponse({"ok": False, "error": "Invalid step"}, status_code=400)
+
+    mid = member_id.strip()[:32]
+    if not mid:
+        return JSONResponse({"ok": False, "error": "Missing legislator"}, status_code=400)
+    if find_member_by_id(state, mid) is None:
+        return JSONResponse(
+            {"ok": False, "error": "Legislator not found. Please refresh and try again."},
+            status_code=400,
+        )
+
+    if user is not None:
+        db.add(
+            OutreachStepEvent(
+                user_id=user.id,
+                session_id=None,
+                member_id=mid,
+                outreach_type=outreach_type,
+                step_slug=step_slug.strip(),
+            )
+        )
+    else:
+        anon_sid = validate_anon_session_id(session_id)
+        if anon_sid is None:
+            if session_id is not None and str(session_id).strip():
+                return JSONResponse(
+                    {"ok": False, "error": "Invalid session_id format"},
+                    status_code=400,
+                )
+            return JSONResponse(
+                {"ok": False, "error": "Not authenticated"},
+                status_code=401,
+            )
+        db.add(
+            OutreachStepEvent(
+                user_id=None,
+                session_id=anon_sid,
+                member_id=mid,
+                outreach_type=outreach_type,
+                step_slug=step_slug.strip(),
+            )
+        )
+
+    await db.commit()
+    return {"ok": True}
 
 
 async def get_outreach_aggregate(db: AsyncSession) -> dict[str, int]:

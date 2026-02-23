@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import advocacy_helpers as ah
 from .. import config as cfg
 from ..app_state import state
+from ..community_email import get_effective_email_for_member
 from ..config import DEV_MODE
 from ..constants import CATEGORY_CHOICES, CATEGORY_COMMITTEES
 from ..data_source import is_using_mocks
@@ -215,27 +217,79 @@ async def _build_search_results_context(
         if card is not None:
             result_member_ids.append(card["id"])
     result_member_ids = list(dict.fromkeys(result_member_ids))
+    result_member_ids_str = [str(mid) for mid in result_member_ids]
 
     user_called_member_ids: set[str] = set()
     user_emailed_member_ids: set[str] = set()
-    if user and result_member_ids:
+    if user and result_member_ids_str:
         outreach_result = await db.execute(
             select(OutreachEvent.member_id, OutreachEvent.kind)
             .where(OutreachEvent.user_id == user.id)
-            .where(OutreachEvent.member_id.in_(result_member_ids))
+            .where(OutreachEvent.member_id.in_(result_member_ids_str))
             .where(OutreachEvent.kind.in_(["call", "email"]))
         )
         for mid, kind in outreach_result.all():
+            mid_str = str(mid)
             if kind == "call":
-                user_called_member_ids.add(mid)
+                user_called_member_ids.add(mid_str)
             elif kind == "email":
-                user_emailed_member_ids.add(mid)
+                user_emailed_member_ids.add(mid_str)
+
+    senator_id = str(senator_card["id"]) if senator_card else None
+    rep_id = str(rep_card["id"]) if rep_card else None
+    senator_called = senator_id is not None and senator_id in user_called_member_ids
+    rep_called = rep_id is not None and rep_id in user_called_member_ids
+    senator_emailed = senator_id is not None and senator_id in user_emailed_member_ids
+    rep_emailed = rep_id is not None and rep_id in user_emailed_member_ids
+    district_called_count = (1 if senator_called else 0) + (1 if rep_called else 0)
+    district_goal_done = (
+        (1 if senator_called else 0)
+        + (1 if senator_emailed else 0)
+        + (1 if rep_called else 0)
+        + (1 if rep_emailed else 0)
+    )
+    district_goal_total = 2 * (1 if senator_card else 0) + 2 * (1 if rep_card else 0)
+    both_district_members_called = (senator_card is None or senator_called) and (
+        rep_card is None or rep_called
+    )
+
+    # Ordered actionable steps: call then email for higher-moneyball member, then repeat for lower.
+    goal_steps: list[dict[str, Any]] = []
+    for item in your_legislators:
+        card = item["card"]
+        mid = str(card["id"])
+        role_short = "Senator" if "Senator" in item["role_label"] else "Rep"
+        goal_steps.append(
+            {
+                "member_id": mid,
+                "role_label": role_short,
+                "action": "call",
+                "done": mid in user_called_member_ids,
+            }
+        )
+        goal_steps.append(
+            {
+                "member_id": mid,
+                "role_label": role_short,
+                "action": "email",
+                "done": mid in user_emailed_member_ids,
+            }
+        )
+    goal_next_step: dict[str, Any] | None = None
+    for s in goal_steps:
+        if not s["done"]:
+            goal_next_step = {
+                "action": s["action"],
+                "member_id": s["member_id"],
+                "role_label": s["role_label"],
+            }
+            break
 
     outreach_heat: dict[str, int] = {}
-    if result_member_ids:
+    if result_member_ids_str:
         heat_result = await db.execute(
             select(OutreachEvent.member_id, func.count(func.distinct(OutreachEvent.user_id)))
-            .where(OutreachEvent.member_id.in_(result_member_ids))
+            .where(OutreachEvent.member_id.in_(result_member_ids_str))
             .where(OutreachEvent.kind.in_(["call", "email"]))
             .group_by(OutreachEvent.member_id)
         )
@@ -297,6 +351,16 @@ async def _build_search_results_context(
         "error": error,
         "user_called_member_ids": user_called_member_ids,
         "user_emailed_member_ids": user_emailed_member_ids,
+        "senator_called": senator_called,
+        "rep_called": rep_called,
+        "senator_emailed": senator_emailed,
+        "rep_emailed": rep_emailed,
+        "district_called_count": district_called_count,
+        "district_goal_done": district_goal_done,
+        "district_goal_total": district_goal_total,
+        "both_district_members_called": both_district_members_called,
+        "goal_steps": goal_steps,
+        "goal_next_step": goal_next_step,
         "outreach_heat": outreach_heat,
         "outreach_sidebar": outreach_sidebar,
         "outreach_calls_count": outreach_calls_count,
@@ -465,8 +529,11 @@ async def advocacy_drawer(
             if office.phone:
                 phone = office.phone
                 break
-    has_public_email = bool(member and member.email)
-    recipient_email = (member.email or "") if member else ""
+    effective_email, email_source, community_verification = await get_effective_email_for_member(
+        state, db, member_id_stripped
+    )
+    has_public_email = bool(effective_email)
+    recipient_email = effective_email
 
     if view == "email":
         show_call_nudge = True
@@ -482,7 +549,6 @@ async def advocacy_drawer(
             )
             if (r.scalar() or 0) > 0:
                 show_call_nudge = False
-
         target_type = "POWER_BROKER" if target_type_param == "POWER_BROKER" else "NON_COMMITTEE"
         chamber = getattr(member, "chamber", None) if member else None
         district = getattr(member, "district", None) if member else None
@@ -516,6 +582,8 @@ async def advocacy_drawer(
                 "recipient_email": recipient_email,
                 "contact_name": "",
                 "has_public_email": has_public_email,
+                "email_source": email_source,
+                "community_verification": community_verification,
                 "subject": subject_constituent,
                 "subject_constituent": subject_constituent,
                 "subject_general": subject_general,
@@ -533,9 +601,33 @@ async def advocacy_drawer(
     photo_url = photo_url_validated or (getattr(member, "photo_url", "") or "" if member else "")
     if photo_url and not photo_url.startswith(("http://", "https://")):
         photo_url = urljoin("https://www.ilga.gov/", photo_url)
-    member_public_email = (member.email or "").strip() if member else ""
+    member_public_email = effective_email
     target_type = "POWER_BROKER" if target_type_param == "POWER_BROKER" else "NON_COMMITTEE"
     drawer_ctx = ah.legislator_drawer_context(member)
+
+    call_completed = False
+    call_notes = ""
+    call_contact_name = ""
+    call_support_score: int | None = None
+    if user and member_id_stripped:
+        r = await db.execute(
+            select(OutreachEvent)
+            .where(
+                OutreachEvent.user_id == user.id,
+                OutreachEvent.member_id == member_id_stripped,
+                OutreachEvent.kind == "call",
+            )
+            .order_by(OutreachEvent.created_at.desc())
+            .limit(1)
+        )
+        last_call = r.scalar_one_or_none()
+        if last_call:
+            call_completed = True
+            call_notes = (last_call.notes or "").strip()
+            call_contact_name = (last_call.contact_name or "").strip()
+            if last_call.support_score is not None and 1 <= last_call.support_score <= 5:
+                call_support_score = last_call.support_score
+
     response = templates.TemplateResponse(
         "_advocacy_drawer_call.html",
         {
@@ -548,6 +640,12 @@ async def advocacy_drawer(
             "photo_url": photo_url,
             "member_public_email": member_public_email,
             "target_type": target_type,
+            "email_source": email_source,
+            "community_verification": community_verification,
+            "call_completed": call_completed,
+            "call_notes": call_notes,
+            "call_contact_name": call_contact_name,
+            "call_support_score": call_support_score,
             **drawer_ctx,
         },
     )
@@ -556,7 +654,11 @@ async def advocacy_drawer(
 
 
 @router.post("/call/{call_id}/wrapup")
-async def advocacy_call_wrapup(request: Request, call_id: str):
+async def advocacy_call_wrapup(
+    request: Request,
+    call_id: str,
+    db: AsyncSession = Depends(get_db),
+):
     """Wrap-up from call: swap drawer to Email view (prefilled or copy-only)."""
     form = await request.form()
     raw_zip = (form.get("zip") or "").strip()
@@ -567,7 +669,10 @@ async def advocacy_call_wrapup(request: Request, call_id: str):
     member_id = call_id.strip()
     member = find_member_by_id(state, member_id) if member_id else None
     legislator_name = member.name if member else ""
-    recipient = (email_address or "").strip() or (member.email if member else "") or ""
+    effective_email, email_source, community_verification = await get_effective_email_for_member(
+        state, db, member_id
+    )
+    recipient = (email_address or "").strip() or effective_email or ""
 
     staffer = (staffer_name or "").strip() or ""
     target_type_form = (form.get("target_type") or "").strip().upper()
@@ -598,6 +703,11 @@ async def advocacy_call_wrapup(request: Request, call_id: str):
     contact_name = staffer or ""
     legislator_display_name = ah.get_legislator_display_name(legislator_name, chamber, district)
     party_abbr = ah.party_abbr_for_member(member)
+    used_community_recipient = not (email_address or "").strip() and bool(effective_email)
+    wrapup_email_source = email_source if used_community_recipient else None
+    wrapup_community_verification = (
+        community_verification if used_community_recipient and email_source == "community" else None
+    )
     if recipient:
         return templates.TemplateResponse(
             "_advocacy_drawer_email.html",
@@ -609,6 +719,8 @@ async def advocacy_call_wrapup(request: Request, call_id: str):
                 "recipient_email": recipient,
                 "contact_name": contact_name,
                 "has_public_email": True,
+                "email_source": wrapup_email_source,
+                "community_verification": wrapup_community_verification,
                 "subject": subject_constituent,
                 "subject_constituent": subject_constituent,
                 "subject_general": subject_general,
@@ -634,6 +746,8 @@ async def advocacy_call_wrapup(request: Request, call_id: str):
             "recipient_email": "",
             "contact_name": contact_name,
             "has_public_email": False,
+            "email_source": None,
+            "community_verification": None,
             "subject": subject_constituent,
             "subject_constituent": subject_constituent,
             "subject_general": subject_general,
@@ -671,6 +785,37 @@ async def advocacy_call_no_answer(request: Request, call_id: str):
             "outcome": outcome,
         },
     )
+
+
+def _reverse_geocode_to_zip(lat: float, lon: float) -> str | None:
+    """Call Nominatim reverse geocoder; return 5-digit US ZIP or None."""
+    import requests
+
+    url = "https://nominatim.openstreetmap.org/reverse"
+    params = {"lat": lat, "lon": lon, "format": "json"}
+    headers = {"User-Agent": "ILGAAdvocacy/1.0 (Illinois legislator lookup)"}
+    try:
+        resp = requests.get(url, params=params, headers=headers, timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+        postcode = (data.get("address") or {}).get("postcode")
+        if not postcode:
+            return None
+        digits = "".join(c for c in str(postcode) if c.isdigit())
+        return digits[:5] if len(digits) >= 5 else None
+    except Exception:
+        return None
+
+
+@router.get("/api/zip-from-coords")
+async def zip_from_coords(lat: float = 0, lon: float = 0):
+    """Reverse-geocode lat/lon to a 5-digit US ZIP. For use with browser geolocation."""
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        return JSONResponse({"zip": None, "error": "Invalid coordinates"}, status_code=400)
+    zip_code = await asyncio.to_thread(_reverse_geocode_to_zip, lat, lon)
+    if not zip_code or not _ZIP_RE.match(zip_code):
+        return JSONResponse({"zip": None, "error": "No ZIP found for this location"})
+    return JSONResponse({"zip": zip_code})
 
 
 @router.get("/api/check-constituent")

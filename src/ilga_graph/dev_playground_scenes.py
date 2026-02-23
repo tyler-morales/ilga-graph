@@ -19,6 +19,10 @@ def _drawer_call_context() -> dict:
         "photo_url": "",
         "member_public_email": "",
         "target_type": "NON_COMMITTEE",
+        "call_completed": False,
+        "call_notes": "",
+        "call_contact_name": "",
+        "call_support_score": None,
         **ah.legislator_drawer_context(None),
     }
 

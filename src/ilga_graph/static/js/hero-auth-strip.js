@@ -9,6 +9,34 @@
         return match ? decodeURIComponent(match[1].replace(/^\s+|\s+$/g, '')) : '';
     }
     window.getCsrfToken = getCsrfToken;
+
+    function getAnonSessionId() {
+        var key = 'ilga_anon_sid';
+        try {
+            if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(key)) {
+                return sessionStorage.getItem(key);
+            }
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                var uuid = crypto.randomUUID();
+                sessionStorage.setItem(key, uuid);
+                return uuid;
+            }
+            if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+                var arr = new Uint8Array(16);
+                crypto.getRandomValues(arr);
+                var hex = '';
+                for (var i = 0; i < arr.length; i++) hex += ('0' + arr[i].toString(16)).slice(-2);
+                var sid = hex.substring(0, 32);
+                sessionStorage.setItem(key, sid);
+                return sid;
+            }
+            return null;
+        } catch (e) {
+            return null;
+        }
+    }
+    window.getAnonSessionId = getAnonSessionId;
+
     window._ilgaUserEmail = null;
     window._pendingAuthEmail = '';
 
@@ -83,6 +111,7 @@
                     window._ilgaUserEmail = null;
                     updateAuthStrip(false);
                 }
+                try { sessionStorage.removeItem('ilga_anon_sid'); } catch (e) {}
                 fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' })
                     .then(function () {
                         if (document.dispatchEvent) {
@@ -257,6 +286,8 @@
             body.append('email', window._pendingAuthEmail);
             body.append('code', code);
             body.append('csrf_token', getCsrfToken());
+            var anonSid = getAnonSessionId();
+            if (anonSid) body.append('anon_session_id', anonSid);
             fetch('/auth/verify-code', { method: 'POST', body: body, credentials: 'same-origin' })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
@@ -264,6 +295,7 @@
                     verifyBtn.textContent = 'Confirm';
                     if (data.ok && data.email) {
                         window._ilgaUserEmail = data.email;
+                        try { sessionStorage.removeItem('ilga_anon_sid'); } catch (e) {}
                         if (_inlineCloseTimer) { clearTimeout(_inlineCloseTimer); _inlineCloseTimer = null; }
                         if (inlineBlock) {
                             inlineBlock.hidden = true;

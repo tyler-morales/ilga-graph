@@ -569,21 +569,6 @@ def _kei_email_body_core(
     )
 
 
-def build_email_body_full(
-    *,
-    legislator_title: str,
-    legislator_last: str,
-    **_kwargs: str,
-) -> str:
-    """Kei vehicle email body using the simplified mad-lib template.
-
-    Delegates to ``_kei_email_body_core`` which has [CONSTITUENT_INTRO],
-    [CALLER_NAME], [CALLER_PHONE], [CALLER_EMAIL] placeholders.
-    Extra kwargs kept for backward compat but ignored.
-    """
-    return _kei_email_body_core(legislator_title, legislator_last)
-
-
 def build_email_body(
     member_name: str,
     script_hint: str,

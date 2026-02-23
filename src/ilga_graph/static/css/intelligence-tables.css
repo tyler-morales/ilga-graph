@@ -37,6 +37,24 @@ transition: box-shadow 0.15s, border-color 0.15s;
 border-color: #aaa;
 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
+
+@supports (container-type: inline-size) {
+.story-card {
+  container-type: inline-size;
+  container-name: story-card;
+}
+@container story-card (max-width: 260px) {
+  .story-card {
+    padding: 0.75em;
+  }
+  .story-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25em;
+  }
+}
+}
+
 .story-card-header {
 display: flex;
 justify-content: space-between;
@@ -133,6 +151,19 @@ border-radius: 6px;
 padding: 1em;
 background: #fafafa;
 }
+
+@supports (container-type: inline-size) {
+.story-coalition-card {
+  container-type: inline-size;
+  container-name: coalition-card;
+}
+@container coalition-card (max-width: 240px) {
+  .story-coalition-card {
+    padding: 0.75em;
+  }
+}
+}
+
 .story-coalition-card h3 {
 margin: 0 0 0.4em 0;
 font-size: var(--font-size-body);

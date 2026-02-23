@@ -61,6 +61,7 @@
   margin: 0;
 }
 
+/* Fallback: viewport breakpoint when container queries unsupported */
 @media (max-width: 768px) {
   .whats-happening-row {
     grid-template-columns: 1fr;
@@ -68,5 +69,22 @@
 
   .whats-happening-part {
     padding: 1rem;
+  }
+}
+
+@supports (container-type: inline-size) {
+  .whats-happening {
+    container-type: inline-size;
+    container-name: section;
+  }
+
+  @container section (max-width: 600px) {
+    .whats-happening-row {
+      grid-template-columns: 1fr;
+    }
+
+    .whats-happening-part {
+      padding: 1rem;
+    }
   }
 }

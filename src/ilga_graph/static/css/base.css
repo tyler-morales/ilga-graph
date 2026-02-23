@@ -374,7 +374,8 @@ a:visited {
   user-select: none;
 }
 
-.footer-disclaimer {
+.footer-disclaimer,
+.footer-usage-notice {
   font-size: var(--font-size-sm);
   color: #888;
   text-align: center;
@@ -383,7 +384,8 @@ a:visited {
 }
 
 @media (max-width: 640px) {
-  .footer-disclaimer {
+  .footer-disclaimer,
+  .footer-usage-notice {
     white-space: normal;
   }
 }
@@ -724,6 +726,19 @@ a:visited {
 .report-bug-field--error input[type="email"]:focus {
   outline-color: #b52a2a;
   border-color: #b52a2a;
+}
+
+@supports selector(:has(*)) {
+  .report-bug-field:has([aria-invalid="true"]) textarea,
+  .report-bug-field:has([aria-invalid="true"]) input[type="email"] {
+    border-color: #c88;
+    background-color: #fefafa;
+  }
+  .report-bug-field:has([aria-invalid="true"]) textarea:focus,
+  .report-bug-field:has([aria-invalid="true"]) input[type="email"]:focus {
+    outline-color: #b52a2a;
+    border-color: #b52a2a;
+  }
 }
 
 .report-bug-hint {

@@ -18,17 +18,18 @@ from email.message import EmailMessage
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import JSONResponse
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import config as cfg
 from ..db import get_db
-from ..db_models import AuthCode, User
+from ..db_models import AuthCode, OutreachStepEvent, User
 from ..dependencies import create_session_token, get_current_user_optional
 from ..security import (
     CSRF_COOKIE_NAME,
     rate_limit_request_code,
     rate_limit_verify_code,
+    validate_anon_session_id,
     validate_csrf_token,
 )
 
@@ -165,10 +166,15 @@ async def verify_code(
     request: Request,
     email: str = Form(...),
     code: str = Form(...),
+    anon_session_id: str | None = Form(None),
     csrf_token: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
-    """Verify the 6-digit code.  On success: create/get user, set session cookie."""
+    """Verify the 6-digit code. On success: create/get user, set session cookie.
+
+    If anon_session_id is provided and valid, outreach_step_events rows with that
+    session_id are attributed to the user (user_id set, session_id cleared).
+    """
     cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
     if not validate_csrf_token(csrf_token, cookie_token):
         return JSONResponse(
@@ -213,6 +219,15 @@ async def verify_code(
         db.add(user)
         await db.flush()
     user.last_login_at = now
+
+    anon_sid = validate_anon_session_id(anon_session_id)
+    if anon_sid:
+        await db.execute(
+            update(OutreachStepEvent)
+            .where(OutreachStepEvent.session_id == anon_sid)
+            .values(user_id=user.id, session_id=None)
+        )
+
     await db.commit()
 
     token = create_session_token(user.id)

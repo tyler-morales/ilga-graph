@@ -20,11 +20,13 @@
 
 {% macro member_card(member, role_label, role_class, zip_code, user_called_member_ids=none,
 user_emailed_member_ids=none, outreach_heat=none) %}
-{% set user_called = user_called_member_ids is not none and member.id in user_called_member_ids %}
-{% set user_emailed = user_emailed_member_ids is not none and member.id in user_emailed_member_ids %}
-{% set heat_count = outreach_heat.get(member.id, 0) if outreach_heat else 0 %}
-<div class="card {% if role_class in ['role-senator', 'role-rep'] %}card-your-legislator{% endif %}"
-    id="card-{{ member.id }}">
+{% set member_id_str = member.id|string %}
+{% set user_called = user_called_member_ids is not none and member_id_str in user_called_member_ids %}
+{% set user_emailed = user_emailed_member_ids is not none and member_id_str in user_emailed_member_ids %}
+{% set outreach_complete = user_called and user_emailed %}
+{% set heat_count = outreach_heat.get(member_id_str, 0) if outreach_heat else 0 %}
+<div class="card {% if role_class in ['role-senator', 'role-rep'] %}card-your-legislator{% endif %}{% if outreach_complete %} card-outreach-complete{% endif %}"
+    id="card-{{ member.id }}"{% if outreach_complete %} aria-label="You called and emailed this legislator"{% endif %}>
     {# Fire pill (corner): data-driven from outreach_events — COUNT(DISTINCT user_id) per member; see
     docs/development/db-and-outreach.md #}
     {% if heat_count > 0 %}
@@ -67,6 +69,14 @@ user_emailed_member_ids=none, outreach_heat=none) %}
             {% endif %}
             <div class="card-header-col">
                 <div class="card-header-right">
+                    {% if role_class in ['role-senator', 'role-rep'] %}
+                    <span class="tooltip-wrap card-constituency-wrap"><span class="card-constituency-label card-constituency-pill {{ role_class }}" tabindex="0" role="button" aria-label="{{ role_label }}, focus or hover for description">{{ role_label }}</span><span
+                            class="tooltip-content"><strong>{{ role_label }}</strong>
+                            <p>{% if role_class == 'role-senator' %}Your state senator for this ZIP's district.
+                                Constituent calls are tracked—yours counts.{% else %}Your
+                                state representative votes on bills in the House before the Senate.{% endif %}</p>
+                        </span></span>
+                    {% endif %}
                     <h3 class="card-name">
                         {{ member.name }}
                         <span class="card-name-meta">({{ member.party_abbr }}-{{ member.chamber }} District {{
@@ -74,6 +84,7 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                     </h3>
                 </div>
                 <div class="card-badge-row">
+                    {% if role_class == 'role-broker' %}
                     {% if member.badges %}
                     {% for badge in member.badges %}
                     <span class="tooltip-wrap"><span class="role-label role-badge" tabindex="0" role="button" aria-label="{{ badge }}, focus or hover for description">{{ badge }}</span><span
@@ -85,13 +96,32 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                     {% else %}
                     <span class="tooltip-wrap"><span class="role-label {{ role_class }}" tabindex="0" role="button" aria-label="{{ role_label }}, focus or hover for description">{{ role_label
                             }}</span><span class="tooltip-content"><strong>{{ role_label }}</strong>
-                            <p>{% if role_class == 'role-senator' %}Your state senator for this ZIP's district.
-                                Constituent calls are tracked—yours counts.{% elif role_class == 'role-rep'
-                                %}Your
-                                state representative votes on bills in the House before the Senate.{% elif
-                                role_class == 'role-broker' %}Committee chair for your topic (default Transportation), or highest Moneyball senator or rep. Key target for co-sponsorship.{% else %}{{ role_label }}.{% endif %}
-                            </p>
+                            <p>Committee chair for your topic (default Transportation), or highest Moneyball senator or rep. Key target for co-sponsorship.</p>
                         </span></span>
+                    {% endif %}
+                    {% elif role_class not in ['role-senator', 'role-rep'] %}
+                    {% if member.badges %}
+                    {% for badge in member.badges %}
+                    <span class="tooltip-wrap"><span class="role-label role-badge" tabindex="0" role="button" aria-label="{{ badge }}, focus or hover for description">{{ badge }}</span><span
+                            class="tooltip-content"><strong>{{ badge }}</strong>
+                            <p>{% if badge == 'Power Broker' %}Committee chair for your topic (default Transportation), or highest Moneyball senator or rep. Key target for co-sponsorship.{% else %}{{ badge }} role for
+                                this advocacy target.{% endif %}</p>
+                        </span></span>
+                    {% endfor %}
+                    {% else %}
+                    <span class="tooltip-wrap"><span class="role-label {{ role_class }}" tabindex="0" role="button" aria-label="{{ role_label }}, focus or hover for description">{{ role_label
+                            }}</span><span class="tooltip-content"><strong>{{ role_label }}</strong>
+                            <p>{{ role_label }}.</p>
+                        </span></span>
+                    {% endif %}
+                    {% endif %}
+                    {% if member.badges and role_class in ['role-senator', 'role-rep'] %}
+                    {% for badge in member.badges %}
+                    <span class="tooltip-wrap"><span class="role-label role-badge" tabindex="0" role="button" aria-label="{{ badge }}, focus or hover for description">{{ badge }}</span><span
+                            class="tooltip-content"><strong>{{ badge }}</strong>
+                            <p>{{ badge }} role for this advocacy target.</p>
+                        </span></span>
+                    {% endfor %}
                     {% endif %}
                     {% for pb in member.power_badges %}
                     <span class="tooltip-wrap"><span class="power-badge {{ pb.css_class }}" tabindex="0" role="button" aria-label="{{ pb.label }}, focus or hover for description"><span
@@ -359,13 +389,16 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                 <div class="outreach-row {% if not member.email %}outreach-row-no-email{% endif %}">
                     {% if member.phone %}
                     {% if user_called %}
-                    <span class="outreach-btn outreach-phone outreach-done"
-                        aria-label="You called this legislator"><span class="outreach-icon" aria-hidden="true"><svg
+                    <button type="button" class="outreach-btn outreach-phone outreach-done"
+                        data-member-id="{{ member.id }}" data-zip="{{ zip_code }}"
+                        data-photo-url="{{ member.photo_url or '' }}" data-target-type="{{ target_type }}"
+                        aria-label="You called this legislator — open to view"
+                        onclick="openAdvocacyDrawer('call', this.getAttribute('data-member-id'), this.getAttribute('data-zip'), this.getAttribute('data-photo-url'), this.getAttribute('data-target-type'))"><span class="outreach-icon" aria-hidden="true"><svg
                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                 stroke-linecap="round" stroke-linejoin="round">
                                 <path
                                     d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                            </svg></span> Called!</span>
+                            </svg></span> Called!</button>
                     {% else %}
                     <button class="outreach-btn outreach-phone" data-member-id="{{ member.id }}"
                         data-zip="{{ zip_code }}" data-photo-url="{{ member.photo_url or '' }}"
@@ -382,14 +415,17 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                     {% if not member.email %}
                     <div class="outreach-email-wrap">
                         {% if user_emailed %}
-                        <span class="outreach-btn outreach-email outreach-done"
-                            aria-label="You emailed this legislator"><span class="outreach-icon" aria-hidden="true"><svg
+                        <button type="button" class="outreach-btn outreach-email outreach-done"
+                            data-member-id="{{ member.id }}" data-zip="{{ zip_code }}"
+                            data-photo-url="{{ member.photo_url or '' }}" data-target-type="{{ target_type }}"
+                            aria-label="You emailed this legislator — open to view"
+                            onclick="openAdvocacyDrawer('email', this.getAttribute('data-member-id'), this.getAttribute('data-zip'), this.getAttribute('data-photo-url'), this.getAttribute('data-target-type'))"><span class="outreach-icon" aria-hidden="true"><svg
                                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                     stroke-linecap="round" stroke-linejoin="round">
                                     <path
                                         d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                                     <polyline points="22,6 12,13 2,6" />
-                                </svg></span> Emailed!</span>
+                                </svg></span> Emailed!</button>
                         {% else %}
                         <button class="outreach-btn outreach-email" data-member-id="{{ member.id }}"
                             data-zip="{{ zip_code }}" data-photo-url="{{ member.photo_url or '' }}"
@@ -407,13 +443,16 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                     </div>
                     {% else %}
                     {% if user_emailed %}
-                    <span class="outreach-btn outreach-email outreach-done"
-                        aria-label="You emailed this legislator"><span class="outreach-icon" aria-hidden="true"><svg
+                    <button type="button" class="outreach-btn outreach-email outreach-done"
+                        data-member-id="{{ member.id }}" data-zip="{{ zip_code }}"
+                        data-photo-url="{{ member.photo_url or '' }}" data-target-type="{{ target_type }}"
+                        aria-label="You emailed this legislator — open to view"
+                        onclick="openAdvocacyDrawer('email', this.getAttribute('data-member-id'), this.getAttribute('data-zip'), this.getAttribute('data-photo-url'), this.getAttribute('data-target-type'))"><span class="outreach-icon" aria-hidden="true"><svg
                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                 stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                                 <polyline points="22,6 12,13 2,6" />
-                            </svg></span> Emailed!</span>
+                            </svg></span> Emailed!</button>
                     {% else %}
                     <button class="outreach-btn outreach-email" data-member-id="{{ member.id }}"
                         data-zip="{{ zip_code }}" data-photo-url="{{ member.photo_url or '' }}"
@@ -630,7 +669,56 @@ user_emailed_member_ids=none, outreach_heat=none) %}
 {% if your_legislators or broker %}
 <div class="results-layout">
     <aside class="results-aside">
-        <details class="how-it-works how-it-works-details" open>
+        {% if senator or representative %}
+        <section class="outreach-goal" aria-labelledby="outreach-goal-heading"
+            data-goal-zip="{{ zip }}"
+            data-goal-senator-id="{{ senator.id if senator else '' }}"
+            data-goal-rep-id="{{ representative.id if representative else '' }}">
+            <div class="outreach-goal__head-row">
+                <h2 id="outreach-goal-heading" class="outreach-goal__title">Your goal</h2>
+                <div class="outreach-goal__zip-cell" aria-label="ZIP code for this goal">
+                    <button type="button" class="outreach-goal__zip-display" data-goal-zip-display aria-expanded="false" aria-controls="outreach-goal-zip-edit" aria-label="ZIP code {{ zip }}. Click to change ZIP and update your goal for a different district.">{{ zip }}</button>
+                    <input type="text" id="outreach-goal-zip-edit" class="outreach-goal__zip-edit" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" placeholder="ZIP" aria-label="Edit ZIP code" value="{{ zip }}" hidden>
+                    <button type="button" class="outreach-goal__zip-locate" data-goal-zip-locate aria-label="Use my location to find my ZIP code"><span class="outreach-goal__zip-locate-icon" aria-hidden="true">⌖</span><span class="outreach-goal__zip-locate-text">Use location</span></button>
+                    <span class="outreach-goal__zip-status" id="outreach-goal-zip-status" aria-live="polite" aria-atomic="true" hidden></span>
+                </div>
+            </div>
+            <p class="outreach-goal__copy">Complete these {{ district_goal_total|default(4) }} actions for your district: call and email your Senator and your Representative (higher-impact member first).</p>
+            {% if district_goal_total is defined and district_goal_total > 0 %}
+            <div class="outreach-goal__bar-wrap" role="status" aria-live="polite">
+                <p class="outreach-goal__bar-label" id="outreach-goal-bar-label">{{ district_goal_done|default(0) }} of {{ district_goal_total }} actions complete</p>
+                <div class="outreach-goal__bar" role="progressbar" id="outreach-goal-bar"
+                    aria-valuenow="{{ district_goal_done|default(0) }}" aria-valuemin="0" aria-valuemax="{{ district_goal_total }}"
+                    aria-labelledby="outreach-goal-bar-label">
+                    <div class="outreach-goal__bar-fill" id="outreach-goal-bar-fill" style="width: {{ ((district_goal_done|default(0)) / district_goal_total * 100)|int }}%;"></div>
+                </div>
+            </div>
+            <ol class="outreach-goal__actions outreach-goal__actions--numbered" role="list" aria-label="District outreach steps (call then email for each member; order by impact)">
+                {% for step in goal_steps %}
+                <li class="outreach-goal__action{% if step.done %} outreach-goal__action--done{% endif %}">
+                    <span class="outreach-goal__action-status" data-goal-member="{{ step.member_id }}" data-goal-kind="{{ step.action }}" aria-label="{{ 'Called' if step.action == 'call' and step.done else 'Not yet called' if step.action == 'call' else 'Emailed' if step.done else 'Not yet emailed' }}"></span>
+                    <span class="outreach-goal__action-label">{{ 'Call' if step.action == 'call' else 'Email' }} {{ step.role_label }}</span>
+                    <a href="#" class="outreach-goal__action-link" data-action="{{ step.action }}" data-member-id="{{ step.member_id }}" data-zip="{{ zip }}" aria-label="{{ 'Call' if step.action == 'call' else 'Email' }} your {{ step.role_label }}"{% if step.done %} aria-disabled="true"{% endif %}>{{ 'Call' if step.action == 'call' else 'Email' }}</a>
+                </li>
+                {% endfor %}
+            </ol>
+            {% if goal_next_step %}
+            <p class="outreach-goal__next" id="outreach-goal-next">Next: <a href="#" class="outreach-goal__action-link outreach-goal__next-link" data-action="{{ goal_next_step.action }}" data-member-id="{{ goal_next_step.member_id }}" data-zip="{{ zip }}" aria-label="{{ goal_next_step.action|capitalize }} your {{ goal_next_step.role_label }}">{{ goal_next_step.action|capitalize }} your {{ goal_next_step.role_label }}</a></p>
+            {% else %}
+            <p class="outreach-goal__next" id="outreach-goal-next" hidden aria-hidden="true">Next: <span class="outreach-goal__next-placeholder"></span></p>
+            {% endif %}
+            {% if both_district_members_called|default(false) %}
+            <div class="outreach-goal__celebration" role="status" aria-live="polite">
+                <p class="outreach-goal__celebration-msg">You've reached both your district members.</p>
+                {% if broker %}
+                <p class="outreach-goal__optional">Want more impact? <a href="#" class="outreach-goal__action-link outreach-goal__cta-broker" data-action="call" data-member-id="{{ broker.id }}" data-zip="{{ zip }}" aria-label="Open call script for Power Broker">Call the Power Broker</a></p>
+                {% endif %}
+            </div>
+            {% endif %}
+            {% endif %}
+        </section>
+        {% endif %}
+        <details class="how-it-works how-it-works-details">
             <summary class="hiw-title">How we pick targets</summary>
             <div class="hiw-body">
                 <dl>
@@ -693,7 +781,7 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                 <article class="outreach-sidebar-card {% if m.is_constituent %}outreach-sidebar-card--constituent{% endif %}" role="listitem">
                     <div class="outreach-sidebar-card__photo-wrap">
                         {% if m.photo_url %}
-                        <img src="{{ m.photo_url }}" alt="" class="outreach-sidebar-card__photo" width="120" height="112" loading="lazy">
+                        <img src="{{ m.photo_url }}" alt="" class="outreach-sidebar-card__photo" width="64" height="64" loading="lazy">
                         {% else %}
                         <span class="outreach-sidebar-card__photo outreach-sidebar-card__photo--initials" aria-hidden="true">{% if m.name and m.name.split() %}{{ m.name.split()[0][0] }}{{ m.name.split()[-1][0] }}{% else %}?{% endif %}</span>
                         {% endif %}
@@ -715,15 +803,25 @@ user_emailed_member_ids=none, outreach_heat=none) %}
     <main class="results-main">
         {% endif %}
 
-        {# ── Your Legislators (ordered by Moneyball score, higher first) ── #}
-        {% if your_legislators %}
-        <h2>🏡 Your Legislators <span class="section-zip">(ZIP {{ zip }})</span></h2>
+        {# ── Your district members (Senator + Rep side-by-side) ── #}
+        {% if senator or representative %}
+        <h2 id="district-members-heading">Your district members <span class="section-zip">(ZIP {{ zip }})</span></h2>
         <p class="section-desc">These are <strong>your</strong> representatives. Constituent calls are tracked
             &mdash; yours matters the most.</p>
-        {% for item in your_legislators %}
-        {{ member_card(item.card, item.role_label, item.role_class, zip, user_called_member_ids|default([]),
-        user_emailed_member_ids|default([]), outreach_heat|default(none)) }}
-        {% endfor %}
+        <div class="district-members-row" role="list" aria-labelledby="district-members-heading">
+            {% if senator %}
+            <div class="district-members-row__card" role="listitem">
+                {{ member_card(senator, "Your Senator", "role-senator", zip, user_called_member_ids|default([]),
+                user_emailed_member_ids|default([]), outreach_heat|default(none)) }}
+            </div>
+            {% endif %}
+            {% if representative %}
+            <div class="district-members-row__card" role="listitem">
+                {{ member_card(representative, "Your Representative", "role-rep", zip, user_called_member_ids|default([]),
+                user_emailed_member_ids|default([]), outreach_heat|default(none)) }}
+            </div>
+            {% endif %}
+        </div>
         {% endif %}
 
         {# ── Strategic Targets ── #}
