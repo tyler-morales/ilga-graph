@@ -1,43 +1,225 @@
-{% extends "base.html" %}
+{% extends "_brief_skeleton.html" %}
 {% block title %}Brief for legislators — {{ site_name }}{% endblock %}
-{% block content %}
-<div class="legal-page legislator-brief">
-    <h1>Brief for legislators</h1>
-    <p class="legal-page-intro">Kei vehicle registration in Illinois — statutory gap and proposed clarification.</p>
+{% block brief_title %}Brief for legislators{% endblock %}
+{% block brief_intro %}
+<p class="legal-page-intro">Kei vehicle registration in Illinois — statutory gap and proposed clarification.</p>
+{% endblock %}
+{% block brief_main_heading %}Executive summary{% endblock %}
+{% block brief_main %}
+<p>Illinois is currently denying or revoking registration for federally lawful Kei (軽) class
+    vehicles—small, street-legal trucks and vans—by applying 625 ILCS 5/3-401(c-1) in a way that treats
+    them as non-highway. This is a statutory interpretation gap, not a safety or compliance issue. A
+    narrow clarification amendment can restore normal registration while leaving safety, equipment, and
+    insurance requirements unchanged.</p>
 
-    <section aria-labelledby="brief-summary">
-        <h2 id="brief-summary">Executive summary</h2>
-        <p>Illinois is currently denying or revoking registration for federally lawful Kei (軽) class vehicles—small, street-legal trucks and vans—by applying 625 ILCS 5/3-401(c-1) in a way that treats them as non-highway. This is a statutory interpretation gap, not a safety or compliance issue. A narrow clarification amendment can restore normal registration while leaving safety, equipment, and insurance requirements unchanged.</p>
-    </section>
+<section aria-labelledby="brief-current-law">
+    <h2 id="brief-current-law">Current law</h2>
+    <p><strong>625 ILCS 5/3-401(c-1)</strong> governs when certain vehicles may be registered. The
+        provision is being applied to treat Kei vehicles as ineligible for normal highway registration,
+        despite their federal compliance and use on public roads in other states. The statute was not
+        written with this vehicle class in mind, leading to inconsistent interpretation and blocked
+        registration for lawful owners.</p>
 
-    <section aria-labelledby="brief-current-law">
-        <h2 id="brief-current-law">Current law</h2>
-        <p><strong>625 ILCS 5/3-401(c-1)</strong> governs when certain vehicles may be registered. The provision is being applied to treat Kei vehicles as ineligible for normal highway registration, despite their federal compliance and use on public roads in other states. The statute was not written with this vehicle class in mind, leading to inconsistent interpretation and blocked registration for lawful owners.</p>
-    </section>
+    <h3 id="brief-states-table">Selected State Status: Authorization / Reversal Examples</h3>
+    <p>This table highlights recent, high-signal examples where states explicitly authorized or restored kei
+        registration through statute or formal policy. (Not an exhaustive list.)</p>
+    <div class="bill-actions-table-wrap" role="region" aria-label="State mechanisms table">
+        <table class="intel-table legislator-brief-states-table">
+            <thead>
+                <tr>
+                    <th scope="col">State</th>
+                    <th scope="col" class="brief-table-col-indicator" title="Legislation (statute or bill)">Bill</th>
+                    <th scope="col" class="brief-table-col-indicator" title="Administrative policy change">Policy</th>
+                    <th scope="col">Mechanism</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td data-label="State">Texas</td>
+                    <td data-label="Bill" class="brief-table-cell-indicator"><span
+                            class="brief-table-indicator brief-table-indicator--yes" role="img"
+                            aria-label="Has bill: yes">✓</span></td>
+                    <td data-label="Policy" class="brief-table-cell-indicator"><span
+                            class="brief-table-indicator brief-table-indicator--no" role="img"
+                            aria-label="Policy change: no">—</span></td>
+                    <td data-label="Mechanism">SB 1816 — miniature vehicle; titling/registration</td>
+                    <td data-label="Status">Effective Sep 1, 2025</td>
+                    <td data-label="Notes">Highway operational rules</td>
+                </tr>
+                <tr>
+                    <td data-label="State">Colorado</td>
+                    <td data-label="Bill" class="brief-table-cell-indicator"><span
+                            class="brief-table-indicator brief-table-indicator--yes" role="img"
+                            aria-label="Has bill: yes">✓</span></td>
+                    <td data-label="Policy" class="brief-table-cell-indicator"><span
+                            class="brief-table-indicator brief-table-indicator--no" role="img"
+                            aria-label="Policy change: no">—</span></td>
+                    <td data-label="Mechanism">HB 25-1281 — kei road-legal; framework</td>
+                    <td data-label="Status">Signed May 2025; effective Jul 2027</td>
+                    <td data-label="Notes">55 mph limit</td>
+                </tr>
+                <tr>
+                    <td data-label="State">Massachusetts</td>
+                    <td data-label="Bill" class="brief-table-cell-indicator"><span
+                            class="brief-table-indicator brief-table-indicator--yes" role="img"
+                            aria-label="Has bill: yes">✓</span></td>
+                    <td data-label="Policy" class="brief-table-cell-indicator"><span
+                            class="brief-table-indicator brief-table-indicator--yes" role="img"
+                            aria-label="Policy change: yes">✓</span></td>
+                    <td data-label="Mechanism">Policy update &amp; Bill H.4053</td>
+                    <td data-label="Status">Resumed Sep 2024</td>
+                    <td data-label="Notes">RMV allows registration; H.4053 in committee</td>
+                </tr>
+                <tr>
+                    <td data-label="State">Michigan</td>
+                    <td data-label="Bill" class="brief-table-cell-indicator"><span
+                            class="brief-table-indicator brief-table-indicator--no" role="img"
+                            aria-label="Has bill: no">—</span></td>
+                    <td data-label="Policy" class="brief-table-cell-indicator"><span
+                            class="brief-table-indicator brief-table-indicator--yes" role="img"
+                            aria-label="Policy change: yes">✓</span></td>
+                    <td data-label="Mechanism">Policy update</td>
+                    <td data-label="Status">Resumed Nov 2024</td>
+                    <td data-label="Notes">Title &amp; registration allowed</td>
+                </tr>
+                <tr>
+                    <td data-label="State">Oregon</td>
+                    <td data-label="Bill" class="brief-table-cell-indicator"><span
+                            class="brief-table-indicator brief-table-indicator--yes" role="img"
+                            aria-label="Has bill: yes">✓</span></td>
+                    <td data-label="Policy" class="brief-table-cell-indicator"><span
+                            class="brief-table-indicator brief-table-indicator--no" role="img"
+                            aria-label="Policy change: no">—</span></td>
+                    <td data-label="Mechanism">SB 1213 — title/registration + operating rules</td>
+                    <td data-label="Status">Transportation committee</td>
+                    <td data-label="Notes">In committee</td>
+                </tr>
+                <tr>
+                    <td data-label="State">Maine</td>
+                    <td data-label="Bill" class="brief-table-cell-indicator"><span
+                            class="brief-table-indicator brief-table-indicator--yes" role="img"
+                            aria-label="Has bill: yes">✓</span></td>
+                    <td data-label="Policy" class="brief-table-cell-indicator"><span
+                            class="brief-table-indicator brief-table-indicator--no" role="img"
+                            aria-label="Policy change: no">—</span></td>
+                    <td data-label="Mechanism">H.4053</td>
+                    <td data-label="Status">In committee</td>
+                    <td data-label="Notes">Title/registration + working group</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
 
-    <section aria-labelledby="brief-impact">
-        <h2 id="brief-impact">Impact</h2>
-        <p>Registration is being denied or revoked for vehicles that are legally imported, meet federal standards, and are commonly used for delivery, groundskeeping, agriculture, and small business. Owners who have complied with federal and state rules are unable to register their vehicles in Illinois, while the same vehicles remain street-legal elsewhere.</p>
-    </section>
+<section aria-labelledby="brief-impact">
+    <h2 id="brief-impact">Impact</h2>
+    <p>Registration is being denied or revoked for vehicles that are legally imported, meet federal
+        standards, and are commonly used for delivery, groundskeeping, agriculture, and small business.
+        Owners who have complied with federal and state rules are unable to register their vehicles in
+        Illinois, while the same vehicles remain street-legal elsewhere.</p>
+</section>
 
-    <section aria-labelledby="brief-solution">
-        <h2 id="brief-solution">Proposed solution</h2>
-        <p>A <strong>narrow clarification amendment</strong> that explicitly allows registration of federally compliant Kei-class vehicles under existing safety, equipment, and insurance requirements. No weakening of those requirements is proposed—only clarification so that vehicles that are lawful and safe under federal and other state frameworks can be registered in Illinois.</p>
-    </section>
+<section aria-labelledby="brief-solution">
+    <h2 id="brief-solution">Proposed solution</h2>
+    <p>A <strong>narrow clarification amendment</strong> that explicitly allows registration of
+        federally compliant Kei-class vehicles under existing safety, equipment, and insurance
+        requirements. No weakening of those requirements is proposed—only clarification so that vehicles
+        that are lawful and safe under federal and other state frameworks can be registered in Illinois.
+    </p>
+</section>
 
-    <section aria-labelledby="brief-facts">
-        <h2 id="brief-facts">Key facts</h2>
-        <ul>
-            <li><strong>Safety.</strong> Kei vehicles are built to regulated standards and are used on public roads in other states and in highly regulated jurisdictions with strong safety records.</li>
-            <li><strong>Federal compliance.</strong> Vehicles at issue are 25+ years old and legally imported under federal rules; they are not off-road or unregulated equipment.</li>
-            <li><strong>Other states.</strong> Many states allow registration of these vehicles without similar statutory barriers; Illinois’s interpretation is an outlier.</li>
-            <li><strong>Use cases.</strong> Common uses include small-business delivery, university and park groundskeeping, and agricultural support—applications where size and efficiency are advantages.</li>
+<section aria-labelledby="brief-facts">
+    <h2 id="brief-facts">Key facts</h2>
+    <ul>
+        <li><strong>Safety.</strong> Kei vehicles are built to regulated standards and are used on
+            public roads in other states and in highly regulated jurisdictions with strong safety
+            records.</li>
+        <li><strong>Federal compliance.</strong> Vehicles at issue are 25+ years old and legally
+            imported under federal rules; they are not off-road or unregulated equipment.</li>
+        <li><strong>Other states.</strong> Many states allow registration of these vehicles without
+            similar statutory barriers; Illinois's interpretation is an outlier.</li>
+        <li><strong>Use cases.</strong> Common uses include small-business delivery, university and park
+            groundskeeping, and agricultural support—applications where size and efficiency are
+            advantages.</li>
+    </ul>
+</section>
+
+<section aria-labelledby="brief-contact">
+    <h2 id="brief-contact">More information</h2>
+    <p>Constituents and advocates are reaching out through <a href="/advocacy/">our outreach tool</a>.
+        For a short overview of the issue from a constituent perspective, see <a href="/the-issue">The
+            Issue</a>.</p>
+</section>
+{% endblock %}
+{% block brief_sidebar %}
+<aside class="legislator-brief-sidebar" aria-labelledby="brief-documents-heading">
+    <h2 id="brief-documents-heading" class="legislator-brief-sidebar__title">Documents</h2>
+    <div class="legislator-brief-sidebar__content">
+        <h4 id="brief-docs-heading" class="legislator-brief-sidebar__subtitle">Brief documents</h4>
+        <ul class="legislator-brief-docs" role="list" aria-labelledby="brief-docs-heading">
+            {% for doc in brief_documents|default([]) %}
+            <li
+                class="legislator-brief-doc{% if not doc.get('available', true) %} legislator-brief-doc--unavailable{% endif %}">
+                {% if doc.get('available', true) %}
+                <a class="legislator-brief-doc__link" href="{{ doc.url }}"
+                    aria-label="Download {{ doc.title }} ({{ doc.file_type|upper }})" {% if doc.url !='#' %}
+                    target="_blank" rel="noopener noreferrer" {% endif %}>
+                    <img class="legislator-brief-doc__icon" src="/static/images/icon-{{ doc.file_type }}.svg" alt=""
+                        width="24" height="24" aria-hidden="true">
+                    <span class="legislator-brief-doc__title">{{ doc.title }}</span>
+                </a>
+                {% else %}
+                <span class="legislator-brief-doc__link legislator-brief-doc__link--disabled" aria-disabled="true">
+                    <img class="legislator-brief-doc__icon" src="/static/images/icon-{{ doc.file_type }}.svg" alt=""
+                        width="24" height="24" aria-hidden="true">
+                    <span class="legislator-brief-doc__title">{{ doc.title }}</span>
+                </span>
+                {% if doc.get('note') %}<p class="legislator-brief-doc__note">{{ doc.note }}</p>{% endif %}
+                {% endif %}
+            </li>
+            {% endfor %}
         </ul>
-    </section>
-
-    <section aria-labelledby="brief-contact">
-        <h2 id="brief-contact">More information</h2>
-        <p>Constituents and advocates are reaching out through <a href="/advocacy/">our outreach tool</a>. For a short overview of the issue from a constituent perspective, see <a href="/the-issue">The Issue</a>.</p>
-    </section>
-</div>
+        <h4 id="brief-bills-passed" class="legislator-brief-sidebar__subtitle">Passed bills</h4>
+        <ul class="legislator-brief-bills" role="list" aria-labelledby="brief-bills-passed">
+            {% for bill in brief_bills_passed|default([]) %}
+            <li class="legislator-brief-doc">
+                <a class="legislator-brief-doc__link" href="{{ bill.url }}" target="_blank" rel="noopener noreferrer"
+                    aria-label="View bill {{ bill.title }}">
+                    <img class="legislator-brief-doc__icon" src="/static/images/icon-pdf.svg" alt="" width="24"
+                        height="24" aria-hidden="true">
+                    <span class="legislator-brief-doc__title">{{ bill.title }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        <h4 id="brief-bills-current" class="legislator-brief-sidebar__subtitle">Current bills</h4>
+        <ul class="legislator-brief-bills" role="list" aria-labelledby="brief-bills-current">
+            {% for bill in brief_bills_current|default([]) %}
+            <li class="legislator-brief-doc">
+                <a class="legislator-brief-doc__link" href="{{ bill.url }}" target="_blank" rel="noopener noreferrer"
+                    aria-label="View bill {{ bill.title }}">
+                    <img class="legislator-brief-doc__icon" src="/static/images/icon-pdf.svg" alt="" width="24"
+                        height="24" aria-hidden="true">
+                    <span class="legislator-brief-doc__title">{{ bill.title }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        <h4 id="brief-sources-heading" class="legislator-brief-sidebar__subtitle">Sources</h4>
+        <ul class="legislator-brief-sources" role="list" aria-labelledby="brief-sources-heading">
+            {% for source in brief_sources|default([]) %}
+            <li class="legislator-brief-doc">
+                <a class="legislator-brief-doc__link" href="{{ source.url }}" target="_blank" rel="noopener noreferrer"
+                    aria-label="View source {{ source.title }}">
+                    <img class="legislator-brief-doc__icon" src="/static/images/icon-link.svg" alt="" width="24"
+                        height="24" aria-hidden="true">
+                    <span class="legislator-brief-doc__title">{{ source.title }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</aside>
 {% endblock %}
