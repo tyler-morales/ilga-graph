@@ -56,8 +56,11 @@ scrape-full: ## Full reset: delete cache/, then scrape all members (~177) + full
 dev: ## Serve from cache (dev mode, auto-reload)
 	ILGA_LOAD_ONLY=1 ILGA_PROFILE=dev $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src
 
-serve: ## Serve from cache (prod mode)
+serve: ## Serve from cache (prod mode); runs Alembic in subprocess at startup
 	ILGA_LOAD_ONLY=1 ILGA_PROFILE=prod $(BIN)uvicorn ilga_graph.main:app --app-dir src
+
+serve-no-migrate: ## Serve without running migrations (run 'alembic upgrade head' first)
+	ILGA_LOAD_ONLY=1 ILGA_PROFILE=prod ILGA_SKIP_MIGRATIONS=1 $(BIN)uvicorn ilga_graph.main:app --app-dir src
 
 dev-reset: ## Clear dev cache (next make dev uses mocks/dev seed data)
 	rm -rf cache/dev

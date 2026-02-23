@@ -17,6 +17,10 @@ _MONEYBALL_FILE = "moneyball.json"
 _MEMBERS_FILE = "members.json"
 _BILLS_FILE = "bills.json"
 
+# Bump when scoring logic or serialized profile shape changes (e.g. CEL/LES).
+# Old caches are ignored so analytics recompute.
+_ANALYTICS_CACHE_VERSION = 3
+
 
 def _source_data_mtime(data_dir: Path) -> float:
     """Return the latest mtime of source data files (members + bills)."""
@@ -68,6 +72,14 @@ def load_analytics_cache(
         LOGGER.warning("Failed to read analytics cache: %s", e)
         return None
 
+    if mb_raw.get("cache_version", 0) < _ANALYTICS_CACHE_VERSION:
+        LOGGER.info(
+            "Analytics cache version %s < %s; recomputing.",
+            mb_raw.get("cache_version", 0),
+            _ANALYTICS_CACHE_VERSION,
+        )
+        return None
+
     try:
         scorecards = {mid: MemberScorecard(**d) for mid, d in sc_raw.items()}
         profiles = {mid: MoneyballProfile(**d) for mid, d in mb_raw["profiles"].items()}
@@ -109,6 +121,7 @@ def save_analytics_cache(
 
     mb_path = _moneyball_path(cache_dir)
     mb_raw = {
+        "cache_version": _ANALYTICS_CACHE_VERSION,
         "profiles": {mid: _profile_to_dict(p) for mid, p in moneyball.profiles.items()},
         "rankings_overall": moneyball.rankings_overall,
         "rankings_house": moneyball.rankings_house,
@@ -180,6 +193,9 @@ def _profile_to_dict(p: MoneyballProfile) -> dict:
         "total_passed": p.total_passed,
         "institutional_weight": p.institutional_weight,
         "moneyball_score": p.moneyball_score,
+        "les": p.les,
+        "les_benchmark": p.les_benchmark,
+        "les_expectation": p.les_expectation,
         "rank_overall": p.rank_overall,
         "rank_chamber": p.rank_chamber,
         "rank_non_leadership": p.rank_non_leadership,
