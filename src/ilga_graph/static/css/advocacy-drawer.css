@@ -809,6 +809,9 @@
 
 .drawer-draft-followup-cta-block {
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
     justify-content: flex-start;
 }
 
@@ -845,6 +848,94 @@
 .drawer-draft-followup-btn.drawer-draft-followup-link-loading {
     opacity: 0.8;
     pointer-events: none;
+}
+
+.drawer-draft-followup-btn-later {
+    padding: 10px 16px;
+    border-radius: 22px;
+    font-size: var(--font-size-body);
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+    background: transparent;
+    color: #6d6d72;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+.drawer-draft-followup-btn-later:hover {
+    color: #1a1a1a;
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.drawer-draft-followup-btn-later:focus-visible {
+    outline: 2px solid #34c759;
+    outline-offset: 2px;
+}
+
+.drawer-draft-followup-recorded-msg {
+    margin: 8px 0 0;
+    font-size: var(--font-size-sm);
+    color: #6d6d72;
+}
+
+/* ── Done for this member (transition state before next district member) ── */
+.drawer-done-for-member {
+    padding: 24px 16px;
+}
+
+.drawer-done-for-member__message {
+    margin: 0 0 12px 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.drawer-done-for-member__comeback {
+    margin: 0 0 20px 0;
+    font-size: var(--font-size-sm);
+    color: #6d6d72;
+}
+
+.drawer-done-for-member__next-wrap {
+    margin: 0 0 16px 0;
+}
+
+.drawer-done-for-member__cta {
+    display: inline-block;
+    padding: 14px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    background: #2db84e;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.drawer-done-for-member__cta:hover {
+    background: #28a745;
+}
+
+.drawer-done-for-member__cta:active {
+    transform: scale(0.98);
+}
+
+.drawer-done-for-member__cta:focus-visible {
+    outline: 2px solid #34c759;
+    outline-offset: 2px;
+}
+
+.drawer-done-for-member__district-done,
+.drawer-done-for-member__broker-nudge {
+    margin: 8px 0 0;
+    font-size: var(--font-size-sm);
+    color: #555;
+}
+
+.drawer-done-for-member__broker-nudge {
+    margin-top: 12px;
 }
 
 .drawer-voicemail-reminder-just-in {
@@ -1479,6 +1570,14 @@
 
 .drawer-email-capture-wrap.drawer-email-saved-visible .drawer-email-saved {
     display: block;
+}
+
+.drawer-email-capture-attribution {
+    margin: 6px 0 0;
+    font-size: 0.75rem;
+    color: #5f6368;
+    line-height: 1.3;
+    font-style: italic;
 }
 
 .drawer-email-saved-pill {

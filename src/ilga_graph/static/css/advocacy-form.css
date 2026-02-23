@@ -875,15 +875,23 @@
   text-align: right;
 }
 
-/* Gamified "Called!" / "Emailed!" — gold metallic done state */
+/* Gamified "Called!" / "Emailed!" — gold metallic done state; still clickable to open drawer and view state */
 .outreach-btn.outreach-done {
-  cursor: default;
-  pointer-events: none;
+  cursor: pointer;
   background: linear-gradient(145deg, #c9a227 0%, #b8860b 30%, #daa520 50%, #b8860b 70%, #8b6914 100%);
   color: #1a1a0a;
   font-weight: 700;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -1px 0 rgba(0, 0, 0, 0.2), 0 2px 6px rgba(184, 134, 11, 0.4);
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.outreach-btn.outreach-done:hover {
+  filter: brightness(1.08);
+}
+
+.outreach-btn.outreach-done:focus-visible {
+  outline: 2px solid #1a1a0a;
+  outline-offset: 2px;
 }
 
 .outreach-btn.outreach-done .outreach-icon {
