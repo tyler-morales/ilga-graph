@@ -20,9 +20,11 @@ from .routers.admin import router as _admin_router
 from .routers.advocacy import router as _advocacy_router
 from .routers.auth import router as _auth_router
 from .routers.bills import router as _bills_router
+from .routers.content import router as _content_router
 from .routers.dev import router as _dev_router
 from .routers.explore import router as _explore_router
 from .routers.feedback import router as _feedback_router
+from .routers.home import router as _home_router
 from .routers.intelligence import router as _intelligence_router
 from .routers.legal import router as _legal_router
 from .routers.outreach import router as _outreach_router
@@ -254,12 +256,14 @@ app.add_exception_handler(Exception, _uncaught_exception_handler)
 register_middleware(app)
 
 app.include_router(graphql_app, prefix="/graphql")
+app.include_router(_home_router)
 app.include_router(_site_router)
 app.include_router(_admin_router)
 app.include_router(_dev_router, prefix="/dev")
 
 app.include_router(_advocacy_router, prefix="/advocacy")
 app.include_router(_auth_router)
+app.include_router(_content_router)
 app.include_router(_feedback_router)
 app.include_router(_legal_router)
 app.include_router(_bills_router, prefix="/api")

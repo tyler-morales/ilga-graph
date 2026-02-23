@@ -1,0 +1,104 @@
+{# ── Advocacy hero: centered single-column layout, no image; form posts via HTMX to /advocacy/search. Same message, advocate-focused. ── #}
+<div class="advocacy-hero advocacy-hero--centered">
+    <div class="hero-inner">
+        <p class="hero-eyebrow">Take action</p>
+        <h1 class="hero-headline">
+            {% if hero_headline_line1 and hero_headline_line2 %}
+            <span class="hero-headline-line">{% if hero_headline_line1_highlight %}{{ hero_headline_line1_prefix|default('') }}<span
+                class="hero-headline-sharpie-wrap"><img src="/static/images/sharpie.png" alt=""
+                    class="hero-headline-sharpie" aria-hidden="true" width="120" height="120"><span
+                    class="hero-headline-sharpie-text">{{ hero_headline_line1_highlight }}</span></span>{{ hero_headline_line1_suffix|default('') }}{% else %}{{ hero_headline_line1 }}{% endif %}</span>
+            <span class="hero-headline-line">{% if hero_headline_highlight %}{{ hero_headline_line2_prefix|default('') }}<span class="hero-headline-mark"
+                aria-hidden="true">{{ hero_headline_highlight }}</span>{{ hero_headline_line2_suffix|default('') }}{% else %}{{ hero_headline_line2 }}{% endif %}</span>
+            {% else %}{{ hero_headline or title }}{% endif %}
+        </h1>
+        <div class="hero-split">
+            <div class="hero-action">
+                <p class="hero-subhead">{% if hero_subhead_line1 and hero_subhead_line2 %}{{ hero_subhead_line1 }}<br>{{ hero_subhead_line2 }}{% else %}{{ hero_subhead }}{% endif %}</p>
+                <p class="hero-ticker" aria-live="polite">
+                    {% if calls_total|default(0) > 0 %}
+                    Add your voice. <strong aria-hidden="true">{{ calls_total }}</strong>+ outreach actions already
+                    made.
+                    {% else %}
+                    Add your voice — enter your ZIP to start.
+                    {% endif %}
+                </p>
+                <div class="hero-form">
+                    <form action="/advocacy" method="get" id="advocacy-form" aria-label="Find your legislators by ZIP code">
+                        <input type="hidden" name="category" value="Transportation">
+                        <div class="hero-form-row">
+                            <div class="hero-field">
+                                <label for="zip_code">Your Illinois ZIP code</label>
+                                <input type="text" id="zip_code" name="zip" inputmode="numeric" pattern="[0-9]{5}"
+                                    placeholder="60007" maxlength="5" required autocomplete="postal-code"
+                                    value="{{ zip or '' }}">
+                            </div>
+                            <div class="hero-field hero-field-btn">
+                                <button type="submit" id="find-btn">Start Outreaching</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <script>
+            (function () {
+                var btn = document.getElementById('find-btn');
+                if (!btn || typeof confetti !== 'function') return;
+                var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                btn.addEventListener('click', function () {
+                    if (reducedMotion) return;
+                    var form = btn.closest('form');
+                    if (form && !form.checkValidity()) return;
+                    var rect = btn.getBoundingClientRect();
+                    var origin = { x: (rect.left + rect.width / 2) / window.innerWidth, y: (rect.top + rect.height / 2) / window.innerHeight };
+                    confetti({ origin: origin, spread: 100, startVelocity: 28, particleCount: 80, colors: ['#f59e0b', '#fcd34d', '#fde68a', '#fef3c7', '#b45309', '#92400e'] });
+                    setTimeout(function () {
+                        confetti({ origin: origin, spread: 70, startVelocity: 25, particleCount: 50, scalar: 1.1, colors: ['#f59e0b', '#fcd34d', '#b45309'] });
+                    }, 150);
+                });
+            })();
+        </script>
+        <div class="hero-meta" id="auth-strip" aria-live="polite">
+            <div class="hero-meta-line">
+                <span id="auth-strip-signed-out" class="hero-meta-auth">
+                    <button type="button" class="auth-strip-signin-btn" id="auth-strip-signin-btn">Pick up where you
+                        left off or start tracking your outreach</button>
+                </span>
+                <span id="auth-strip-signed-in" class="hero-meta-auth auth-strip-signed-in" hidden><span
+                        class="hero-verified-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                            <polyline points="22 4 12 14.01 9 11.01" />
+                        </svg></span> Verified <span id="auth-strip-email"></span> &middot; <button type="button"
+                        class="auth-strip-signout" id="auth-strip-signout">Sign out</button></span>
+            </div>
+            <div id="auth-strip-progress" class="hero-meta-line auth-strip-progress" hidden aria-live="polite"
+                aria-label="Your outreach progress"></div>
+            <div id="auth-strip-inline-signin" class="hero-signin-inline" hidden>
+                <div class="hero-signin-state" id="hero-signin-state-email">
+                    <input type="email" class="hero-signin-input" id="hero-signin-email" placeholder="Your email"
+                        autocomplete="email" inputmode="email">
+                    <button type="button" class="hero-signin-btn" id="hero-signin-request-btn">Send code</button>
+                </div>
+                <div class="hero-signin-state" id="hero-signin-state-code" hidden>
+                    <span class="hero-signin-code-hint" id="hero-signin-code-hint">Check your email for a 6-digit
+                        code</span>
+                    {% if dev_available %}
+                    <p class="hero-signin-dev-hint" aria-live="polite">Dev mode: your code appears in the <strong>server terminal</strong> (where you ran the app), not in the browser.</p>
+                    {% endif %}
+                    <div class="hero-signin-code-row">
+                        <input type="text" class="hero-signin-code-input" id="hero-signin-code-input"
+                            placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code">
+                        <button type="button" class="hero-signin-btn" id="hero-signin-verify-btn">Confirm</button>
+                    </div>
+                    <span class="hero-signin-error" id="hero-signin-error" hidden></span>
+                    <button type="button" class="hero-signin-resend" id="hero-signin-resend">Resend code</button>
+                </div>
+                <button type="button" class="hero-signin-cancel" id="hero-signin-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="/static/js/magnify-lens.js" defer></script>

@@ -1,0 +1,82 @@
+/**
+ * Share section — home page only, below What's happening.
+ * Copy link + optional native Share; BEM-style .share-section-*.
+ */
+
+.share-section {
+  margin-top: 1.25rem;
+  padding: 1.5rem 0;
+  border-top: 1px solid var(--color-border-light, #e5e5e5);
+}
+
+.share-section-title {
+  font-size: var(--font-size-h2, 1.35rem);
+  color: var(--color-text-muted, #444);
+  margin: 0 0 0.35em 0;
+  font-weight: 600;
+}
+
+.share-section-intro {
+  font-size: var(--font-size-body, 1rem);
+  color: var(--color-text-muted, #444);
+  margin: 0 0 1rem 0;
+  line-height: var(--line-height-body, 1.5);
+}
+
+.share-section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+}
+
+.share-section-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.5rem 1rem;
+  font-size: var(--font-size-body, 1rem);
+  font-weight: 500;
+  color: var(--color-text, #222);
+  background: var(--color-bg-muted, #fafafa);
+  border: 1px solid var(--color-border-light, #ddd);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.share-section-btn:hover:not(:disabled) {
+  background: var(--color-bg-input, #f0f0f0);
+  border-color: var(--color-border, #ccc);
+}
+
+.share-section-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-bg-page, #f4f4f0), 0 0 0 4px var(--color-border-focus, #333);
+}
+
+.share-section-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.share-section-btn-text {
+  line-height: 1.2;
+}
+
+.share-section-feedback {
+  margin: 0.5rem 0 0 0;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-success, #059669);
+  min-height: 1.25em;
+}
+
+@media (max-width: 768px) {
+  .share-section {
+    padding: 1.25rem 0;
+  }
+
+  .share-section-btn {
+    padding: 0.6rem 1rem;
+  }
+}

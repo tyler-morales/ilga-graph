@@ -4,120 +4,9 @@
 
 {% block content %}
 <script>window.__ILGA_FEATURES = {{ (features or { }) | tojson }};</script>
-{# ── Hero section (hardball: threat-focused copy, image + action layout) ── #}
-<div class="advocacy-hero">
-    <div class="hero-inner">
-        <p class="hero-eyebrow">Take action</p>
-        <h1 class="hero-headline">{% if hero_headline_line1 and hero_headline_line2 %}{% if
-            hero_headline_line1_highlight %}{{ hero_headline_line1_prefix|default('') }}<span
-                class="hero-headline-sharpie-wrap"><img src="/static/images/sharpie.png" alt=""
-                    class="hero-headline-sharpie" aria-hidden="true" width="120" height="120"><span
-                    class="hero-headline-sharpie-text">{{ hero_headline_line1_highlight }}</span></span>{{
-            hero_headline_line1_suffix|default('') }}{% else %}{{ hero_headline_line1 }}{% endif %}<br>{% if
-            hero_headline_highlight %}{{ hero_headline_line2_prefix|default('') }}<span class="hero-headline-mark"
-                aria-hidden="true">{{ hero_headline_highlight }}</span>{{ hero_headline_line2_suffix|default('') }}{%
-            else %}{{ hero_headline_line2 }}{% endif %}{% else %}{{ hero_headline or title }}{% endif %}</h1>
-        <div class="hero-split">
-            <div class="hero-image-wrap">
-                <img src="/static/images/truck-hero.jpg" alt="White Kei truck on city street" class="hero-image"
-                    loading="eager" width="600" height="400"
-                    onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/a/ad/SuzukiCarry8th.jpg'; this.alt='Suzuki Carry kei truck';">
-            </div>
-            <div class="hero-action">
-                <p class="hero-subhead">{{ hero_subhead }}</p>
-                <p class="hero-ticker" aria-live="polite">
-                    {% if calls_total|default(0) > 0 %}
-                    Add your voice. <strong aria-hidden="true">{{ calls_total }}</strong>+ outreach actions already
-                    made.
-                    {% else %}
-                    Add your voice — enter your ZIP to start.
-                    {% endif %}
-                </p>
-                <div class="hero-form">
-                    <form action="/advocacy/search" method="post" id="advocacy-form" hx-post="/advocacy/search"
-                        hx-target="#results" hx-swap="innerHTML" hx-indicator="#search-spinner">
-                        <input type="hidden" name="category" value="Transportation">
-                        <div class="hero-form-row">
-                            <div class="hero-field">
-                                <label for="zip_code">Your Illinois ZIP code</label>
-                                <input type="text" id="zip_code" name="zip_code" inputmode="numeric" pattern="[0-9]{5}"
-                                    placeholder="60614" maxlength="5" required autocomplete="postal-code"
-                                    value="{{ zip or '' }}">
-                            </div>
-                            <div class="hero-field hero-field-btn">
-                                <button type="submit" id="find-btn">Start Outreaching</button>
-                                <span id="search-spinner" class="htmx-indicator">Searching&hellip;</span>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-        <script>
-            (function () {
-                var btn = document.getElementById('find-btn');
-                if (!btn || typeof confetti !== 'function') return;
-                var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-                btn.addEventListener('click', function () {
-                    if (reducedMotion) return;
-                    var form = btn.closest('form');
-                    if (form && !form.checkValidity()) return;
-                    var rect = btn.getBoundingClientRect();
-                    var origin = { x: (rect.left + rect.width / 2) / window.innerWidth, y: (rect.top + rect.height / 2) / window.innerHeight };
-                    confetti({ origin: origin, spread: 100, startVelocity: 28, particleCount: 80, colors: ['#f59e0b', '#fcd34d', '#fde68a', '#fef3c7', '#b45309', '#92400e'] });
-                    setTimeout(function () {
-                        confetti({ origin: origin, spread: 70, startVelocity: 25, particleCount: 50, scalar: 1.1, colors: ['#f59e0b', '#fcd34d', '#b45309'] });
-                    }, 150);
-                });
-            })();
-        </script>
-        <div class="hero-trust-badges" role="list" aria-label="Why take action">
-            <span role="listitem"><span aria-hidden="true">⏱</span> Takes 1 Minute</span>
-            <span role="listitem"><span aria-hidden="true">📜</span> Scripts Provided</span>
-            <span role="listitem"><span aria-hidden="true">✓</span> Real Impact</span>
-        </div>
-        <div class="hero-meta" id="auth-strip" aria-live="polite">
-            <div class="hero-meta-line">
-                <span id="auth-strip-signed-out" class="hero-meta-auth">
-                    <button type="button" class="auth-strip-signin-btn" id="auth-strip-signin-btn">Pick up where you
-                        left off or start tracking your outreach</button>
-                </span>
-                <span id="auth-strip-signed-in" class="hero-meta-auth auth-strip-signed-in" hidden><span
-                        class="hero-verified-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24"
-                            fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                            stroke-linejoin="round">
-                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                            <polyline points="22 4 12 14.01 9 11.01" />
-                        </svg></span> Verified <span id="auth-strip-email"></span> &middot; <button type="button"
-                        class="auth-strip-signout" id="auth-strip-signout">Sign out</button></span>
-            </div>
-            <div id="auth-strip-progress" class="hero-meta-line auth-strip-progress" hidden aria-live="polite"
-                aria-label="Your outreach progress"></div>
-            <div id="auth-strip-inline-signin" class="hero-signin-inline" hidden>
-                <div class="hero-signin-state" id="hero-signin-state-email">
-                    <input type="email" class="hero-signin-input" id="hero-signin-email" placeholder="Your email"
-                        autocomplete="email" inputmode="email">
-                    <button type="button" class="hero-signin-btn" id="hero-signin-request-btn">Send code</button>
-                </div>
-                <div class="hero-signin-state" id="hero-signin-state-code" hidden>
-                    <span class="hero-signin-code-hint" id="hero-signin-code-hint">Check your email for a 6-digit
-                        code</span>
-                    {% if dev_available %}
-                    <p class="hero-signin-dev-hint" aria-live="polite">Dev mode: your code appears in the <strong>server terminal</strong> (where you ran the app), not in the browser.</p>
-                    {% endif %}
-                    <div class="hero-signin-code-row">
-                        <input type="text" class="hero-signin-code-input" id="hero-signin-code-input"
-                            placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code">
-                        <button type="button" class="hero-signin-btn" id="hero-signin-verify-btn">Confirm</button>
-                    </div>
-                    <span class="hero-signin-error" id="hero-signin-error" hidden></span>
-                    <button type="button" class="hero-signin-resend" id="hero-signin-resend">Resend code</button>
-                </div>
-                <button type="button" class="hero-signin-cancel" id="hero-signin-cancel">Cancel</button>
-            </div>
-        </div>
-    </div>
-</div>
+{# ── Hero section: advocacy-centered hero only (no "what's happening" block) ── #}
+{% include "_hero_advocacy.html" %}
+<div class="hero-results-sep" aria-hidden="true"></div>
 <div id="results" role="region" aria-label="Search results" {% if your_legislators is defined %}
     data-has-initial-results="true" {% endif %}>
     {% if error and your_legislators is not defined %}<div class="error-msg" role="alert">{{ error }}</div>{% endif %}
@@ -192,10 +81,18 @@
 </div>
 
 <script>
-    /* ── Auto-scroll to members when page loads with results (e.g. /advocacy?zip=60071) ── */
+    /* ── Auto-scroll to results only when user just submitted zip (not on plain navigation) ── */
+    // #region agent log
     (function () {
         var results = document.getElementById('results');
         if (!results || results.getAttribute('data-has-initial-results') !== 'true') return;
+        var justSubmittedZip = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('__ilga_scroll_to_results') === '1';
+        try {
+            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '0c4473' }, body: JSON.stringify({ sessionId: '0c4473', location: 'index.html:onload-scroll', message: 'results on load', data: { justSubmittedZip: justSubmittedZip, willScroll: justSubmittedZip }, hypothesisId: 'H1', timestamp: Date.now() }) }).catch(function () {});
+        } catch (e) {}
+        // #endregion
+        if (!justSubmittedZip) return;
+        if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('__ilga_scroll_to_results');
         var params = new URLSearchParams(window.location.search || '');
         var autoView = params.get('view') || (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('__ilga_dev_view'));
         var autoMember = params.get('member_id') || (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('__ilga_dev_member'));
@@ -282,18 +179,19 @@
     function initRecommendationChipTooltips(container) {
         initAdvocacyTooltips(container);
     }
+    /* ── Set scroll-to-results flag so after full-page load we scroll only when user submitted zip ── */
+    (function () {
+        var form = document.getElementById('advocacy-form');
+        if (!form) return;
+        form.addEventListener('submit', function () {
+            if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('__ilga_scroll_to_results', '1');
+        });
+    })();
     /* ── Auto-submit on 5-digit ZIP ── */
     document.getElementById('zip_code').addEventListener('input', function () {
         if (this.value.replace(/\D/g, '').length === 5) {
             this.value = this.value.replace(/\D/g, '').slice(0, 5);
             document.getElementById('advocacy-form').requestSubmit();
-            setTimeout(function () {
-                var drawer = document.getElementById('advocacy-drawer');
-                if (drawer && drawer.classList.contains('open')) return;
-                if (shouldSkipResultsScroll()) return;
-                var results = document.getElementById('results');
-                if (results) results.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 600);
         }
     });
 
@@ -395,7 +293,7 @@
         var elt = e.detail.elt;
         var form = elt && (elt.id === 'advocacy-form' ? elt : (elt.closest && elt.closest('#advocacy-form')));
         if (!form) return;
-        var zipInput = form.querySelector('input[name="zip_code"]');
+        var zipInput = form.querySelector('#zip_code') || form.querySelector('input[name="zip"]') || form.querySelector('input[name="zip_code"]');
         var zip = zipInput ? zipInput.value.trim() : '';
         if (/^\d{5}$/.test(zip)) {
             var url = new URL(window.location.href);
@@ -1144,39 +1042,7 @@
         updatePulse();
     }
 
-    /* ── Auth: From field verify + outreach tracking ── */
-    function getCsrfToken() {
-        var match = document.cookie.match(/\bXSRF-TOKEN=([^;]*)/);
-        return match ? decodeURIComponent(match[1].replace(/^\s+|\s+$/g, '')) : '';
-    }
-    var _ilgaUserEmail = null;
-    var _pendingAuthEmail = '';
-
-    function updateAuthStrip(signedIn, email) {
-        var stripSignedOut = document.getElementById('auth-strip-signed-out');
-        var stripSignedIn = document.getElementById('auth-strip-signed-in');
-        var stripEmail = document.getElementById('auth-strip-email');
-        var stripProgress = document.getElementById('auth-strip-progress');
-        if (!stripSignedOut || !stripSignedIn) return;
-        if (signedIn && email) {
-            stripSignedOut.hidden = true;
-            stripSignedIn.hidden = false;
-            if (stripEmail) stripEmail.textContent = email;
-            stripSignedIn.classList.remove('auth-strip-signed-in--visible');
-            requestAnimationFrame(function () {
-                stripSignedIn.classList.add('auth-strip-signed-in--visible');
-            });
-            refreshAuthStripProgress();
-        } else {
-            stripSignedOut.hidden = false;
-            stripSignedIn.hidden = true;
-            stripSignedIn.classList.remove('auth-strip-signed-in--visible');
-            if (stripProgress) {
-                stripProgress.hidden = true;
-                stripProgress.textContent = '';
-            }
-        }
-    }
+    /* ── Auth: getCsrfToken, updateAuthStrip, initAuthStrip, initHeroInlineSignin from hero-auth-strip.js ── */
 
     function initDrawerFromAuth(container) {
         if (!container) return;
@@ -1206,6 +1072,9 @@
             if (emailText) emailText.textContent = email;
             showState('verified');
             updateAuthStrip(true, email);
+            if (document.dispatchEvent) {
+                document.dispatchEvent(new CustomEvent('ilga:auth-change', { detail: { signedIn: true } }));
+            }
             if (typeof window._guideGoVerifiedHook === 'function') {
                 window._guideGoVerifiedHook(email);
             }
@@ -1361,260 +1230,49 @@
 
         signoutBtn.onclick = function () {
             fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' })
-                .then(function () { goInput(); })
+                .then(function () {
+                    goInput();
+                    if (document.dispatchEvent) {
+                        document.dispatchEvent(new CustomEvent('ilga:auth-change', { detail: { signedIn: false } }));
+                    }
+                })
                 .catch(function () { goInput(); });
         };
     }
 
-    (function initAuthStrip() {
-        var stripSignout = document.getElementById('auth-strip-signout');
-        if (stripSignout) {
-            stripSignout.onclick = function () {
-                var signedInEl = document.getElementById('auth-strip-signed-in');
-                if (signedInEl && !signedInEl.hidden) {
-                    signedInEl.classList.remove('auth-strip-signed-in--visible');
-                    function finishSignout() {
-                        signedInEl.removeEventListener('transitionend', finishSignout);
-                        _ilgaUserEmail = null;
-                        updateAuthStrip(false);
-                    }
-                    signedInEl.addEventListener('transitionend', finishSignout, { once: true });
-                    setTimeout(finishSignout, 560);
-                } else {
-                    _ilgaUserEmail = null;
-                    updateAuthStrip(false);
-                }
-                fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' })
-                    .then(function () { })
-                    .catch(function () { });
-            };
-        }
-        fetch('/auth/me', { credentials: 'same-origin' })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                if (data.authenticated && data.email) {
-                    _ilgaUserEmail = data.email;
-                    updateAuthStrip(true, data.email);
-                } else {
-                    _ilgaUserEmail = null;
-                    updateAuthStrip(false);
-                }
+    function refreshAdvocacyResults() {
+        var resultsEl = document.getElementById('results');
+        if (!resultsEl || resultsEl.getAttribute('data-has-initial-results') !== 'true') return;
+        var form = document.getElementById('advocacy-form');
+        if (!form) return;
+        var zipInput = form.querySelector('#zip_code') || form.querySelector('input[name="zip"]');
+        var zip = zipInput ? zipInput.value.trim() : '';
+        if (!/^\d{5}$/.test(zip)) return;
+        var categoryInput = form.querySelector('input[name="category"]');
+        var category = categoryInput ? categoryInput.value : 'Transportation';
+        var body = new FormData();
+        body.append('zip_code', zip);
+        body.append('category', category);
+        fetch('/advocacy/search', {
+            method: 'POST',
+            body: body,
+            credentials: 'same-origin',
+            headers: { 'HX-Request': 'true' }
+        })
+            .then(function (r) { return r.text(); })
+            .then(function (html) {
+                if (html) resultsEl.innerHTML = html;
+                if (window.htmx && window.htmx.process) window.htmx.process(resultsEl);
+                if (typeof applyCardBioOverflow === 'function') applyCardBioOverflow();
+                if (typeof initRecommendationChipTooltips === 'function') initRecommendationChipTooltips(resultsEl);
+                if (typeof applyCardEnterAnimation === 'function') applyCardEnterAnimation(resultsEl);
             })
             .catch(function () { });
-    })();
+    }
 
-    (function initHeroInlineSignin() {
-        var stripSignedOut = document.getElementById('auth-strip-signed-out');
-        var inlineBlock = document.getElementById('auth-strip-inline-signin');
-        var signinBtn = document.getElementById('auth-strip-signin-btn');
-        var stateEmail = document.getElementById('hero-signin-state-email');
-        var stateCode = document.getElementById('hero-signin-state-code');
-        var emailInput = document.getElementById('hero-signin-email');
-        var requestBtn = document.getElementById('hero-signin-request-btn');
-        var codeHint = document.getElementById('hero-signin-code-hint');
-        var codeInput = document.getElementById('hero-signin-code-input');
-        var verifyBtn = document.getElementById('hero-signin-verify-btn');
-        var codeError = document.getElementById('hero-signin-error');
-        var resendBtn = document.getElementById('hero-signin-resend');
-        var cancelBtn = document.getElementById('hero-signin-cancel');
-
-        var _inlineCloseTimer = null;
-
-        function showInline(show) {
-            if (!inlineBlock) return;
-            if (show) {
-                if (_inlineCloseTimer) { clearTimeout(_inlineCloseTimer); _inlineCloseTimer = null; }
-                inlineBlock.hidden = false;
-                inlineBlock.classList.remove('hero-signin-inline--open');
-                requestAnimationFrame(function () {
-                    requestAnimationFrame(function () {
-                        inlineBlock.classList.add('hero-signin-inline--open');
-                    });
-                });
-            } else {
-                if (_inlineCloseTimer) clearTimeout(_inlineCloseTimer);
-                inlineBlock.classList.remove('hero-signin-inline--open');
-                _inlineCloseTimer = setTimeout(function () {
-                    _inlineCloseTimer = null;
-                    inlineBlock.hidden = true;
-                }, 560);
-            }
-        }
-
-        function showHeroState(which) {
-            if (stateEmail) {
-                stateEmail.hidden = (which !== 'email');
-                stateEmail.classList.toggle('hero-signin-state-visible', which === 'email');
-            }
-            if (stateCode) {
-                stateCode.hidden = (which !== 'code');
-                if (which === 'code') {
-                    requestAnimationFrame(function () {
-                        stateCode.classList.add('hero-signin-state-visible');
-                    });
-                } else {
-                    stateCode.classList.remove('hero-signin-state-visible');
-                }
-            }
-        }
-
-        function closeInline() {
-            if (_inlineCloseTimer) { clearTimeout(_inlineCloseTimer); _inlineCloseTimer = null; }
-            if (inlineBlock) {
-                inlineBlock.hidden = true;
-                inlineBlock.classList.remove('hero-signin-inline--open');
-            }
-            if (stripSignedOut) stripSignedOut.hidden = false;
-            showHeroState('email');
-            if (emailInput) emailInput.value = '';
-            if (codeInput) codeInput.value = '';
-            if (codeError) { codeError.textContent = ''; codeError.hidden = true; }
-        }
-
-        signinBtn && (signinBtn.onclick = function () {
-            if (stripSignedOut) stripSignedOut.hidden = true;
-            showInline(true);
-            showHeroState('email');
-            requestAnimationFrame(function () {
-                stateEmail && stateEmail.classList.add('hero-signin-state-visible');
-            });
-            if (emailInput) { emailInput.value = ''; emailInput.focus(); }
-            if (requestBtn) requestBtn.disabled = true;
-            if (codeError) { codeError.hidden = true; codeError.textContent = ''; }
-        });
-
-        if (emailInput) {
-            emailInput.addEventListener('input', setSendCodeEnabled);
-            emailInput.addEventListener('change', setSendCodeEnabled);
-            emailInput.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (requestBtn && !requestBtn.disabled) requestBtn.click();
-                }
-            });
-        }
-
-        cancelBtn && (cancelBtn.onclick = closeInline);
-
-        requestBtn && (requestBtn.onclick = function () {
-            var email = (emailInput && emailInput.value || '').trim().toLowerCase();
-            if (!email || email.indexOf('@') === -1) { if (emailInput) emailInput.focus(); return; }
-            requestBtn.disabled = true;
-            requestBtn.classList.add('hero-signin-btn--sending');
-            requestBtn.textContent = 'Sending\u2026';
-            var body = new FormData();
-            body.append('email', email);
-            body.append('csrf_token', getCsrfToken());
-            fetch('/auth/request-code', { method: 'POST', body: body, credentials: 'same-origin' })
-                .then(function (r) { return r.json(); })
-                .then(function (data) {
-                    requestBtn.classList.remove('hero-signin-btn--sending');
-                    requestBtn.disabled = false;
-                    requestBtn.textContent = 'Send code';
-                    if (data.ok) {
-                        _pendingAuthEmail = email;
-                        if (codeHint) {
-                            var esc = (function (s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); })(email);
-                            codeHint.innerHTML = 'Code sent to <strong>' + esc + '</strong>';
-                        }
-                        if (codeInput) { codeInput.value = ''; codeInput.focus(); }
-                        if (codeError) codeError.hidden = true;
-                        showHeroState('code');
-                    } else {
-                        if (codeError) { codeError.textContent = data.error || 'Couldn\'t send code'; codeError.hidden = false; }
-                    }
-                })
-                .catch(function () {
-                    requestBtn.classList.remove('hero-signin-btn--sending');
-                    requestBtn.disabled = false;
-                    requestBtn.textContent = 'Send code';
-                    if (codeError) { codeError.textContent = 'Network error \u2014 try again'; codeError.hidden = false; }
-                });
-        });
-
-        function doHeroVerify() {
-            var code = (codeInput && codeInput.value || '').trim();
-            if (!code || code.length < 6) return;
-            verifyBtn.disabled = true;
-            verifyBtn.textContent = 'Verifying\u2026';
-            if (codeError) codeError.hidden = true;
-            var body = new FormData();
-            body.append('email', _pendingAuthEmail);
-            body.append('code', code);
-            body.append('csrf_token', getCsrfToken());
-            fetch('/auth/verify-code', { method: 'POST', body: body, credentials: 'same-origin' })
-                .then(function (r) { return r.json(); })
-                .then(function (data) {
-                    verifyBtn.disabled = false;
-                    verifyBtn.textContent = 'Confirm';
-                    if (data.ok && data.email) {
-                        _ilgaUserEmail = data.email;
-                        if (_inlineCloseTimer) { clearTimeout(_inlineCloseTimer); _inlineCloseTimer = null; }
-                        if (inlineBlock) {
-                            inlineBlock.hidden = true;
-                            inlineBlock.classList.remove('hero-signin-inline--open');
-                        }
-                        showHeroState('email');
-                        if (emailInput) emailInput.value = '';
-                        if (codeInput) codeInput.value = '';
-                        if (codeError) { codeError.textContent = ''; codeError.hidden = true; }
-                        updateAuthStrip(true, data.email);
-                    } else {
-                        if (codeError) { codeError.textContent = data.error || 'That code didn\'t work — try again or resend.'; codeError.hidden = false; }
-                        if (codeInput) { codeInput.value = ''; codeInput.focus(); }
-                    }
-                })
-                .catch(function () {
-                    verifyBtn.disabled = false;
-                    verifyBtn.textContent = 'Confirm';
-                    if (codeError) { codeError.textContent = 'Network error \u2014 try again'; codeError.hidden = false; }
-                });
-        }
-
-        function isEmailLike(val) {
-            var s = (val || '').trim();
-            return s.length > 0 && s.indexOf('@') >= 1 && s.indexOf('@') < s.length - 1;
-        }
-
-        function setSendCodeEnabled() {
-            if (requestBtn) requestBtn.disabled = !isEmailLike(emailInput && emailInput.value);
-        }
-
-        verifyBtn && (verifyBtn.onclick = doHeroVerify);
-
-        if (codeInput) {
-            codeInput.addEventListener('input', function () {
-                this.value = this.value.replace(/\D/g, '').slice(0, 6);
-                if (this.value.length === 6) doHeroVerify();
-            });
-        }
-
-        resendBtn && (resendBtn.onclick = function () {
-            if (!_pendingAuthEmail) return;
-            resendBtn.disabled = true;
-            resendBtn.textContent = 'Sending\u2026';
-            if (codeError) codeError.hidden = true;
-            var body = new FormData();
-            body.append('email', _pendingAuthEmail);
-            body.append('csrf_token', getCsrfToken());
-            fetch('/auth/request-code', { method: 'POST', body: body, credentials: 'same-origin' })
-                .then(function (r) { return r.json(); })
-                .then(function (data) {
-                    resendBtn.disabled = false;
-                    resendBtn.textContent = 'Resend code';
-                    if (data.ok && codeHint) {
-                        var escResend = (function (s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); })(_pendingAuthEmail);
-                        codeHint.innerHTML = 'New code sent to <strong>' + escResend + '</strong>';
-                    }
-                    if (codeInput) { codeInput.value = ''; codeInput.focus(); }
-                })
-                .catch(function () {
-                    resendBtn.disabled = false;
-                    resendBtn.textContent = 'Resend code';
-                    if (codeError) { codeError.textContent = 'Network error \u2014 try again'; codeError.hidden = false; }
-                });
-        });
-    })();
+    document.addEventListener('ilga:auth-change', function () {
+        refreshAdvocacyResults();
+    });
 
     function recordOutreach(memberId, kind, zipCode, outcome, notes, contactName, supportScore) {
         if (!_ilgaUserEmail) return Promise.resolve();
@@ -1633,6 +1291,7 @@
                 if (data && data.ok && memberId && kind) {
                     setOutreachDone(memberId, kind);
                     refreshAuthStripProgress();
+                    refreshAdvocacyResults();
                 }
                 return data;
             })

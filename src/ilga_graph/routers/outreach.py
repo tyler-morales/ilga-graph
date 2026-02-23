@@ -87,12 +87,13 @@ async def record_outreach(
             status_code=400,
         )
 
+    zip_val = zip_code.strip() or None
     event = OutreachEvent(
         user_id=user.id,
         user_email=user.email,
         member_id=mid,
         kind=kind,
-        zip_code=zip_code.strip() or None,
+        zip_code=zip_val,
         outcome=outcome.strip() or None,
         notes=notes.strip() or None,
         contact_name=contact_name.strip() or None,
@@ -100,6 +101,8 @@ async def record_outreach(
         constituent=_parse_constituent(constituent),
     )
     db.add(event)
+    if zip_val and len(zip_val) == 5 and zip_val.isdigit():
+        user.zip_code = zip_val
     await db.commit()
     LOGGER.info("Outreach recorded: user=%s member=%s kind=%s", user.email, member_id, kind)
     return {"ok": True, "event_id": event.id}
@@ -108,16 +111,15 @@ async def record_outreach(
 async def get_outreach_aggregate(db: AsyncSession) -> dict[str, int]:
     """Return global outreach counts for landing page ticker/social proof.
 
-    Hero uses calls_total = unique outreach (distinct user_id, member_id pairs)
-    for call/email events; one contact per legislator counts as one.
+    Hero uses calls_total = total actions (each call and each email count
+    separately); call + email for one member = 2.
     """
-    subq = (
-        select(OutreachEvent.user_id, OutreachEvent.member_id)
+    total_result = await db.execute(
+        select(func.count())
+        .select_from(OutreachEvent)
         .where(OutreachEvent.kind.in_(["call", "email"]))
-        .distinct()
     )
-    total_result = await db.execute(select(func.count()).select_from(subq.subquery()))
-    unique_outreach = total_result.scalar() or 0
+    total_actions = total_result.scalar() or 0
     result = await db.execute(
         select(OutreachEvent.kind, func.count())
         .where(OutreachEvent.kind.in_(["call", "email"]))
@@ -125,7 +127,7 @@ async def get_outreach_aggregate(db: AsyncSession) -> dict[str, int]:
     )
     by_kind = {row[0]: row[1] for row in result.all()}
     return {
-        "calls_total": unique_outreach,
+        "calls_total": total_actions,
         "calls_this_week": 0,
         "emails_total": by_kind.get("email", 0),
     }

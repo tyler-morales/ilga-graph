@@ -1,0 +1,123 @@
+/**
+ * Mission statement — home page only. Large academic serif italic quote; heading top-left, attribution bottom-right.
+ * Single font family for the whole block; gray palette.
+ */
+
+.mission-statement {
+  font-family: Georgia, "Times New Roman", "Liberation Serif", serif;
+  margin-top: 2rem;
+  padding: 4rem 0;
+  border-top: 1px solid var(--color-border-light, #e5e5e5);
+  position: relative;
+  isolation: isolate;
+}
+
+.mission-statement::before {
+  content: "";
+  position: absolute;
+  top: 4rem;
+  right: 0;
+  bottom: 4rem;
+  left: 0;
+  z-index: -1;
+  background-image: url("/static/images/kei-truck-illustration.png");
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.1;
+}
+
+/* Header matches .whats-happening-title */
+.mission-statement-heading {
+  font-size: var(--font-size-h2, 1.35rem);
+  font-weight: 600;
+  color: var(--color-text-muted, #444);
+  margin: 0 0 1rem 0;
+  text-align: left;
+}
+
+.mission-statement-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-height: 8rem;
+}
+
+.mission-statement-quote {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-weight: 600;
+  font-style: italic;
+  line-height: 1.35;
+  color: #1a1a1a;
+  margin: 0;
+  padding: 0;
+  border: none;
+  text-align: left;
+}
+
+.mission-statement-attribution {
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-style: italic;
+  color: #1a1a1a;
+  margin: 0;
+  margin-top: auto;
+  text-align: right;
+}
+
+/* CTA lives in .home-cta (between mission statement and Share) so it is not on the truck image. */
+.home-cta {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--color-border-light, #e5e5e5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.mission-statement-cta-btn {
+  display: inline-block;
+  font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+  font-size: var(--font-size-body, 1rem);
+  font-weight: 600;
+  padding: 12px 24px;
+  background: #1a73e8;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.mission-statement-cta-btn:link,
+.mission-statement-cta-btn:visited {
+  color: #fff;
+}
+
+.mission-statement-cta-btn:hover {
+  background: #1765cc;
+}
+
+.mission-statement-cta-btn:focus-visible {
+  outline: 2px solid #1a73e8;
+  outline-offset: 2px;
+}
+
+.home-cta .mission-statement-cta-text {
+  font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+  font-size: var(--font-size-body, 1rem);
+  font-weight: 400;
+  font-style: normal;
+  color: #555;
+  line-height: 1.5;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .mission-statement-quote {
+    font-size: 1.35rem;
+  }
+}

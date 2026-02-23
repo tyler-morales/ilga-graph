@@ -31,6 +31,10 @@
     <link rel="stylesheet" href="/static/css/advocacy-drawer.css">
     <link rel="stylesheet" href="/static/css/advocacy-email.css">
     <link rel="stylesheet" href="/static/css/advocacy-cards.css">
+    <link rel="stylesheet" href="/static/css/magnify-lens.css">
+    <link rel="stylesheet" href="/static/css/whats-happening.css">
+    <link rel="stylesheet" href="/static/css/mission-statement.css">
+    <link rel="stylesheet" href="/static/css/share-section.css">
     <link rel="stylesheet" href="/static/css/intelligence-dashboard.css">
     <link rel="stylesheet" href="/static/css/intelligence-tables.css">
     <script src="https://unpkg.com/@floating-ui/dom@1.6.11/dist/floating-ui.dom.umd.min.js"
@@ -43,7 +47,7 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js" crossorigin="anonymous"></script>
 </head>
 
-<body>
+<body class="{% block body_class %}{% endblock %}">
     {% if show_beta_banner %}
     <div class="beta-banner" id="beta-banner" role="region" aria-label="Beta notice">
         <button type="button" class="beta-banner-emoji" id="beta-banner-emoji-btn" aria-label="Celebrate with confetti">🎉</button>
@@ -134,19 +138,27 @@
         </main>
         <footer class="footer" role="contentinfo">
             <p class="footer-brand">{{ site_name }}</p>
-            <p class="footer-links">
+            <p class="footer-facebook">
                 <a href="https://www.facebook.com/groups/690646129984408" target="_blank" rel="noopener noreferrer">Join the Facebook group</a>
-                {% if show_beta_banner %}
-                <span class="footer-links-sep" aria-hidden="true"> · </span>
-                <a href="{{ beta_banner_feedback_url }}" class="footer-link-report" target="_blank" rel="noopener noreferrer">Report a bug</a>
-                {% endif %}
-                <span class="footer-links-sep" aria-hidden="true"> · </span>
-                <a href="/advocacy">Advocacy</a>
-                <span class="footer-links-sep" aria-hidden="true"> · </span>
-                <a href="/privacy">Privacy</a>
-                <span class="footer-links-sep" aria-hidden="true"> · </span>
-                <a href="/terms">Terms</a>
             </p>
+            <nav class="footer-nav footer-nav-primary" aria-label="Main">
+                <a href="/">Home</a>
+                <span class="footer-nav-sep" aria-hidden="true"> · </span>
+                <a href="/advocacy">Advocacy</a>
+                <span class="footer-nav-sep" aria-hidden="true"> · </span>
+                <a href="/the-issue">The Issue</a>
+                <span class="footer-nav-sep" aria-hidden="true"> · </span>
+                <a href="/legislator-brief">Legislator brief</a>
+            </nav>
+            <nav class="footer-nav footer-nav-secondary" aria-label="Legal and support">
+                {% if show_beta_banner %}
+                <a href="{{ beta_banner_feedback_url }}" target="_blank" rel="noopener noreferrer">Report a bug</a>
+                <span class="footer-nav-sep" aria-hidden="true"> · </span>
+                {% endif %}
+                <a href="/privacy">Privacy</a>
+                <span class="footer-nav-sep" aria-hidden="true"> · </span>
+                <a href="/terms">Terms</a>
+            </nav>
             <p class="footer-disclaimer">Not affiliated with the Illinois General Assembly. Information here is for advocacy and educational purposes only.</p>
         </footer>
     </div>
@@ -171,7 +183,7 @@
 
         {# ── Advocacy context panel ── #}
         <div class="dev-bar-panel" id="dev-panel-advocacy" style="display:none;">
-            <label>ZIP <input type="text" id="dev-zip" value="60601" maxlength="5" pattern="[0-9]{5}"
+            <label>ZIP <input type="text" id="dev-zip" value="60007" maxlength="5" pattern="[0-9]{5}"
                     class="dev-bar-input dev-bar-input-sm"></label>
             <label>Member
                 <select id="dev-member" class="dev-bar-input">
@@ -255,7 +267,7 @@
                 else if (/^\d{5}$/.test(params.get('zip'))) devZipEl.value = params.get('zip');
                 // Sync dev bar ZIP to hero and auto-run search so members show without clicking
                 var heroZip = document.getElementById('zip_code');
-                var zipToUse = devZipEl.value || (heroZip && heroZip.value) || '60601';
+                var zipToUse = devZipEl.value || (heroZip && heroZip.value) || '60007';
                 if (heroZip) heroZip.value = zipToUse;
                 devZipEl.value = zipToUse;
                 sessionStorage.setItem('__ilga_dev_zip', zipToUse);
@@ -391,7 +403,7 @@
                 var drawerWasOpen = sessionStorage.getItem('__ilga_dev_drawer_open') === '1';
                 if (autoView && autoMember && (params.get('view') || drawerWasOpen)) {
                     var rawAutoZip = params.get('zip');
-                    var autoZip = (/^\d{5}$/.test(rawAutoZip) ? rawAutoZip : null) || sessionStorage.getItem('__ilga_dev_zip') || '60601';
+                    var autoZip = (/^\d{5}$/.test(rawAutoZip) ? rawAutoZip : null) || sessionStorage.getItem('__ilga_dev_zip') || '60007';
                     window.addEventListener('DOMContentLoaded', function () {
                         setTimeout(function () {
                             if (typeof openAdvocacyDrawer === 'function') {
@@ -404,6 +416,8 @@
         })();
     </script>
     {% endif %}
+    <script src="/static/js/hero-auth-strip.js"></script>
+    {% block extra_scripts %}{% endblock %}
 </body>
 
 </html>

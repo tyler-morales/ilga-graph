@@ -31,6 +31,8 @@ from ..routers.outreach import get_outreach_aggregate
 from ..security import validate_photo_url_for_drawer
 
 _ZIP_RE = re.compile(r"^\d{5}$")
+# Pre-fill hero ZIP in dev/mocks; must exist in state.zip_to_district.
+DEFAULT_HERO_ZIP = "60007"
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
 _LETTER_PDF_PATH = (
@@ -63,9 +65,13 @@ _HERO_SUBHEAD = (
     "pre-written script in under a minute."
 )
 
+# Two-line subhead: break after "below"; second line starts with "to".
+_HERO_SUBHEAD_ADVOCACY_LINE1 = "Enter your ZIP below"
+_HERO_SUBHEAD_ADVOCACY_LINE2 = "to find your legislators and start outreaching today."
+
 
 def _hero_context() -> dict[str, Any]:
-    """Shared hero headline/subhead for advocacy index and search error response."""
+    """Shared hero headline/subhead for home page (issue-focused)."""
     return {
         "hero_headline": "Fix Illinois Law. Allow Kei Vehicle Registration.",
         "hero_headline_line1": "Fix Illinois Law.",
@@ -77,6 +83,23 @@ def _hero_context() -> dict[str, Any]:
         "hero_headline_highlight": "Kei Vehicle",
         "hero_headline_line2_suffix": " Registration.",
         "hero_subhead": _HERO_SUBHEAD,
+    }
+
+
+def _hero_context_advocacy() -> dict[str, Any]:
+    """Advocacy-page hero: advocate-focused headline (find legislators, take action)."""
+    return {
+        "hero_headline": "Find your legislators. Take action on Kei vehicle registration.",
+        "hero_headline_line1": "Find your legislators.",
+        "hero_headline_line1_prefix": "",
+        "hero_headline_line1_highlight": "",
+        "hero_headline_line1_suffix": "",
+        "hero_headline_line2": "Take action on Kei vehicle registration.",
+        "hero_headline_line2_prefix": "",
+        "hero_headline_highlight": "Take action",
+        "hero_headline_line2_suffix": " on Kei vehicle registration.",
+        "hero_subhead_line1": _HERO_SUBHEAD_ADVOCACY_LINE1,
+        "hero_subhead_line2": _HERO_SUBHEAD_ADVOCACY_LINE2,
     }
 
 
@@ -218,6 +241,47 @@ async def _build_search_results_context(
         )
         outreach_heat = {str(mid): int(cnt) for mid, cnt in heat_result.all()}
 
+    outreach_sidebar: list[dict[str, Any]] = []
+    outreach_calls_count = 0
+    outreach_emails_count = 0
+    if user and getattr(state, "member_lookup_by_id", None):
+        sidebar_result = await db.execute(
+            select(OutreachEvent.member_id, OutreachEvent.kind)
+            .where(OutreachEvent.user_id == user.id)
+            .where(OutreachEvent.kind.in_(["call", "email"]))
+            .order_by(OutreachEvent.created_at.desc())
+        )
+        member_kinds: dict[str, set[str]] = {}
+        for mid, kind in sidebar_result.all():
+            if kind == "call":
+                outreach_calls_count += 1
+            elif kind == "email":
+                outreach_emails_count += 1
+            mid_str = str(mid)
+            if mid_str not in member_kinds:
+                member_kinds[mid_str] = set()
+            member_kinds[mid_str].add(kind)
+        for member_id in member_kinds:
+            member = state.member_lookup_by_id.get(member_id)
+            if member is None:
+                continue
+            kinds = member_kinds[member_id]
+            photo_url = getattr(member, "photo_url", "") or ""
+            if photo_url and not photo_url.startswith(("http://", "https://")):
+                photo_url = urljoin("https://www.ilga.gov/", photo_url.lstrip("/"))
+            outreach_sidebar.append(
+                {
+                    "id": member_id,
+                    "name": getattr(member, "name", "") or "",
+                    "district": getattr(member, "district", "") or "",
+                    "chamber": getattr(member, "chamber", "") or "",
+                    "photo_url": photo_url,
+                    "called": "call" in kinds,
+                    "emailed": "email" in kinds,
+                    "is_constituent": is_constituent_for_zip_member(state, zip_code, member),
+                }
+            )
+
     return {
         "seed_mode": is_using_mocks(),
         "member_count": len(state.members),
@@ -234,6 +298,10 @@ async def _build_search_results_context(
         "user_called_member_ids": user_called_member_ids,
         "user_emailed_member_ids": user_emailed_member_ids,
         "outreach_heat": outreach_heat,
+        "outreach_sidebar": outreach_sidebar,
+        "outreach_calls_count": outreach_calls_count,
+        "outreach_emails_count": outreach_emails_count,
+        "show_my_outreach": user is not None,
     }
 
 
@@ -251,6 +319,10 @@ async def advocacy_index(
     zip_param = (zip or "").strip()
     if zip_param and not _ZIP_RE.match(zip_param):
         zip_param = ""
+    if not zip_param and user and getattr(user, "zip_code", None):
+        saved = (user.zip_code or "").strip()
+        if _ZIP_RE.match(saved) and saved in state.zip_to_district:
+            zip_param = saved
     in_district = zip_param in state.zip_to_district if zip_param else False
     member_count = len(state.members)
     zip_count = len(state.zip_to_district)
@@ -261,10 +333,11 @@ async def advocacy_index(
     except Exception:
         calls_total = 0
         calls_this_week = 0
+    hero_ctx = _hero_context_advocacy()
     ctx: dict[str, Any] = {
         "request": request,
         "title": cfg.SITE_NAME,
-        **_hero_context(),
+        **hero_ctx,
         "categories": CATEGORY_CHOICES,
         "member_count": member_count,
         "zip_count": zip_count,
@@ -275,13 +348,24 @@ async def advocacy_index(
     }
     if zip_param:
         ctx["zip"] = zip_param
-    elif cfg.DEV_MODE:
-        ctx["zip"] = "60601"
-    elif is_using_mocks():
-        ctx["zip"] = "60601"
+    elif cfg.DEV_MODE or is_using_mocks():
+        ctx["zip"] = DEFAULT_HERO_ZIP
     if zip_param and in_district:
         results_ctx = await _build_search_results_context(zip_param, "Transportation", db, user)
         ctx.update(results_ctx)
+    elif zip_param and not in_district:
+        ctx["error"] = (
+            f"ZIP code {zip_param!r} not found in Illinois district data. "
+            "Please enter a valid 5-digit Illinois ZIP code."
+        )
+        if is_using_mocks() and state.zip_to_district:
+            sample = sorted(state.zip_to_district.keys())[:6]
+            ctx["error"] += f" In dev mode, try ZIPs such as: {', '.join(sample)}."
+        ctx["zip"] = DEFAULT_HERO_ZIP
+    user_zip = (getattr(user, "zip_code", None) or "").strip() if user else ""
+    if zip_param and in_district and user and user_zip != zip_param:
+        user.zip_code = zip_param
+        await db.commit()
     return templates.TemplateResponse("index.html", ctx)
 
 
@@ -291,7 +375,7 @@ async def advocacy_test(request: Request):
     if not DEV_MODE:
         raise HTTPException(status_code=404, detail="Not found")
     test_members = ah.test_member_list(state)
-    default_zip = "60601"
+    default_zip = DEFAULT_HERO_ZIP
     return templates.TemplateResponse(
         "advocacy_test.html",
         {
@@ -631,10 +715,11 @@ async def advocacy_search(
     if not _ZIP_RE.match(zip_code):
         error = "Please enter a valid 5-digit Illinois ZIP code."
         tpl = "_results_partial.html" if is_htmx else "index.html"
+        hero_ctx_err = _hero_context_advocacy()
         ctx_error: dict[str, Any] = {
             "request": request,
             "title": cfg.SITE_NAME,
-            **_hero_context(),
+            **hero_ctx_err,
             "categories": CATEGORY_CHOICES,
             "zip": "",
             "category": category or "Transportation",
@@ -660,12 +745,13 @@ async def advocacy_search(
             sample = sorted(state.zip_to_district.keys())[:6]
             error += f" In dev mode, try ZIPs such as: {', '.join(sample)}."
         tpl = "_results_partial.html" if is_htmx else "index.html"
+        hero_ctx_err2 = _hero_context_advocacy()
         ctx_error = {
             "request": request,
             "title": cfg.SITE_NAME,
-            **_hero_context(),
+            **hero_ctx_err2,
             "categories": CATEGORY_CHOICES,
-            "zip": zip_code,
+            "zip": DEFAULT_HERO_ZIP,
             "category": category or "Transportation",
             "error": error,
         }

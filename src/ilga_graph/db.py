@@ -66,6 +66,7 @@ async def _init_db_fallback() -> None:
     async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         for col_sql in (
+            "ALTER TABLE users ADD COLUMN zip_code VARCHAR(10)",
             "ALTER TABLE outreach_events ADD COLUMN contact_name VARCHAR(128)",
             "ALTER TABLE outreach_events ADD COLUMN support_score INTEGER",
             "ALTER TABLE outreach_events ADD COLUMN constituent BOOLEAN",
