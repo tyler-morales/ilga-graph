@@ -271,33 +271,33 @@ class TestConnectionTypes:
 
 
 class TestSafeParseDateIntegration:
-    """Test the safe date parsing helper from main.py."""
+    """Test the safe date parsing helper from date_parse."""
 
     def test_valid_date(self) -> None:
-        from ilga_graph.main import _safe_parse_date
+        from ilga_graph.date_parse import safe_parse_date
 
-        result = _safe_parse_date("2025-06-01", "test")
+        result = safe_parse_date("2025-06-01", "test")
         assert result is not None
         assert result.year == 2025
         assert result.month == 6
         assert result.day == 1
 
     def test_invalid_date_returns_none(self) -> None:
-        from ilga_graph.main import _safe_parse_date
+        from ilga_graph.date_parse import safe_parse_date
 
-        result = _safe_parse_date("not-a-date", "test")
+        result = safe_parse_date("not-a-date", "test")
         assert result is None
 
     def test_empty_string_returns_none(self) -> None:
-        from ilga_graph.main import _safe_parse_date
+        from ilga_graph.date_parse import safe_parse_date
 
-        result = _safe_parse_date("", "test")
+        result = safe_parse_date("", "test")
         assert result is None
 
     def test_wrong_format_returns_none(self) -> None:
-        from ilga_graph.main import _safe_parse_date
+        from ilga_graph.date_parse import safe_parse_date
 
-        result = _safe_parse_date("06/01/2025", "test")
+        result = safe_parse_date("06/01/2025", "test")
         assert result is None
 
 

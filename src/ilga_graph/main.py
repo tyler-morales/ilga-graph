@@ -14,7 +14,6 @@ from strawberry.fastapi import GraphQLRouter
 
 from . import config as cfg
 from .app_state import state
-from .date_parse import parse_bill_date, safe_parse_date
 from .middleware import register_middleware
 from .routers.admin import router as _admin_router
 from .routers.advocacy import router as _advocacy_router
@@ -29,10 +28,6 @@ from .routers.intelligence import router as _intelligence_router
 from .routers.legal import router as _legal_router
 from .routers.outreach import router as _outreach_router
 from .routers.site import router as _site_router
-
-# Backward compat for tests (test_main, test_api)
-_parse_bill_date = parse_bill_date
-_safe_parse_date = safe_parse_date
 
 # ── Configure logging ────────────────────────────────────────────────────────
 logging.basicConfig(

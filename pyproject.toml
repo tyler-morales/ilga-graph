@@ -50,6 +50,9 @@ ml = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+filterwarnings = [
+    "ignore:There is no current event loop:DeprecationWarning:aiosqlite.*",
+]
 
 [tool.ruff]
 target-version = "py310"
