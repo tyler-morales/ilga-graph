@@ -10,9 +10,10 @@ This doc summarizes the DB implementation, potential issues, and how tests verif
 |-----------|------|
 | **db.py** | Async SQLite engine (`ILGA_DB_PATH`), `init_db()` (Alembic upgrade head, or fallback create_all + ALTERs), `get_db()` FastAPI dependency |
 | **alembic/** | Versioned migrations; `alembic upgrade head` creates/updates schema. Schema version stored in `alembic_version` table. |
-| **db_models.py** | `User` (id, email, **zip_code**, created_at, last_login_at), `AuthCode`, `OutreachEvent` (SQLAlchemy ORM) |
+| **db_models.py** | `User` (id, email, **zip_code**, created_at, last_login_at), `AuthCode`, `OutreachEvent`, **OutreachStepEvent** (funnel checkpoints), `CommunityMemberEmail` (community-sourced legislator emails; SQLAlchemy ORM) |
+| **outreach_steps.py** | Canonical step slugs for call (answered + no-answer) and email flows; `is_valid_step()` for validation |
 | **routers/auth.py** | Request code, verify code, logout, `/me` |
-| **routers/outreach.py** | Record event, stats by member, my-history |
+| **routers/outreach.py** | Record event, **record step** (POST /outreach/step), stats by member, my-history |
 | **dependencies.py** | Session token (itsdangerous), `get_current_user_optional`, `require_user` |
 
 ---
@@ -27,17 +28,26 @@ This doc summarizes the DB implementation, potential issues, and how tests verif
 |--------|--------|------|
 | **Auth** | `auth_codes`, then `users` (and `auth_codes.used`) | POST /auth/request-code → POST /auth/verify-code |
 | **Outreach (in-app)** | `outreach_events` | Logged-in user records call/email/no_answer via POST /outreach/record |
+| **Outreach steps (funnel)** | `outreach_step_events` | Logged-in user reaches checkpoints: client POST /outreach/step (member_id, outreach_type, step_slug); server also inserts step when recording call/email/no_answer (call_recorded, email_recorded, no_answer_recorded). Step slugs defined in `outreach_steps.py`. |
+| **Community emails** | `community_member_emails` | When recording a call (POST /outreach/record, kind=call) with optional `legislator_email`, and member has no public email, one row per (member_id, email, user_id); used to pre-fill drawer for next constituent |
 | **Seed script** | `users`, `outreach_events` | `make seed-outreach` or `python scripts/seed_outreach.py` |
 
 - **Auth:** request-code inserts one `AuthCode`; verify-code finds it, marks used, and gets-or-creates `User`, updates `last_login_at`.
-- **Outreach:** POST /outreach/record (requires auth) inserts one `OutreachEvent` per call/email/no_answer and, when a valid 5-digit zip is provided, updates the logged-in user's `User.zip_code` so the advocacy page can pre-fill next time. The server validates that `member_id` refers to a legislator in app state (`find_member_by_id`); if not, it returns 400 so the DB never stores invalid or slug-style ids.
+- **Outreach:** POST /outreach/record (requires auth) inserts one `OutreachEvent` per call/email/no_answer and, when a valid 5-digit zip is provided, updates the logged-in user's `User.zip_code` so the advocacy page can pre-fill next time. In the call drawer, the **call is recorded when the user selects an interest level** (1–5) in the post-call poll, not when they open the follow-up email draft. The **voicemail / no-answer path**: when the user clicks "End call" in the voicemail section, the client records via POST /outreach/record with `kind=no_answer` (when signed in), then POST /advocacy/call/{id}/no-answer returns the no-answer outcome partial and the drawer body is replaced so the user sees "No problem — offices get busy" and CTAs (Send email instead / Close). Anonymous users see the same no-answer screen but no event is persisted. The server validates that `member_id` refers to a legislator in app state (`find_member_by_id`); if not, it returns 400 so the DB never stores invalid or slug-style ids.
 - **Seed:** `scripts/seed_outreach.py` uses the same profile/env as the app; runs `init_db()`, then gets-or-creates user for the backlog email: **prod** → `moratyle@gmail.com`, **dev** → `funky_mama11@gmail.com`. Inserts `OutreachEvent` rows only when the rep name **resolves to a canonical member id** (from cache/mocks members.json). Unresolved names are skipped (no slug fallback), so the DB stays consistent. Re-running seed deletes existing outreach events for that user before inserting, so it is idempotent. Use the same `ILGA_PROFILE` (or same `ILGA_DB_PATH`) for app and seed. In dev, the seed also inserts **"this week"** and mock-advocate events with **hardcoded numeric member_ids** so the landing ticker and heat pills work; all use canonical ids.
 
 ### Read paths (where DB data is used)
 
 - **Auth:** verify-code and GET /auth/me read `auth_codes` and `users`.
-- **Outreach:** GET /outreach/stats/{member_id}, GET /outreach/interest-poll/{member_id} (public), GET /outreach/my-stats and GET /outreach/my-history (auth required).
+- **Outreach:** GET /outreach/stats/{member_id}, GET /outreach/interest-poll/{member_id} (public), GET /outreach/my-stats and GET /outreach/my-history (auth required). **Funnel:** `outreach_step_events` is written only (no read API yet); use for analytics (funnel by step, drop-off, time between steps).
+- **Community emails:** Advocacy drawer and wrap-up (GET /advocacy/drawer, POST /advocacy/call/{id}/wrapup) call `get_effective_email_for_member()` which reads `community_member_emails` to pre-fill recipient when member has no public email; best email = most submitters, then most recent.
 - **Advocacy:** When a logged-in user has a saved `User.zip_code` (valid and in district data), the advocacy page pre-fills the hero ZIP and runs the search without requiring a URL param. When they visit with a valid `?zip=` or record outreach with a zip, that zip is saved to `User.zip_code`. Drawer checks whether the current user has called this member (count from `outreach_events`). Results page builds `user_called_member_ids` / `user_emailed_member_ids` (for "Reached out" pill) and **outreach_heat** (count of distinct users who reached out per member) for the **fire pill** on each card. The **landing hero ticker** shows one number: **total outreach actions** (all time) = count of all call/email events. Copy: "Add your voice. X+ outreach actions already made."
+
+### Outreach checkpoint steps (outreach_steps.py)
+
+- **Call (answered):** drawer_opened, phone_clicked, staffer_name_captured, office_email_captured, end_call_clicked, interest_selected, call_recorded, wrapup_draft_clicked, wrapup_skipped.
+- **Call (no-answer):** drawer_opened, voicemail_toggled, end_call_clicked_vm, no_answer_recorded.
+- **Email:** drawer_opened, signed_in, subject_confirmed, details_filled, pdf_grabbed, send_clicked, email_recorded.
 
 ### Fire pill on member cards (data-driven)
 
@@ -49,7 +59,7 @@ The **fire pill** (🔥 N) in the corner of each advocacy member card is **data-
 
 1. **Startup log** — Run the app (e.g. `make dev`). In logs you should see: `Database ready at data/ilga_dev.db` (or your path). Confirms `init_db()` ran and path is correct.
 
-2. **Tables exist** — `sqlite3 data/ilga_dev.db` then `SELECT name FROM sqlite_master WHERE type='table';` — expect `users`, `auth_codes`, `outreach_events`.
+2. **Tables exist** — `sqlite3 data/ilga_dev.db` then `SELECT name FROM sqlite_master WHERE type='table';` — expect `users`, `auth_codes`, `outreach_events`, `outreach_step_events`, `community_member_emails`.
 
 3. **Auth write + read** — Request a code (POST /auth/request-code), then in DB: `SELECT * FROM auth_codes ORDER BY id DESC LIMIT 1;` — one new row. Verify code (POST /auth/verify-code); then `SELECT * FROM users;` — one user; that `auth_codes.used` = 1. GET /auth/me returns that email.
 
