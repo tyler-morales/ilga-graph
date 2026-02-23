@@ -80,3 +80,12 @@ flowchart LR
 - **Outreach data** (calls, emails, no-answer): stored in **SQLite**. To get sample data in dev, run `make seed-outreach` once with `ILGA_PROFILE=dev`.
 
 See [DB and outreach](db-and-outreach.md) for schema and auth.
+
+---
+
+## Analytics cache (scorecards + Moneyball)
+
+Scorecards and Moneyball are computed from members + bills; they can be cached so startup skips recomputation. Cache is stored under the same data dir as members/bills (`scorecards.json`, `moneyball.json`).
+
+- **Invalidation:** Cache is used only if it is **newer than** `members.json` and `bills.json`, and if its **schema version** matches the app. When you change scoring logic (e.g. in `moneyball.py` or `cel.py`), bump `_ANALYTICS_CACHE_VERSION` in `analytics_cache.py` so old caches are ignored and analytics recompute.
+- **Moneyball and CEL:** The **Moneyball composite score** (0–100) uses **CEL Legislative Effectiveness Score (LES)** for the effectiveness component (replacing the legacy law passage rate in that slot). LES is computed first (stage-weighted bill progress, chamber-relative), normalized to 0–1 by cohort max, then blended with pipeline, magnet, bridge, centrality, and institutional weight. So CEL directly drives both the score and Power Broker ranking; changes to CEL logic will change Moneyball and who ranks first after cache invalidation.

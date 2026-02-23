@@ -290,7 +290,7 @@ class TestComputeMoneyball:
         cosponsor_republican: Member,
     ) -> None:
         members = [mixed_bill_member, cosponsor_republican]
-        # All weight on effectiveness
+        # All weight on effectiveness (CEL LES when available)
         w = MoneyballWeights(
             effectiveness=1.0,
             pipeline=0,
@@ -301,8 +301,13 @@ class TestComputeMoneyball:
         )
         report = compute_moneyball(members, weights=w)
         mb = report.profiles[mixed_bill_member.id]
-        # Score should be effectiveness_rate * 100
-        expected = round(mb.effectiveness_rate * 100, 2)
+        # Effectiveness component is CEL LES normalized to cohort max; top LES gets 100
+        max_les = max(p.les for p in report.profiles.values())
+        expected = (
+            round(min(mb.les / max_les, 1.0) * 100, 2)
+            if max_les > 0
+            else round(mb.effectiveness_rate * 100, 2)
+        )
         assert mb.moneyball_score == expected
 
     def test_zero_bills_no_division_error(

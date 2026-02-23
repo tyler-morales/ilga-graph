@@ -320,9 +320,9 @@ class MoneyballProfile:
     moneyball_score: float = 0.0
 
     # ── CEL-style Legislative Effectiveness Score ──
-    les: float = 0.0               # Normalized LES (chamber avg = 1)
-    les_benchmark: float = 0.0     # OLS-predicted LES (seniority + majority + chair)
-    les_expectation: str = ""      # "Above", "Meets", or "Below" expectations
+    les: float = 0.0  # Normalized LES (chamber avg = 1)
+    les_benchmark: float = 0.0  # OLS-predicted LES (seniority + majority + chair)
+    les_expectation: str = ""  # "Above", "Meets", or "Below" expectations
 
     # ── Rank (populated by the ranker) ──
     rank_overall: int = 0
@@ -339,14 +339,15 @@ class MoneyballWeights:
     All weights should sum to 1.0 for interpretability, but the engine
     normalizes them regardless.
 
-    Default allocation (v2 — with institutional power bonus):
+    Default allocation (v3 — effectiveness = CEL LES):
 
-    * effectiveness  24%  (was 30%)
-    * pipeline       16%  (was 20%)
-    * magnet         16%  (was 20%)
-    * bridge         12%  (was 15%)
-    * centrality     12%  (was 15%)
-    * institutional  20%  (new)
+    * effectiveness  24%  CEL Legislative Effectiveness Score (LES), normalized
+                         to cohort max; fallback to law success rate if no LES.
+    * pipeline       16%
+    * magnet         16%
+    * bridge         12%
+    * centrality     12%
+    * institutional  20%
     """
 
     def __init__(
@@ -387,15 +388,24 @@ def _normalize_magnet(magnet: float, max_magnet: float) -> float:
     return min(magnet / max_magnet, 1.0)
 
 
+def _effectiveness_component(profile: MoneyballProfile, max_les: float) -> float:
+    """CEL LES (normalized 0-1) when available; else legacy effectiveness_rate."""
+    if max_les > 0 and profile.les >= 0:
+        return min(profile.les / max_les, 1.0)
+    return profile.effectiveness_rate
+
+
 def _compute_moneyball_score(
     profile: MoneyballProfile,
     max_magnet: float,
     weights: MoneyballWeights,
+    max_les: float = 0.0,
 ) -> float:
     """Compute the composite Moneyball Score (0.0 – 100.0).
 
     Components (each normalized to 0-1 before weighting):
-    - effectiveness_rate: already 0-1
+    - effectiveness: CEL Legislative Effectiveness Score (LES) normalized to
+      cohort max when available; else legacy law success rate.
     - pipeline_depth_normalized: already 0-1
     - magnet_normalized: magnet / max_magnet across cohort
     - bridge_score: already 0-1
@@ -404,9 +414,10 @@ def _compute_moneyball_score(
     """
     w = weights
     total_weight = w.total or 1.0
+    eff = _effectiveness_component(profile, max_les)
 
     raw = (
-        w.effectiveness * profile.effectiveness_rate
+        w.effectiveness * eff
         + w.pipeline * profile.pipeline_depth_normalized
         + w.magnet * _normalize_magnet(profile.magnet_score, max_magnet)
         + w.bridge * profile.bridge_score
@@ -771,16 +782,7 @@ def compute_moneyball(
                 1,
             )
 
-    # ── Step 4: Compute composite scores ──
-    max_magnet = max((p.magnet_score for p in profiles.values()), default=0.0)
-    for profile in profiles.values():
-        profile.moneyball_score = _compute_moneyball_score(
-            profile,
-            max_magnet,
-            weights,
-        )
-
-    # ── Step 4b: CEL-style Legislative Effectiveness Scores ──
+    # ── Step 4a: CEL-style Legislative Effectiveness Scores (before composite) ──
     les_results = compute_les_scores(members, witness_slips=witness_slips)
     for member_id, les_result in les_results.items():
         profile = profiles.get(member_id)
@@ -788,6 +790,17 @@ def compute_moneyball(
             profile.les = les_result.les
             profile.les_benchmark = les_result.les_benchmark
             profile.les_expectation = les_result.les_expectation
+
+    # ── Step 4b: Compute composite scores (effectiveness = CEL LES when available) ──
+    max_magnet = max((p.magnet_score for p in profiles.values()), default=0.0)
+    max_les = max((p.les for p in profiles.values()), default=0.0)
+    for profile in profiles.values():
+        profile.moneyball_score = _compute_moneyball_score(
+            profile,
+            max_magnet,
+            weights,
+            max_les=max_les,
+        )
 
     # ── Step 5: Assign badges ──
     for profile in profiles.values():

@@ -7,11 +7,8 @@ import pytest
 from ilga_graph.cel import (
     BillCategory,
     CELStage,
-    MemberLESResult,
-    _bill_cosponsor_counts,
     _derive_chamber_majority,
     _is_committee_chair,
-    _is_majority_party,
     _seniority_terms,
     bill_reaches_cel_stage,
     classify_bill_category,
@@ -19,7 +16,6 @@ from ilga_graph.cel import (
     compute_les_scores,
 )
 from ilga_graph.models import Bill, CareerRange, Member, WitnessSlip
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -259,7 +255,9 @@ class TestDeriveChamberMajority:
 
 class TestComputeLESScores:
     def test_returns_result_for_every_member(self) -> None:
-        m1 = _make_member("1", "House", "Democrat", bills=[_make_bill("HB0001", "Public Act 104-0001")])
+        m1 = _make_member(
+            "1", "House", "Democrat", bills=[_make_bill("HB0001", "Public Act 104-0001")]
+        )
         m2 = _make_member("2", "House", "Republican", bills=[])
         results = compute_les_scores([m1, m2])
         assert "1" in results

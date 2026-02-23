@@ -134,8 +134,12 @@ def get_moneyball_components() -> list[MoneyballComponent]:
         MoneyballComponent(
             id="effectiveness",
             weight_pct=24.0,
-            name="Passage rate (laws)",
-            short_definition="Laws passed ÷ laws filed (HB/SB only).",
+            name="Legislative effectiveness (CEL)",
+            short_definition=(
+                "CEL Legislative Effectiveness Score (LES): weighted bill progress "
+                "through BILL→AIC→ABC→PASS→LAW, normalized so chamber avg = 1. "
+                "Uses C/S/SS category weights; normalized to 0–1 in the composite."
+            ),
         ),
         MoneyballComponent(
             id="pipeline",
@@ -179,9 +183,9 @@ def get_moneyball_components() -> list[MoneyballComponent]:
 
 MONEYBALL_ONE_LINER: str = (
     "Moneyball is a 0–100 composite that ranks legislators by combining "
-    "passage rate, how far their bills go, co-sponsorship pull, cross-party work, "
-    "network connectedness, and institutional role. We use it to surface high-impact "
-    "targets beyond name recognition."
+    "CEL-style legislative effectiveness (LES), pipeline depth, co-sponsorship pull, "
+    "cross-party work, network connectedness, and institutional role. We use it to "
+    "surface high-impact targets beyond name recognition."
 )
 
 

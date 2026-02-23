@@ -5,11 +5,18 @@ Uses SQLAlchemy async with aiosqlite driver.  The DB file lives at
 
 Call ``init_db()`` once during app lifespan to run migrations (Alembic),
 then use ``get_db()`` as a FastAPI dependency to get an ``AsyncSession``.
+
+Migrations run in a subprocess to avoid in-process Alembic (logging takeover
+or exit behavior that can kill the server). Set ``ILGA_SKIP_MIGRATIONS=1`` to
+skip migrations on startup (run ``alembic upgrade head`` manually first).
 """
 
 from __future__ import annotations
 
 import logging
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -18,7 +25,10 @@ from . import config as cfg
 
 LOGGER = logging.getLogger(__name__)
 
-DB_PATH: Path = Path(cfg._env("ILGA_DB_PATH", "data/ilga.db"))
+# Resolve DB path against project root so it's consistent under uvicorn --app-dir src
+_project_root = Path(__file__).resolve().parent.parent.parent
+_db_path_cfg = Path(cfg._env("ILGA_DB_PATH", "data/ilga.db"))
+DB_PATH: Path = _project_root / _db_path_cfg if not _db_path_cfg.is_absolute() else _db_path_cfg
 
 _engine = create_async_engine(
     f"sqlite+aiosqlite:///{DB_PATH}",
@@ -29,24 +39,43 @@ _engine = create_async_engine(
 async_session_factory = async_sessionmaker(_engine, expire_on_commit=False)
 
 
-def _run_alembic_upgrade() -> bool:
-    """Run Alembic migrations to head if available. Returns True if ran, False to use fallback."""
-    try:
-        from alembic.config import Config
-
-        from alembic import command
-    except ImportError:
-        return False
-    db_path_abs = DB_PATH.resolve()
-    root = db_path_abs.parent
+def _alembic_root() -> Path | None:
+    """Return project root (where alembic.ini lives), or None."""
+    root = DB_PATH.resolve().parent
     while root != root.parent and not (root / "alembic.ini").exists():
         root = root.parent
-    if not (root / "alembic.ini").exists():
+    return root if (root / "alembic.ini").exists() else None
+
+
+def _run_alembic_upgrade() -> bool:
+    """Run Alembic migrations to head via subprocess to avoid in-process exit/logging issues."""
+    if os.environ.get("ILGA_SKIP_MIGRATIONS") == "1":
+        LOGGER.info("Skipping migrations (ILGA_SKIP_MIGRATIONS=1)")
         return False
-    config = Config(str(root / "alembic.ini"))
-    config.set_main_option("script_location", str(root / "alembic"))
-    config.set_main_option("sqlalchemy.url", f"sqlite:///{db_path_abs}")
-    command.upgrade(config, "head")
+    root = _alembic_root()
+    if root is None:
+        return False
+    alembic_ini = root / "alembic.ini"
+    env = os.environ.copy()
+    env["ILGA_DB_PATH"] = str(DB_PATH.resolve())
+    result = subprocess.run(
+        [sys.executable, "-m", "alembic", "-c", str(alembic_ini), "upgrade", "head"],
+        cwd=str(root),
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if result.returncode != 0:
+        out = (result.stdout or "").strip()
+        err = (result.stderr or "").strip()
+        msg = f"Alembic upgrade exited {result.returncode}"
+        if err:
+            msg += f"\nstderr:\n{err}"
+        if out:
+            msg += f"\nstdout:\n{out}"
+        LOGGER.error("%s", msg)
+        raise RuntimeError(msg)
     return True
 
 

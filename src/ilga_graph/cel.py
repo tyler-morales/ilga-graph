@@ -38,23 +38,23 @@ _CATEGORY_WEIGHTS: dict[str, int] = {
 
 # Keywords indicating a commemorative bill (case-insensitive match on description/synopsis)
 _COMMEMORATIVE_KEYWORDS: tuple[str, ...] = (
-    "designat",          # "designate", "designation"
+    "designat",  # "designate", "designation"
     "memorial",
     "honor",
     "honour",
-    "recogniz",          # "recognize", "recognition"
+    "recogniz",  # "recognize", "recognition"
     "congratulat",
-    "commemo",           # "commemorate", "commemorating"
+    "commemo",  # "commemorate", "commemorating"
     "private relief",
     "renaming",
     "rename",
     "tribute",
-    "celebrat",          # "celebrate", "celebrating"
+    "celebrat",  # "celebrate", "celebrating"
     "proclaim",
 )
 
 # Thresholds for Substantive & Significant (proxy definitions for Illinois)
-_SS_MIN_COSPONSORS: int = 5   # >= 5 co-sponsors on the bill
+_SS_MIN_COSPONSORS: int = 5  # >= 5 co-sponsors on the bill
 _SS_MIN_WITNESS_SLIPS: int = 10  # >= 10 witness slips on the bill
 
 
@@ -108,10 +108,7 @@ def classify_bill_category(
     if _is_commemorative(bill):
         return BillCategory.COMMEMORATIVE
 
-    if (
-        cosponsor_count >= _SS_MIN_COSPONSORS
-        or witness_slip_count >= _SS_MIN_WITNESS_SLIPS
-    ):
+    if cosponsor_count >= _SS_MIN_COSPONSORS or witness_slip_count >= _SS_MIN_WITNESS_SLIPS:
         return BillCategory.SIGNIFICANT
 
     return BillCategory.SUBSTANTIVE
@@ -182,7 +179,7 @@ class MemberLESResult:
     """Per-member CEL Legislative Effectiveness Score and benchmark."""
 
     member_id: str
-    les: float           # Normalized LES (chamber avg = 1)
+    les: float  # Normalized LES (chamber avg = 1)
     les_benchmark: float  # OLS-predicted LES from seniority/majority/chair
     les_expectation: str  # "Above", "Meets", or "Below"
     # Raw stage weights (for transparency / debugging)
