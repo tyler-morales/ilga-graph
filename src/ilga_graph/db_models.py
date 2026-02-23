@@ -67,7 +67,8 @@ class OutreachStepEvent(Base):
     """One row per checkpoint reached in call/email flow (funnel analytics).
 
     outreach_type is 'call' or 'email'. step_slug comes from outreach_steps.py.
-    No unique constraint: we allow multiple reached_at per (user, member, type, step)
+    For anonymous funnel tracking: user_id can be NULL when session_id is set.
+    No unique constraint: we allow multiple reached_at per (user/session, member, type, step)
     for repeat sessions; analytics can take max(reached_at) or count as needed.
     """
 
@@ -75,6 +76,7 @@ class OutreachStepEvent(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int | None] = mapped_column(nullable=True, index=True)
+    session_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     member_id: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     outreach_type: Mapped[str] = mapped_column(String(16), nullable=False)  # call | email
     step_slug: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
@@ -83,6 +85,12 @@ class OutreachStepEvent(Base):
     __table_args__ = (
         Index("ix_outreach_step_events_user_member_type", "user_id", "member_id", "outreach_type"),
         Index("ix_outreach_step_events_type_slug_time", "outreach_type", "step_slug", "reached_at"),
+        Index(
+            "ix_outreach_step_events_session_type_time",
+            "session_id",
+            "outreach_type",
+            "reached_at",
+        ),
     )
 
 

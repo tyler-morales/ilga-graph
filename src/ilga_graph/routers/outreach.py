@@ -23,7 +23,7 @@ from ..db_models import CommunityMemberEmail, OutreachEvent, OutreachStepEvent, 
 from ..dependencies import get_current_user_optional
 from ..member_lookup import find_member_by_id
 from ..outreach_steps import is_valid_step
-from ..security import CSRF_COOKIE_NAME, validate_csrf_token
+from ..security import CSRF_COOKIE_NAME, validate_anon_session_id, validate_csrf_token
 
 _LEGISLATOR_EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", re.IGNORECASE)
 _LEGISLATOR_EMAIL_MAX = 320
@@ -179,19 +179,22 @@ async def record_outreach_step(
     member_id: str = Form(...),
     outreach_type: str = Form(...),
     step_slug: str = Form(...),
+    session_id: str | None = Form(None),
     csrf_token: str | None = Form(None),
     user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ):
-    """Record a checkpoint step in the call/email funnel. Auth required; no-op if not signed in."""
+    """Record a checkpoint step in the call/email funnel.
+
+    Authenticated: store user_id, session_id not persisted.
+    Anonymous: accepted when session_id is present and valid; stored with user_id=NULL.
+    """
     cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
     if not validate_csrf_token(csrf_token, cookie_token):
         return JSONResponse(
             {"ok": False, "error": "Invalid or expired security token. Reload the page."},
             status_code=403,
         )
-    if user is None:
-        return JSONResponse({"ok": False, "error": "Not authenticated"}, status_code=401)
 
     outreach_type = outreach_type.strip().lower()
     if outreach_type not in ("call", "email"):
@@ -208,14 +211,38 @@ async def record_outreach_step(
             status_code=400,
         )
 
-    db.add(
-        OutreachStepEvent(
-            user_id=user.id,
-            member_id=mid,
-            outreach_type=outreach_type,
-            step_slug=step_slug.strip(),
+    if user is not None:
+        db.add(
+            OutreachStepEvent(
+                user_id=user.id,
+                session_id=None,
+                member_id=mid,
+                outreach_type=outreach_type,
+                step_slug=step_slug.strip(),
+            )
         )
-    )
+    else:
+        anon_sid = validate_anon_session_id(session_id)
+        if anon_sid is None:
+            if session_id is not None and str(session_id).strip():
+                return JSONResponse(
+                    {"ok": False, "error": "Invalid session_id format"},
+                    status_code=400,
+                )
+            return JSONResponse(
+                {"ok": False, "error": "Not authenticated"},
+                status_code=401,
+            )
+        db.add(
+            OutreachStepEvent(
+                user_id=None,
+                session_id=anon_sid,
+                member_id=mid,
+                outreach_type=outreach_type,
+                step_slug=step_slug.strip(),
+            )
+        )
+
     await db.commit()
     return {"ok": True}
 

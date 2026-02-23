@@ -1282,12 +1282,15 @@
             body.append('email', _pendingAuthEmail);
             body.append('code', code);
             body.append('csrf_token', getCsrfToken());
+            var anonSid = typeof getAnonSessionId === 'function' ? getAnonSessionId() : null;
+            if (anonSid) body.append('anon_session_id', anonSid);
             fetch('/auth/verify-code', { method: 'POST', body: body, credentials: 'same-origin' })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
                     codeSubmit.disabled = false;
                     codeSubmit.textContent = 'Confirm';
                     if (data.ok && data.email) {
+                        try { sessionStorage.removeItem('ilga_anon_sid'); } catch (e) {}
                         goVerified(data.email);
                     } else {
                         if (codeError) { codeError.textContent = data.error || 'That code didn\'t work — try again or resend.'; codeError.hidden = false; }
@@ -1620,12 +1623,15 @@
     }
 
     function recordOutreachStep(memberId, outreachType, stepSlug) {
-        if (!_ilgaUserEmail) return Promise.resolve();
         var body = new FormData();
         body.append('member_id', memberId || '');
         body.append('outreach_type', outreachType || 'call');
         body.append('step_slug', stepSlug || '');
         body.append('csrf_token', getCsrfToken());
+        if (!_ilgaUserEmail && typeof getAnonSessionId === 'function') {
+            var anonSid = getAnonSessionId();
+            if (anonSid) body.append('session_id', anonSid);
+        }
         return fetch('/outreach/step', { method: 'POST', body: body, credentials: 'same-origin' })
             .then(function (r) { return r.json ? r.json() : {}; })
             .catch(function () { return undefined; });

@@ -374,7 +374,8 @@ a:visited {
   user-select: none;
 }
 
-.footer-disclaimer {
+.footer-disclaimer,
+.footer-usage-notice {
   font-size: var(--font-size-sm);
   color: #888;
   text-align: center;
@@ -383,7 +384,8 @@ a:visited {
 }
 
 @media (max-width: 640px) {
-  .footer-disclaimer {
+  .footer-disclaimer,
+  .footer-usage-notice {
     white-space: normal;
   }
 }

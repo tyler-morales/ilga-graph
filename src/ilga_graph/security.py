@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hmac
 import logging
+import re
 import time
 from collections import defaultdict, deque
 
@@ -109,6 +110,20 @@ def rate_limit_verify_code(client_ip: str) -> bool:
         window_seconds=900,
         max_count=cfg.RATE_LIMIT_VERIFY_CODE_PER_15MIN,
     )
+
+
+# Anonymous funnel: session id from client (sessionStorage ilga_anon_sid).
+_ANON_SESSION_ID_RE = re.compile(r"^[a-zA-Z0-9\-]{1,64}$")
+
+
+def validate_anon_session_id(raw: str | None) -> str | None:
+    """Return trimmed session_id if valid (1–64 chars, alphanumeric + hyphen); else None."""
+    if not raw:
+        return None
+    s = raw.strip()
+    if not s or len(s) > 64 or not _ANON_SESSION_ID_RE.match(s):
+        return None
+    return s
 
 
 def validate_page_url(url: str | None) -> str | None:
