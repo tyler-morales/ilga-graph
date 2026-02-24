@@ -1403,6 +1403,13 @@
     document.addEventListener('ilga:goal-updated', function (e) {
         var zip = e.detail && e.detail.zip;
         if (zip && typeof updateGoalBlockFromStorage === 'function') updateGoalBlockFromStorage(zip);
+        var memberId = e.detail && e.detail.memberId;
+        var kind = e.detail && e.detail.kind;
+        if (kind === 'call' && memberId) {
+            var body = document.getElementById('advocacy-drawer-body');
+            var nudge = body && body.querySelector('#gmail-call-other-nudge');
+            if (nudge && nudge.getAttribute('data-nudge-member-id') === memberId) nudge.setAttribute('hidden', '');
+        }
     });
 
     /* ── Goal sidebar: click ZIP to edit; commit updates hero form, URL, and re-fetches results so goal reflects new district ── */
@@ -1659,10 +1666,7 @@
         var brokerNudge = clone.querySelector('#drawer-done-broker-nudge');
         if (msgName) msgName.textContent = currentMemberName;
         if (!didEmail && comeback) { comeback.removeAttribute('hidden'); }
-        var otherAlreadyCalled = otherMemberId && typeof getGoalProgress === 'function' && zip && getGoalProgress(zip)[otherMemberId] && getGoalProgress(zip)[otherMemberId].call;
-        /* #region agent log */
-        fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9b1dec'},body:JSON.stringify({sessionId:'9b1dec',location:'index.html:showDrawerDoneForMember',message:'done view CTA',data:{otherId:otherMemberId,zip:zip||'',otherAlreadyCalled:!!otherAlreadyCalled,hideCTA:!!otherAlreadyCalled},timestamp:Date.now(),hypothesisId:'H3'})}).catch(function(){});
-        /* #endregion */
+        var otherAlreadyCalled = otherMemberId && typeof memberAlreadyCalled === 'function' && memberAlreadyCalled(otherMemberId, zip);
         if (otherMemberId && otherLabel && !otherAlreadyCalled) {
             if (nextLabel) nextLabel.textContent = otherLabel;
             if (cta) {
@@ -1796,6 +1800,24 @@
             return {};
         }
     }
+
+    /**
+     * Returns true if this member was already called (anon: localStorage; signed-in: goal block DOM or localStorage).
+     * Used so "Call your Senator/Rep" nudge and done-view CTA disappear when that member was already called.
+     */
+    function memberAlreadyCalled(memberId, zip) {
+        if (!memberId) return false;
+        var storage = typeof getGoalProgress === 'function' && zip ? getGoalProgress(zip) : {};
+        var progress = storage[memberId] || null;
+        if (progress && progress.call) return true;
+        var results = document.getElementById('results');
+        var block = results && results.querySelector('.outreach-goal');
+        if (!block) return false;
+        var status = block.querySelector('.outreach-goal__action-status[data-goal-member="' + memberId + '"][data-goal-kind="call"]');
+        var row = status && status.closest('.outreach-goal__action');
+        return !!(row && row.classList.contains('outreach-goal__action--done'));
+    }
+
     function setGoalActionDone(zip, memberId, kind) {
         if (!zip || !/^\d{5}$/.test(zip) || !memberId || !kind) return;
         var key = GOAL_STORAGE_PREFIX + zip;
@@ -1805,7 +1827,7 @@
         try {
             localStorage.setItem(key, JSON.stringify(data));
         } catch (e) { /* quota or disabled */ }
-        document.dispatchEvent(new CustomEvent('ilga:goal-updated', { detail: { zip: zip } }));
+        document.dispatchEvent(new CustomEvent('ilga:goal-updated', { detail: { zip: zip, memberId: memberId, kind: kind } }));
     }
     function updateGoalBlockFromStorage(zip) {
         if (_ilgaUserEmail) return;
@@ -2175,20 +2197,27 @@
         var wrap = container && container.querySelector('.gmail-compose');
         if (!wrap) return;
         container.classList.add('drawer-email-open');
-        var nudgeOnInit = wrap.querySelector('#gmail-call-other-nudge');
-        if (nudgeOnInit) nudgeOnInit.setAttribute('hidden', '');
-        /* #region agent log */
         var _drawer = document.getElementById('advocacy-drawer');
         var _mid = (_drawer && _drawer.getAttribute('data-member-id')) || '';
         var _zip = typeof getConstituentZip === 'function' ? getConstituentZip() : '';
-        var _progress = (typeof getGoalProgress === 'function' && _zip) ? getGoalProgress(_zip) : {};
-        var _currentCalled = !!(_mid && _progress[_mid] && _progress[_mid].call);
+        var _currentCalled = _mid && _zip && typeof memberAlreadyCalled === 'function' && memberAlreadyCalled(_mid, _zip);
+        var nudgeOnInit = (wrap && wrap.querySelector('#gmail-call-other-nudge')) || (container && container.querySelector('#gmail-call-other-nudge'));
+        if (nudgeOnInit) nudgeOnInit.setAttribute('hidden', '');
+        if (_currentCalled && !nudgeOnInit && container) {
+            var nudgeFallback = container.querySelector('#gmail-call-other-nudge');
+            if (nudgeFallback) nudgeFallback.setAttribute('hidden', '');
+        }
+        if (_currentCalled && container) {
+            var hideNudgeAgain = function () {
+                var el = container.querySelector('#gmail-call-other-nudge');
+                if (el) el.setAttribute('hidden', '');
+            };
+            requestAnimationFrame(hideNudgeAgain);
+        }
         var _callFirstBanner = wrap.querySelector('.gmail-banner-tip');
         if (_callFirstBanner && _mid && _zip && _currentCalled) {
             _callFirstBanner.setAttribute('hidden', '');
         }
-        fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9b1dec'},body:JSON.stringify({sessionId:'9b1dec',location:'index.html:initDrawerEmailActions',message:'email init call-first',data:{hasBanner:!!_callFirstBanner,memberId:_mid,zip:_zip,currentMemberCalled:_currentCalled,hiddenBanner:_currentCalled&&!!_callFirstBanner},timestamp:Date.now(),hypothesisId:'H2'})}).catch(function(){});
-        /* #endregion */
         initDrawerFromAuth(wrap);
 
         var subjectEl = wrap.querySelector('#gmail-subject-text');
@@ -2553,7 +2582,7 @@
                         if (mailtoBtn) mailtoBtn.setAttribute('hidden', '');
                         var ctx = typeof getDrawerDoneContext === 'function' ? getDrawerDoneContext(true) : null;
                         var zip = getConstituentZip();
-                        var otherCallDone = zip && ctx && ctx.otherId && typeof getGoalProgress === 'function' && !!(getGoalProgress(zip)[ctx.otherId] && getGoalProgress(zip)[ctx.otherId].call);
+                        var otherCallDone = ctx && ctx.otherId && typeof memberAlreadyCalled === 'function' && memberAlreadyCalled(ctx.otherId, zip);
                         if (ctx && ctx.otherId && ctx.otherLabel && !otherCallDone) {
                             var nudge = wrap.querySelector('#gmail-call-other-nudge');
                             var nudgeBtn = wrap.querySelector('#gmail-call-other-btn');
@@ -2561,6 +2590,7 @@
                             if (nudge && nudgeBtn && labelSpan) {
                                 labelSpan.textContent = ctx.otherLabel;
                                 nudgeBtn.setAttribute('aria-label', 'Call your ' + ctx.otherLabel);
+                                nudge.setAttribute('data-nudge-member-id', ctx.otherId || '');
                                 var photoUrl = '';
                                 var card = document.getElementById('card-' + ctx.otherId);
                                 if (card) {
