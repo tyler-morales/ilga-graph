@@ -1,0 +1,80 @@
+{# HTMX partial: switchboard grid rows. Receives legislators, zip_code, error. #}
+{% if error %}
+<p class="mock-grid-error" role="alert">{{ error }}</p>
+{% else %}
+<div class="mock-switchboard-grid" role="table" aria-label="Mock outreach state by legislator">
+    <div class="mock-grid-header" role="row">
+      <span class="mock-grid-cell mock-cell-legislator" role="columnheader">Legislator</span>
+      <span class="mock-grid-cell mock-cell-call" role="columnheader">Call</span>
+      <span class="mock-grid-cell mock-cell-email" role="columnheader">Email</span>
+      <span class="mock-grid-cell mock-cell-support" role="columnheader">Support</span>
+      <span class="mock-grid-cell mock-cell-contact" role="columnheader">Contact</span>
+      <span class="mock-grid-cell mock-cell-constituent" role="columnheader">Constituent</span>
+      <span class="mock-grid-cell mock-cell-heat" role="columnheader">Heat</span>
+    </div>
+    {% for leg in legislators %}
+    <div class="mock-row" role="row" data-member-id="{{ leg.member_id }}">
+      <div class="mock-grid-cell mock-cell-legislator" role="cell">
+        <div class="mock-legislator-info">
+          {% if leg.photo_url %}
+          <img src="{{ leg.photo_url }}" alt="" class="mock-legislator-photo" width="48" height="48">
+          {% else %}
+          <span class="mock-legislator-initials" aria-hidden="true">{{ leg.name[:2] if leg.name else '?' }}</span>
+          {% endif %}
+          <div class="mock-legislator-meta">
+            <span class="mock-legislator-name">{{ leg.name }}</span>
+            <span class="mock-legislator-role">{{ leg.role_label }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="mock-grid-cell mock-cell-call" role="cell">
+        <button type="button"
+                class="mock-jack mock-jack-call"
+                data-action="call"
+                aria-pressed="false"
+                aria-label="Call {{ leg.name }}: off">
+          <span class="mock-jack-light" aria-hidden="true"></span>
+        </button>
+      </div>
+      <div class="mock-grid-cell mock-cell-email" role="cell">
+        <button type="button"
+                class="mock-jack mock-jack-email"
+                data-action="email"
+                aria-pressed="false"
+                aria-label="Email {{ leg.name }}: off">
+          <span class="mock-jack-light" aria-hidden="true"></span>
+        </button>
+      </div>
+      <div class="mock-grid-cell mock-cell-support" role="cell">
+        <select class="mock-support-select" aria-label="Support score for {{ leg.name }}" data-member-id="{{ leg.member_id }}">
+          <option value="1">1 Opposed</option>
+          <option value="2">2 Skeptical</option>
+          <option value="3">3 Neutral</option>
+          <option value="4" selected>4 Interested</option>
+          <option value="5">5 Champion</option>
+        </select>
+      </div>
+      <div class="mock-grid-cell mock-cell-contact" role="cell">
+        <input type="text"
+               class="mock-contact-input"
+               placeholder="Staffer name"
+               aria-label="Contact name for {{ leg.name }}"
+               data-member-id="{{ leg.member_id }}"
+               maxlength="128">
+      </div>
+      <div class="mock-grid-cell mock-cell-constituent" role="cell">
+        <label class="mock-constituent-label">
+          <input type="checkbox" class="mock-constituent-checkbox" checked data-member-id="{{ leg.member_id }}" aria-label="{{ leg.name }} constituent">
+          <span aria-hidden="true">Yes</span>
+        </label>
+      </div>
+      <div class="mock-grid-cell mock-cell-heat" role="cell">
+        <label class="mock-heat-label">
+          <span class="mock-heat-value" data-member-id="{{ leg.member_id }}">0</span>
+          <input type="range" class="mock-heat-slider" min="0" max="10" value="0" data-member-id="{{ leg.member_id }}" aria-label="Community heat for {{ leg.name }}">
+        </label>
+      </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
