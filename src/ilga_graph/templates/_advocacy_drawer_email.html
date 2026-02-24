@@ -23,19 +23,6 @@
         </div>
     </div>
 
-    {# ── Friendly reminder: call first if they haven’t already ── #}
-    {% if show_call_nudge is defined and show_call_nudge %}
-    <div class="gmail-banner gmail-banner-tip">
-        <span class="gmail-banner-icon">📞</span>
-        <div class="gmail-banner-text">
-            <strong>Call first when you can.</strong> It often gets a faster response and you can ask for their best
-            email. Switch to
-            <button type="button" class="gmail-banner-link" onclick="openAdvocacyDrawerFromDrawer('call')">Call</button>
-            above, then come back here to send your email.
-        </div>
-    </div>
-    {% endif %}
-
     {# ── Status banners (contextual) ── #}
     {% if drawer_view == 'call_only' %}
     <div class="gmail-banner gmail-banner-warning">
@@ -47,17 +34,6 @@
             {% if instructions %}
             <p class="gmail-banner-note"><strong>Your notes:</strong> {{ instructions }}</p>
             {% endif %}
-        </div>
-    </div>
-    {% endif %}
-
-    {% if not has_public_email and drawer_view == 'email_first' %}
-    <div class="gmail-banner gmail-banner-warning">
-        <span class="gmail-banner-icon">🔍</span>
-        <div class="gmail-banner-text">
-            This legislator's email isn't publicly listed. Switch to
-            <button type="button" class="gmail-banner-link" onclick="openAdvocacyDrawerFromDrawer('call')">Call</button>
-            above to get the right email, then come back here to send.
         </div>
     </div>
     {% endif %}

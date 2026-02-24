@@ -36,10 +36,18 @@
     overflow-x: hidden;
 }
 
-/* Email drawer only: 50% viewport width */
+/* Email drawer only: 50% viewport width (desktop) */
 .phone-panel.phone-panel--email {
     width: 50vw;
     max-width: 50vw;
+}
+
+/* Tablet: email drawer 75% of viewport width */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .phone-panel.phone-panel--email {
+        width: 75vw;
+        max-width: 75vw;
+    }
 }
 
 .phone-panel.open {

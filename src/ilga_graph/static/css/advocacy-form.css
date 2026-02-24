@@ -457,6 +457,82 @@
   outline-offset: 2px;
 }
 
+.hero-zip-edit-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+
+.hero-zip-edit-wrap:not([hidden]) {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.hero-zip-edit-wrap.hero-zip-edit-wrap--open {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hero-zip-edit-wrap[hidden] {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-zip-edit-wrap {
+    transition: none;
+  }
+  .hero-zip-edit-wrap:not([hidden]) {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hero-zip-edit {
+  width: 7ch;
+  min-width: 6ch;
+  max-width: 8rem;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  padding: 2px 4px;
+  border: 1px solid #888;
+  border-radius: 4px;
+}
+
+.hero-zip-update {
+  font: inherit;
+  font-size: var(--font-size-sm);
+  line-height: 1.25;
+  padding: 2px 8px;
+  height: calc(1.25em + 4px);
+  box-sizing: border-box;
+  border: 1px solid #888;
+  border-radius: 4px;
+  background: #f5f5f5;
+  color: #333;
+  cursor: pointer;
+}
+
+.hero-zip-update:hover {
+  background: #e8e8e8;
+}
+
+.hero-zip-update:focus {
+  outline: 2px solid #4a7c59;
+  outline-offset: 1px;
+}
+
+.hero-zip-edit:focus {
+  outline: 2px solid #4a7c59;
+  outline-offset: 1px;
+}
+
+.hero-zip-line-label {
+  font-size: var(--font-size-sm);
+  color: #555;
+  margin-right: 4px;
+}
+
 .hero-zip-status {
   font-size: 0.75rem;
   color: #666;

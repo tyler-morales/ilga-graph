@@ -553,7 +553,7 @@ def _kei_email_body_core(
         first_line
         + "I live in [CITY_OR_ZIP]. [CONSTITUENT_INTRO]writing to share a brief on an issue "
         "affecting vehicle registration under 625 ILCS 5/3-401(c-1).\n\n"
-        "This matters to me because [ONE_SENTENCE_WHY].\n\n"
+        "This matters to me because [ONE_SENTENCE_WHY]\n\n"
         "Currently, Illinois is treating federally lawful imported vehicles (commonly 25+ years "
         'old) as off-highway/non-highway based on how "originally manufactured for operation on '
         'highways" is being interpreted. In practice, this prevents otherwise lawful vehicles '

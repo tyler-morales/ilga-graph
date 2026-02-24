@@ -50,12 +50,16 @@
 <template id="drawer-done-for-member">
     <div class="drawer-done-for-member" role="status" aria-live="polite">
         <p class="drawer-done-for-member__message">You're done with <span id="drawer-done-member-name"></span>.</p>
-        <p class="drawer-done-for-member__comeback" id="drawer-done-comeback" hidden>You can come back to send your follow-up email later.</p>
+        <p class="drawer-done-for-member__comeback" id="drawer-done-comeback" hidden>You can come back to send your
+            follow-up email later.</p>
         <p class="drawer-done-for-member__next-wrap" id="drawer-done-next-wrap">
-            <button type="button" class="drawer-done-for-member__cta" id="drawer-done-next-cta">Call your <span id="drawer-done-next-label"></span></button>
+            <button type="button" class="drawer-done-for-member__cta" id="drawer-done-next-cta">Call your <span
+                    id="drawer-done-next-label"></span></button>
         </p>
-        <p class="drawer-done-for-member__district-done" id="drawer-done-district-done" hidden>You've completed outreach for your district members.</p>
-        <p class="drawer-done-for-member__broker-nudge" id="drawer-done-broker-nudge" hidden>Optional: call the Power Broker for extra impact.</p>
+        <p class="drawer-done-for-member__district-done" id="drawer-done-district-done" hidden>You've completed outreach
+            for your district members.</p>
+        <p class="drawer-done-for-member__broker-nudge" id="drawer-done-broker-nudge" hidden>Optional: call the Power
+            Broker for extra impact.</p>
     </div>
 </template>
 
@@ -297,26 +301,17 @@
         if (!block || _ilgaUserEmail) return;
         if (zip && typeof updateGoalBlockFromStorage === 'function') updateGoalBlockFromStorage(zip);
     }
-    function initHeroZipSync() {
-        var zipInput = document.getElementById('zip_code');
-        if (!zipInput || !document.getElementById('hero-zip-display')) return;
-        if (typeof syncHeroZipDisplay === 'function') syncHeroZipDisplay();
-        zipInput.addEventListener('input', function () { if (typeof syncHeroZipDisplay === 'function') syncHeroZipDisplay(); });
-        zipInput.addEventListener('change', function () { if (typeof syncHeroZipDisplay === 'function') syncHeroZipDisplay(); });
-    }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () {
             if (typeof logGoalListDiagnostic === 'function') logGoalListDiagnostic('load');
             applyCardBioOverflow();
             initRecommendationChipTooltips();
             initGoalBlockFromStorage();
-            initHeroZipSync();
         });
     } else {
         applyCardBioOverflow();
         initRecommendationChipTooltips();
         initGoalBlockFromStorage();
-        initHeroZipSync();
     }
 
     /* ── Keep URL in sync with ZIP when user searches (shareable, bookmarkable links) ── */
@@ -333,27 +328,9 @@
         }
     });
 
-    // #region agent log
-    function logGoalListDiagnostic(runId) {
-        var resultsEl = document.getElementById('results');
-        var ol = resultsEl ? resultsEl.querySelector('.outreach-goal__actions') : null;
-        if (!ol) {
-            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'b14c79' }, body: JSON.stringify({ sessionId: 'b14c79', runId: runId || 'run1', hypothesisId: 'H4', location: 'index.html:goal-list-diagnostic', message: 'Goal list not in DOM', data: { found: false }, timestamp: Date.now() }) }).catch(function() {});
-            return;
-        }
-        var cs = window.getComputedStyle(ol);
-        var li = ol.querySelector('li');
-        var liCs = li ? window.getComputedStyle(li) : {};
-        var markerCs = li ? (function() { try { return window.getComputedStyle(li, '::marker'); } catch (e) { return {}; } })() : {};
-        var payload = { sessionId: 'b14c79', runId: runId || 'run1', hypothesisId: 'H1', location: 'index.html:goal-list-diagnostic', message: 'Goal list computed styles', data: { tagName: ol.tagName, className: ol.className, listStyleType: cs.listStyleType, listStylePosition: cs.listStylePosition, paddingLeft: cs.paddingLeft, padding: cs.padding, liDisplay: liCs.display, markerDisplay: markerCs.display, markerContent: markerCs.content }, timestamp: Date.now() };
-        fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'b14c79' }, body: JSON.stringify(payload) }).catch(function() {});
-    }
-    // #endregion
-
     /* ── Scroll to results after htmx swap ── */
     document.body.addEventListener('htmx:afterSwap', function (e) {
         if (e.detail.target && e.detail.target.id === 'results') {
-            if (typeof logGoalListDiagnostic === 'function') logGoalListDiagnostic('htmx-swap');
             applyCardEnterAnimation(e.detail.target);
             setTimeout(function () {
                 applyCardBioOverflow();
@@ -1299,7 +1276,7 @@
                     codeSubmit.disabled = false;
                     codeSubmit.textContent = 'Confirm';
                     if (data.ok && data.email) {
-                        try { sessionStorage.removeItem('ilga_anon_sid'); } catch (e) {}
+                        try { sessionStorage.removeItem('ilga_anon_sid'); } catch (e) { }
                         goVerified(data.email);
                     } else {
                         if (codeError) { codeError.textContent = data.error || 'That code didn\'t work — try again or resend.'; codeError.hidden = false; }
@@ -1435,11 +1412,17 @@
         var form = document.getElementById('advocacy-form');
         var zipInput = form && (form.querySelector('#zip_code') || form.querySelector('input[name="zip"]'));
         if (zipInput) zipInput.value = newZip;
-        if (typeof syncHeroZipDisplay === 'function') syncHeroZipDisplay();
         var url = new URL(window.location.href);
         url.searchParams.set('zip', newZip);
         history.replaceState(null, '', url.pathname + url.search);
         if (typeof refreshAdvocacyResults === 'function') refreshAdvocacyResults();
+        var signedInEl = document.getElementById('auth-strip-signed-in');
+        if (signedInEl && !signedInEl.hidden && typeof getCsrfToken === 'function') {
+            var body = new FormData();
+            body.append('zip_code', newZip);
+            body.append('csrf_token', getCsrfToken());
+            fetch('/advocacy/api/me/zip', { method: 'PATCH', body: body, credentials: 'same-origin' }).catch(function () {});
+        }
         return true;
     }
     function setGoalZipStatus(cell, text, visible) {
@@ -1448,68 +1431,8 @@
         statusEl.textContent = text || '';
         if (visible) statusEl.removeAttribute('hidden'); else statusEl.setAttribute('hidden', '');
     }
-    function setHeroZipStatus(text, visible) {
-        var statusEl = document.getElementById('hero-zip-status');
-        if (!statusEl) return;
-        statusEl.textContent = text || '';
-        if (visible) statusEl.removeAttribute('hidden'); else statusEl.setAttribute('hidden', '');
-    }
-    function syncHeroZipDisplay() {
-        var display = document.getElementById('hero-zip-display');
-        var input = document.getElementById('zip_code');
-        if (display && input) display.textContent = (input.value || '').trim() || '';
-    }
     document.body.addEventListener('click', function (e) {
-        var heroZipDisplay = e.target && e.target.closest && e.target.closest('[data-hero-zip-display]');
-        if (heroZipDisplay) {
-            var zipInput = document.getElementById('zip_code');
-            if (zipInput) {
-                e.preventDefault();
-                zipInput.focus();
-            }
-            return;
-        }
         var zipLocate = e.target && e.target.closest && e.target.closest('.outreach-goal__zip-locate');
-        if (zipLocate && zipLocate.closest('.hero-zip-line')) {
-            e.preventDefault();
-            if (!navigator.geolocation) {
-                setHeroZipStatus('Location not supported', true);
-                setTimeout(function () { setHeroZipStatus('', false); }, 3000);
-                return;
-            }
-            zipLocate.disabled = true;
-            setHeroZipStatus('Locating…', true);
-            navigator.geolocation.getCurrentPosition(
-                function (pos) {
-                    var lat = pos.coords.latitude;
-                    var lon = pos.coords.longitude;
-                    fetch('/advocacy/api/zip-from-coords?lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon), { credentials: 'same-origin' })
-                        .then(function (r) { return r.json(); })
-                        .then(function (data) {
-                            zipLocate.disabled = false;
-                            if (data && data.zip && /^\d{5}$/.test(data.zip)) {
-                                setHeroZipStatus('', false);
-                                commitGoalZip(data.zip);
-                            } else {
-                                setHeroZipStatus('No ZIP found for this location', true);
-                                setTimeout(function () { setHeroZipStatus('', false); }, 4000);
-                            }
-                        })
-                        .catch(function () {
-                            zipLocate.disabled = false;
-                            setHeroZipStatus('Location unavailable', true);
-                            setTimeout(function () { setHeroZipStatus('', false); }, 4000);
-                        });
-                },
-                function () {
-                    zipLocate.disabled = false;
-                    setHeroZipStatus('Location unavailable', true);
-                    setTimeout(function () { setHeroZipStatus('', false); }, 4000);
-                },
-                { timeout: 10000, maximumAge: 60000 }
-            );
-            return;
-        }
         if (zipLocate && zipLocate.closest('#results')) {
             e.preventDefault();
             var cell = zipLocate.closest('.outreach-goal__zip-cell');
@@ -1590,15 +1513,6 @@
         }
     }, true);
     document.body.addEventListener('keydown', function (e) {
-        var heroZipDisplay = e.target && e.target.closest && e.target.closest('[data-hero-zip-display]');
-        if (heroZipDisplay && (e.key === 'Enter' || e.key === ' ')) {
-            var zipInput = document.getElementById('zip_code');
-            if (zipInput) {
-                e.preventDefault();
-                zipInput.focus();
-            }
-            return;
-        }
         var editInput = e.target && e.target.classList && e.target.classList.contains('outreach-goal__zip-edit') ? e.target : null;
         if (!editInput || !editInput.closest('#results')) return;
         if (e.key !== 'Enter') return;
@@ -1691,7 +1605,7 @@
         body.innerHTML = '';
         body.appendChild(clone);
         if (cta && otherMemberId) {
-            requestAnimationFrame(function () { try { cta.focus(); } catch (e) {} });
+            requestAnimationFrame(function () { try { cta.focus(); } catch (e) { } });
         }
         initDrawerFocusTrapAndFocus();
     }
@@ -1950,11 +1864,14 @@
     };
     var MADLIB_REGEX = /\[(LEGISLATOR_NAME|CALLER_NAME|CALLER_PHONE|CALLER_EMAIL|CITY_OR_ZIP|ONE_SENTENCE_WHY|CONSTITUENT_INTRO)\]/g;
     var MADLIB_FOOTER_KEYS = ['CALLER_NAME', 'CALLER_PHONE', 'CALLER_EMAIL'];
-    var MADLIB_FOOTER_WIDTH_CH = 22;
     var MADLIB_OPTIONAL_KEYS = ['ONE_SENTENCE_WHY', 'CALLER_PHONE'];
 
     function renderMadLibsBody(bodyText, container, prefills) {
         container.innerHTML = '';
+        var measureSpan = document.createElement('span');
+        measureSpan.className = 'madlib-measure';
+        measureSpan.setAttribute('aria-hidden', 'true');
+        container.appendChild(measureSpan);
         var parts = bodyText.split(MADLIB_REGEX);
         var blanks = [];
         var valueMap = {};
@@ -1962,11 +1879,15 @@
         for (var i = 0; i < parts.length; i++) {
             if (i % 2 === 0) {
                 if (parts[i]) {
-                    var span = document.createElement('span');
-                    span.textContent = parts[i];
-                    span.setAttribute('contenteditable', 'true');
-                    span.setAttribute('spellcheck', 'true');
-                    container.appendChild(span);
+                    if (parts[i].trim()) {
+                        var span = document.createElement('span');
+                        span.textContent = parts[i];
+                        span.setAttribute('contenteditable', 'true');
+                        span.setAttribute('spellcheck', 'true');
+                        container.appendChild(span);
+                    } else {
+                        container.appendChild(document.createTextNode(parts[i]));
+                    }
                 }
             } else {
                 var key = parts[i];
@@ -1989,7 +1910,7 @@
                 inp.setAttribute('data-madlib-min-ch', String(minCh));
                 inp.setAttribute('autocomplete', 'off');
                 if (isMultiline) {
-                    inp.setAttribute('rows', '2');
+                    inp.setAttribute('rows', '1');
                     inp.setAttribute('wrap', 'soft');
                 }
                 if (prefills && prefills[key]) {
@@ -2000,25 +1921,40 @@
                 function resizeMadLibInput(input) {
                     var key = input.getAttribute('data-madlib-key');
                     if (input.tagName === 'TEXTAREA') {
-                        var lines = (input.value || '').split(/\r?\n/).length;
-                        input.setAttribute('rows', Math.max(2, Math.min(6, lines + 1)));
+                        var cs = input.ownerDocument.defaultView.getComputedStyle(input);
+                        var lineH = cs.lineHeight;
+                        var minPx = (lineH && lineH !== 'normal') ? parseFloat(lineH) : (parseFloat(cs.fontSize) || 16) * 1.35;
+                        input.style.overflowY = 'hidden';
+                        input.style.height = '0';
+                        var h = Math.max(input.scrollHeight, minPx);
+                        input.style.height = h + 'px';
+                        input.style.overflowY = 'auto';
                         return;
                     }
-                    var isFooter = key && MADLIB_FOOTER_KEYS.indexOf(key) !== -1;
-                    var cursorCh = (document.activeElement === input) ? 1 : 0;
-                    var ch;
-                    if (isFooter) {
-                        ch = MADLIB_FOOTER_WIDTH_CH + cursorCh;
+                    var el = container.querySelector('.madlib-measure');
+                    if (!el) return;
+                    var cs = input.ownerDocument.defaultView.getComputedStyle(input);
+                    var minCh = parseInt(input.getAttribute('data-madlib-min-ch') || '2', 10);
+                    var text = (input.value && input.value.length) ? input.value : (input.placeholder || '');
+                    var isPlaceholder = !(input.value && input.value.length);
+                    el.style.fontFamily = cs.fontFamily;
+                    el.style.fontSize = cs.fontSize;
+                    el.style.fontWeight = cs.fontWeight;
+                    el.style.fontStyle = isPlaceholder ? 'italic' : (cs.fontStyle || 'normal');
+                    el.style.letterSpacing = cs.letterSpacing || 'normal';
+                    el.textContent = text || '0';
+                    var measured = el.offsetWidth;
+                    if (text) {
+                        el.textContent = '0'.repeat(minCh);
+                        var minPx = el.offsetWidth;
+                        var cursorPadding = (document.activeElement === input) ? 10 : 4;
+                        input.style.width = Math.max(measured + cursorPadding, minPx) + 'px';
                     } else {
-                        var v = (input.value || '').trim();
-                        var pl = (input.placeholder || '');
-                        var len = v ? v.length : pl.length;
-                        var min = parseInt(input.getAttribute('data-madlib-min-ch') || '2', 10);
-                        ch = Math.max(min, len) + cursorCh;
+                        el.textContent = '0'.repeat(minCh);
+                        var minPx = el.offsetWidth;
+                        input.style.width = minPx + 'px';
                     }
-                    input.style.width = ch + 'ch';
                 }
-                resizeMadLibInput(inp);
                 (function (input, k) {
                     var selector = '[data-madlib-key="' + k + '"]';
                     input.addEventListener('input', function () {
@@ -2043,8 +1979,37 @@
                     });
                 })(inp, key);
                 container.appendChild(inp);
+                resizeMadLibInput(inp);
                 blanks.push(inp);
+                // #region agent log
+                if (key === 'ONE_SENTENCE_WHY') {
+                    var nextPart = parts[i + 1];
+                    fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e2192d' }, body: JSON.stringify({ sessionId: 'e2192d', location: 'index.html:renderMadLibsBody', message: 'ONE_SENTENCE_WHY trailing part', data: { nextPart: nextPart, nextPartLength: nextPart ? nextPart.length : 0 }, timestamp: Date.now(), hypothesisId: 'A' }) }).catch(function () {});
+                }
+                // #endregion
             }
+        }
+        // #region agent log
+        var whyEl = container.querySelector('[data-madlib-key="ONE_SENTENCE_WHY"]');
+        if (whyEl) {
+            var next = whyEl.nextSibling;
+            var disp = whyEl.ownerDocument.defaultView.getComputedStyle(whyEl).display;
+            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e2192d' }, body: JSON.stringify({ sessionId: 'e2192d', location: 'index.html:renderMadLibsBody:after', message: 'ONE_SENTENCE_WHY DOM', data: { display: disp, nextNodeType: next ? next.nodeType : null, nextText: next && next.nodeType === 3 ? next.textContent.slice(0, 20) : null }, timestamp: Date.now(), hypothesisId: 'B' }) }).catch(function () {});
+        }
+        // #endregion
+        /* Footer fields (name, phone, email): same default width; they still resize on input/blur/focus */
+        var footerBlanks = blanks.filter(function (inp) {
+            return inp.tagName === 'INPUT' && MADLIB_FOOTER_KEYS.indexOf(inp.getAttribute('data-madlib-key')) !== -1;
+        });
+        if (footerBlanks.length > 0) {
+            var defaultPx = 0;
+            footerBlanks.forEach(function (inp) {
+                var w = parseFloat(inp.style.width) || inp.offsetWidth;
+                if (w > defaultPx) defaultPx = w;
+            });
+            footerBlanks.forEach(function (inp) {
+                inp.style.width = defaultPx + 'px';
+            });
         }
         return { blanks: blanks, valueMap: valueMap };
     }
@@ -2072,6 +2037,9 @@
         });
         text = text.trim();
         if (text.indexOf('This matters to me because .') !== -1) {
+            // #region agent log
+            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e2192d' }, body: JSON.stringify({ sessionId: 'e2192d', location: 'index.html:getComposedBody', message: 'Stripping empty why period', data: { hadEmptyWhy: true }, timestamp: Date.now(), hypothesisId: 'E' }) }).catch(function () {});
+            // #endregion
             text = text.replace(/This matters to me because \.\s*\n\n?/g, '');
         }
         return text;
@@ -2410,27 +2378,31 @@
             }
         };
 
-        /* ── Subject verify button ── */
+        /* ── Subject verify button: removed from DOM once verified so the pill is gone ── */
         var subjectVerifyBtn = wrap.querySelector('#gmail-subject-verify-btn');
         if (subjectVerifyBtn) {
             subjectVerifyBtn.onclick = function () {
                 var drawer = document.getElementById('advocacy-drawer');
                 var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
                 if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'email', 'subject_confirmed');
-                subjectVerifyBtn.classList.add('verified');
-                var sp = subjectVerifyBtn.querySelector('span');
-                if (sp) sp.textContent = 'Verified';
+                subjectVerifyBtn.remove();
+                subjectVerifyBtn = null;
                 guide.jumpTo('madlibs');
                 setTimeout(function () { guide.focusNextBlank(); }, 300);
             };
         }
         /* ── Subject: Enter focuses "Looks good" so user can Tab/Enter through steps ── */
         var subjectInput = wrap.querySelector('#gmail-subject-text');
-        if (subjectInput && subjectVerifyBtn) {
+        if (subjectInput) {
             subjectInput.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    subjectVerifyBtn.focus();
+                    if (subjectVerifyBtn) {
+                        subjectVerifyBtn.focus();
+                    } else {
+                        guide.jumpTo('madlibs');
+                        setTimeout(function () { guide.focusNextBlank(); }, 300);
+                    }
                 }
             });
         }
@@ -2455,6 +2427,8 @@
                         blanks[idx - 1].focus();
                     } else if (subjectVerifyBtn) {
                         subjectVerifyBtn.focus();
+                    } else if (subjectInput) {
+                        subjectInput.focus();
                     }
                     return;
                 }

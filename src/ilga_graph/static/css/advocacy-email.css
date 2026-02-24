@@ -142,7 +142,7 @@
   font-size: var(--font-size-label);
   color: #5f6368;
   flex-shrink: 0;
-  min-width: 52px;
+  /* No min-width: each chip slots after its label with row gap, not aligned email-to-email */
 }
 
 .gmail-field-value {
@@ -718,7 +718,6 @@
 .gmail-action-bar-nudge {
   display: inline-flex;
   align-items: center;
-  margin-left: 4px;
 }
 
 .gmail-call-other-btn {
@@ -894,8 +893,7 @@
 .gmail-compose button:focus-visible,
 .gmail-compose [tabindex]:focus-visible,
 .gmail-compose .gmail-field-input:focus-visible,
-.gmail-compose .madlib-blank:focus-visible,
-.gmail-compose .madlib-body [contenteditable]:focus-visible {
+.gmail-compose .madlib-blank:focus-visible {
   outline: 2px solid rgba(80, 90, 100, 0.5);
   outline-offset: 2px;
 }
@@ -973,6 +971,7 @@
 .madlib-body {
   position: absolute;
   inset: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   min-width: 0;
   width: 100%;
@@ -985,6 +984,19 @@
   color: #3c4043;
   margin: 0;
   padding: 15px;
+}
+
+/* Hidden span used to measure mad lib text width (same font as input); kept in flow but invisible */
+.madlib-measure {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  visibility: hidden;
+  white-space: pre;
+  pointer-events: none;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
 }
 
 .madlib-blank {
@@ -1004,6 +1016,7 @@
   transition: border-color 0.2s, font-weight 0.15s;
   vertical-align: baseline;
   box-sizing: content-box;
+  /* Width set dynamically by JS from placeholder/value measured width */
 }
 
 .madlib-blank::placeholder {
@@ -1045,25 +1058,31 @@
   animation: guidePulse 1s ease-in-out 2;
 }
 
-/* Multi-line mad lib (e.g. ONE_SENTENCE_WHY): wrap text so it doesn't overflow; period can sit on same line when space allows */
+/* Multi-line mad lib (e.g. ONE_SENTENCE_WHY): one line when empty, grows with content; stays within container on mobile */
 .madlib-blank-multiline.madlib-blank {
   display: inline-block;
   min-width: 24ch;
-  width: 44ch;
-  max-width: 100%;
+  width: 100%;
+  max-width: 44ch;
+  box-sizing: border-box;
   resize: none;
+  overflow-x: hidden;
   overflow-y: auto;
   vertical-align: top;
-  min-height: 2.6em;
+  min-height: 1.35em;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .madlib-blank-multiline.madlib-blank.filled {
   min-width: 0;
-  width: auto;
-  max-width: none;
+  width: 100%;
+  max-width: 44ch;
 }
 
-.madlib-body [contenteditable]:focus {
+/* Non–mad-lib editable prose: no focus outline (mad lib blanks keep outline via .madlib-blank:focus-visible) */
+.madlib-body [contenteditable]:focus,
+.madlib-body [contenteditable]:focus-visible {
   outline: none;
   background: transparent;
 }
@@ -1137,7 +1156,6 @@
   }
 
   .gmail-action-bar-nudge {
-    margin-left: 0;
     width: 100%;
   }
 
