@@ -5,6 +5,11 @@
     <h1>Terms of use</h1>
     <p class="legal-page-intro">By using this site, you agree to the following terms.</p>
 
+    <section aria-labelledby="terms-scope">
+        <h2 id="terms-scope">What this site does</h2>
+        <p>This site helps you find your Illinois legislators and contact them (by phone or email) about Kei vehicle registration. It provides advocacy copy, a legislator brief, and an overview of the issue. You may sign in with email to save your outreach; when signed out, progress may be stored locally in your browser. We also offer a <a href="/report-bug">bug report</a> form and, where available, a GraphQL API for programmatic access subject to these terms and any API key or rate limits we apply.</p>
+    </section>
+
     <section aria-labelledby="terms-disclaimer">
         <h2 id="terms-disclaimer">Disclaimer</h2>
         <p>Information on this site is for advocacy and educational purposes only. It is not legal advice. You are responsible for your own actions and for verifying any information before relying on it.</p>
@@ -19,7 +24,7 @@
         <h2 id="terms-acceptable-use">Acceptable use</h2>
         <p>You agree to use this site lawfully and in good faith. You must not:</p>
         <ul>
-            <li>Use the site to harass, spam, or impersonate others.</li>
+            <li>Use the site to harass, spam, or impersonate others, or to send misleading communications in the name of the site or of legislators.</li>
             <li>Run automated scraping or bots in a way that overloads the service or violates these terms.</li>
             <li>Attempt to gain unauthorized access to our systems or other users’ data.</li>
         </ul>
@@ -29,6 +34,11 @@
     <section aria-labelledby="terms-changes">
         <h2 id="terms-changes">Changes</h2>
         <p>We may update these terms from time to time. The current version is always available on this page. Continued use of the site after changes constitutes acceptance of the updated terms.</p>
+    </section>
+
+    <section aria-labelledby="terms-contact">
+        <h2 id="terms-contact">Contact</h2>
+        <p>For questions about these terms, use the <a href="{{ beta_banner_feedback_url or '/report-bug' }}">Report a bug</a> link in the footer (or <a href="/report-bug">/report-bug</a>). We will respond as we are able.</p>
     </section>
 </div>
 {% endblock %}
