@@ -74,8 +74,11 @@
                         </svg></span> Verified <span id="auth-strip-email"></span> &middot; <button type="button"
                         class="auth-strip-signout" id="auth-strip-signout">Sign out</button></span>
             </div>
-            <div id="auth-strip-progress" class="hero-meta-line auth-strip-progress" hidden aria-live="polite"
-                aria-label="Your outreach progress"></div>
+            <div class="hero-meta-line hero-zip-line" aria-label="ZIP code for your district">
+                <span id="hero-zip-display" class="hero-zip-display" data-hero-zip-display role="button" tabindex="0" aria-label="ZIP code for your district. Click or press Enter to change.">{{ zip or '' }}</span>
+                <button type="button" class="outreach-goal__zip-locate" id="hero-zip-locate" data-hero-zip-locate aria-label="Use my location to find my ZIP code"><span class="outreach-goal__zip-locate-icon" aria-hidden="true">⌖</span><span class="outreach-goal__zip-locate-text">Use location</span></button>
+                <span class="hero-zip-status" id="hero-zip-status" aria-live="polite" aria-atomic="true" hidden></span>
+            </div>
             <div id="auth-strip-inline-signin" class="hero-signin-inline" hidden>
                 <div class="hero-signin-state" id="hero-signin-state-email">
                     <input type="email" class="hero-signin-input" id="hero-signin-email" placeholder="Your email"

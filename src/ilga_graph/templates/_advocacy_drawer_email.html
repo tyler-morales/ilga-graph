@@ -156,12 +156,12 @@
             <input type="text" class="gmail-field-input gmail-subject-input" id="gmail-subject-text"
                 value="{{ subject }}" placeholder="Subject" spellcheck="true">
             <button type="button" class="gmail-subject-verify-btn" id="gmail-subject-verify-btn"
-                title="Confirm subject looks good">
+                title="Confirm subject looks good" aria-label="Confirm subject looks good">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
                     stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="20 6 9 17 4 12" />
                 </svg>
-                <span>Looks good</span>
+                <span class="gmail-subject-verify-btn-text">Looks good</span>
             </button>
         </div>
     </div>
@@ -221,12 +221,15 @@
             </svg>
             <span>I sent it!</span>
         </button>
+        {# Show "Call your Senator/Representative" when the current member has not been called yet. #}
+        {% if current_member_role_label is defined and current_member_role_label and not (current_member_already_called is defined and current_member_already_called) %}
         <div class="gmail-action-bar-nudge" id="gmail-call-other-nudge" hidden aria-live="polite">
             <button type="button" class="gmail-call-other-btn" id="gmail-call-other-btn"
-                aria-label="Call your Senator">
-                Call your <span id="gmail-call-other-label">Senator</span>
+                aria-label="Call your {{ current_member_role_label|e }}">
+                Call your <span id="gmail-call-other-label">{{ current_member_role_label }}</span>
             </button>
         </div>
+        {% endif %}
     </div>
 </div>
 {% if show_beta_banner and beta_banner_feedback_url %}

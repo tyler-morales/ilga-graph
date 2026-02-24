@@ -802,42 +802,21 @@ padding-bottom: 4px;
   margin-top: 2px;
 }
 
-/* Constituency label (Your Senator / Your Representative): pill above name */
+/* Constituency label (Your Senator / Your Representative): plain text above name */
 .card-constituency-wrap {
-  display: block;
-  margin-bottom: 6px;
+  text-transform: uppercase;
 }
 
 .card-constituency-label {
   cursor: help;
-}
-
-.card-constituency-pill {
-  display: inline-block;
+  color: #000;
   font-size: var(--font-size-sm);
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 9999px;
-  border: 1px solid transparent;
+  font-weight: normal;
 }
 
-.card-constituency-pill.role-senator {
-  background: #e8ecf2;
-  color: #2c3e5a;
-  border-color: #c5cdda;
-}
-
-.card-constituency-pill.role-rep {
-  background: #efe8f2;
-  color: #3e2c4a;
-  border-color: #d4c5dd;
-}
-
-.card-constituency-label:focus-visible,
-.card-constituency-pill:focus-visible {
+.card-constituency-label:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 2px;
-  border-radius: 9999px;
 }
 
 /* Desktop only: padding between name line and badges */
@@ -1573,7 +1552,7 @@ a.vote-bill:visited {
   min-width: 0;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .district-members-row {
     grid-template-columns: 1fr;
   }

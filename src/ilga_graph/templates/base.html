@@ -415,6 +415,27 @@
                 }
             }
         })();
+
+        // Secret dev command: type *dev (no focus in input/textarea) to open playground in new tab
+        (function () {
+            var SECRET = '*dev';
+            var buf = '';
+            var RESET_MS = 2000;
+            var t = null;
+            document.addEventListener('keydown', function (e) {
+                if (e.target && (e.target.closest('input') || e.target.closest('textarea') || e.target.closest('select') || e.target.closest('[contenteditable="true"]'))) return;
+                if (t) clearTimeout(t);
+                buf += e.key;
+                if (buf.length > SECRET.length) buf = buf.slice(-SECRET.length);
+                if (buf === SECRET) {
+                    buf = '';
+                    window.open('/dev/playground?dev', '_blank', 'noopener');
+                    e.preventDefault();
+                    return;
+                }
+                t = setTimeout(function () { buf = ''; }, RESET_MS);
+            });
+        })();
     </script>
     {% endif %}
     <script src="/static/js/hero-auth-strip.js"></script>

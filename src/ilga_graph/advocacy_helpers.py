@@ -97,10 +97,21 @@ def recommendation_chip_order(
     laws_passed: int | None,
     laws_filed: int | None,
     bridge_pct: float | None,
+    relevant_committee_codes: list[str] | None = None,
 ) -> list[str]:
-    """Return which recommendation chips apply, in ML-priority order."""
+    """Return which recommendation chips apply, in ML-priority order.
+
+    When relevant_committee_codes is set (e.g. topic + general committees),
+    the chair chip is only included if the member chairs one of those committees.
+    """
     net = influence_dict
-    has_chair = any(cr.get("is_leadership") for cr in (committee_roles or []))
+    if relevant_committee_codes:
+        has_chair = any(
+            cr.get("is_leadership") and cr.get("code") in relevant_committee_codes
+            for cr in (committee_roles or [])
+        )
+    else:
+        has_chair = any(cr.get("is_leadership") for cr in (committee_roles or []))
     rank_percentile = (
         round((1 - (rank_chamber - 1) / chamber_size) * 100)
         if rank_chamber and chamber_size > 0
@@ -165,6 +176,7 @@ def member_to_card(
     *,
     why: str = "",
     badges: list[str] | None = None,
+    relevant_committee_codes: list[str] | None = None,
 ) -> dict:
     """Convert a Member to a template-friendly dict for card rendering.
 
@@ -341,6 +353,7 @@ def member_to_card(
         laws_passed=laws_passed,
         laws_filed=laws_filed,
         bridge_pct=bridge_pct,
+        relevant_committee_codes=relevant_committee_codes,
     )
 
     return {

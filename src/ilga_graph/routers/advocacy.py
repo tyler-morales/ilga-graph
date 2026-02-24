@@ -19,7 +19,7 @@ from .. import config as cfg
 from ..app_state import state
 from ..community_email import get_effective_email_for_member
 from ..config import DEV_MODE
-from ..constants import CATEGORY_CHOICES, CATEGORY_COMMITTEES
+from ..constants import CATEGORY_CHOICES, CATEGORY_COMMITTEES, GENERAL_COMMITTEE_CODES
 from ..data_source import is_using_mocks
 from ..db import get_db
 from ..db_models import OutreachEvent, User
@@ -122,6 +122,8 @@ async def _build_search_results_context(
     committee_codes = CATEGORY_COMMITTEES.get(topic_for_broker, [])
     committee_ids = ah.committee_member_ids(state, committee_codes) if committee_codes else None
     category_label = category if category else ""
+    # Topic + general committees (Appropriations, Assignments) for "Why we recommend" chair chips.
+    relevant_committee_codes = list(dict.fromkeys(committee_codes + GENERAL_COMMITTEE_CODES))
 
     senator_member = (
         find_member_by_district(state, "senate", senate_district) if senate_district else None
@@ -132,6 +134,7 @@ async def _build_search_results_context(
             state,
             senator_member,
             why=f"Represents IL Senate District {senate_district}, which contains ZIP {zip_code}.",
+            relevant_committee_codes=relevant_committee_codes,
         )
         senator_card["script_hint"] = ah.build_script_hint_senator(
             senator_card, zip_code, senate_district
@@ -158,6 +161,7 @@ async def _build_search_results_context(
             state,
             rep_member,
             why=f"Represents IL House District {house_district}, which contains ZIP {zip_code}.",
+            relevant_committee_codes=relevant_committee_codes,
         )
         rep_card["script_hint"] = ah.build_script_hint_rep(rep_card, zip_code, house_district)
         rep_card["script_sections"] = ah.build_script_sections_rep(
@@ -199,7 +203,12 @@ async def _build_search_results_context(
 
     broker_card = None
     if broker_member:
-        broker_card = ah.member_to_card(state, broker_member, why=broker_why)
+        broker_card = ah.member_to_card(
+            state,
+            broker_member,
+            why=broker_why,
+            relevant_committee_codes=relevant_committee_codes,
+        )
         broker_card["script_hint"] = ah.build_script_hint_broker(broker_card, broker_why)
         broker_card["script_sections"] = ah.build_script_sections_broker(broker_card, broker_why)
         broker_card["email_subject"] = ah.build_email_subject(zip_code)
@@ -342,6 +351,7 @@ async def _build_search_results_context(
         "zip_count": len(state.zip_to_district),
         "zip": zip_code,
         "category": category,
+        "relevant_committee_codes": relevant_committee_codes,
         "senate_district": senate_district,
         "house_district": house_district,
         "your_legislators": your_legislators,
@@ -500,6 +510,16 @@ async def advocacy_brief_pdf():
     )
 
 
+def _role_label_for_member(member: Any) -> str | None:
+    """'Senator' or 'Representative' based on the member's chamber. None for unknown."""
+    chamber = (getattr(member, "chamber", None) or "").strip().lower()
+    if chamber == "senate":
+        return "Senator"
+    if chamber == "house":
+        return "Representative"
+    return None
+
+
 @router.get("/drawer")
 async def advocacy_drawer(
     request: Request,
@@ -572,6 +592,7 @@ async def advocacy_drawer(
         )
         legislator_display_name = ah.get_legislator_display_name(legislator_name, chamber, district)
         party_abbr = ah.party_abbr_for_member(member)
+        current_role_label = _role_label_for_member(member)
         return templates.TemplateResponse(
             "_advocacy_drawer_email.html",
             {
@@ -595,6 +616,8 @@ async def advocacy_drawer(
                 "zip_code": zip_code,
                 "is_constituent": is_constituent,
                 "party_abbr": party_abbr,
+                "current_member_role_label": current_role_label,
+                "current_member_already_called": not show_call_nudge,
             },
         )
 
@@ -708,6 +731,7 @@ async def advocacy_call_wrapup(
     wrapup_community_verification = (
         community_verification if used_community_recipient and email_source == "community" else None
     )
+    wrapup_role_label = _role_label_for_member(member)
     if recipient:
         return templates.TemplateResponse(
             "_advocacy_drawer_email.html",
@@ -733,6 +757,8 @@ async def advocacy_call_wrapup(
                 "zip_code": zip_code,
                 "is_constituent": is_constituent,
                 "party_abbr": party_abbr,
+                "current_member_role_label": wrapup_role_label,
+                "current_member_already_called": True,
             },
         )
 
@@ -761,6 +787,8 @@ async def advocacy_call_wrapup(
             "zip_code": zip_code,
             "is_constituent": is_constituent,
             "party_abbr": party_abbr,
+            "current_member_role_label": wrapup_role_label,
+            "current_member_already_called": True,
         },
     )
 

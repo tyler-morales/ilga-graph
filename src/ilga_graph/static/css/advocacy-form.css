@@ -435,6 +435,33 @@
   margin: 0;
 }
 
+.hero-zip-line {
+  margin-top: 4px;
+  gap: 4px 6px;
+  font-size: var(--font-size-sm);
+  color: #555;
+}
+
+.hero-zip-display {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.hero-zip-display:hover {
+  color: #335;
+}
+
+.hero-zip-display:focus {
+  outline: 2px solid #4a7c59;
+  outline-offset: 2px;
+}
+
+.hero-zip-status {
+  font-size: 0.75rem;
+  color: #666;
+}
+
 .auth-strip {
   font-size: var(--font-size-sm);
   color: #555;
@@ -504,12 +531,6 @@
 .auth-strip-signin-btn:focus-visible {
   outline: 2px solid var(--color-focus-ring, #1a73e8);
   outline-offset: 2px;
-}
-
-.auth-strip-progress {
-  font-size: var(--font-size-label);
-  color: #555;
-  margin-top: 2px;
 }
 
 .hero-signin-inline {

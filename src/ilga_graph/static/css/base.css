@@ -876,6 +876,11 @@ a:visited {
   font-size: var(--font-size-h3, 1.125rem);
 }
 
+.legal-page ul {
+  padding-left: 0;
+  list-style-position: inside;
+}
+
 .legal-page li {
   margin-bottom: 0.35em;
 }
@@ -1039,7 +1044,7 @@ a:visited {
 .report-bug-truck-track {
   width: 100%;
   min-width: 400px;
-  height: 56px;
+  height: 100px;
   position: relative;
   overflow: visible;
 }

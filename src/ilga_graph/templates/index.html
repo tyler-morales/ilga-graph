@@ -297,17 +297,26 @@
         if (!block || _ilgaUserEmail) return;
         if (zip && typeof updateGoalBlockFromStorage === 'function') updateGoalBlockFromStorage(zip);
     }
+    function initHeroZipSync() {
+        var zipInput = document.getElementById('zip_code');
+        if (!zipInput || !document.getElementById('hero-zip-display')) return;
+        if (typeof syncHeroZipDisplay === 'function') syncHeroZipDisplay();
+        zipInput.addEventListener('input', function () { if (typeof syncHeroZipDisplay === 'function') syncHeroZipDisplay(); });
+        zipInput.addEventListener('change', function () { if (typeof syncHeroZipDisplay === 'function') syncHeroZipDisplay(); });
+    }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () {
             if (typeof logGoalListDiagnostic === 'function') logGoalListDiagnostic('load');
             applyCardBioOverflow();
             initRecommendationChipTooltips();
             initGoalBlockFromStorage();
+            initHeroZipSync();
         });
     } else {
         applyCardBioOverflow();
         initRecommendationChipTooltips();
         initGoalBlockFromStorage();
+        initHeroZipSync();
     }
 
     /* ── Keep URL in sync with ZIP when user searches (shareable, bookmarkable links) ── */
@@ -1419,6 +1428,7 @@
         var form = document.getElementById('advocacy-form');
         var zipInput = form && (form.querySelector('#zip_code') || form.querySelector('input[name="zip"]'));
         if (zipInput) zipInput.value = newZip;
+        if (typeof syncHeroZipDisplay === 'function') syncHeroZipDisplay();
         var url = new URL(window.location.href);
         url.searchParams.set('zip', newZip);
         history.replaceState(null, '', url.pathname + url.search);
@@ -1431,8 +1441,68 @@
         statusEl.textContent = text || '';
         if (visible) statusEl.removeAttribute('hidden'); else statusEl.setAttribute('hidden', '');
     }
+    function setHeroZipStatus(text, visible) {
+        var statusEl = document.getElementById('hero-zip-status');
+        if (!statusEl) return;
+        statusEl.textContent = text || '';
+        if (visible) statusEl.removeAttribute('hidden'); else statusEl.setAttribute('hidden', '');
+    }
+    function syncHeroZipDisplay() {
+        var display = document.getElementById('hero-zip-display');
+        var input = document.getElementById('zip_code');
+        if (display && input) display.textContent = (input.value || '').trim() || '';
+    }
     document.body.addEventListener('click', function (e) {
+        var heroZipDisplay = e.target && e.target.closest && e.target.closest('[data-hero-zip-display]');
+        if (heroZipDisplay) {
+            var zipInput = document.getElementById('zip_code');
+            if (zipInput) {
+                e.preventDefault();
+                zipInput.focus();
+            }
+            return;
+        }
         var zipLocate = e.target && e.target.closest && e.target.closest('.outreach-goal__zip-locate');
+        if (zipLocate && zipLocate.closest('.hero-zip-line')) {
+            e.preventDefault();
+            if (!navigator.geolocation) {
+                setHeroZipStatus('Location not supported', true);
+                setTimeout(function () { setHeroZipStatus('', false); }, 3000);
+                return;
+            }
+            zipLocate.disabled = true;
+            setHeroZipStatus('Locating…', true);
+            navigator.geolocation.getCurrentPosition(
+                function (pos) {
+                    var lat = pos.coords.latitude;
+                    var lon = pos.coords.longitude;
+                    fetch('/advocacy/api/zip-from-coords?lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon), { credentials: 'same-origin' })
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            zipLocate.disabled = false;
+                            if (data && data.zip && /^\d{5}$/.test(data.zip)) {
+                                setHeroZipStatus('', false);
+                                commitGoalZip(data.zip);
+                            } else {
+                                setHeroZipStatus('No ZIP found for this location', true);
+                                setTimeout(function () { setHeroZipStatus('', false); }, 4000);
+                            }
+                        })
+                        .catch(function () {
+                            zipLocate.disabled = false;
+                            setHeroZipStatus('Location unavailable', true);
+                            setTimeout(function () { setHeroZipStatus('', false); }, 4000);
+                        });
+                },
+                function () {
+                    zipLocate.disabled = false;
+                    setHeroZipStatus('Location unavailable', true);
+                    setTimeout(function () { setHeroZipStatus('', false); }, 4000);
+                },
+                { timeout: 10000, maximumAge: 60000 }
+            );
+            return;
+        }
         if (zipLocate && zipLocate.closest('#results')) {
             e.preventDefault();
             var cell = zipLocate.closest('.outreach-goal__zip-cell');
@@ -1513,6 +1583,15 @@
         }
     }, true);
     document.body.addEventListener('keydown', function (e) {
+        var heroZipDisplay = e.target && e.target.closest && e.target.closest('[data-hero-zip-display]');
+        if (heroZipDisplay && (e.key === 'Enter' || e.key === ' ')) {
+            var zipInput = document.getElementById('zip_code');
+            if (zipInput) {
+                e.preventDefault();
+                zipInput.focus();
+            }
+            return;
+        }
         var editInput = e.target && e.target.classList && e.target.classList.contains('outreach-goal__zip-edit') ? e.target : null;
         if (!editInput || !editInput.closest('#results')) return;
         if (e.key !== 'Enter') return;
@@ -1845,7 +1924,7 @@
         'CALLER_PHONE': { label: 'Phone (optional)', type: 'tel', minCh: 10 },
         'CALLER_EMAIL': { label: 'Email', type: 'email', minCh: 12 },
         'CITY_OR_ZIP': { label: 'City or ZIP', type: 'text', minCh: 6 },
-        'ONE_SENTENCE_WHY': { label: 'Why this matters to you (optional)', type: 'text', minCh: 12 }
+        'ONE_SENTENCE_WHY': { label: 'Why this matters to you (optional)', type: 'text', minCh: 12, multiline: true }
     };
     var MADLIB_REGEX = /\[(LEGISLATOR_NAME|CALLER_NAME|CALLER_PHONE|CALLER_EMAIL|CITY_OR_ZIP|ONE_SENTENCE_WHY|CONSTITUENT_INTRO)\]/g;
     var MADLIB_FOOTER_KEYS = ['CALLER_NAME', 'CALLER_PHONE', 'CALLER_EMAIL'];
@@ -1879,13 +1958,18 @@
                 }
                 var cfg = MADLIB_PLACEHOLDERS[key] || { label: key, type: 'text', minCh: 8 };
                 var minCh = (cfg.minCh !== undefined) ? cfg.minCh : 8;
-                var inp = document.createElement('input');
-                inp.type = cfg.type;
-                inp.className = 'madlib-blank';
+                var isMultiline = !!cfg.multiline;
+                var inp = document.createElement(isMultiline ? 'textarea' : 'input');
+                if (!isMultiline) inp.type = cfg.type;
+                inp.className = 'madlib-blank' + (isMultiline ? ' madlib-blank-multiline' : '');
                 inp.placeholder = cfg.label;
                 inp.setAttribute('data-madlib-key', key);
                 inp.setAttribute('data-madlib-min-ch', String(minCh));
                 inp.setAttribute('autocomplete', 'off');
+                if (isMultiline) {
+                    inp.setAttribute('rows', '2');
+                    inp.setAttribute('wrap', 'soft');
+                }
                 if (prefills && prefills[key]) {
                     inp.value = prefills[key];
                     inp.classList.add('filled');
@@ -1893,6 +1977,11 @@
                 }
                 function resizeMadLibInput(input) {
                     var key = input.getAttribute('data-madlib-key');
+                    if (input.tagName === 'TEXTAREA') {
+                        var lines = (input.value || '').split(/\r?\n/).length;
+                        input.setAttribute('rows', Math.max(2, Math.min(6, lines + 1)));
+                        return;
+                    }
                     var isFooter = key && MADLIB_FOOTER_KEYS.indexOf(key) !== -1;
                     var cursorCh = (document.activeElement === input) ? 1 : 0;
                     var ch;
@@ -1909,10 +1998,11 @@
                 }
                 resizeMadLibInput(inp);
                 (function (input, k) {
+                    var selector = '[data-madlib-key="' + k + '"]';
                     input.addEventListener('input', function () {
                         var val = input.value.trim();
                         valueMap[k] = val;
-                        container.querySelectorAll('input[data-madlib-key="' + k + '"]').forEach(function (el) {
+                        container.querySelectorAll(selector).forEach(function (el) {
                             if (el !== input) el.value = val;
                             el.classList.toggle('filled', !!val);
                             el.classList.remove('error');
@@ -1923,7 +2013,7 @@
                     input.addEventListener('blur', function () {
                         if (input.value.trim()) input.classList.add('filled');
                         resizeMadLibInput(input);
-                        container.querySelectorAll('input[data-madlib-key="' + k + '"]').forEach(resizeMadLibInput);
+                        container.querySelectorAll(selector).forEach(resizeMadLibInput);
                     });
                     input.addEventListener('focus', function () {
                         input.classList.remove('error');
@@ -1953,7 +2043,7 @@
                 text += node.textContent;
             } else if (node.tagName === 'SPAN') {
                 text += node.innerText || node.textContent;
-            } else if (node.tagName === 'INPUT') {
+            } else if (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA') {
                 var val = (node.value || '').trim();
                 text += val;
             }
@@ -2855,17 +2945,7 @@
         var drawer = document.getElementById('advocacy-drawer');
         var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
         if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'call', 'wrapup_skipped');
-        if (typeof tryShowDrawerDoneForMember === 'function') {
-            tryShowDrawerDoneForMember(false);
-        } else {
-            var ctaBlock = document.getElementById('drawer-draft-followup-cta-block');
-            var msgEl = document.getElementById('drawer-draft-followup-recorded-msg');
-            if (ctaBlock) ctaBlock.setAttribute('hidden', '');
-            if (msgEl) {
-                msgEl.removeAttribute('hidden');
-                msgEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-        }
+        if (typeof closeAdvocacyDrawer === 'function') closeAdvocacyDrawer();
     });
 
     document.body.addEventListener('htmx:afterSwap', function (e) {
