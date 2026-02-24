@@ -1389,24 +1389,7 @@
         }
     });
 
-    /* ── Goal sidebar: click ZIP to edit; commit updates hero form, URL, and re-fetches results so goal reflects new district ── */
-    function showGoalZipEdit(displayBtn, editInput) {
-        if (!displayBtn || !editInput) return;
-        var block = displayBtn.closest('.outreach-goal');
-        var currentZip = (block && block.getAttribute('data-goal-zip')) || (editInput.value || '').trim();
-        displayBtn.setAttribute('hidden', '');
-        displayBtn.setAttribute('aria-expanded', 'true');
-        editInput.removeAttribute('hidden');
-        editInput.value = currentZip;
-        editInput.focus();
-    }
-    function hideGoalZipEdit(displayBtn, editInput, revertZip) {
-        if (!displayBtn || !editInput) return;
-        editInput.setAttribute('hidden', '');
-        displayBtn.removeAttribute('hidden');
-        displayBtn.setAttribute('aria-expanded', 'false');
-        if (revertZip != null) displayBtn.textContent = revertZip;
-    }
+    /* ── Goal sidebar: commitGoalZip updates hero form, URL, and re-fetches results (e.g. after PATCH /advocacy/api/me/zip). ── */
     function commitGoalZip(newZip) {
         if (!/^\d{5}$/.test(newZip)) return false;
         var form = document.getElementById('advocacy-form');
@@ -1425,64 +1408,7 @@
         }
         return true;
     }
-    function setGoalZipStatus(cell, text, visible) {
-        var statusEl = cell && cell.querySelector('.outreach-goal__zip-status');
-        if (!statusEl) return;
-        statusEl.textContent = text || '';
-        if (visible) statusEl.removeAttribute('hidden'); else statusEl.setAttribute('hidden', '');
-    }
     document.body.addEventListener('click', function (e) {
-        var zipLocate = e.target && e.target.closest && e.target.closest('.outreach-goal__zip-locate');
-        if (zipLocate && zipLocate.closest('#results')) {
-            e.preventDefault();
-            var cell = zipLocate.closest('.outreach-goal__zip-cell');
-            if (!cell) return;
-            if (!navigator.geolocation) {
-                setGoalZipStatus(cell, 'Location not supported', true);
-                setTimeout(function () { setGoalZipStatus(cell, '', false); }, 3000);
-                return;
-            }
-            zipLocate.disabled = true;
-            setGoalZipStatus(cell, 'Locating…', true);
-            navigator.geolocation.getCurrentPosition(
-                function (pos) {
-                    var lat = pos.coords.latitude;
-                    var lon = pos.coords.longitude;
-                    fetch('/advocacy/api/zip-from-coords?lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon), { credentials: 'same-origin' })
-                        .then(function (r) { return r.json(); })
-                        .then(function (data) {
-                            zipLocate.disabled = false;
-                            if (data && data.zip && /^\d{5}$/.test(data.zip)) {
-                                setGoalZipStatus(cell, '', false);
-                                commitGoalZip(data.zip);
-                            } else {
-                                setGoalZipStatus(cell, 'No ZIP found for this location', true);
-                                setTimeout(function () { setGoalZipStatus(cell, '', false); }, 4000);
-                            }
-                        })
-                        .catch(function () {
-                            zipLocate.disabled = false;
-                            setGoalZipStatus(cell, 'Location unavailable', true);
-                            setTimeout(function () { setGoalZipStatus(cell, '', false); }, 4000);
-                        });
-                },
-                function () {
-                    zipLocate.disabled = false;
-                    setGoalZipStatus(cell, 'Location unavailable', true);
-                    setTimeout(function () { setGoalZipStatus(cell, '', false); }, 4000);
-                },
-                { timeout: 10000, maximumAge: 60000 }
-            );
-            return;
-        }
-        var zipDisplay = e.target && e.target.closest && e.target.closest('.outreach-goal__zip-display');
-        if (zipDisplay && zipDisplay.closest('#results')) {
-            e.preventDefault();
-            var cell = zipDisplay.closest('.outreach-goal__zip-cell');
-            var editInput = cell && cell.querySelector('.outreach-goal__zip-edit');
-            showGoalZipEdit(zipDisplay, editInput);
-            return;
-        }
         var link = e.target && e.target.closest && e.target.closest('.outreach-goal__action-link');
         if (!link || !link.closest('#results')) return;
         e.preventDefault();
@@ -1497,37 +1423,6 @@
         }
         openAdvocacyDrawer(action, memberId || '', zip || '', photoUrl, '');
     });
-
-    document.body.addEventListener('blur', function (e) {
-        var editInput = e.target && e.target.classList && e.target.classList.contains('outreach-goal__zip-edit') ? e.target : null;
-        if (!editInput || !editInput.closest('#results')) return;
-        var cell = editInput.closest('.outreach-goal__zip-cell');
-        var displayBtn = cell && cell.querySelector('.outreach-goal__zip-display');
-        var block = editInput.closest('.outreach-goal');
-        var previousZip = (block && block.getAttribute('data-goal-zip')) || '';
-        var newZip = (editInput.value || '').trim();
-        if (/^\d{5}$/.test(newZip)) {
-            commitGoalZip(newZip);
-        } else {
-            hideGoalZipEdit(displayBtn, editInput, previousZip);
-        }
-    }, true);
-    document.body.addEventListener('keydown', function (e) {
-        var editInput = e.target && e.target.classList && e.target.classList.contains('outreach-goal__zip-edit') ? e.target : null;
-        if (!editInput || !editInput.closest('#results')) return;
-        if (e.key !== 'Enter') return;
-        e.preventDefault();
-        var newZip = (editInput.value || '').trim();
-        if (/^\d{5}$/.test(newZip)) {
-            commitGoalZip(newZip);
-        } else {
-            var cell = editInput.closest('.outreach-goal__zip-cell');
-            var displayBtn = cell && cell.querySelector('.outreach-goal__zip-display');
-            var block = editInput.closest('.outreach-goal');
-            var previousZip = (block && block.getAttribute('data-goal-zip')) || '';
-            hideGoalZipEdit(displayBtn, editInput, previousZip);
-        }
-    }, true);
 
     /**
      * Resolve "other" district member from goal block and current drawer member.
