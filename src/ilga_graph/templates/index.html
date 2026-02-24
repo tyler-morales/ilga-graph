@@ -1646,6 +1646,7 @@
         var blockZip = (block.getAttribute('data-goal-zip') || '').trim();
         var senatorId = (block.getAttribute('data-goal-senator-id') || '').trim();
         var repId = (block.getAttribute('data-goal-rep-id') || '').trim();
+        var brokerId = (block.getAttribute('data-goal-broker-id') || '').trim();
         var z = zip || blockZip;
         if (!z) return;
         var stored = getGoalProgress(z);
@@ -1697,14 +1698,14 @@
         if (labelEl) labelEl.textContent = done + ' of ' + total + ' actions complete';
         var nextBlock = block.querySelector('#outreach-goal-next');
         if (nextBlock) {
-            var firstIncomplete = block.querySelector('.outreach-goal__action:not(.outreach-goal__action--done)');
+            var firstIncomplete = block.querySelector('.outreach-goal__phase--district .outreach-goal__action:not(.outreach-goal__action--done)');
             var link = firstIncomplete ? firstIncomplete.querySelector('.outreach-goal__action-link') : null;
             if (link) {
                 var labelEl2 = firstIncomplete.querySelector('.outreach-goal__action-label');
                 var rolePart = labelEl2 ? labelEl2.textContent.replace(/^(Call|Email)\s+/, '').trim() : '';
                 var actionVerb = link.getAttribute('data-action') === 'call' ? 'Call' : 'Email';
                 nextBlock.textContent = '';
-                nextBlock.appendChild(document.createTextNode('Next: '));
+                nextBlock.appendChild(document.createTextNode('Now: '));
                 var nextLink = link.cloneNode(true);
                 nextLink.textContent = actionVerb + ' your ' + rolePart;
                 nextLink.setAttribute('aria-label', actionVerb + ' your ' + rolePart);
@@ -1715,6 +1716,67 @@
             } else {
                 nextBlock.setAttribute('hidden', '');
                 nextBlock.setAttribute('aria-hidden', 'true');
+            }
+        }
+        /* When district 4/4 complete and broker exists, switch to broker phase and update broker bar + Next */
+        if (done === 4 && total === 4 && brokerId) {
+            block.classList.add('outreach-goal--phase-broker');
+            var currentLabelEl = block.querySelector('#outreach-goal-current-label');
+            if (currentLabelEl) currentLabelEl.textContent = 'Outreach the Power Broker';
+            var brokerStored = stored[brokerId] || {};
+            var brokerDone = (brokerStored.call ? 1 : 0) + (brokerStored.email ? 1 : 0);
+            var brokerTotal = 2;
+            function setBrokerAction(memberId, kind, doneVal) {
+                var status = block.querySelector('.outreach-goal__action-status[data-goal-member="' + memberId + '"][data-goal-kind="' + kind + '"]');
+                if (!status) return;
+                var label = kind === 'call' ? (doneVal ? 'Called' : 'Not yet called') : (doneVal ? 'Emailed' : 'Not yet emailed');
+                status.setAttribute('aria-label', label);
+                status.innerHTML = '';
+                var row = status.closest('.outreach-goal__action');
+                if (row) {
+                    if (doneVal) {
+                        row.classList.add('outreach-goal__action--done');
+                        var lnk = row.querySelector('.outreach-goal__action-link');
+                        if (lnk) lnk.setAttribute('aria-disabled', 'true');
+                    } else {
+                        row.classList.remove('outreach-goal__action--done');
+                        var lnk = row.querySelector('.outreach-goal__action-link');
+                        if (lnk) lnk.removeAttribute('aria-disabled');
+                    }
+                }
+            }
+            setBrokerAction(brokerId, 'call', !!(brokerStored.call));
+            setBrokerAction(brokerId, 'email', !!(brokerStored.email));
+            var brokerBar = block.querySelector('#outreach-goal-bar-broker');
+            var brokerFill = block.querySelector('#outreach-goal-bar-fill-broker');
+            var brokerLabelEl = block.querySelector('#outreach-goal-bar-label-broker');
+            if (brokerBar) {
+                brokerBar.setAttribute('aria-valuenow', String(brokerDone));
+                brokerBar.setAttribute('aria-valuemax', String(brokerTotal));
+            }
+            if (brokerFill) brokerFill.style.width = (brokerTotal ? Math.round((brokerDone / brokerTotal) * 100) : 0) + '%';
+            if (brokerLabelEl) brokerLabelEl.textContent = brokerDone + ' of ' + brokerTotal + ' actions complete';
+            var nextBrokerBlock = block.querySelector('#outreach-goal-next-broker');
+            if (nextBrokerBlock) {
+                var firstIncompleteBroker = block.querySelector('.outreach-goal__phase--broker .outreach-goal__action:not(.outreach-goal__action--done)');
+                var brokerLink = firstIncompleteBroker ? firstIncompleteBroker.querySelector('.outreach-goal__action-link') : null;
+                if (brokerLink) {
+                    var brokerLabelEl2 = firstIncompleteBroker.querySelector('.outreach-goal__action-label');
+                    var brokerRolePart = brokerLabelEl2 ? brokerLabelEl2.textContent.replace(/^(Call|Email)\s+/, '').trim() : 'Power Broker';
+                    var brokerActionVerb = brokerLink.getAttribute('data-action') === 'call' ? 'Call' : 'Email';
+                    nextBrokerBlock.textContent = '';
+                    nextBrokerBlock.appendChild(document.createTextNode('Now: '));
+                    var nextBrokerLink = brokerLink.cloneNode(true);
+                    nextBrokerLink.textContent = brokerActionVerb + ' your ' + brokerRolePart;
+                    nextBrokerLink.setAttribute('aria-label', brokerActionVerb + ' your ' + brokerRolePart);
+                    nextBrokerLink.classList.add('outreach-goal__next-link');
+                    nextBrokerBlock.appendChild(nextBrokerLink);
+                    nextBrokerBlock.removeAttribute('hidden');
+                    nextBrokerBlock.removeAttribute('aria-hidden');
+                } else {
+                    nextBrokerBlock.setAttribute('hidden', '');
+                    nextBrokerBlock.setAttribute('aria-hidden', 'true');
+                }
             }
         }
         if (typeof setOutreachDone === 'function') {

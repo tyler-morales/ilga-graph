@@ -686,66 +686,104 @@ user_emailed_member_ids=none, outreach_heat=none) %}
 <div class="results-layout">
     <aside class="results-aside">
         {% if senator or representative %}
-        <section class="outreach-goal" aria-labelledby="outreach-goal-heading" data-goal-zip="{{ zip }}"
+        <section class="outreach-goal {% if goal_phase == 'broker' %}outreach-goal--phase-broker{% endif %}"
+            aria-labelledby="outreach-goal-heading" data-goal-zip="{{ zip }}"
             data-goal-senator-id="{{ senator.id if senator else '' }}"
-            data-goal-rep-id="{{ representative.id if representative else '' }}">
+            data-goal-rep-id="{{ representative.id if representative else '' }}"
+            data-goal-broker-id="{{ broker_id|default('') }}">
             <div class="outreach-goal__head-row">
                 <h2 id="outreach-goal-heading" class="outreach-goal__title">Your goal</h2>
             </div>
-            <p class="outreach-goal__copy">Complete these {{ district_goal_total|default(4) }} actions for your
-                district: call and email your Senator and your Representative (higher-impact member first).</p>
-            {% if district_goal_total is defined and district_goal_total > 0 %}
-            <div class="outreach-goal__bar-wrap" role="status" aria-live="polite">
-                <p class="outreach-goal__bar-label" id="outreach-goal-bar-label">{{ district_goal_done|default(0) }} of
-                    {{ district_goal_total }} actions complete</p>
-                <div class="outreach-goal__bar" role="progressbar" id="outreach-goal-bar"
-                    aria-valuenow="{{ district_goal_done|default(0) }}" aria-valuemin="0"
-                    aria-valuemax="{{ district_goal_total }}" aria-labelledby="outreach-goal-bar-label">
-                    <div class="outreach-goal__bar-fill" id="outreach-goal-bar-fill"
-                        style="width: {{ ((district_goal_done|default(0)) / district_goal_total * 100)|int }}%;">
-                        <span class="outreach-goal__bar-truck" aria-hidden="true">🛻</span>
+            <p class="outreach-goal__copy"><span id="outreach-goal-current-label">{{ current_goal_label|default('Outreach your district legislators') }}</span></p>
+
+            {# Phase 1: district (bar X of 4, 4 steps, Next) #}
+            <div class="outreach-goal__phase outreach-goal__phase--district">
+                {% if district_goal_total is defined and district_goal_total > 0 %}
+                <div class="outreach-goal__bar-wrap" role="status" aria-live="polite">
+                    <p class="outreach-goal__bar-label" id="outreach-goal-bar-label">{{ district_goal_done|default(0) }} of {{ district_goal_total }} actions complete</p>
+                    <div class="outreach-goal__bar" role="progressbar" id="outreach-goal-bar"
+                        aria-valuenow="{{ district_goal_done|default(0) }}" aria-valuemin="0"
+                        aria-valuemax="{{ district_goal_total }}" aria-labelledby="outreach-goal-bar-label">
+                        <div class="outreach-goal__bar-fill" id="outreach-goal-bar-fill"
+                            style="width: {{ ((district_goal_done|default(0)) / district_goal_total * 100)|int }}%;">
+                            <span class="outreach-goal__bar-truck" aria-hidden="true">🛻</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <ol class="outreach-goal__actions outreach-goal__actions--numbered" role="list"
-                aria-label="District outreach steps (call then email for each member; order by impact)">
-                {% for step in goal_steps %}
-                <li class="outreach-goal__action{% if step.done %} outreach-goal__action--done{% endif %}">
-                    <span class="outreach-goal__action-status" data-goal-member="{{ step.member_id }}"
-                        data-goal-kind="{{ step.action }}"
-                        aria-label="{{ 'Called' if step.action == 'call' and step.done else 'Not yet called' if step.action == 'call' else 'Emailed' if step.done else 'Not yet emailed' }}"></span>
-                    <span class="outreach-goal__action-label">{{ 'Call' if step.action == 'call' else 'Email' }} {{
-                        step.role_label }}</span>
-                    <a href="#" class="outreach-goal__action-link" data-action="{{ step.action }}"
-                        data-member-id="{{ step.member_id }}" data-zip="{{ zip }}"
-                        aria-label="{{ 'Call' if step.action == 'call' else 'Email' }} your {{ step.role_label }}" {% if
-                        step.done %} aria-disabled="true" {% endif %}>{{ 'Call' if step.action == 'call' else 'Email'
-                        }}</a>
-                </li>
-                {% endfor %}
-            </ol>
-            {% if goal_next_step %}
-            <p class="outreach-goal__next" id="outreach-goal-next">Next: <a href="#"
-                    class="outreach-goal__action-link outreach-goal__next-link"
-                    data-action="{{ goal_next_step.action }}" data-member-id="{{ goal_next_step.member_id }}"
-                    data-zip="{{ zip }}"
-                    aria-label="{{ goal_next_step.action|capitalize }} your {{ goal_next_step.role_label }}">{{
-                    goal_next_step.action|capitalize }} your {{ goal_next_step.role_label }}</a></p>
-            {% else %}
-            <p class="outreach-goal__next" id="outreach-goal-next" hidden aria-hidden="true">Next: <span
-                    class="outreach-goal__next-placeholder"></span></p>
-            {% endif %}
-            {% if both_district_members_called|default(false) %}
-            <div class="outreach-goal__celebration" role="status" aria-live="polite">
-                <p class="outreach-goal__celebration-msg">You've reached both your district members.</p>
-                {% if broker %}
-                <p class="outreach-goal__optional">Want more impact? <a href="#"
-                        class="outreach-goal__action-link outreach-goal__cta-broker" data-action="call"
-                        data-member-id="{{ broker.id }}" data-zip="{{ zip }}"
-                        aria-label="Open call script for Power Broker">Call the Power Broker</a></p>
+                <ol class="outreach-goal__actions outreach-goal__actions--numbered" role="list"
+                    aria-label="District outreach steps (call then email for each member; order by impact)">
+                    {% for step in district_steps %}
+                    <li class="outreach-goal__action{% if step.done %} outreach-goal__action--done{% endif %}">
+                        <span class="outreach-goal__action-status" data-goal-member="{{ step.member_id }}"
+                            data-goal-kind="{{ step.action }}"
+                            aria-label="{{ 'Called' if step.action == 'call' and step.done else 'Not yet called' if step.action == 'call' else 'Emailed' if step.done else 'Not yet emailed' }}"></span>
+                        <span class="outreach-goal__action-label">{{ 'Call' if step.action == 'call' else 'Email' }} {{ step.role_label }}</span>
+                        <a href="#" class="outreach-goal__action-link" data-action="{{ step.action }}"
+                            data-member-id="{{ step.member_id }}" data-zip="{{ zip }}"
+                            aria-label="{{ 'Call' if step.action == 'call' else 'Email' }} your {{ step.role_label }}"
+                            {% if step.done %}aria-disabled="true"{% endif %}>{{ 'Call' if step.action == 'call' else 'Email' }}</a>
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% if goal_phase == 'district' and goal_next_step %}
+                <p class="outreach-goal__next" id="outreach-goal-next">Now: <a href="#"
+                        class="outreach-goal__action-link outreach-goal__next-link"
+                        data-action="{{ goal_next_step.action }}" data-member-id="{{ goal_next_step.member_id }}"
+                        data-zip="{{ zip }}"
+                        aria-label="{{ goal_next_step.action|capitalize }} your {{ goal_next_step.role_label }}">{{ goal_next_step.action|capitalize }} your {{ goal_next_step.role_label }}</a></p>
+                {% else %}
+                <p class="outreach-goal__next" id="outreach-goal-next" hidden aria-hidden="true">Now: <span class="outreach-goal__next-placeholder"></span></p>
+                {% endif %}
                 {% endif %}
             </div>
+
+            {# Phase 2: broker (bar + 2 steps + Next, then Completed goals as single line) — only when broker exists #}
+            {% if broker %}
+            <div class="outreach-goal__phase outreach-goal__phase--broker">
+                <div class="outreach-goal__bar-wrap" role="status" aria-live="polite">
+                    <p class="outreach-goal__bar-label" id="outreach-goal-bar-label-broker">{{ goal_done|default(0) }} of {{ goal_total|default(2) }} actions complete</p>
+                    <div class="outreach-goal__bar" role="progressbar" id="outreach-goal-bar-broker"
+                        aria-valuenow="{{ goal_done|default(0) }}" aria-valuemin="0"
+                        aria-valuemax="{{ goal_total|default(2) }}" aria-labelledby="outreach-goal-bar-label-broker">
+                        <div class="outreach-goal__bar-fill" id="outreach-goal-bar-fill-broker"
+                            style="width: {{ ((goal_done|default(0)) / (goal_total|default(2)) * 100)|int }}%;">
+                            <span class="outreach-goal__bar-truck" aria-hidden="true">🛻</span>
+                        </div>
+                    </div>
+                </div>
+                <ol class="outreach-goal__actions outreach-goal__actions--numbered" id="outreach-goal-actions-broker" role="list"
+                    aria-label="Power Broker outreach steps (call then email)">
+                    {% for step in broker_goal_steps|default([]) %}
+                    <li class="outreach-goal__action{% if step.done %} outreach-goal__action--done{% endif %}">
+                        <span class="outreach-goal__action-status" data-goal-member="{{ step.member_id }}"
+                            data-goal-kind="{{ step.action }}"
+                            aria-label="{{ 'Called' if step.action == 'call' and step.done else 'Not yet called' if step.action == 'call' else 'Emailed' if step.done else 'Not yet emailed' }}"></span>
+                        <span class="outreach-goal__action-label">{{ 'Call' if step.action == 'call' else 'Email' }} {{ step.role_label }}</span>
+                        <a href="#" class="outreach-goal__action-link" data-action="{{ step.action }}"
+                            data-member-id="{{ step.member_id }}" data-zip="{{ zip }}"
+                            aria-label="{{ 'Call' if step.action == 'call' else 'Email' }} your {{ step.role_label }}"
+                            {% if step.done %}aria-disabled="true"{% endif %}>{{ 'Call' if step.action == 'call' else 'Email' }}</a>
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% if goal_phase == 'broker' and goal_next_step %}
+                <p class="outreach-goal__next" id="outreach-goal-next-broker">Now: <a href="#"
+                        class="outreach-goal__action-link outreach-goal__next-link"
+                        data-action="{{ goal_next_step.action }}" data-member-id="{{ goal_next_step.member_id }}"
+                        data-zip="{{ zip }}"
+                        aria-label="{{ goal_next_step.action|capitalize }} your {{ goal_next_step.role_label }}">{{ goal_next_step.action|capitalize }} your {{ goal_next_step.role_label }}</a></p>
+                {% else %}
+                <p class="outreach-goal__next" id="outreach-goal-next-broker" hidden aria-hidden="true">Now: <span class="outreach-goal__next-placeholder"></span></p>
+                {% endif %}
+                <h3 id="outreach-goal-completed-heading" class="outreach-goal__completed-title">Completed goals</h3>
+                <p class="outreach-goal__completed-summary" aria-labelledby="outreach-goal-completed-heading">Outreach your district legislators</p>
+            </div>
             {% endif %}
+            {% if broker %}
+            <details class="outreach-goal__power-broker-details" id="outreach-goal-power-broker-details">
+                <summary class="outreach-goal__power-broker-summary">Who is the Power Broker?</summary>
+                <p class="outreach-goal__power-broker-explainer">The committee chair for your topic (default Transportation), or the highest Moneyball senator or representative outside your district. Reaching them can multiply impact.</p>
+            </details>
             {% endif %}
         </section>
         {% endif %}

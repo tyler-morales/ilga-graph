@@ -267,13 +267,21 @@ async def _build_search_results_context(
         rep_card is None or rep_called
     )
 
-    # Ordered actionable steps: call then email for higher-moneyball member, then repeat for lower.
-    goal_steps: list[dict[str, Any]] = []
+    broker_id = str(broker_card["id"]) if broker_card else None
+    broker_called = broker_id is not None and broker_id in user_called_member_ids
+    broker_emailed = broker_id is not None and broker_id in user_emailed_member_ids
+    broker_goal_done = (1 if broker_called else 0) + (1 if broker_emailed else 0)
+    broker_goal_total = 2 if broker_card else 0
+    district_goal_complete = district_goal_done == district_goal_total and district_goal_total > 0
+    in_broker_phase = district_goal_complete and broker_card is not None
+
+    # District steps (for phase 1 or for "completed goals" in phase 2).
+    district_steps: list[dict[str, Any]] = []
     for item in your_legislators:
         card = item["card"]
         mid = str(card["id"])
         role_short = "Senator" if "Senator" in item["role_label"] else "Rep"
-        goal_steps.append(
+        district_steps.append(
             {
                 "member_id": mid,
                 "role_label": role_short,
@@ -281,7 +289,7 @@ async def _build_search_results_context(
                 "done": mid in user_called_member_ids,
             }
         )
-        goal_steps.append(
+        district_steps.append(
             {
                 "member_id": mid,
                 "role_label": role_short,
@@ -289,6 +297,39 @@ async def _build_search_results_context(
                 "done": mid in user_emailed_member_ids,
             }
         )
+
+    broker_goal_steps: list[dict[str, Any]] = []
+    if broker_card:
+        broker_goal_steps = [
+            {
+                "member_id": broker_id,
+                "role_label": "Power Broker",
+                "action": "call",
+                "done": broker_called,
+            },
+            {
+                "member_id": broker_id,
+                "role_label": "Power Broker",
+                "action": "email",
+                "done": broker_emailed,
+            },
+        ]
+
+    if in_broker_phase:
+        goal_phase = "broker"
+        current_goal_label = "Outreach the Power Broker"
+        goal_steps = broker_goal_steps
+        goal_done = broker_goal_done
+        goal_total = broker_goal_total
+        completed_goal_steps = [{**s, "done": True} for s in district_steps]
+    else:
+        goal_phase = "district"
+        current_goal_label = "Outreach your district legislators"
+        goal_steps = district_steps
+        goal_done = district_goal_done
+        goal_total = district_goal_total
+        completed_goal_steps = []
+
     goal_next_step: dict[str, Any] | None = None
     for s in goal_steps:
         if not s["done"]:
@@ -414,6 +455,16 @@ async def _build_search_results_context(
         "district_goal_done": district_goal_done,
         "district_goal_total": district_goal_total,
         "both_district_members_called": both_district_members_called,
+        "broker_id": broker_id,
+        "broker_called": broker_called,
+        "broker_emailed": broker_emailed,
+        "goal_phase": goal_phase,
+        "current_goal_label": current_goal_label,
+        "goal_done": goal_done,
+        "goal_total": goal_total,
+        "completed_goal_steps": completed_goal_steps,
+        "district_steps": district_steps,
+        "broker_goal_steps": broker_goal_steps,
         "goal_steps": goal_steps,
         "goal_next_step": goal_next_step,
         "outreach_heat": outreach_heat,
