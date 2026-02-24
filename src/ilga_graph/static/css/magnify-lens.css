@@ -127,10 +127,16 @@
 }
 
 @media (max-width: 768px) {
-  .magnify-lens {
-    display: none !important;
+  /* Lens and frame 30% smaller on mobile (70% of default). */
+  :root {
+    --magnify-size: 105px; /* 150 * 0.7 */
   }
-
+  .magnify-lens {
+    --magnify-frame-size: 161px; /* 230 * 0.7 */
+    --magnify-frame-offset-x: 12.6px; /* 18 * 0.7 */
+    --magnify-frame-offset-y: -3.5px; /* -5 * 0.7 */
+  }
+  /* Lens visible on mobile for intro sweep; no cursor-follow so keep default cursor. */
   .advocacy-hero .hero-headline.hero-headline--lens-active {
     cursor: default;
   }

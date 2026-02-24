@@ -1,7 +1,7 @@
 /**
  * Magnifying glass lens on advocacy hero headline: follows cursor, magnifies
- * content underneath. Respects prefers-reduced-motion (static over "F") and
- * hides on touch viewports.
+ * content underneath. Respects prefers-reduced-motion (static over "F").
+ * On mobile, intro sweep runs; cursor-follow is desktop-only (no hover).
  */
 (function () {
   var SCALE = 1.8;
@@ -139,7 +139,7 @@
   }
 
   function runIntroAnimation(wrapper, headline, lens, content, reducedMotion) {
-    if (reducedMotion || window.innerWidth <= 768) return;
+    if (reducedMotion) return;
     var line1 = headline.querySelector(".hero-headline-line");
     if (!line1 || !line1.textContent || !line1.textContent.trim()) return;
 
@@ -160,7 +160,8 @@
     var y = bounds.y;
 
     var FADE_IN_MS = 300;
-    var INTRO_DURATION_MS = 2200;
+    var isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
+    var INTRO_DURATION_MS = isMobile ? 2900 : 2800;
     var introDurationSec = INTRO_DURATION_MS / 1000;
 
     var marks = headline.querySelectorAll(".hero-headline-mark");
