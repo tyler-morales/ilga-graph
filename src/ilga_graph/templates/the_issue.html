@@ -1,31 +1,263 @@
 {% extends "_brief_skeleton.html" %}
 {% block title %}The Issue — {{ site_name }}{% endblock %}
-{% block brief_title %}The issue{% endblock %}
+{% block brief_title %}Illinois Kei Vehicle Registration{% endblock %}
 {% block brief_intro %}
-<p>Illinois is blocking registration for federally lawful Kei (軽) vehicles due to a statutory interpretation gap. Here's what's happening and how a narrow fix can restore registration without weakening safety or insurance rules.</p>
+<p>Illinois is currently treating lawfully imported kei vehicles as &lsquo;off-highway&rsquo; vehicles, so owners cannot register them for normal road use. Here&rsquo;s what residents need to know and what you can do.</p>
 {% endblock %}
-{% block brief_layout_class %}legislator-brief-layout--no-sidebar{% endblock %}
-{% block brief_main_heading %}Overview{% endblock %}
+{% block brief_layout_class %}{% endblock %}
+{% block brief_main_heading %}What Illinois Residents Need to Know{% endblock %}
 {% block brief_main %}
-    <section aria-labelledby="issue-what">
-        <h2 id="issue-what">What's happening</h2>
-        <p>Registration is being denied or revoked for Kei-class vehicles that are legally imported and federally compliant. Illinois is applying <strong>625 ILCS 5/3-401(c-1)</strong> to treat these vehicles as "non-highway" and therefore ineligible for normal registration, even though they are street-legal in other states and meet federal standards.</p>
+    <section aria-labelledby="issue-plain">
+        <h2 id="issue-plain">The Issue in Plain English</h2>
+        <p>Illinois is currently treating lawfully imported kei vehicles as &lsquo;off-highway&rsquo; vehicles, which means owners cannot register them for normal road use. This is not because the vehicles were illegally imported, and not because owners failed inspection or insurance requirements. It is based on how Illinois is interpreting <strong>625 ILCS 5/3-401(c-1)</strong>.</p>
     </section>
 
-    <section aria-labelledby="issue-why">
-        <h2 id="issue-why">Why it matters</h2>
-        <p>This is a <strong>statutory clarification issue</strong>, not a paperwork or compliance problem. The law was not written with Kei vehicles in mind; the current interpretation creates a gap that blocks lawful, safe, and already-common vehicles (including trucks and vans used for delivery, groundskeeping, and small business) from being registered in Illinois.</p>
+    <section aria-labelledby="issue-why-happening">
+        <h2 id="issue-why-happening">Why This Is Happening</h2>
+        <p>Under federal law, vehicles that are 25 years old or older may be legally imported into the United States under established federal pathways. However, Illinois registration is controlled at the state level. The Secretary of State has cited 625 ILCS 5/3-401(c-1), which restricts registration eligibility based on how a vehicle was originally manufactured for highway use. The current interpretation treats that phrase as meaning &lsquo;manufactured for U.S. highways.&rsquo;</p>
+    </section>
+
+    <section aria-labelledby="issue-means">
+        <h2 id="issue-means">What This Means for Residents</h2>
+        <p>Registrations have been denied or revoked. Titles have been branded &lsquo;Not Eligible for Registration.&rsquo; Some owners have been instructed to surrender license plates. Contesting a decision requires a formal administrative hearing and filing fee.</p>
+    </section>
+
+    <section aria-labelledby="issue-not-about">
+        <h2 id="issue-not-about">What This Is NOT About</h2>
+        <p>This is not about weakening safety laws or bypassing insurance requirements. Illinois would continue to enforce equipment requirements, insurance requirements, titling documentation, and traffic laws. The request is simply for normal registration eligibility.</p>
     </section>
 
     <section aria-labelledby="issue-fix">
-        <h2 id="issue-fix">The fix</h2>
-        <p>A <strong>narrow clarification amendment</strong> can restore normal registration for these vehicles while keeping all existing safety, equipment, and insurance requirements intact. The goal is to align Illinois's treatment of federally compliant Kei vehicles with the intent of the law and with how other states handle them.</p>
+        <h2 id="issue-fix">The Narrow Fix</h2>
+        <p>The General Assembly can clarify that a vehicle originally manufactured for highway use in any jurisdiction, and legally importable under federal law, may be titled and registered in Illinois under normal road-use conditions. This preserves enforcement authority while resolving ambiguity in 625 ILCS 5/3-401(c-1).</p>
+    </section>
+
+    <section aria-labelledby="issue-matters">
+        <h2 id="issue-matters">Why This Matters</h2>
+        <p>Clear law protects residents. When statutory language is ambiguous, regular people absorb the consequences. This issue is about fairness, predictability, and consistent application of Illinois law.</p>
+    </section>
+
+    <section aria-labelledby="issue-other-states">
+        <h2 id="issue-other-states">Where Other States Stand</h2>
+        <p>Many states already allow kei vehicle registration—by passing laws or updating policy. The map and table below show where laws have passed, where bills are in progress, and where agencies have allowed registration without a new law.</p>
+        <div class="brief-states-view" data-view="map" data-state-status="{{ brief_state_map_status_json }}">
+            <div class="brief-states-view-toggle" role="group" aria-label="View as map or table">
+                <button type="button" class="brief-states-view-btn brief-states-view-btn--active" data-view="map"
+                    aria-pressed="true" aria-controls="issue-view-map issue-view-table">Map</button>
+                <button type="button" class="brief-states-view-btn" data-view="table" aria-pressed="false"
+                    aria-controls="issue-view-map issue-view-table">Table</button>
+            </div>
+            <div class="brief-states-view-panel brief-states-view-panel--map" id="issue-view-map" role="region"
+                aria-label="Map view">
+                <div class="brief-us-map-wrap" role="img"
+                    aria-label="United States map. States with kei bills passed into law shown in green; states with bills in progress in orange; states with policy changes in blue; others in gray.">
+                    <div class="brief-us-map" title="US states by bill status" aria-hidden="true"></div>
+                </div>
+                <p class="brief-map-legend" role="region" aria-label="Map legend">
+                    <span class="brief-map-legend-item"><span class="brief-map-swatch brief-map-swatch--passed"
+                            aria-hidden="true"></span> Law passed</span>
+                    <span class="brief-map-legend-item"><span class="brief-map-swatch brief-map-swatch--pending"
+                            aria-hidden="true"></span> Bill in progress</span>
+                    <span class="brief-map-legend-item"><span class="brief-map-swatch brief-map-swatch--policy"
+                            aria-hidden="true"></span> Policy change</span>
+                </p>
+            </div>
+            <div class="brief-states-view-panel brief-states-view-panel--table" id="issue-view-table" role="region"
+                aria-label="Table view">
+                <p class="brief-states-table-intro">States that have allowed or are moving toward kei registration. This list is not exhaustive.</p>
+                <div class="bill-actions-table-wrap" role="region" aria-label="State mechanisms table">
+                    <table class="intel-table legislator-brief-states-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">State</th>
+                                <th scope="col" class="brief-table-col-indicator" title="Legislation (statute or bill)">Bill</th>
+                                <th scope="col" class="brief-table-col-indicator" title="Administrative policy change">Policy</th>
+                                <th scope="col">How</th>
+                                <th scope="col">Effective</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in brief_state_status|default([]) %}
+                            <tr>
+                                <td data-label="State">{{ s.state }}</td>
+                                <td data-label="Bill" class="brief-table-cell-indicator">
+                                    {% if s.bill_status == 'passed' %}
+                                    <span class="brief-table-indicator brief-table-indicator--yes" role="img"
+                                        aria-label="Has bill: yes">✓</span>
+                                    {% elif s.bill_status == 'pending' %}
+                                    <span class="brief-table-indicator brief-table-indicator--pending" role="img"
+                                        aria-label="Bill in progress">●</span>
+                                    {% else %}
+                                    <span class="brief-table-indicator brief-table-indicator--no" role="img"
+                                        aria-label="Has bill: no">—</span>
+                                    {% endif %}
+                                </td>
+                                <td data-label="Policy" class="brief-table-cell-indicator">
+                                    {% if s.policy %}
+                                    <span class="brief-table-indicator brief-table-indicator--yes" role="img"
+                                        aria-label="Policy change: yes">✓</span>
+                                    {% else %}
+                                    <span class="brief-table-indicator brief-table-indicator--no" role="img"
+                                        aria-label="Policy change: no">—</span>
+                                    {% endif %}
+                                </td>
+                                <td data-label="How">{{ s.mechanism }}</td>
+                                <td data-label="Effective">{{ s.status }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <p class="brief-table-legend" id="issue-table-key" role="region" aria-label="Indicator key">
+                    <span class="brief-table-legend-item"><span class="brief-table-indicator brief-table-indicator--yes"
+                            aria-hidden="true">✓</span> Law passed</span>
+                    <span class="brief-table-legend-item"><span class="brief-table-indicator brief-table-indicator--pending"
+                            aria-hidden="true">●</span> Bill in progress</span>
+                    <span class="brief-table-legend-item"><span class="brief-table-indicator brief-table-indicator--no"
+                            aria-hidden="true">—</span> No bill or policy change</span>
+                </p>
+            </div>
+        </div>
     </section>
 
     <section aria-labelledby="issue-action">
-        <h2 id="issue-action">What you can do</h2>
-        <p>Contact your state senator and representative. We'll look up your legislators by ZIP code and give you a short script and email template so you can make your voice heard in under a minute.</p>
+        <h2 id="issue-action">What You Can Do</h2>
+        <ul class="content-list" role="list">
+            <li>Contact your Illinois State Representative and State Senator.</li>
+            <li>Ask them to support a narrow statutory clarification to 625 ILCS 5/3-401(c-1).</li>
+            <li>Encourage them to meet with the Secretary of State&rsquo;s office to confirm language that resolves the ambiguity while preserving safety and insurance requirements.</li>
+        </ul>
         <p><a href="/advocacy/" class="content-cta">Find your legislators and start outreach</a></p>
     </section>
+
+    {% if faq %}
+    <section class="brief-faq" aria-labelledby="issue-faq-heading">
+        <h2 id="issue-faq-heading">{{ faq.title }}</h2>
+        {% if faq.intro %}<p class="brief-faq__intro">{{ faq.intro }}</p>{% endif %}
+        <div class="brief-faq__list">
+            {% for item in faq['items'] %}
+            <details class="brief-faq__item" id="issue-faq-{{ item.id }}">
+                <summary class="brief-faq__question">{{ item.question }}</summary>
+                <div class="brief-faq__answer">
+                    <p>{{ item.answer }}</p>
+                    {% if item.sources %}
+                    <p class="brief-faq__sources-label">Sources:</p>
+                    <ul class="brief-faq__sources" role="list">
+                        {% for src in item.sources %}
+                        <li><a href="{{ src.url }}" target="_blank" rel="noopener noreferrer" class="brief-faq__source-link">{{ src.label }}</a></li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+            </details>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
 {% endblock %}
-{# No brief_sidebar: issue page has no documents sidebar. #}
+{% block brief_sidebar %}
+<aside class="legislator-brief-sidebar" aria-labelledby="issue-brief-documents-heading">
+    <h2 id="issue-brief-documents-heading" class="legislator-brief-sidebar__title">Documents</h2>
+    <div class="legislator-brief-sidebar__content">
+        <h4 id="issue-brief-docs-heading" class="legislator-brief-sidebar__subtitle">Constituent brief</h4>
+        <ul class="legislator-brief-docs" role="list" aria-labelledby="issue-brief-docs-heading">
+            <li class="legislator-brief-doc">
+                <a class="legislator-brief-doc__link" href="/static/images/Illinois_Kei_Vehicle_Registration_Constituent_Brief.pdf"
+                    target="_blank" rel="noopener noreferrer"
+                    aria-label="Download Illinois Kei Vehicle Registration Constituent Brief (PDF)">
+                    <img class="legislator-brief-doc__icon" src="/static/images/icon-pdf.svg" alt="" width="24"
+                        height="24" aria-hidden="true">
+                    <span class="legislator-brief-doc__title">Illinois Kei Vehicle Registration Constituent Brief</span>
+                </a>
+            </li>
+        </ul>
+        {% if issue_sources %}
+        <h4 id="issue-brief-sources-heading" class="legislator-brief-sidebar__subtitle">Sources</h4>
+        <ul class="legislator-brief-sources" role="list" aria-labelledby="issue-brief-sources-heading">
+            {% for source in issue_sources %}
+            <li class="legislator-brief-doc">
+                <a class="legislator-brief-doc__link" href="{{ source.url }}" target="_blank" rel="noopener noreferrer"
+                    aria-label="View source {{ source.title }}">
+                    <img class="legislator-brief-doc__icon" src="/static/images/icon-link.svg" alt="" width="24"
+                        height="24" aria-hidden="true">
+                    <span class="legislator-brief-doc__title">{{ source.title }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% with target='constituent', section_id='issue-share' %}
+        {% include "_share_section_sidebar.html" %}
+        {% endwith %}
+    </div>
+</aside>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+    (function () {
+        var viewEl = document.querySelector('.brief-states-view');
+        if (!viewEl) return;
+        var statusJson = viewEl.getAttribute('data-state-status');
+        if (!statusJson) return;
+        var status;
+        try { status = JSON.parse(statusJson); } catch (e) { return; }
+        var wrap = viewEl.querySelector('.brief-us-map-wrap');
+        var container = wrap ? wrap.querySelector('.brief-us-map') : null;
+        var root = document.querySelector('.legislator-brief') || document.documentElement;
+        var styles = root && root.getRootNode ? getComputedStyle(root) : getComputedStyle(document.documentElement);
+        var defaultFills = { passed: '#086508', pending: '#e87700', policy: '#1a6fb5', none: '#d0d0d0' };
+        function getFill(name) {
+            var val = styles.getPropertyValue('--brief-color-' + name);
+            return (val && val.trim()) || defaultFills[name];
+        }
+        var fills = {
+            passed: getFill('passed'),
+            pending: getFill('pending'),
+            policy: getFill('policy'),
+            none: getFill('none')
+        };
+        function applyFills(svg) {
+            if (!svg) return;
+            var paths = svg.querySelectorAll('path[class]');
+            for (var i = 0; i < paths.length; i++) {
+                var path = paths[i];
+                var cls = (path.getAttribute('class') || '').trim().split(/\s+/)[0];
+                if (status[cls] !== undefined) {
+                    path.style.fill = fills[status[cls]] || fills.none;
+                }
+            }
+        }
+        if (container) {
+            fetch('/static/images/us-states.svg')
+                .then(function (r) { return r.text(); })
+                .then(function (svgText) {
+                    container.innerHTML = svgText;
+                    var svg = container.querySelector('svg');
+                    if (svg) {
+                        svg.setAttribute('class', 'brief-us-map-svg');
+                        svg.setAttribute('viewBox', '0 0 959 593');
+                        svg.removeAttribute('width');
+                        svg.removeAttribute('height');
+                        applyFills(svg);
+                    }
+                })
+                .catch(function () { });
+        }
+        var toggles = viewEl.querySelectorAll('.brief-states-view-btn');
+        for (var j = 0; j < toggles.length; j++) {
+            toggles[j].addEventListener('click', function () {
+                var view = this.getAttribute('data-view');
+                if (!view) return;
+                viewEl.setAttribute('data-view', view);
+                var btns = viewEl.querySelectorAll('.brief-states-view-btn');
+                for (var k = 0; k < btns.length; k++) {
+                    var btn = btns[k];
+                    var isActive = btn.getAttribute('data-view') === view;
+                    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                    btn.classList.toggle('brief-states-view-btn--active', isActive);
+                }
+            });
+        }
+    })();
+</script>
+{% endblock %}

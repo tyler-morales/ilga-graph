@@ -794,6 +794,101 @@ a:visited {
   line-height: 1.25;
 }
 
+/* FAQ section at end of brief main content (the-issue, legislator-brief). */
+.brief-faq {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.brief-faq__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.brief-faq__item {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.brief-faq__question {
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.brief-faq__question::-webkit-details-marker,
+.brief-faq__question::marker {
+  display: none;
+}
+
+.brief-faq__question::after {
+  content: "+";
+  float: right;
+  font-weight: 400;
+  color: #6b7280;
+}
+
+.brief-faq__item[open] .brief-faq__question::after {
+  content: "−";
+}
+
+.brief-faq__question:hover {
+  background: #f9fafb;
+}
+
+.brief-faq__question:focus-visible {
+  outline: 2px solid var(--focus-ring-color, #2563eb);
+  outline-offset: 2px;
+}
+
+.brief-faq__answer {
+  padding: 0 1rem 1rem;
+}
+
+.brief-faq__answer p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.brief-faq__intro {
+  margin: 0 0 1rem;
+  color: #555;
+  font-size: var(--font-size-sm, 0.875rem);
+  line-height: 1.5;
+}
+
+.brief-faq__sources-label {
+  margin: 0.75rem 0 0.25rem;
+  font-size: var(--font-size-xs, 0.75rem);
+  font-weight: 600;
+  color: #374151;
+}
+
+.brief-faq__sources {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: var(--font-size-xs, 0.75rem);
+  line-height: 1.5;
+}
+
+.brief-faq__source-link {
+  color: #2563eb;
+  text-underline-offset: 2px;
+}
+
+.brief-faq__source-link:hover {
+  text-decoration-thickness: 2px;
+}
+
+.brief-faq__source-link:focus-visible {
+  outline: 2px solid var(--focus-ring-color, #2563eb);
+  outline-offset: 2px;
+}
+
 /* Wide: 3-column grid (main | divider | sidebar). */
 @media (min-width: 769px) {
   .legislator-brief-layout {
