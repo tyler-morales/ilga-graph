@@ -111,6 +111,11 @@ def _beta_banner_report_url() -> str:
 
 # Resolved URL passed to templates.
 BETA_BANNER_REPORT_URL: str = _beta_banner_report_url()
+
+# Human-readable date shown in footer on all pages. Update when content/legal/docs change.
+FOOTER_LAST_UPDATED: str = _env("ILGA_FOOTER_LAST_UPDATED", "February 24, 2026").strip()
+# ISO date for <time datetime=""> (accessibility and machines).
+FOOTER_LAST_UPDATED_ISO: str = _env("ILGA_FOOTER_LAST_UPDATED_ISO", "2026-02-24").strip()
 # Bug report image uploads (optional). Empty = no uploads. Dir created on first report with image.
 BUG_REPORT_UPLOAD_DIR: str = _env("ILGA_BUG_REPORT_UPLOAD_DIR", "data/bug_report_uploads").strip()
 BUG_REPORT_MAX_IMAGE_BYTES: int = int(_env("ILGA_BUG_REPORT_MAX_IMAGE_MB", "5")) * 1024 * 1024
