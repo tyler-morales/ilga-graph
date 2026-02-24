@@ -3,7 +3,13 @@
 {% block title %}{{ site_name }} — Find Your Targets{% endblock %}
 
 {% block content %}
-<script>window.__ILGA_FEATURES = {{ (features or { }) | tojson }};</script>
+<script type="application/json" id="ilga-features-json">{{ (features or { }) | tojson }}</script>
+<script>
+(function () {
+  var el = document.getElementById('ilga-features-json');
+  window.__ILGA_FEATURES = el ? JSON.parse(el.textContent) : {};
+})();
+</script>
 {# ── Hero section: advocacy-centered hero only (no "what's happening" block) ── #}
 {% include "_hero_advocacy.html" %}
 <div class="hero-results-sep" aria-hidden="true"></div>
