@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import re
 from pathlib import Path
 from typing import Any
@@ -23,14 +24,18 @@ from ..constants import CATEGORY_CHOICES, CATEGORY_COMMITTEES, GENERAL_COMMITTEE
 from ..data_source import is_using_mocks
 from ..db import get_db
 from ..db_models import OutreachEvent, User
-from ..dependencies import get_current_user_optional
+from ..dependencies import get_current_user_optional, require_user
 from ..member_lookup import (
     find_member_by_district,
     find_member_by_id,
     is_constituent_for_zip_member,
 )
 from ..routers.outreach import get_outreach_aggregate
-from ..security import validate_photo_url_for_drawer
+from ..security import (
+    CSRF_COOKIE_NAME,
+    validate_csrf_token,
+    validate_photo_url_for_drawer,
+)
 
 _ZIP_RE = re.compile(r"^\d{5}$")
 # Pre-fill hero ZIP in dev/mocks; must exist in state.zip_to_district.
@@ -315,15 +320,55 @@ async def _build_search_results_context(
             .order_by(OutreachEvent.created_at.desc())
         )
         member_kinds: dict[str, set[str]] = {}
+        # #region agent log
+        _raw_events: list[list[str]] = []
+        _total_call_events = 0
+        _total_email_events = 0
+        # #endregion
         for mid, kind in sidebar_result.all():
             if kind == "call":
-                outreach_calls_count += 1
+                _total_call_events += 1
             elif kind == "email":
-                outreach_emails_count += 1
+                _total_email_events += 1
             mid_str = str(mid)
             if mid_str not in member_kinds:
                 member_kinds[mid_str] = set()
             member_kinds[mid_str].add(kind)
+            # #region agent log
+            _raw_events.append([mid_str, kind])
+            # #endregion
+        distinct_members_called = sum(1 for k in member_kinds.values() if "call" in k)
+        distinct_members_emailed = sum(1 for k in member_kinds.values() if "email" in k)
+        outreach_calls_count = distinct_members_called
+        outreach_emails_count = distinct_members_emailed
+        # #region agent log
+        try:
+            _log_path = Path("/Users/tyler/Projects/Code/ilga_graph_poc/.cursor/debug-40cdc3.log")
+            with open(_log_path, "a") as _f:
+                _f.write(
+                    json.dumps(
+                        {
+                            "sessionId": "40cdc3",
+                            "hypothesisId": "H1_H2_H3",
+                            "runId": "post-fix",
+                            "location": "advocacy.py:sidebar_counts",
+                            "message": "outreach sidebar events and counts",
+                            "data": {
+                                "user_id": user.id,
+                                "raw_events": _raw_events,
+                                "total_call_events": _total_call_events,
+                                "total_email_events": _total_email_events,
+                                "outreach_calls_count_displayed": outreach_calls_count,
+                                "outreach_emails_count_displayed": outreach_emails_count,
+                            },
+                            "timestamp": __import__("time").time() * 1000,
+                        }
+                    )
+                    + "\n"
+                )
+        except Exception:
+            pass
+        # #endregion
         for member_id in member_kinds:
             member = state.member_lookup_by_id.get(member_id)
             if member is None:
@@ -436,10 +481,6 @@ async def advocacy_index(
             sample = sorted(state.zip_to_district.keys())[:6]
             ctx["error"] += f" In dev mode, try ZIPs such as: {', '.join(sample)}."
         ctx["zip"] = DEFAULT_HERO_ZIP
-    user_zip = (getattr(user, "zip_code", None) or "").strip() if user else ""
-    if zip_param and in_district and user and user_zip != zip_param:
-        user.zip_code = zip_param
-        await db.commit()
     return templates.TemplateResponse("index.html", ctx)
 
 
@@ -856,6 +897,32 @@ async def check_constituent(member_id: str = "", zip: str = ""):
     member = find_member_by_id(state, member_id_stripped)
     is_constituent = is_constituent_for_zip_member(state, zip_code, member)
     return JSONResponse({"is_constituent": is_constituent})
+
+
+@router.patch("/api/me/zip")
+async def update_my_zip(
+    request: Request,
+    zip_code: str = Form(...),
+    csrf_token: str | None = Form(None),
+    user: User = Depends(require_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update current user's stored ZIP (hero zip / Use location commit only)."""
+    cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
+    if not validate_csrf_token(csrf_token, cookie_token):
+        return JSONResponse(
+            {"ok": False, "error": "Invalid or expired security token. Reload the page."},
+            status_code=403,
+        )
+    zip_param = (zip_code or "").strip()
+    if not _ZIP_RE.match(zip_param) or zip_param not in state.zip_to_district:
+        return JSONResponse(
+            {"ok": False, "error": "Invalid or unsupported Illinois ZIP code."},
+            status_code=400,
+        )
+    user.zip_code = zip_param
+    await db.commit()
+    return JSONResponse({"ok": True})
 
 
 @router.post("/search")
