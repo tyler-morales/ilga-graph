@@ -1,7 +1,7 @@
 /**
  * Magnifying glass lens on advocacy hero headline: follows cursor, magnifies
- * content underneath. Respects prefers-reduced-motion (static over "F") and
- * hides on touch viewports.
+ * content underneath. Respects prefers-reduced-motion (static over "F").
+ * On mobile, intro sweep runs; cursor-follow is desktop-only (no hover).
  */
 (function () {
   var SCALE = 1.8;
@@ -9,6 +9,7 @@
   var REDUCED_MOTION_OFFSET_Y = 10;
   /** Extra distance (px) the intro path extends left and right of the text bounds. */
   var PATH_EXTEND_PX = 100;
+  var OUTRO_DURATION_MS = 350;
 
   function getScale() {
     var root = document.documentElement;
@@ -52,8 +53,15 @@
     var content = document.createElement("div");
     content.className = "magnify-lens-content";
 
+    var frameImg = document.createElement("img");
+    frameImg.className = "magnify-lens-frame";
+    frameImg.src = "/static/images/magnifying-glass.webp";
+    frameImg.alt = "";
+    frameImg.setAttribute("aria-hidden", "true");
+
     glass.appendChild(content);
     lens.appendChild(glass);
+    lens.appendChild(frameImg);
     wrapper.appendChild(lens);
 
     return { wrapper: wrapper, lens: lens, glass: glass, content: content };
@@ -131,10 +139,11 @@
   }
 
   function runIntroAnimation(wrapper, headline, lens, content, reducedMotion) {
-    if (reducedMotion || window.innerWidth <= 768) return;
+    if (reducedMotion) return;
     var line1 = headline.querySelector(".hero-headline-line");
     if (!line1 || !line1.textContent || !line1.textContent.trim()) return;
 
+    var isPlayground = !!wrapper.closest(".magnify-playground");
     var elementBounds = getLineBoundsInWrapper(wrapper, line1);
     var textBounds = getTextBoundsInWrapper(wrapper, line1);
     var bounds = textBounds || elementBounds;
@@ -151,8 +160,8 @@
     var y = bounds.y;
 
     var FADE_IN_MS = 300;
-    var INTRO_DURATION_MS = 2200;
-    var OUTRO_DURATION_MS = 350;
+    var isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
+    var INTRO_DURATION_MS = isMobile ? 2900 : 2800;
     var introDurationSec = INTRO_DURATION_MS / 1000;
 
     var marks = headline.querySelectorAll(".hero-headline-mark");
@@ -197,11 +206,13 @@
 
       runSecondThenOutro = function () {
         runSingleSweep(wrapper, headline, lens, content, bounds1, function () {
-          lens.classList.add("magnify-lens--outro");
-          setTimeout(function () {
-            headline.classList.remove("hero-headline--lens-active");
-            lens.classList.remove("magnify-lens--visible", "magnify-lens--outro");
-          }, OUTRO_DURATION_MS);
+          if (!isPlayground) {
+            lens.classList.add("magnify-lens--outro");
+            setTimeout(function () {
+              headline.classList.remove("hero-headline--lens-active");
+              lens.classList.remove("magnify-lens--visible", "magnify-lens--outro");
+            }, OUTRO_DURATION_MS);
+          }
         });
       };
 
@@ -226,11 +237,13 @@
           updatePosition(lens, content, endX, y, getScale());
           setTimeout(function () {
             lens.classList.remove("magnify-lens--intro");
-            lens.classList.add("magnify-lens--outro");
-            setTimeout(function () {
-              headline.classList.remove("hero-headline--lens-active");
-              lens.classList.remove("magnify-lens--visible", "magnify-lens--outro");
-            }, OUTRO_DURATION_MS);
+            if (!isPlayground) {
+              lens.classList.add("magnify-lens--outro");
+              setTimeout(function () {
+                headline.classList.remove("hero-headline--lens-active");
+                lens.classList.remove("magnify-lens--visible", "magnify-lens--outro");
+              }, OUTRO_DURATION_MS);
+            }
           }, INTRO_DURATION_MS);
         });
       });

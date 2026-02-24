@@ -150,8 +150,7 @@ async def record_outreach(
             except IntegrityError:
                 pass
 
-    if zip_val and len(zip_val) == 5 and zip_val.isdigit():
-        user.zip_code = zip_val
+    # user.zip_code is set only by explicit zip commit (sidebar / Use location), not by outreach.
 
     # Record funnel step: call_recorded, email_recorded, or no_answer_recorded
     step_slug = {

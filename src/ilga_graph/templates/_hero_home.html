@@ -1,4 +1,5 @@
-{# ── Home hero: split layout (image + form), form redirects to /advocacy/, stacked links to /the-issue and /legislator-brief. ── #}
+{# ── Home hero: split layout (image + form), form redirects to /advocacy/, stacked links to /the-issue and
+/legislator-brief. ── #}
 <div class="advocacy-hero">
     <div class="hero-inner">
         <p class="hero-eyebrow">Take action</p>
@@ -28,13 +29,14 @@
                     {% endif %}
                 </p>
                 <div class="hero-form">
-                    <form action="/advocacy" method="get" id="advocacy-form" aria-label="Find your legislators by ZIP code">
+                    <form action="/advocacy" method="get" id="advocacy-form"
+                        aria-label="Look up legislators by any Illinois ZIP code">
                         <input type="hidden" name="category" value="Transportation">
                         <div class="hero-form-row">
                             <div class="hero-field">
-                                <label for="zip_code">Your Illinois ZIP code</label>
+                                <label for="zip_code">Enter your ZIP</label>
                                 <input type="text" id="zip_code" name="zip" inputmode="numeric" pattern="[0-9]{5}"
-                                    placeholder="60007" maxlength="5" required autocomplete="postal-code"
+                                    placeholder="Enter any Illinois ZIP" maxlength="5" required autocomplete="off"
                                     value="{{ zip or '' }}">
                             </div>
                             <div class="hero-field hero-field-btn">
@@ -44,7 +46,9 @@
                     </form>
                 </div>
                 <p class="hero-learn-links hero-learn-link-wrap" role="navigation" aria-label="Learn more">
-                    <a href="/the-issue" class="hero-learn-link">Learn</a> about the issue or <a href="/legislator-brief" class="hero-learn-link" aria-label="Read the Brief for legislators">Read</a> the Brief for legislators
+                    <a href="/the-issue" class="hero-learn-link">Learn</a> about the issue or <a
+                        href="/legislator-brief" class="hero-learn-link"
+                        aria-label="Read the Brief for legislators">Read</a> the Brief for legislators
                 </p>
             </div>
         </div>
@@ -81,8 +85,6 @@
                         </svg></span> Verified <span id="auth-strip-email"></span> &middot; <button type="button"
                         class="auth-strip-signout" id="auth-strip-signout">Sign out</button></span>
             </div>
-            <div id="auth-strip-progress" class="hero-meta-line auth-strip-progress" hidden aria-live="polite"
-                aria-label="Your outreach progress"></div>
             <div id="auth-strip-inline-signin" class="hero-signin-inline" hidden>
                 <div class="hero-signin-state" id="hero-signin-state-email">
                     <input type="email" class="hero-signin-input" id="hero-signin-email" placeholder="Your email"
@@ -93,7 +95,8 @@
                     <span class="hero-signin-code-hint" id="hero-signin-code-hint">Check your email for a 6-digit
                         code</span>
                     {% if dev_available %}
-                    <p class="hero-signin-dev-hint" aria-live="polite">Dev mode: your code appears in the <strong>server terminal</strong> (where you ran the app), not in the browser.</p>
+                    <p class="hero-signin-dev-hint" aria-live="polite">Dev mode: your code appears in the <strong>server
+                            terminal</strong> (where you ran the app), not in the browser.</p>
                     {% endif %}
                     <div class="hero-signin-code-row">
                         <input type="text" class="hero-signin-code-input" id="hero-signin-code-input"

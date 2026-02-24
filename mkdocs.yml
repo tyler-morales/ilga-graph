@@ -41,9 +41,11 @@ nav:
     - Email (Brevo): reference/email-brevo.md
     - Environment variables: reference/environment-variables.md
     - GraphQL API: reference/graphql.md
+    - Performance and resilience: reference/performance-resilience.md
     - Project structure: reference/project-structure.md
     - Status report: reference/status-report.md
   - Development:
+    - Component playground: development/component-playground.md
     - Data and environments: development/data-and-environments.md
     - Advocacy Test Mode (internals): development/advocacy-test-mode-internals.md
     - Bills-first pipeline testing: BILLS_FIRST_TESTING.md

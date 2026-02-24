@@ -71,6 +71,13 @@
   min-height: 1.25em;
 }
 
+/* Sidebar variant: inside brief Documents sidebar; separated from doc list. */
+.legislator-brief-sidebar .share-section--sidebar {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border-light, #e5e5e5);
+}
+
 @media (max-width: 768px) {
   .share-section {
     padding: 1.25rem 0;
@@ -78,5 +85,10 @@
 
   .share-section-btn {
     padding: 0.6rem 1rem;
+  }
+
+  .legislator-brief-sidebar .share-section--sidebar {
+    margin-top: 1rem;
+    padding-top: 1rem;
   }
 }

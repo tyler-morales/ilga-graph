@@ -3,7 +3,13 @@
 {% block title %}{{ site_name }} — Find Your Targets{% endblock %}
 
 {% block content %}
-<script>window.__ILGA_FEATURES = {{ (features or { }) | tojson }};</script>
+<script type="application/json" id="ilga-features-json">{{ (features or { }) | tojson }}</script>
+<script>
+(function () {
+  var el = document.getElementById('ilga-features-json');
+  window.__ILGA_FEATURES = el ? JSON.parse(el.textContent) : {};
+})();
+</script>
 {# ── Hero section: advocacy-centered hero only (no "what's happening" block) ── #}
 {% include "_hero_advocacy.html" %}
 <div class="hero-results-sep" aria-hidden="true"></div>
@@ -50,12 +56,16 @@
 <template id="drawer-done-for-member">
     <div class="drawer-done-for-member" role="status" aria-live="polite">
         <p class="drawer-done-for-member__message">You're done with <span id="drawer-done-member-name"></span>.</p>
-        <p class="drawer-done-for-member__comeback" id="drawer-done-comeback" hidden>You can come back to send your follow-up email later.</p>
+        <p class="drawer-done-for-member__comeback" id="drawer-done-comeback" hidden>You can come back to send your
+            follow-up email later.</p>
         <p class="drawer-done-for-member__next-wrap" id="drawer-done-next-wrap">
-            <button type="button" class="drawer-done-for-member__cta" id="drawer-done-next-cta">Call your <span id="drawer-done-next-label"></span></button>
+            <button type="button" class="drawer-done-for-member__cta" id="drawer-done-next-cta">Call your <span
+                    id="drawer-done-next-label"></span></button>
         </p>
-        <p class="drawer-done-for-member__district-done" id="drawer-done-district-done" hidden>You've completed outreach for your district members.</p>
-        <p class="drawer-done-for-member__broker-nudge" id="drawer-done-broker-nudge" hidden>Optional: call the Power Broker for extra impact.</p>
+        <p class="drawer-done-for-member__district-done" id="drawer-done-district-done" hidden>You've completed outreach
+            for your district members.</p>
+        <p class="drawer-done-for-member__broker-nudge" id="drawer-done-broker-nudge" hidden>Optional: call the Power
+            Broker for extra impact.</p>
     </div>
 </template>
 
@@ -324,27 +334,9 @@
         }
     });
 
-    // #region agent log
-    function logGoalListDiagnostic(runId) {
-        var resultsEl = document.getElementById('results');
-        var ol = resultsEl ? resultsEl.querySelector('.outreach-goal__actions') : null;
-        if (!ol) {
-            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'b14c79' }, body: JSON.stringify({ sessionId: 'b14c79', runId: runId || 'run1', hypothesisId: 'H4', location: 'index.html:goal-list-diagnostic', message: 'Goal list not in DOM', data: { found: false }, timestamp: Date.now() }) }).catch(function() {});
-            return;
-        }
-        var cs = window.getComputedStyle(ol);
-        var li = ol.querySelector('li');
-        var liCs = li ? window.getComputedStyle(li) : {};
-        var markerCs = li ? (function() { try { return window.getComputedStyle(li, '::marker'); } catch (e) { return {}; } })() : {};
-        var payload = { sessionId: 'b14c79', runId: runId || 'run1', hypothesisId: 'H1', location: 'index.html:goal-list-diagnostic', message: 'Goal list computed styles', data: { tagName: ol.tagName, className: ol.className, listStyleType: cs.listStyleType, listStylePosition: cs.listStylePosition, paddingLeft: cs.paddingLeft, padding: cs.padding, liDisplay: liCs.display, markerDisplay: markerCs.display, markerContent: markerCs.content }, timestamp: Date.now() };
-        fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'b14c79' }, body: JSON.stringify(payload) }).catch(function() {});
-    }
-    // #endregion
-
     /* ── Scroll to results after htmx swap ── */
     document.body.addEventListener('htmx:afterSwap', function (e) {
         if (e.detail.target && e.detail.target.id === 'results') {
-            if (typeof logGoalListDiagnostic === 'function') logGoalListDiagnostic('htmx-swap');
             applyCardEnterAnimation(e.detail.target);
             setTimeout(function () {
                 applyCardBioOverflow();
@@ -1290,7 +1282,7 @@
                     codeSubmit.disabled = false;
                     codeSubmit.textContent = 'Confirm';
                     if (data.ok && data.email) {
-                        try { sessionStorage.removeItem('ilga_anon_sid'); } catch (e) {}
+                        try { sessionStorage.removeItem('ilga_anon_sid'); } catch (e) { }
                         goVerified(data.email);
                     } else {
                         if (codeError) { codeError.textContent = data.error || 'That code didn\'t work — try again or resend.'; codeError.hidden = false; }
@@ -1394,26 +1386,16 @@
     document.addEventListener('ilga:goal-updated', function (e) {
         var zip = e.detail && e.detail.zip;
         if (zip && typeof updateGoalBlockFromStorage === 'function') updateGoalBlockFromStorage(zip);
+        var memberId = e.detail && e.detail.memberId;
+        var kind = e.detail && e.detail.kind;
+        if (kind === 'call' && memberId) {
+            var body = document.getElementById('advocacy-drawer-body');
+            var nudge = body && body.querySelector('#gmail-call-other-nudge');
+            if (nudge && nudge.getAttribute('data-nudge-member-id') === memberId) nudge.setAttribute('hidden', '');
+        }
     });
 
-    /* ── Goal sidebar: click ZIP to edit; commit updates hero form, URL, and re-fetches results so goal reflects new district ── */
-    function showGoalZipEdit(displayBtn, editInput) {
-        if (!displayBtn || !editInput) return;
-        var block = displayBtn.closest('.outreach-goal');
-        var currentZip = (block && block.getAttribute('data-goal-zip')) || (editInput.value || '').trim();
-        displayBtn.setAttribute('hidden', '');
-        displayBtn.setAttribute('aria-expanded', 'true');
-        editInput.removeAttribute('hidden');
-        editInput.value = currentZip;
-        editInput.focus();
-    }
-    function hideGoalZipEdit(displayBtn, editInput, revertZip) {
-        if (!displayBtn || !editInput) return;
-        editInput.setAttribute('hidden', '');
-        displayBtn.removeAttribute('hidden');
-        displayBtn.setAttribute('aria-expanded', 'false');
-        if (revertZip != null) displayBtn.textContent = revertZip;
-    }
+    /* ── Goal sidebar: commitGoalZip updates hero form, URL, and re-fetches results (e.g. after PATCH /advocacy/api/me/zip). ── */
     function commitGoalZip(newZip) {
         if (!/^\d{5}$/.test(newZip)) return false;
         var form = document.getElementById('advocacy-form');
@@ -1423,66 +1405,16 @@
         url.searchParams.set('zip', newZip);
         history.replaceState(null, '', url.pathname + url.search);
         if (typeof refreshAdvocacyResults === 'function') refreshAdvocacyResults();
+        var signedInEl = document.getElementById('auth-strip-signed-in');
+        if (signedInEl && !signedInEl.hidden && typeof getCsrfToken === 'function') {
+            var body = new FormData();
+            body.append('zip_code', newZip);
+            body.append('csrf_token', getCsrfToken());
+            fetch('/advocacy/api/me/zip', { method: 'PATCH', body: body, credentials: 'same-origin' }).catch(function () {});
+        }
         return true;
     }
-    function setGoalZipStatus(cell, text, visible) {
-        var statusEl = cell && cell.querySelector('.outreach-goal__zip-status');
-        if (!statusEl) return;
-        statusEl.textContent = text || '';
-        if (visible) statusEl.removeAttribute('hidden'); else statusEl.setAttribute('hidden', '');
-    }
     document.body.addEventListener('click', function (e) {
-        var zipLocate = e.target && e.target.closest && e.target.closest('.outreach-goal__zip-locate');
-        if (zipLocate && zipLocate.closest('#results')) {
-            e.preventDefault();
-            var cell = zipLocate.closest('.outreach-goal__zip-cell');
-            if (!cell) return;
-            if (!navigator.geolocation) {
-                setGoalZipStatus(cell, 'Location not supported', true);
-                setTimeout(function () { setGoalZipStatus(cell, '', false); }, 3000);
-                return;
-            }
-            zipLocate.disabled = true;
-            setGoalZipStatus(cell, 'Locating…', true);
-            navigator.geolocation.getCurrentPosition(
-                function (pos) {
-                    var lat = pos.coords.latitude;
-                    var lon = pos.coords.longitude;
-                    fetch('/advocacy/api/zip-from-coords?lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon), { credentials: 'same-origin' })
-                        .then(function (r) { return r.json(); })
-                        .then(function (data) {
-                            zipLocate.disabled = false;
-                            if (data && data.zip && /^\d{5}$/.test(data.zip)) {
-                                setGoalZipStatus(cell, '', false);
-                                commitGoalZip(data.zip);
-                            } else {
-                                setGoalZipStatus(cell, 'No ZIP found for this location', true);
-                                setTimeout(function () { setGoalZipStatus(cell, '', false); }, 4000);
-                            }
-                        })
-                        .catch(function () {
-                            zipLocate.disabled = false;
-                            setGoalZipStatus(cell, 'Location unavailable', true);
-                            setTimeout(function () { setGoalZipStatus(cell, '', false); }, 4000);
-                        });
-                },
-                function () {
-                    zipLocate.disabled = false;
-                    setGoalZipStatus(cell, 'Location unavailable', true);
-                    setTimeout(function () { setGoalZipStatus(cell, '', false); }, 4000);
-                },
-                { timeout: 10000, maximumAge: 60000 }
-            );
-            return;
-        }
-        var zipDisplay = e.target && e.target.closest && e.target.closest('.outreach-goal__zip-display');
-        if (zipDisplay && zipDisplay.closest('#results')) {
-            e.preventDefault();
-            var cell = zipDisplay.closest('.outreach-goal__zip-cell');
-            var editInput = cell && cell.querySelector('.outreach-goal__zip-edit');
-            showGoalZipEdit(zipDisplay, editInput);
-            return;
-        }
         var link = e.target && e.target.closest && e.target.closest('.outreach-goal__action-link');
         if (!link || !link.closest('#results')) return;
         e.preventDefault();
@@ -1497,37 +1429,6 @@
         }
         openAdvocacyDrawer(action, memberId || '', zip || '', photoUrl, '');
     });
-
-    document.body.addEventListener('blur', function (e) {
-        var editInput = e.target && e.target.classList && e.target.classList.contains('outreach-goal__zip-edit') ? e.target : null;
-        if (!editInput || !editInput.closest('#results')) return;
-        var cell = editInput.closest('.outreach-goal__zip-cell');
-        var displayBtn = cell && cell.querySelector('.outreach-goal__zip-display');
-        var block = editInput.closest('.outreach-goal');
-        var previousZip = (block && block.getAttribute('data-goal-zip')) || '';
-        var newZip = (editInput.value || '').trim();
-        if (/^\d{5}$/.test(newZip)) {
-            commitGoalZip(newZip);
-        } else {
-            hideGoalZipEdit(displayBtn, editInput, previousZip);
-        }
-    }, true);
-    document.body.addEventListener('keydown', function (e) {
-        var editInput = e.target && e.target.classList && e.target.classList.contains('outreach-goal__zip-edit') ? e.target : null;
-        if (!editInput || !editInput.closest('#results')) return;
-        if (e.key !== 'Enter') return;
-        e.preventDefault();
-        var newZip = (editInput.value || '').trim();
-        if (/^\d{5}$/.test(newZip)) {
-            commitGoalZip(newZip);
-        } else {
-            var cell = editInput.closest('.outreach-goal__zip-cell');
-            var displayBtn = cell && cell.querySelector('.outreach-goal__zip-display');
-            var block = editInput.closest('.outreach-goal');
-            var previousZip = (block && block.getAttribute('data-goal-zip')) || '';
-            hideGoalZipEdit(displayBtn, editInput, previousZip);
-        }
-    }, true);
 
     /**
      * Resolve "other" district member from goal block and current drawer member.
@@ -1580,10 +1481,7 @@
         var brokerNudge = clone.querySelector('#drawer-done-broker-nudge');
         if (msgName) msgName.textContent = currentMemberName;
         if (!didEmail && comeback) { comeback.removeAttribute('hidden'); }
-        var otherAlreadyCalled = otherMemberId && typeof getGoalProgress === 'function' && zip && getGoalProgress(zip)[otherMemberId] && getGoalProgress(zip)[otherMemberId].call;
-        /* #region agent log */
-        fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9b1dec'},body:JSON.stringify({sessionId:'9b1dec',location:'index.html:showDrawerDoneForMember',message:'done view CTA',data:{otherId:otherMemberId,zip:zip||'',otherAlreadyCalled:!!otherAlreadyCalled,hideCTA:!!otherAlreadyCalled},timestamp:Date.now(),hypothesisId:'H3'})}).catch(function(){});
-        /* #endregion */
+        var otherAlreadyCalled = otherMemberId && typeof memberAlreadyCalled === 'function' && memberAlreadyCalled(otherMemberId, zip);
         if (otherMemberId && otherLabel && !otherAlreadyCalled) {
             if (nextLabel) nextLabel.textContent = otherLabel;
             if (cta) {
@@ -1608,7 +1506,7 @@
         body.innerHTML = '';
         body.appendChild(clone);
         if (cta && otherMemberId) {
-            requestAnimationFrame(function () { try { cta.focus(); } catch (e) {} });
+            requestAnimationFrame(function () { try { cta.focus(); } catch (e) { } });
         }
         initDrawerFocusTrapAndFocus();
     }
@@ -1717,6 +1615,24 @@
             return {};
         }
     }
+
+    /**
+     * Returns true if this member was already called (anon: localStorage; signed-in: goal block DOM or localStorage).
+     * Used so "Call your Senator/Rep" nudge and done-view CTA disappear when that member was already called.
+     */
+    function memberAlreadyCalled(memberId, zip) {
+        if (!memberId) return false;
+        var storage = typeof getGoalProgress === 'function' && zip ? getGoalProgress(zip) : {};
+        var progress = storage[memberId] || null;
+        if (progress && progress.call) return true;
+        var results = document.getElementById('results');
+        var block = results && results.querySelector('.outreach-goal');
+        if (!block) return false;
+        var status = block.querySelector('.outreach-goal__action-status[data-goal-member="' + memberId + '"][data-goal-kind="call"]');
+        var row = status && status.closest('.outreach-goal__action');
+        return !!(row && row.classList.contains('outreach-goal__action--done'));
+    }
+
     function setGoalActionDone(zip, memberId, kind) {
         if (!zip || !/^\d{5}$/.test(zip) || !memberId || !kind) return;
         var key = GOAL_STORAGE_PREFIX + zip;
@@ -1726,7 +1642,7 @@
         try {
             localStorage.setItem(key, JSON.stringify(data));
         } catch (e) { /* quota or disabled */ }
-        document.dispatchEvent(new CustomEvent('ilga:goal-updated', { detail: { zip: zip } }));
+        document.dispatchEvent(new CustomEvent('ilga:goal-updated', { detail: { zip: zip, memberId: memberId, kind: kind } }));
     }
     function updateGoalBlockFromStorage(zip) {
         if (_ilgaUserEmail) return;
@@ -1736,6 +1652,7 @@
         var blockZip = (block.getAttribute('data-goal-zip') || '').trim();
         var senatorId = (block.getAttribute('data-goal-senator-id') || '').trim();
         var repId = (block.getAttribute('data-goal-rep-id') || '').trim();
+        var brokerId = (block.getAttribute('data-goal-broker-id') || '').trim();
         var z = zip || blockZip;
         if (!z) return;
         var stored = getGoalProgress(z);
@@ -1787,14 +1704,14 @@
         if (labelEl) labelEl.textContent = done + ' of ' + total + ' actions complete';
         var nextBlock = block.querySelector('#outreach-goal-next');
         if (nextBlock) {
-            var firstIncomplete = block.querySelector('.outreach-goal__action:not(.outreach-goal__action--done)');
+            var firstIncomplete = block.querySelector('.outreach-goal__phase--district .outreach-goal__action:not(.outreach-goal__action--done)');
             var link = firstIncomplete ? firstIncomplete.querySelector('.outreach-goal__action-link') : null;
             if (link) {
                 var labelEl2 = firstIncomplete.querySelector('.outreach-goal__action-label');
                 var rolePart = labelEl2 ? labelEl2.textContent.replace(/^(Call|Email)\s+/, '').trim() : '';
                 var actionVerb = link.getAttribute('data-action') === 'call' ? 'Call' : 'Email';
                 nextBlock.textContent = '';
-                nextBlock.appendChild(document.createTextNode('Next: '));
+                nextBlock.appendChild(document.createTextNode('Now: '));
                 var nextLink = link.cloneNode(true);
                 nextLink.textContent = actionVerb + ' your ' + rolePart;
                 nextLink.setAttribute('aria-label', actionVerb + ' your ' + rolePart);
@@ -1805,6 +1722,67 @@
             } else {
                 nextBlock.setAttribute('hidden', '');
                 nextBlock.setAttribute('aria-hidden', 'true');
+            }
+        }
+        /* When district 4/4 complete and broker exists, switch to broker phase and update broker bar + Next */
+        if (done === 4 && total === 4 && brokerId) {
+            block.classList.add('outreach-goal--phase-broker');
+            var currentLabelEl = block.querySelector('#outreach-goal-current-label');
+            if (currentLabelEl) currentLabelEl.textContent = 'Outreach the Power Broker';
+            var brokerStored = stored[brokerId] || {};
+            var brokerDone = (brokerStored.call ? 1 : 0) + (brokerStored.email ? 1 : 0);
+            var brokerTotal = 2;
+            function setBrokerAction(memberId, kind, doneVal) {
+                var status = block.querySelector('.outreach-goal__action-status[data-goal-member="' + memberId + '"][data-goal-kind="' + kind + '"]');
+                if (!status) return;
+                var label = kind === 'call' ? (doneVal ? 'Called' : 'Not yet called') : (doneVal ? 'Emailed' : 'Not yet emailed');
+                status.setAttribute('aria-label', label);
+                status.innerHTML = '';
+                var row = status.closest('.outreach-goal__action');
+                if (row) {
+                    if (doneVal) {
+                        row.classList.add('outreach-goal__action--done');
+                        var lnk = row.querySelector('.outreach-goal__action-link');
+                        if (lnk) lnk.setAttribute('aria-disabled', 'true');
+                    } else {
+                        row.classList.remove('outreach-goal__action--done');
+                        var lnk = row.querySelector('.outreach-goal__action-link');
+                        if (lnk) lnk.removeAttribute('aria-disabled');
+                    }
+                }
+            }
+            setBrokerAction(brokerId, 'call', !!(brokerStored.call));
+            setBrokerAction(brokerId, 'email', !!(brokerStored.email));
+            var brokerBar = block.querySelector('#outreach-goal-bar-broker');
+            var brokerFill = block.querySelector('#outreach-goal-bar-fill-broker');
+            var brokerLabelEl = block.querySelector('#outreach-goal-bar-label-broker');
+            if (brokerBar) {
+                brokerBar.setAttribute('aria-valuenow', String(brokerDone));
+                brokerBar.setAttribute('aria-valuemax', String(brokerTotal));
+            }
+            if (brokerFill) brokerFill.style.width = (brokerTotal ? Math.round((brokerDone / brokerTotal) * 100) : 0) + '%';
+            if (brokerLabelEl) brokerLabelEl.textContent = brokerDone + ' of ' + brokerTotal + ' actions complete';
+            var nextBrokerBlock = block.querySelector('#outreach-goal-next-broker');
+            if (nextBrokerBlock) {
+                var firstIncompleteBroker = block.querySelector('.outreach-goal__phase--broker .outreach-goal__action:not(.outreach-goal__action--done)');
+                var brokerLink = firstIncompleteBroker ? firstIncompleteBroker.querySelector('.outreach-goal__action-link') : null;
+                if (brokerLink) {
+                    var brokerLabelEl2 = firstIncompleteBroker.querySelector('.outreach-goal__action-label');
+                    var brokerRolePart = brokerLabelEl2 ? brokerLabelEl2.textContent.replace(/^(Call|Email)\s+/, '').trim() : 'Power Broker';
+                    var brokerActionVerb = brokerLink.getAttribute('data-action') === 'call' ? 'Call' : 'Email';
+                    nextBrokerBlock.textContent = '';
+                    nextBrokerBlock.appendChild(document.createTextNode('Now: '));
+                    var nextBrokerLink = brokerLink.cloneNode(true);
+                    nextBrokerLink.textContent = brokerActionVerb + ' your ' + brokerRolePart;
+                    nextBrokerLink.setAttribute('aria-label', brokerActionVerb + ' your ' + brokerRolePart);
+                    nextBrokerLink.classList.add('outreach-goal__next-link');
+                    nextBrokerBlock.appendChild(nextBrokerLink);
+                    nextBrokerBlock.removeAttribute('hidden');
+                    nextBrokerBlock.removeAttribute('aria-hidden');
+                } else {
+                    nextBrokerBlock.setAttribute('hidden', '');
+                    nextBrokerBlock.setAttribute('aria-hidden', 'true');
+                }
             }
         }
         if (typeof setOutreachDone === 'function') {
@@ -1845,15 +1823,18 @@
         'CALLER_PHONE': { label: 'Phone (optional)', type: 'tel', minCh: 10 },
         'CALLER_EMAIL': { label: 'Email', type: 'email', minCh: 12 },
         'CITY_OR_ZIP': { label: 'City or ZIP', type: 'text', minCh: 6 },
-        'ONE_SENTENCE_WHY': { label: 'Why this matters to you (optional)', type: 'text', minCh: 12 }
+        'ONE_SENTENCE_WHY': { label: 'Why this matters to you (optional)', type: 'text', minCh: 12, multiline: true }
     };
     var MADLIB_REGEX = /\[(LEGISLATOR_NAME|CALLER_NAME|CALLER_PHONE|CALLER_EMAIL|CITY_OR_ZIP|ONE_SENTENCE_WHY|CONSTITUENT_INTRO)\]/g;
     var MADLIB_FOOTER_KEYS = ['CALLER_NAME', 'CALLER_PHONE', 'CALLER_EMAIL'];
-    var MADLIB_FOOTER_WIDTH_CH = 22;
     var MADLIB_OPTIONAL_KEYS = ['ONE_SENTENCE_WHY', 'CALLER_PHONE'];
 
     function renderMadLibsBody(bodyText, container, prefills) {
         container.innerHTML = '';
+        var measureSpan = document.createElement('span');
+        measureSpan.className = 'madlib-measure';
+        measureSpan.setAttribute('aria-hidden', 'true');
+        container.appendChild(measureSpan);
         var parts = bodyText.split(MADLIB_REGEX);
         var blanks = [];
         var valueMap = {};
@@ -1861,11 +1842,15 @@
         for (var i = 0; i < parts.length; i++) {
             if (i % 2 === 0) {
                 if (parts[i]) {
-                    var span = document.createElement('span');
-                    span.textContent = parts[i];
-                    span.setAttribute('contenteditable', 'true');
-                    span.setAttribute('spellcheck', 'true');
-                    container.appendChild(span);
+                    if (parts[i].trim()) {
+                        var span = document.createElement('span');
+                        span.textContent = parts[i];
+                        span.setAttribute('contenteditable', 'true');
+                        span.setAttribute('spellcheck', 'true');
+                        container.appendChild(span);
+                    } else {
+                        container.appendChild(document.createTextNode(parts[i]));
+                    }
                 }
             } else {
                 var key = parts[i];
@@ -1879,13 +1864,18 @@
                 }
                 var cfg = MADLIB_PLACEHOLDERS[key] || { label: key, type: 'text', minCh: 8 };
                 var minCh = (cfg.minCh !== undefined) ? cfg.minCh : 8;
-                var inp = document.createElement('input');
-                inp.type = cfg.type;
-                inp.className = 'madlib-blank';
+                var isMultiline = !!cfg.multiline;
+                var inp = document.createElement(isMultiline ? 'textarea' : 'input');
+                if (!isMultiline) inp.type = cfg.type;
+                inp.className = 'madlib-blank' + (isMultiline ? ' madlib-blank-multiline' : '');
                 inp.placeholder = cfg.label;
                 inp.setAttribute('data-madlib-key', key);
                 inp.setAttribute('data-madlib-min-ch', String(minCh));
                 inp.setAttribute('autocomplete', 'off');
+                if (isMultiline) {
+                    inp.setAttribute('rows', '1');
+                    inp.setAttribute('wrap', 'soft');
+                }
                 if (prefills && prefills[key]) {
                     inp.value = prefills[key];
                     inp.classList.add('filled');
@@ -1893,26 +1883,47 @@
                 }
                 function resizeMadLibInput(input) {
                     var key = input.getAttribute('data-madlib-key');
-                    var isFooter = key && MADLIB_FOOTER_KEYS.indexOf(key) !== -1;
-                    var cursorCh = (document.activeElement === input) ? 1 : 0;
-                    var ch;
-                    if (isFooter) {
-                        ch = MADLIB_FOOTER_WIDTH_CH + cursorCh;
-                    } else {
-                        var v = (input.value || '').trim();
-                        var pl = (input.placeholder || '');
-                        var len = v ? v.length : pl.length;
-                        var min = parseInt(input.getAttribute('data-madlib-min-ch') || '2', 10);
-                        ch = Math.max(min, len) + cursorCh;
+                    if (input.tagName === 'TEXTAREA') {
+                        var cs = input.ownerDocument.defaultView.getComputedStyle(input);
+                        var lineH = cs.lineHeight;
+                        var minPx = (lineH && lineH !== 'normal') ? parseFloat(lineH) : (parseFloat(cs.fontSize) || 16) * 1.35;
+                        input.style.overflowY = 'hidden';
+                        input.style.height = '0';
+                        var h = Math.max(input.scrollHeight, minPx);
+                        input.style.height = h + 'px';
+                        input.style.overflowY = 'auto';
+                        return;
                     }
-                    input.style.width = ch + 'ch';
+                    var el = container.querySelector('.madlib-measure');
+                    if (!el) return;
+                    var cs = input.ownerDocument.defaultView.getComputedStyle(input);
+                    var minCh = parseInt(input.getAttribute('data-madlib-min-ch') || '2', 10);
+                    var text = (input.value && input.value.length) ? input.value : (input.placeholder || '');
+                    var isPlaceholder = !(input.value && input.value.length);
+                    el.style.fontFamily = cs.fontFamily;
+                    el.style.fontSize = cs.fontSize;
+                    el.style.fontWeight = cs.fontWeight;
+                    el.style.fontStyle = isPlaceholder ? 'italic' : (cs.fontStyle || 'normal');
+                    el.style.letterSpacing = cs.letterSpacing || 'normal';
+                    el.textContent = text || '0';
+                    var measured = el.offsetWidth;
+                    if (text) {
+                        el.textContent = '0'.repeat(minCh);
+                        var minPx = el.offsetWidth;
+                        var cursorPadding = (document.activeElement === input) ? 10 : 4;
+                        input.style.width = Math.max(measured + cursorPadding, minPx) + 'px';
+                    } else {
+                        el.textContent = '0'.repeat(minCh);
+                        var minPx = el.offsetWidth;
+                        input.style.width = minPx + 'px';
+                    }
                 }
-                resizeMadLibInput(inp);
                 (function (input, k) {
+                    var selector = '[data-madlib-key="' + k + '"]';
                     input.addEventListener('input', function () {
                         var val = input.value.trim();
                         valueMap[k] = val;
-                        container.querySelectorAll('input[data-madlib-key="' + k + '"]').forEach(function (el) {
+                        container.querySelectorAll(selector).forEach(function (el) {
                             if (el !== input) el.value = val;
                             el.classList.toggle('filled', !!val);
                             el.classList.remove('error');
@@ -1923,7 +1934,7 @@
                     input.addEventListener('blur', function () {
                         if (input.value.trim()) input.classList.add('filled');
                         resizeMadLibInput(input);
-                        container.querySelectorAll('input[data-madlib-key="' + k + '"]').forEach(resizeMadLibInput);
+                        container.querySelectorAll(selector).forEach(resizeMadLibInput);
                     });
                     input.addEventListener('focus', function () {
                         input.classList.remove('error');
@@ -1931,8 +1942,37 @@
                     });
                 })(inp, key);
                 container.appendChild(inp);
+                resizeMadLibInput(inp);
                 blanks.push(inp);
+                // #region agent log
+                if (key === 'ONE_SENTENCE_WHY') {
+                    var nextPart = parts[i + 1];
+                    fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e2192d' }, body: JSON.stringify({ sessionId: 'e2192d', location: 'index.html:renderMadLibsBody', message: 'ONE_SENTENCE_WHY trailing part', data: { nextPart: nextPart, nextPartLength: nextPart ? nextPart.length : 0 }, timestamp: Date.now(), hypothesisId: 'A' }) }).catch(function () {});
+                }
+                // #endregion
             }
+        }
+        // #region agent log
+        var whyEl = container.querySelector('[data-madlib-key="ONE_SENTENCE_WHY"]');
+        if (whyEl) {
+            var next = whyEl.nextSibling;
+            var disp = whyEl.ownerDocument.defaultView.getComputedStyle(whyEl).display;
+            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e2192d' }, body: JSON.stringify({ sessionId: 'e2192d', location: 'index.html:renderMadLibsBody:after', message: 'ONE_SENTENCE_WHY DOM', data: { display: disp, nextNodeType: next ? next.nodeType : null, nextText: next && next.nodeType === 3 ? next.textContent.slice(0, 20) : null }, timestamp: Date.now(), hypothesisId: 'B' }) }).catch(function () {});
+        }
+        // #endregion
+        /* Footer fields (name, phone, email): same default width; they still resize on input/blur/focus */
+        var footerBlanks = blanks.filter(function (inp) {
+            return inp.tagName === 'INPUT' && MADLIB_FOOTER_KEYS.indexOf(inp.getAttribute('data-madlib-key')) !== -1;
+        });
+        if (footerBlanks.length > 0) {
+            var defaultPx = 0;
+            footerBlanks.forEach(function (inp) {
+                var w = parseFloat(inp.style.width) || inp.offsetWidth;
+                if (w > defaultPx) defaultPx = w;
+            });
+            footerBlanks.forEach(function (inp) {
+                inp.style.width = defaultPx + 'px';
+            });
         }
         return { blanks: blanks, valueMap: valueMap };
     }
@@ -1953,13 +1993,16 @@
                 text += node.textContent;
             } else if (node.tagName === 'SPAN') {
                 text += node.innerText || node.textContent;
-            } else if (node.tagName === 'INPUT') {
+            } else if (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA') {
                 var val = (node.value || '').trim();
                 text += val;
             }
         });
         text = text.trim();
         if (text.indexOf('This matters to me because .') !== -1) {
+            // #region agent log
+            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e2192d' }, body: JSON.stringify({ sessionId: 'e2192d', location: 'index.html:getComposedBody', message: 'Stripping empty why period', data: { hadEmptyWhy: true }, timestamp: Date.now(), hypothesisId: 'E' }) }).catch(function () {});
+            // #endregion
             text = text.replace(/This matters to me because \.\s*\n\n?/g, '');
         }
         return text;
@@ -2085,20 +2128,27 @@
         var wrap = container && container.querySelector('.gmail-compose');
         if (!wrap) return;
         container.classList.add('drawer-email-open');
-        var nudgeOnInit = wrap.querySelector('#gmail-call-other-nudge');
-        if (nudgeOnInit) nudgeOnInit.setAttribute('hidden', '');
-        /* #region agent log */
         var _drawer = document.getElementById('advocacy-drawer');
         var _mid = (_drawer && _drawer.getAttribute('data-member-id')) || '';
         var _zip = typeof getConstituentZip === 'function' ? getConstituentZip() : '';
-        var _progress = (typeof getGoalProgress === 'function' && _zip) ? getGoalProgress(_zip) : {};
-        var _currentCalled = !!(_mid && _progress[_mid] && _progress[_mid].call);
+        var _currentCalled = _mid && _zip && typeof memberAlreadyCalled === 'function' && memberAlreadyCalled(_mid, _zip);
+        var nudgeOnInit = (wrap && wrap.querySelector('#gmail-call-other-nudge')) || (container && container.querySelector('#gmail-call-other-nudge'));
+        if (nudgeOnInit) nudgeOnInit.setAttribute('hidden', '');
+        if (_currentCalled && !nudgeOnInit && container) {
+            var nudgeFallback = container.querySelector('#gmail-call-other-nudge');
+            if (nudgeFallback) nudgeFallback.setAttribute('hidden', '');
+        }
+        if (_currentCalled && container) {
+            var hideNudgeAgain = function () {
+                var el = container.querySelector('#gmail-call-other-nudge');
+                if (el) el.setAttribute('hidden', '');
+            };
+            requestAnimationFrame(hideNudgeAgain);
+        }
         var _callFirstBanner = wrap.querySelector('.gmail-banner-tip');
         if (_callFirstBanner && _mid && _zip && _currentCalled) {
             _callFirstBanner.setAttribute('hidden', '');
         }
-        fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9b1dec'},body:JSON.stringify({sessionId:'9b1dec',location:'index.html:initDrawerEmailActions',message:'email init call-first',data:{hasBanner:!!_callFirstBanner,memberId:_mid,zip:_zip,currentMemberCalled:_currentCalled,hiddenBanner:_currentCalled&&!!_callFirstBanner},timestamp:Date.now(),hypothesisId:'H2'})}).catch(function(){});
-        /* #endregion */
         initDrawerFromAuth(wrap);
 
         var subjectEl = wrap.querySelector('#gmail-subject-text');
@@ -2291,27 +2341,31 @@
             }
         };
 
-        /* ── Subject verify button ── */
+        /* ── Subject verify button: removed from DOM once verified so the pill is gone ── */
         var subjectVerifyBtn = wrap.querySelector('#gmail-subject-verify-btn');
         if (subjectVerifyBtn) {
             subjectVerifyBtn.onclick = function () {
                 var drawer = document.getElementById('advocacy-drawer');
                 var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
                 if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'email', 'subject_confirmed');
-                subjectVerifyBtn.classList.add('verified');
-                var sp = subjectVerifyBtn.querySelector('span');
-                if (sp) sp.textContent = 'Verified';
+                subjectVerifyBtn.remove();
+                subjectVerifyBtn = null;
                 guide.jumpTo('madlibs');
                 setTimeout(function () { guide.focusNextBlank(); }, 300);
             };
         }
         /* ── Subject: Enter focuses "Looks good" so user can Tab/Enter through steps ── */
         var subjectInput = wrap.querySelector('#gmail-subject-text');
-        if (subjectInput && subjectVerifyBtn) {
+        if (subjectInput) {
             subjectInput.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    subjectVerifyBtn.focus();
+                    if (subjectVerifyBtn) {
+                        subjectVerifyBtn.focus();
+                    } else {
+                        guide.jumpTo('madlibs');
+                        setTimeout(function () { guide.focusNextBlank(); }, 300);
+                    }
                 }
             });
         }
@@ -2336,6 +2390,8 @@
                         blanks[idx - 1].focus();
                     } else if (subjectVerifyBtn) {
                         subjectVerifyBtn.focus();
+                    } else if (subjectInput) {
+                        subjectInput.focus();
                     }
                     return;
                 }
@@ -2463,7 +2519,7 @@
                         if (mailtoBtn) mailtoBtn.setAttribute('hidden', '');
                         var ctx = typeof getDrawerDoneContext === 'function' ? getDrawerDoneContext(true) : null;
                         var zip = getConstituentZip();
-                        var otherCallDone = zip && ctx && ctx.otherId && typeof getGoalProgress === 'function' && !!(getGoalProgress(zip)[ctx.otherId] && getGoalProgress(zip)[ctx.otherId].call);
+                        var otherCallDone = ctx && ctx.otherId && typeof memberAlreadyCalled === 'function' && memberAlreadyCalled(ctx.otherId, zip);
                         if (ctx && ctx.otherId && ctx.otherLabel && !otherCallDone) {
                             var nudge = wrap.querySelector('#gmail-call-other-nudge');
                             var nudgeBtn = wrap.querySelector('#gmail-call-other-btn');
@@ -2471,6 +2527,7 @@
                             if (nudge && nudgeBtn && labelSpan) {
                                 labelSpan.textContent = ctx.otherLabel;
                                 nudgeBtn.setAttribute('aria-label', 'Call your ' + ctx.otherLabel);
+                                nudge.setAttribute('data-nudge-member-id', ctx.otherId || '');
                                 var photoUrl = '';
                                 var card = document.getElementById('card-' + ctx.otherId);
                                 if (card) {
@@ -2855,17 +2912,7 @@
         var drawer = document.getElementById('advocacy-drawer');
         var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
         if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'call', 'wrapup_skipped');
-        if (typeof tryShowDrawerDoneForMember === 'function') {
-            tryShowDrawerDoneForMember(false);
-        } else {
-            var ctaBlock = document.getElementById('drawer-draft-followup-cta-block');
-            var msgEl = document.getElementById('drawer-draft-followup-recorded-msg');
-            if (ctaBlock) ctaBlock.setAttribute('hidden', '');
-            if (msgEl) {
-                msgEl.removeAttribute('hidden');
-                msgEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-        }
+        if (typeof closeAdvocacyDrawer === 'function') closeAdvocacyDrawer();
     });
 
     document.body.addEventListener('htmx:afterSwap', function (e) {

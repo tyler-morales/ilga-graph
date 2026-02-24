@@ -1,20 +1,25 @@
-{# ── Advocacy hero: centered single-column layout, no image; form posts via HTMX to /advocacy/search. Same message, advocate-focused. ── #}
+{# ── Advocacy hero: centered single-column layout, no image; form posts via HTMX to /advocacy/search. Same message,
+advocate-focused. ── #}
 <div class="advocacy-hero advocacy-hero--centered">
     <div class="hero-inner">
         <p class="hero-eyebrow">Take action</p>
         <h1 class="hero-headline">
             {% if hero_headline_line1 and hero_headline_line2 %}
-            <span class="hero-headline-line">{% if hero_headline_line1_highlight %}{{ hero_headline_line1_prefix|default('') }}<span
-                class="hero-headline-sharpie-wrap"><img src="/static/images/sharpie.png" alt=""
-                    class="hero-headline-sharpie" aria-hidden="true" width="120" height="120"><span
-                    class="hero-headline-sharpie-text">{{ hero_headline_line1_highlight }}</span></span>{{ hero_headline_line1_suffix|default('') }}{% else %}{{ hero_headline_line1 }}{% endif %}</span>
-            <span class="hero-headline-line">{% if hero_headline_highlight %}{{ hero_headline_line2_prefix|default('') }}<span class="hero-headline-mark"
-                aria-hidden="true">{{ hero_headline_highlight }}</span>{{ hero_headline_line2_suffix|default('') }}{% else %}{{ hero_headline_line2 }}{% endif %}</span>
+            <span class="hero-headline-line">{% if hero_headline_line1_highlight %}{{
+                hero_headline_line1_prefix|default('') }}<span class="hero-headline-sharpie-wrap"><img
+                        src="/static/images/sharpie.png" alt="" class="hero-headline-sharpie" aria-hidden="true"
+                        width="120" height="120"><span class="hero-headline-sharpie-text">{{
+                        hero_headline_line1_highlight }}</span></span>{{ hero_headline_line1_suffix|default('') }}{%
+                else %}{{ hero_headline_line1 }}{% endif %}</span>
+            <span class="hero-headline-line">{% if hero_headline_highlight %}{{ hero_headline_line2_prefix|default('')
+                }}<span class="hero-headline-mark" aria-hidden="true">{{ hero_headline_highlight }}</span>{{
+                hero_headline_line2_suffix|default('') }}{% else %}{{ hero_headline_line2 }}{% endif %}</span>
             {% else %}{{ hero_headline or title }}{% endif %}
         </h1>
         <div class="hero-split">
             <div class="hero-action">
-                <p class="hero-subhead">{% if hero_subhead_line1 and hero_subhead_line2 %}{{ hero_subhead_line1 }}<br>{{ hero_subhead_line2 }}{% else %}{{ hero_subhead }}{% endif %}</p>
+                <p class="hero-subhead">{% if hero_subhead_line1 and hero_subhead_line2 %}{{ hero_subhead_line1 }}<br>{{
+                    hero_subhead_line2 }}{% else %}{{ hero_subhead }}{% endif %}</p>
                 <p class="hero-ticker" aria-live="polite">
                     {% if calls_total|default(0) > 0 %}
                     Add your voice. <strong aria-hidden="true">{{ calls_total }}</strong>+ outreach actions already
@@ -24,14 +29,15 @@
                     {% endif %}
                 </p>
                 <div class="hero-form">
-                    <form action="/advocacy" method="get" id="advocacy-form" aria-label="Find your legislators by ZIP code">
+                    <form action="/advocacy" method="get" id="advocacy-form"
+                        aria-label="Look up legislators by any Illinois ZIP code">
                         <input type="hidden" name="category" value="Transportation">
                         <div class="hero-form-row">
                             <div class="hero-field">
-                                <label for="zip_code">Your Illinois ZIP code</label>
+                                <label for="zip_code">Enter your ZIP</label>
                                 <input type="text" id="zip_code" name="zip" inputmode="numeric" pattern="[0-9]{5}"
-                                    placeholder="60007" maxlength="5" required autocomplete="postal-code"
-                                    value="{{ zip or '' }}">
+                                    placeholder="Enter any Illinois ZIP" maxlength="5" required autocomplete="off"
+                                    value="{{ zip or '' }}" data-search-zip>
                             </div>
                             <div class="hero-field hero-field-btn">
                                 <button type="submit" id="find-btn">Start Outreaching</button>
@@ -74,8 +80,6 @@
                         </svg></span> Verified <span id="auth-strip-email"></span> &middot; <button type="button"
                         class="auth-strip-signout" id="auth-strip-signout">Sign out</button></span>
             </div>
-            <div id="auth-strip-progress" class="hero-meta-line auth-strip-progress" hidden aria-live="polite"
-                aria-label="Your outreach progress"></div>
             <div id="auth-strip-inline-signin" class="hero-signin-inline" hidden>
                 <div class="hero-signin-state" id="hero-signin-state-email">
                     <input type="email" class="hero-signin-input" id="hero-signin-email" placeholder="Your email"
@@ -86,7 +90,8 @@
                     <span class="hero-signin-code-hint" id="hero-signin-code-hint">Check your email for a 6-digit
                         code</span>
                     {% if dev_available %}
-                    <p class="hero-signin-dev-hint" aria-live="polite">Dev mode: your code appears in the <strong>server terminal</strong> (where you ran the app), not in the browser.</p>
+                    <p class="hero-signin-dev-hint" aria-live="polite">Dev mode: your code appears in the <strong>server
+                            terminal</strong> (where you ran the app), not in the browser.</p>
                     {% endif %}
                     <div class="hero-signin-code-row">
                         <input type="text" class="hero-signin-code-input" id="hero-signin-code-input"

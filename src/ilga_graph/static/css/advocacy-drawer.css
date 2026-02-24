@@ -36,10 +36,18 @@
     overflow-x: hidden;
 }
 
-/* Email drawer only: 50% viewport width */
+/* Email drawer only: 50% viewport width (desktop) */
 .phone-panel.phone-panel--email {
     width: 50vw;
     max-width: 50vw;
+}
+
+/* Tablet: email drawer 75% of viewport width */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .phone-panel.phone-panel--email {
+        width: 75vw;
+        max-width: 75vw;
+    }
 }
 
 .phone-panel.open {
@@ -57,6 +65,7 @@
     .phone-overlay {
         transition-duration: 0.01s;
     }
+
     .phone-panel {
         transition-duration: 0.01s;
     }
@@ -353,12 +362,15 @@
 
 /* aspect-ratio: progressive enhancement so height follows from width */
 @supports (aspect-ratio: 1) {
+
     .drawer-call-photo,
     .drawer-call-photo-placeholder {
         aspect-ratio: 1;
         height: auto;
     }
+
     @media (max-width: 480px) {
+
         .drawer-call-photo,
         .drawer-call-photo-placeholder {
             width: 80px;
@@ -2221,6 +2233,7 @@
 
 /* ── Responsive: phone ── */
 @media (max-width: 480px) {
+
     .drawer-call-photo,
     .drawer-call-photo-placeholder {
         width: 80px;
@@ -2246,7 +2259,7 @@
     }
 
     .phone-panel-body {
-        padding: 16px 18px;
+        padding: 0 18px;
     }
 
     .phone-panel.phone-panel--email {
@@ -2263,6 +2276,7 @@
 /* When drawer is narrow (e.g. split view): same content layout as 480px viewport fallback */
 @supports (container-type: inline-size) {
     @container drawer (max-width: 480px) {
+
         .drawer-call-photo,
         .drawer-call-photo-placeholder {
             width: 80px;
@@ -2288,7 +2302,7 @@
         }
 
         .phone-panel-body {
-            padding: 16px 18px;
+            padding: 0 18px;
         }
     }
 }
@@ -2299,12 +2313,14 @@
     font-size: var(--font-size-xs);
     color: #6b7280;
 }
+
 .drawer-bug-nudge-link {
     color: #374151;
     text-decoration: none;
     position: relative;
     display: inline-block;
 }
+
 .drawer-bug-nudge-link::after {
     content: '';
     position: absolute;
@@ -2314,23 +2330,29 @@
     height: 1px;
     background: currentColor;
 }
+
 .drawer-bug-nudge-link:hover {
     color: #111;
 }
+
 .drawer-bug-nudge-link:hover::after {
     opacity: 0;
 }
+
 .drawer-bug-nudge-link:focus {
     outline: 2px solid #333;
     outline-offset: 2px;
 }
+
 .drawer-bug-nudge-vm {
     margin-top: 16px;
 }
+
 .gmail-bug-nudge {
     margin-top: 8px;
     margin-bottom: 0;
 }
+
 .drawer-no-answer-bug-nudge {
     margin-top: 16px;
     text-align: center;

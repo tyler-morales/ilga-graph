@@ -97,6 +97,13 @@ def get_scenes() -> list[dict]:
                 "context": _drawer_email_context,
                 "trigger": None,
             },
+            {
+                "id": "magnify",
+                "label": "Magnifying glass",
+                "template": "dev_playground/_scene_magnify.html",
+                "context": {},
+                "trigger": None,
+            },
         ]
     )
     return _SCENES

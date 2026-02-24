@@ -1,5 +1,12 @@
 """Shared constants (e.g. category → committee mapping for advocacy and explore)."""
 
+# Committee codes that most or all bills go through (gatekeeper + appropriations).
+# Used to limit "Why we recommend them" chair chips to topic + general committees.
+GENERAL_COMMITTEE_CODES: list[str] = [
+    "SAPP",  # Appropriations
+    "SCOA",  # Assignments * Reports (Senate gatekeeper)
+]
+
 # Policy categories → Senate committee codes. Used by advocacy search and Power Map.
 CATEGORY_COMMITTEES: dict[str, list[str]] = {
     "": [],

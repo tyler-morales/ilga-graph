@@ -54,6 +54,23 @@
   transition: transform var(--magnify-intro-duration, 2.2s) ease-in-out;
 }
 
+/* Full magnifying glass image as sibling of the glass so it is NOT clipped by the lens circle.
+   Aligned to the lens by top-right corner; padding pushes the graphic inward so the circle lines up. */
+.magnify-lens-frame {
+  position: absolute;
+  /* Top-right of frame = top-right of lens; offset nudges frame for alignment */
+  left: calc(var(--magnify-size) - var(--magnify-frame-size, 230px) + var(--magnify-frame-offset-x, 18px));
+  top: calc(0px + var(--magnify-frame-offset-y, -5px));
+  width: var(--magnify-frame-size, 230px);
+  height: var(--magnify-frame-size, 230px);
+  padding: var(--magnify-frame-padding, 1px);
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 10;
+  object-fit: contain;
+  object-position: center center;
+}
+
 /* Single source of truth for lens size; JS reads from .magnify-lens-glass.offsetWidth.
    Kept modest so the lens reads as a magnifier and does not cover the second line ("Take action"). */
 .magnify-lens-glass {
@@ -80,6 +97,7 @@
   inset: 0;
   border-radius: 50%;
   pointer-events: none;
+  z-index: 2;
   background: radial-gradient(ellipse at 30% 20%,
       rgba(255, 255, 255, 0.4) 0%,
       transparent 60%);
@@ -109,10 +127,16 @@
 }
 
 @media (max-width: 768px) {
-  .magnify-lens {
-    display: none !important;
+  /* Lens and frame 30% smaller on mobile (70% of default). */
+  :root {
+    --magnify-size: 105px; /* 150 * 0.7 */
   }
-
+  .magnify-lens {
+    --magnify-frame-size: 161px; /* 230 * 0.7 */
+    --magnify-frame-offset-x: 12.6px; /* 18 * 0.7 */
+    --magnify-frame-offset-y: -3.5px; /* -5 * 0.7 */
+  }
+  /* Lens visible on mobile for intro sweep; no cursor-follow so keep default cursor. */
   .advocacy-hero .hero-headline.hero-headline--lens-active {
     cursor: default;
   }

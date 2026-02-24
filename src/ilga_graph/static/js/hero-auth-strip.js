@@ -41,26 +41,7 @@
     window._pendingAuthEmail = '';
 
     function refreshAuthStripProgress() {
-        var el = document.getElementById('auth-strip-progress');
-        if (!el) return;
-        fetch('/outreach/my-stats', { credentials: 'same-origin' })
-            .then(function (r) { return r.json(); })
-            .then(function (d) {
-                if (d && (d.calls != null || d.emails != null)) {
-                    var parts = [];
-                    if (d.calls) parts.push('Called ' + d.calls + ' legislator' + (d.calls === 1 ? '' : 's'));
-                    if (d.emails) parts.push('sent ' + d.emails + ' email' + (d.emails === 1 ? '' : 's'));
-                    el.textContent = parts.length ? parts.join(' and ') + '.' : '';
-                    el.hidden = !el.textContent;
-                } else {
-                    el.hidden = true;
-                    el.textContent = '';
-                }
-            })
-            .catch(function () {
-                el.hidden = true;
-                el.textContent = '';
-            });
+        /* Progress line ("Called X legislators and sent Y emails") removed from hero; kept as no-op for callers. */
     }
     window.refreshAuthStripProgress = refreshAuthStripProgress;
 
@@ -68,7 +49,6 @@
         var stripSignedOut = document.getElementById('auth-strip-signed-out');
         var stripSignedIn = document.getElementById('auth-strip-signed-in');
         var stripEmail = document.getElementById('auth-strip-email');
-        var stripProgress = document.getElementById('auth-strip-progress');
         if (!stripSignedOut || !stripSignedIn) return;
         if (signedIn && email) {
             window._ilgaUserEmail = email;
@@ -85,10 +65,6 @@
             stripSignedOut.hidden = false;
             stripSignedIn.hidden = true;
             stripSignedIn.classList.remove('auth-strip-signed-in--visible');
-            if (stripProgress) {
-                stripProgress.hidden = true;
-                stripProgress.textContent = '';
-            }
         }
     }
     window.updateAuthStrip = updateAuthStrip;

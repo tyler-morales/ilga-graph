@@ -506,12 +506,6 @@
   outline-offset: 2px;
 }
 
-.auth-strip-progress {
-  font-size: var(--font-size-label);
-  color: #555;
-  margin-top: 2px;
-}
-
 .hero-signin-inline {
   font-family: var(--font-sans);
   font-size: var(--font-size-base);

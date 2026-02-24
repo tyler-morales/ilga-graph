@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import re
 from pathlib import Path
 from typing import Any
@@ -19,18 +20,22 @@ from .. import config as cfg
 from ..app_state import state
 from ..community_email import get_effective_email_for_member
 from ..config import DEV_MODE
-from ..constants import CATEGORY_CHOICES, CATEGORY_COMMITTEES
+from ..constants import CATEGORY_CHOICES, CATEGORY_COMMITTEES, GENERAL_COMMITTEE_CODES
 from ..data_source import is_using_mocks
 from ..db import get_db
 from ..db_models import OutreachEvent, User
-from ..dependencies import get_current_user_optional
+from ..dependencies import get_current_user_optional, require_user
 from ..member_lookup import (
     find_member_by_district,
     find_member_by_id,
     is_constituent_for_zip_member,
 )
 from ..routers.outreach import get_outreach_aggregate
-from ..security import validate_photo_url_for_drawer
+from ..security import (
+    CSRF_COOKIE_NAME,
+    validate_csrf_token,
+    validate_photo_url_for_drawer,
+)
 
 _ZIP_RE = re.compile(r"^\d{5}$")
 # Pre-fill hero ZIP in dev/mocks; must exist in state.zip_to_district.
@@ -122,6 +127,8 @@ async def _build_search_results_context(
     committee_codes = CATEGORY_COMMITTEES.get(topic_for_broker, [])
     committee_ids = ah.committee_member_ids(state, committee_codes) if committee_codes else None
     category_label = category if category else ""
+    # Topic + general committees (Appropriations, Assignments) for "Why we recommend" chair chips.
+    relevant_committee_codes = list(dict.fromkeys(committee_codes + GENERAL_COMMITTEE_CODES))
 
     senator_member = (
         find_member_by_district(state, "senate", senate_district) if senate_district else None
@@ -132,6 +139,7 @@ async def _build_search_results_context(
             state,
             senator_member,
             why=f"Represents IL Senate District {senate_district}, which contains ZIP {zip_code}.",
+            relevant_committee_codes=relevant_committee_codes,
         )
         senator_card["script_hint"] = ah.build_script_hint_senator(
             senator_card, zip_code, senate_district
@@ -158,6 +166,7 @@ async def _build_search_results_context(
             state,
             rep_member,
             why=f"Represents IL House District {house_district}, which contains ZIP {zip_code}.",
+            relevant_committee_codes=relevant_committee_codes,
         )
         rep_card["script_hint"] = ah.build_script_hint_rep(rep_card, zip_code, house_district)
         rep_card["script_sections"] = ah.build_script_sections_rep(
@@ -199,7 +208,12 @@ async def _build_search_results_context(
 
     broker_card = None
     if broker_member:
-        broker_card = ah.member_to_card(state, broker_member, why=broker_why)
+        broker_card = ah.member_to_card(
+            state,
+            broker_member,
+            why=broker_why,
+            relevant_committee_codes=relevant_committee_codes,
+        )
         broker_card["script_hint"] = ah.build_script_hint_broker(broker_card, broker_why)
         broker_card["script_sections"] = ah.build_script_sections_broker(broker_card, broker_why)
         broker_card["email_subject"] = ah.build_email_subject(zip_code)
@@ -253,13 +267,21 @@ async def _build_search_results_context(
         rep_card is None or rep_called
     )
 
-    # Ordered actionable steps: call then email for higher-moneyball member, then repeat for lower.
-    goal_steps: list[dict[str, Any]] = []
+    broker_id = str(broker_card["id"]) if broker_card else None
+    broker_called = broker_id is not None and broker_id in user_called_member_ids
+    broker_emailed = broker_id is not None and broker_id in user_emailed_member_ids
+    broker_goal_done = (1 if broker_called else 0) + (1 if broker_emailed else 0)
+    broker_goal_total = 2 if broker_card else 0
+    district_goal_complete = district_goal_done == district_goal_total and district_goal_total > 0
+    in_broker_phase = district_goal_complete and broker_card is not None
+
+    # District steps (for phase 1 or for "completed goals" in phase 2).
+    district_steps: list[dict[str, Any]] = []
     for item in your_legislators:
         card = item["card"]
         mid = str(card["id"])
         role_short = "Senator" if "Senator" in item["role_label"] else "Rep"
-        goal_steps.append(
+        district_steps.append(
             {
                 "member_id": mid,
                 "role_label": role_short,
@@ -267,7 +289,7 @@ async def _build_search_results_context(
                 "done": mid in user_called_member_ids,
             }
         )
-        goal_steps.append(
+        district_steps.append(
             {
                 "member_id": mid,
                 "role_label": role_short,
@@ -275,6 +297,39 @@ async def _build_search_results_context(
                 "done": mid in user_emailed_member_ids,
             }
         )
+
+    broker_goal_steps: list[dict[str, Any]] = []
+    if broker_card:
+        broker_goal_steps = [
+            {
+                "member_id": broker_id,
+                "role_label": "Power Broker",
+                "action": "call",
+                "done": broker_called,
+            },
+            {
+                "member_id": broker_id,
+                "role_label": "Power Broker",
+                "action": "email",
+                "done": broker_emailed,
+            },
+        ]
+
+    if in_broker_phase:
+        goal_phase = "broker"
+        current_goal_label = "Outreach the Power Broker"
+        goal_steps = broker_goal_steps
+        goal_done = broker_goal_done
+        goal_total = broker_goal_total
+        completed_goal_steps = [{**s, "done": True} for s in district_steps]
+    else:
+        goal_phase = "district"
+        current_goal_label = "Outreach your district legislators"
+        goal_steps = district_steps
+        goal_done = district_goal_done
+        goal_total = district_goal_total
+        completed_goal_steps = []
+
     goal_next_step: dict[str, Any] | None = None
     for s in goal_steps:
         if not s["done"]:
@@ -306,15 +361,55 @@ async def _build_search_results_context(
             .order_by(OutreachEvent.created_at.desc())
         )
         member_kinds: dict[str, set[str]] = {}
+        # #region agent log
+        _raw_events: list[list[str]] = []
+        _total_call_events = 0
+        _total_email_events = 0
+        # #endregion
         for mid, kind in sidebar_result.all():
             if kind == "call":
-                outreach_calls_count += 1
+                _total_call_events += 1
             elif kind == "email":
-                outreach_emails_count += 1
+                _total_email_events += 1
             mid_str = str(mid)
             if mid_str not in member_kinds:
                 member_kinds[mid_str] = set()
             member_kinds[mid_str].add(kind)
+            # #region agent log
+            _raw_events.append([mid_str, kind])
+            # #endregion
+        distinct_members_called = sum(1 for k in member_kinds.values() if "call" in k)
+        distinct_members_emailed = sum(1 for k in member_kinds.values() if "email" in k)
+        outreach_calls_count = distinct_members_called
+        outreach_emails_count = distinct_members_emailed
+        # #region agent log
+        try:
+            _log_path = Path("/Users/tyler/Projects/Code/ilga_graph_poc/.cursor/debug-40cdc3.log")
+            with open(_log_path, "a") as _f:
+                _f.write(
+                    json.dumps(
+                        {
+                            "sessionId": "40cdc3",
+                            "hypothesisId": "H1_H2_H3",
+                            "runId": "post-fix",
+                            "location": "advocacy.py:sidebar_counts",
+                            "message": "outreach sidebar events and counts",
+                            "data": {
+                                "user_id": user.id,
+                                "raw_events": _raw_events,
+                                "total_call_events": _total_call_events,
+                                "total_email_events": _total_email_events,
+                                "outreach_calls_count_displayed": outreach_calls_count,
+                                "outreach_emails_count_displayed": outreach_emails_count,
+                            },
+                            "timestamp": __import__("time").time() * 1000,
+                        }
+                    )
+                    + "\n"
+                )
+        except Exception:
+            pass
+        # #endregion
         for member_id in member_kinds:
             member = state.member_lookup_by_id.get(member_id)
             if member is None:
@@ -342,6 +437,7 @@ async def _build_search_results_context(
         "zip_count": len(state.zip_to_district),
         "zip": zip_code,
         "category": category,
+        "relevant_committee_codes": relevant_committee_codes,
         "senate_district": senate_district,
         "house_district": house_district,
         "your_legislators": your_legislators,
@@ -359,6 +455,16 @@ async def _build_search_results_context(
         "district_goal_done": district_goal_done,
         "district_goal_total": district_goal_total,
         "both_district_members_called": both_district_members_called,
+        "broker_id": broker_id,
+        "broker_called": broker_called,
+        "broker_emailed": broker_emailed,
+        "goal_phase": goal_phase,
+        "current_goal_label": current_goal_label,
+        "goal_done": goal_done,
+        "goal_total": goal_total,
+        "completed_goal_steps": completed_goal_steps,
+        "district_steps": district_steps,
+        "broker_goal_steps": broker_goal_steps,
         "goal_steps": goal_steps,
         "goal_next_step": goal_next_step,
         "outreach_heat": outreach_heat,
@@ -426,10 +532,6 @@ async def advocacy_index(
             sample = sorted(state.zip_to_district.keys())[:6]
             ctx["error"] += f" In dev mode, try ZIPs such as: {', '.join(sample)}."
         ctx["zip"] = DEFAULT_HERO_ZIP
-    user_zip = (getattr(user, "zip_code", None) or "").strip() if user else ""
-    if zip_param and in_district and user and user_zip != zip_param:
-        user.zip_code = zip_param
-        await db.commit()
     return templates.TemplateResponse("index.html", ctx)
 
 
@@ -498,6 +600,16 @@ async def advocacy_brief_pdf():
             "Content-Disposition": "attachment; filename=IL_Kei_Vehicle_Registration_Fix_Brief.pdf"  # noqa: E501
         },
     )
+
+
+def _role_label_for_member(member: Any) -> str | None:
+    """'Senator' or 'Representative' based on the member's chamber. None for unknown."""
+    chamber = (getattr(member, "chamber", None) or "").strip().lower()
+    if chamber == "senate":
+        return "Senator"
+    if chamber == "house":
+        return "Representative"
+    return None
 
 
 @router.get("/drawer")
@@ -572,6 +684,7 @@ async def advocacy_drawer(
         )
         legislator_display_name = ah.get_legislator_display_name(legislator_name, chamber, district)
         party_abbr = ah.party_abbr_for_member(member)
+        current_role_label = _role_label_for_member(member)
         return templates.TemplateResponse(
             "_advocacy_drawer_email.html",
             {
@@ -595,6 +708,8 @@ async def advocacy_drawer(
                 "zip_code": zip_code,
                 "is_constituent": is_constituent,
                 "party_abbr": party_abbr,
+                "current_member_role_label": current_role_label,
+                "current_member_already_called": not show_call_nudge,
             },
         )
 
@@ -708,6 +823,7 @@ async def advocacy_call_wrapup(
     wrapup_community_verification = (
         community_verification if used_community_recipient and email_source == "community" else None
     )
+    wrapup_role_label = _role_label_for_member(member)
     if recipient:
         return templates.TemplateResponse(
             "_advocacy_drawer_email.html",
@@ -733,6 +849,8 @@ async def advocacy_call_wrapup(
                 "zip_code": zip_code,
                 "is_constituent": is_constituent,
                 "party_abbr": party_abbr,
+                "current_member_role_label": wrapup_role_label,
+                "current_member_already_called": True,
             },
         )
 
@@ -761,6 +879,8 @@ async def advocacy_call_wrapup(
             "zip_code": zip_code,
             "is_constituent": is_constituent,
             "party_abbr": party_abbr,
+            "current_member_role_label": wrapup_role_label,
+            "current_member_already_called": True,
         },
     )
 
@@ -828,6 +948,32 @@ async def check_constituent(member_id: str = "", zip: str = ""):
     member = find_member_by_id(state, member_id_stripped)
     is_constituent = is_constituent_for_zip_member(state, zip_code, member)
     return JSONResponse({"is_constituent": is_constituent})
+
+
+@router.patch("/api/me/zip")
+async def update_my_zip(
+    request: Request,
+    zip_code: str = Form(...),
+    csrf_token: str | None = Form(None),
+    user: User = Depends(require_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update current user's stored ZIP (hero zip / Use location commit only)."""
+    cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
+    if not validate_csrf_token(csrf_token, cookie_token):
+        return JSONResponse(
+            {"ok": False, "error": "Invalid or expired security token. Reload the page."},
+            status_code=403,
+        )
+    zip_param = (zip_code or "").strip()
+    if not _ZIP_RE.match(zip_param) or zip_param not in state.zip_to_district:
+        return JSONResponse(
+            {"ok": False, "error": "Invalid or unsupported Illinois ZIP code."},
+            status_code=400,
+        )
+    user.zip_code = zip_param
+    await db.commit()
+    return JSONResponse({"ok": True})
 
 
 @router.post("/search")

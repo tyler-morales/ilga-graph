@@ -5,7 +5,8 @@
     <strong>Dev/Seed mode.</strong>
     {% if member_count is defined and member_count < 100 %} Only {{ member_count }} of 177 legislators are loaded. {%
         endif %} {% if zip_count is defined and zip_count < 100 %} District data uses ~{{ zip_count }} demo ZIPs (not
-        full Census). {% endif %} Some districts may show no results. <strong>Good ZIPs to test:</strong> 60007, 60016, 60033,
+        full Census). {% endif %} Some districts may show no results. <strong>Good ZIPs to test:</strong> 60007, 60016,
+        60033,
         60034, 60068, 60071 (all match the dev dataset).
 </div>
 {% endif %}
@@ -26,7 +27,8 @@ user_emailed_member_ids=none, outreach_heat=none) %}
 {% set outreach_complete = user_called and user_emailed %}
 {% set heat_count = outreach_heat.get(member_id_str, 0) if outreach_heat else 0 %}
 <div class="card {% if role_class in ['role-senator', 'role-rep'] %}card-your-legislator{% endif %}{% if outreach_complete %} card-outreach-complete{% endif %}"
-    id="card-{{ member.id }}"{% if outreach_complete %} aria-label="You called and emailed this legislator"{% endif %}>
+    id="card-{{ member.id }}" {% if outreach_complete %} aria-label="You called and emailed this legislator" {% endif
+    %}>
     {# Fire pill (corner): data-driven from outreach_events — COUNT(DISTINCT user_id) per member; see
     docs/development/db-and-outreach.md #}
     {% if heat_count > 0 %}
@@ -34,15 +36,26 @@ user_emailed_member_ids=none, outreach_heat=none) %}
         title="{{ heat_count }} unique outreach advocate{{ 's' if heat_count != 1 else '' }}">
         <span class="heat-score-pill-fire" aria-hidden="true">
             <span class="heat-score-pill-fire-static">🔥</span>
-            <img class="heat-score-pill-fire-animated" src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExMjIzcmVqNmFkOHF6bnphZDdnMHh3MzRjOWo3cnFtN2txNTQ5NGZ2MSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/ewh4ipgPw1bBVj4HI5/giphy.gif" alt="" width="36" height="36" loading="lazy">
+            <img class="heat-score-pill-fire-animated"
+                src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExMjIzcmVqNmFkOHF6bnphZDdnMHh3MzRjOWo3cnFtN2txNTQ5NGZ2MSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/ewh4ipgPw1bBVj4HI5/giphy.gif"
+                alt="" width="36" height="36" loading="lazy">
         </span>
-        {{ heat_count }}<span
-            class="heat-score-pill-text">&nbsp;unique outreach advocate{{ 's' if heat_count != 1 else ''
+        {{ heat_count }}<span class="heat-score-pill-text">&nbsp;Outreach action{{ 's' if heat_count != 1 else ''
             }}</span></span>
     {% endif %}
     {% set net = member.influence_network %}
     {% set leadership_roles = member.committee_roles|selectattr('is_leadership')|list if member.committee_roles
     else [] %}
+    {% set rel_codes = relevant_committee_codes|default(none) %}
+    {% if rel_codes is none %}
+    {% set leadership_roles_relevant = leadership_roles %}
+    {% else %}
+    {% set _ns = namespace(leadership_roles_relevant=[]) %}
+    {% for cr in leadership_roles %}
+    {% if cr.code in rel_codes %}{% set _ = _ns.leadership_roles_relevant.append(cr) %}{% endif %}
+    {% endfor %}
+    {% set leadership_roles_relevant = _ns.leadership_roles_relevant %}
+    {% endif %}
     {% set has_chair = leadership_roles|length > 0 %}
     {% set high_rank = member.rank_percentile is not none and member.rank_percentile >= 70 %}
     {% set is_persuadable = member.voting_record and member.voting_record.is_persuadable %}
@@ -70,8 +83,9 @@ user_emailed_member_ids=none, outreach_heat=none) %}
             <div class="card-header-col">
                 <div class="card-header-right">
                     {% if role_class in ['role-senator', 'role-rep'] %}
-                    <span class="tooltip-wrap card-constituency-wrap"><span class="card-constituency-label card-constituency-pill {{ role_class }}" tabindex="0" role="button" aria-label="{{ role_label }}, focus or hover for description">{{ role_label }}</span><span
-                            class="tooltip-content"><strong>{{ role_label }}</strong>
+                    <span class="tooltip-wrap card-constituency-wrap"><span class="card-constituency-label" tabindex="0"
+                            role="button" aria-label="{{ role_label }}, focus or hover for description">{{ role_label
+                            }}</span><span class="tooltip-content"><strong>{{ role_label }}</strong>
                             <p>{% if role_class == 'role-senator' %}Your state senator for this ZIP's district.
                                 Constituent calls are tracked—yours counts.{% else %}Your
                                 state representative votes on bills in the House before the Senate.{% endif %}</p>
@@ -87,29 +101,38 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                     {% if role_class == 'role-broker' %}
                     {% if member.badges %}
                     {% for badge in member.badges %}
-                    <span class="tooltip-wrap"><span class="role-label role-badge" tabindex="0" role="button" aria-label="{{ badge }}, focus or hover for description">{{ badge }}</span><span
+                    <span class="tooltip-wrap"><span class="role-label role-badge" tabindex="0" role="button"
+                            aria-label="{{ badge }}, focus or hover for description">{{ badge }}</span><span
                             class="tooltip-content"><strong>{{ badge }}</strong>
-                            <p>{% if badge == 'Power Broker' %}Committee chair for your topic (default Transportation), or highest Moneyball senator or rep. Key target for co-sponsorship.{% else %}{{ badge }} role for
+                            <p>{% if badge == 'Power Broker' %}Committee chair for your topic (default Transportation),
+                                or highest Moneyball senator or rep. Key target for co-sponsorship.{% else %}{{ badge }}
+                                role for
                                 this advocacy target.{% endif %}</p>
                         </span></span>
                     {% endfor %}
                     {% else %}
-                    <span class="tooltip-wrap"><span class="role-label {{ role_class }}" tabindex="0" role="button" aria-label="{{ role_label }}, focus or hover for description">{{ role_label
+                    <span class="tooltip-wrap"><span class="role-label {{ role_class }}" tabindex="0" role="button"
+                            aria-label="{{ role_label }}, focus or hover for description">{{ role_label
                             }}</span><span class="tooltip-content"><strong>{{ role_label }}</strong>
-                            <p>Committee chair for your topic (default Transportation), or highest Moneyball senator or rep. Key target for co-sponsorship.</p>
+                            <p>Committee chair for your topic (default Transportation), or highest Moneyball senator or
+                                rep. Key target for co-sponsorship.</p>
                         </span></span>
                     {% endif %}
                     {% elif role_class not in ['role-senator', 'role-rep'] %}
                     {% if member.badges %}
                     {% for badge in member.badges %}
-                    <span class="tooltip-wrap"><span class="role-label role-badge" tabindex="0" role="button" aria-label="{{ badge }}, focus or hover for description">{{ badge }}</span><span
+                    <span class="tooltip-wrap"><span class="role-label role-badge" tabindex="0" role="button"
+                            aria-label="{{ badge }}, focus or hover for description">{{ badge }}</span><span
                             class="tooltip-content"><strong>{{ badge }}</strong>
-                            <p>{% if badge == 'Power Broker' %}Committee chair for your topic (default Transportation), or highest Moneyball senator or rep. Key target for co-sponsorship.{% else %}{{ badge }} role for
+                            <p>{% if badge == 'Power Broker' %}Committee chair for your topic (default Transportation),
+                                or highest Moneyball senator or rep. Key target for co-sponsorship.{% else %}{{ badge }}
+                                role for
                                 this advocacy target.{% endif %}</p>
                         </span></span>
                     {% endfor %}
                     {% else %}
-                    <span class="tooltip-wrap"><span class="role-label {{ role_class }}" tabindex="0" role="button" aria-label="{{ role_label }}, focus or hover for description">{{ role_label
+                    <span class="tooltip-wrap"><span class="role-label {{ role_class }}" tabindex="0" role="button"
+                            aria-label="{{ role_label }}, focus or hover for description">{{ role_label
                             }}</span><span class="tooltip-content"><strong>{{ role_label }}</strong>
                             <p>{{ role_label }}.</p>
                         </span></span>
@@ -117,14 +140,16 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                     {% endif %}
                     {% if member.badges and role_class in ['role-senator', 'role-rep'] %}
                     {% for badge in member.badges %}
-                    <span class="tooltip-wrap"><span class="role-label role-badge" tabindex="0" role="button" aria-label="{{ badge }}, focus or hover for description">{{ badge }}</span><span
+                    <span class="tooltip-wrap"><span class="role-label role-badge" tabindex="0" role="button"
+                            aria-label="{{ badge }}, focus or hover for description">{{ badge }}</span><span
                             class="tooltip-content"><strong>{{ badge }}</strong>
                             <p>{{ badge }} role for this advocacy target.</p>
                         </span></span>
                     {% endfor %}
                     {% endif %}
                     {% for pb in member.power_badges %}
-                    <span class="tooltip-wrap"><span class="power-badge {{ pb.css_class }}" tabindex="0" role="button" aria-label="{{ pb.label }}, focus or hover for description"><span
+                    <span class="tooltip-wrap"><span class="power-badge {{ pb.css_class }}" tabindex="0" role="button"
+                            aria-label="{{ pb.label }}, focus or hover for description"><span
                                 class="power-badge-icon power-icon-{{ pb.icon }}"></span> {{ pb.label
                             }}</span><span class="tooltip-content"><strong>{{ pb.label }}</strong>
                             <p>{{ pb.explanation }}</p>
@@ -176,8 +201,8 @@ user_emailed_member_ids=none, outreach_heat=none) %}
             (_first_name ~ "'s" if _idx==1 else _title_last ~ "'s" ) %} {% set ns.why_picked=ns.why_picked + ["" ~
             _ref_subj ~ " co-sponsors with
                             <strong>" ~ net.unique_collaborators ~ "+ colleagues</strong>, so " ~ _ref_poss ~ " support carries
-                            weight." ] %} {% endif %} {% if has_chair and (ns.why_picked|length) < 3 %} {% for cr in
-            leadership_roles %} {% if (ns.why_picked|length) < 3 %} {% set _idx=ns.why_picked|length %} {% set
+                            weight." ] %} {% endif %} {% if leadership_roles_relevant|length > 0 and (ns.why_picked|length) < 3 %} {% for cr in
+            leadership_roles_relevant %} {% if (ns.why_picked|length) < 3 %} {% set _idx=ns.why_picked|length %} {% set
             _ref_subj=member.name if _idx==0 else (_first_name if _idx==1 else _title_last) %} {% set
             ns.why_picked=ns.why_picked + ["" ~ _ref_subj ~ " <strong>chairs
                                 " ~ cr.name ~ "</strong>—the <strong>gatekeeper</strong> for which bills get hearings."
@@ -210,9 +235,8 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                 <div class="power-signals">
                     {% for chip_key in member.get('recommendation_chip_order', []) %}
                     {% if chip_key == 'cosponsor_lift' %}
-                    <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-wow"
-                            role="button" tabindex="0"><span
-                                class="signal-emoji" aria-hidden="true">📈</span>
+                    <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-wow" role="button"
+                            tabindex="0"><span class="signal-emoji" aria-hidden="true">📈</span>
                             <span class="chip-text-full">Bills {{ _first_name }} co-sponsors pass at {{
                                 net.cosponsor_passage_multiplier }}&times; the chamber rate</span>
                             <span class="chip-text-mobile">Cosponsor pass {{ net.cosponsor_passage_multiplier
@@ -229,9 +253,8 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                                 }}&times;).</p>
                         </span></span>
                     {% elif chip_key == 'outperforms_caucus' %}
-                    <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-wow"
-                            role="button" tabindex="0"><span
-                                class="signal-emoji" aria-hidden="true">📈</span>
+                    <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-wow" role="button"
+                            tabindex="0"><span class="signal-emoji" aria-hidden="true">📈</span>
                             <span class="chip-text-full">Outperforms caucus: {{ net.passage_rate_vs_caucus
                                 }}&times; average passage</span>
                             <span class="chip-text-mobile">{{ net.passage_rate_vs_caucus }}&times;
@@ -250,9 +273,8 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                     {% set minority_collab = net.collaborator_democrats if net.collaborator_democrats <=
                         net.collaborator_republicans else net.collaborator_republicans %} {% set
                         bipartisan_pct=(minority_collab / total_collab * 100)|round(1) if total_collab else 0 %} <span
-                        class="tooltip-wrap tooltip-click"><span class="signal-chip signal-bridge"
-                            role="button" tabindex="0"><span
-                                class="signal-emoji" aria-hidden="true">🤝</span>
+                        class="tooltip-wrap tooltip-click"><span class="signal-chip signal-bridge" role="button"
+                            tabindex="0"><span class="signal-emoji" aria-hidden="true">🤝</span>
                             <span class="chip-text-full">{{ net.bipartisan_label }}</span>
                             <span class="chip-text-mobile">Bipartisan</span></span><span class="tooltip-content"><span
                                 class="tooltip-title">Bipartisan reach</span>
@@ -265,9 +287,8 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                                 net.unique_collaborators }} unique collaborators.</p>
                         </span></span>
                         {% elif chip_key == 'big_network' %}
-                        <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-wow"
-                                role="button" tabindex="0"><span
-                                    class="signal-emoji" aria-hidden="true">👥</span>
+                        <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-wow" role="button"
+                                tabindex="0"><span class="signal-emoji" aria-hidden="true">👥</span>
                                 <span class="chip-text-full">Works with {{ net.unique_collaborators }}+
                                     legislators</span>
                                 <span class="chip-text-mobile">{{ net.unique_collaborators }}+
@@ -280,10 +301,9 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                                     this chamber.</p>
                             </span></span>
                         {% elif chip_key == 'chair' %}
-                        {% for cr in leadership_roles %}
-                        <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-chair"
-                                role="button" tabindex="0"><span
-                                    class="signal-emoji" aria-hidden="true">🪑</span>
+                        {% for cr in leadership_roles_relevant %}
+                        <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-chair" role="button"
+                                tabindex="0"><span class="signal-emoji" aria-hidden="true">🪑</span>
                                 <span class="chip-text-full">{{ cr.role }}: {{ cr.name }}{% if cr.total_bills >
                                     0 and cr.advancement_rate_pct >= 25 %} ({{ cr.advancement_rate_pct }}%
                                     advance rate){% elif cr.role|lower in ['chair', 'chairperson'] %} &mdash;
@@ -300,9 +320,8 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                             </span></span>
                         {% endfor %}
                         {% elif chip_key == 'high_rank' %}
-                        <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-rank"
-                                role="button" tabindex="0"><span
-                                    class="signal-emoji" aria-hidden="true">🏆</span>
+                        <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-rank" role="button"
+                                tabindex="0"><span class="signal-emoji" aria-hidden="true">🏆</span>
                                 <span class="chip-text-full">Top of {{ member.chamber }} (#{{
                                     member.rank_chamber }} of {{ member.chamber_size }})</span>
                                 <span class="chip-text-mobile">#{{ member.rank_chamber }} in {{ member.chamber
@@ -315,9 +334,8 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                                     }} in {{ member.chamber }} by Moneyball score.</p>
                             </span></span>
                         {% elif chip_key == 'high_passage' %}
-                        <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-passage"
-                                role="button" tabindex="0"><span
-                                    class="signal-emoji" aria-hidden="true">📊</span>
+                        <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-passage" role="button"
+                                tabindex="0"><span class="signal-emoji" aria-hidden="true">📊</span>
                                 <span class="chip-text-full">{{ member.passage_rate_pct }}% passage rate ({{
                                     member.laws_passed }}/{{ member.laws_filed }} passed)</span>
                                 <span class="chip-text-mobile">{{ member.passage_rate_pct }}%
@@ -331,9 +349,8 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                                     primary-sponsored bills became law ({{ member.passage_rate_pct }}%).</p>
                             </span></span>
                         {% elif chip_key == 'productive' %}
-                        <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-passage"
-                                role="button" tabindex="0"><span
-                                    class="signal-emoji" aria-hidden="true">✅</span>
+                        <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-passage" role="button"
+                                tabindex="0"><span class="signal-emoji" aria-hidden="true">✅</span>
                                 <span class="chip-text-full">{{ member.laws_passed }} law{{ 's' if
                                     member.laws_passed != 1 else '' }} passed</span>
                                 <span class="chip-text-mobile">{{ member.laws_passed }} law{{ 's' if
@@ -348,9 +365,8 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                                     {{ _first_name }} sponsored became law.</p>
                             </span></span>
                         {% elif chip_key == 'cross_party' %}
-                        <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-bridge"
-                                role="button" tabindex="0"><span
-                                    class="signal-emoji" aria-hidden="true">🤝</span>
+                        <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-bridge" role="button"
+                                tabindex="0"><span class="signal-emoji" aria-hidden="true">🤝</span>
                                 <span class="chip-text-full">Works across the aisle ({{ member.bridge_pct }}%
                                     cross-party bills)</span>
                                 <span class="chip-text-mobile">{{ member.bridge_pct }}%
@@ -365,8 +381,7 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                             </span></span>
                         {% elif chip_key == 'persuadable' %}
                         <span class="tooltip-wrap tooltip-click"><span class="signal-chip signal-persuadable"
-                                role="button" tabindex="0"><span
-                                    class="signal-emoji" aria-hidden="true">💬</span>
+                                role="button" tabindex="0"><span class="signal-emoji" aria-hidden="true">💬</span>
                                 <span class="chip-text-full">Breaks party ranks {{
                                     member.voting_record.party_defection_count }}&times; &mdash;
                                     persuadable</span>
@@ -393,9 +408,9 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                         data-member-id="{{ member.id }}" data-zip="{{ zip_code }}"
                         data-photo-url="{{ member.photo_url or '' }}" data-target-type="{{ target_type }}"
                         aria-label="You called this legislator — open to view"
-                        onclick="openAdvocacyDrawer('call', this.getAttribute('data-member-id'), this.getAttribute('data-zip'), this.getAttribute('data-photo-url'), this.getAttribute('data-target-type'))"><span class="outreach-icon" aria-hidden="true"><svg
-                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round">
+                        onclick="openAdvocacyDrawer('call', this.getAttribute('data-member-id'), this.getAttribute('data-zip'), this.getAttribute('data-photo-url'), this.getAttribute('data-target-type'))"><span
+                            class="outreach-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path
                                     d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                             </svg></span> Called!</button>
@@ -419,9 +434,10 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                             data-member-id="{{ member.id }}" data-zip="{{ zip_code }}"
                             data-photo-url="{{ member.photo_url or '' }}" data-target-type="{{ target_type }}"
                             aria-label="You emailed this legislator — open to view"
-                            onclick="openAdvocacyDrawer('email', this.getAttribute('data-member-id'), this.getAttribute('data-zip'), this.getAttribute('data-photo-url'), this.getAttribute('data-target-type'))"><span class="outreach-icon" aria-hidden="true"><svg
-                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                    stroke-linecap="round" stroke-linejoin="round">
+                            onclick="openAdvocacyDrawer('email', this.getAttribute('data-member-id'), this.getAttribute('data-zip'), this.getAttribute('data-photo-url'), this.getAttribute('data-target-type'))"><span
+                                class="outreach-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
                                     <path
                                         d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                                     <polyline points="22,6 12,13 2,6" />
@@ -447,9 +463,9 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                         data-member-id="{{ member.id }}" data-zip="{{ zip_code }}"
                         data-photo-url="{{ member.photo_url or '' }}" data-target-type="{{ target_type }}"
                         aria-label="You emailed this legislator — open to view"
-                        onclick="openAdvocacyDrawer('email', this.getAttribute('data-member-id'), this.getAttribute('data-zip'), this.getAttribute('data-photo-url'), this.getAttribute('data-target-type'))"><span class="outreach-icon" aria-hidden="true"><svg
-                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round">
+                        onclick="openAdvocacyDrawer('email', this.getAttribute('data-member-id'), this.getAttribute('data-zip'), this.getAttribute('data-photo-url'), this.getAttribute('data-target-type'))"><span
+                            class="outreach-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                                 <polyline points="22,6 12,13 2,6" />
                             </svg></span> Emailed!</button>
@@ -670,53 +686,104 @@ user_emailed_member_ids=none, outreach_heat=none) %}
 <div class="results-layout">
     <aside class="results-aside">
         {% if senator or representative %}
-        <section class="outreach-goal" aria-labelledby="outreach-goal-heading"
-            data-goal-zip="{{ zip }}"
+        <section class="outreach-goal {% if goal_phase == 'broker' %}outreach-goal--phase-broker{% endif %}"
+            aria-labelledby="outreach-goal-heading" data-goal-zip="{{ zip }}"
             data-goal-senator-id="{{ senator.id if senator else '' }}"
-            data-goal-rep-id="{{ representative.id if representative else '' }}">
+            data-goal-rep-id="{{ representative.id if representative else '' }}"
+            data-goal-broker-id="{{ broker_id|default('') }}">
             <div class="outreach-goal__head-row">
                 <h2 id="outreach-goal-heading" class="outreach-goal__title">Your goal</h2>
-                <div class="outreach-goal__zip-cell" aria-label="ZIP code for this goal">
-                    <button type="button" class="outreach-goal__zip-display" data-goal-zip-display aria-expanded="false" aria-controls="outreach-goal-zip-edit" aria-label="ZIP code {{ zip }}. Click to change ZIP and update your goal for a different district.">{{ zip }}</button>
-                    <input type="text" id="outreach-goal-zip-edit" class="outreach-goal__zip-edit" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" placeholder="ZIP" aria-label="Edit ZIP code" value="{{ zip }}" hidden>
-                    <button type="button" class="outreach-goal__zip-locate" data-goal-zip-locate aria-label="Use my location to find my ZIP code"><span class="outreach-goal__zip-locate-icon" aria-hidden="true">⌖</span><span class="outreach-goal__zip-locate-text">Use location</span></button>
-                    <span class="outreach-goal__zip-status" id="outreach-goal-zip-status" aria-live="polite" aria-atomic="true" hidden></span>
-                </div>
             </div>
-            <p class="outreach-goal__copy">Complete these {{ district_goal_total|default(4) }} actions for your district: call and email your Senator and your Representative (higher-impact member first).</p>
-            {% if district_goal_total is defined and district_goal_total > 0 %}
-            <div class="outreach-goal__bar-wrap" role="status" aria-live="polite">
-                <p class="outreach-goal__bar-label" id="outreach-goal-bar-label">{{ district_goal_done|default(0) }} of {{ district_goal_total }} actions complete</p>
-                <div class="outreach-goal__bar" role="progressbar" id="outreach-goal-bar"
-                    aria-valuenow="{{ district_goal_done|default(0) }}" aria-valuemin="0" aria-valuemax="{{ district_goal_total }}"
-                    aria-labelledby="outreach-goal-bar-label">
-                    <div class="outreach-goal__bar-fill" id="outreach-goal-bar-fill" style="width: {{ ((district_goal_done|default(0)) / district_goal_total * 100)|int }}%;">
-                        <span class="outreach-goal__bar-truck" aria-hidden="true">🛻</span>
+            <p class="outreach-goal__copy"><span id="outreach-goal-current-label">{{ current_goal_label|default('Outreach your district legislators') }}</span></p>
+
+            {# Phase 1: district (bar X of 4, 4 steps, Next) #}
+            <div class="outreach-goal__phase outreach-goal__phase--district">
+                {% if district_goal_total is defined and district_goal_total > 0 %}
+                <div class="outreach-goal__bar-wrap" role="status" aria-live="polite">
+                    <p class="outreach-goal__bar-label" id="outreach-goal-bar-label">{{ district_goal_done|default(0) }} of {{ district_goal_total }} actions complete</p>
+                    <div class="outreach-goal__bar" role="progressbar" id="outreach-goal-bar"
+                        aria-valuenow="{{ district_goal_done|default(0) }}" aria-valuemin="0"
+                        aria-valuemax="{{ district_goal_total }}" aria-labelledby="outreach-goal-bar-label">
+                        <div class="outreach-goal__bar-fill" id="outreach-goal-bar-fill"
+                            style="width: {{ ((district_goal_done|default(0)) / district_goal_total * 100)|int }}%;">
+                            <span class="outreach-goal__bar-truck" aria-hidden="true">🛻</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <ol class="outreach-goal__actions outreach-goal__actions--numbered" role="list" aria-label="District outreach steps (call then email for each member; order by impact)">
-                {% for step in goal_steps %}
-                <li class="outreach-goal__action{% if step.done %} outreach-goal__action--done{% endif %}">
-                    <span class="outreach-goal__action-status" data-goal-member="{{ step.member_id }}" data-goal-kind="{{ step.action }}" aria-label="{{ 'Called' if step.action == 'call' and step.done else 'Not yet called' if step.action == 'call' else 'Emailed' if step.done else 'Not yet emailed' }}"></span>
-                    <span class="outreach-goal__action-label">{{ 'Call' if step.action == 'call' else 'Email' }} {{ step.role_label }}</span>
-                    <a href="#" class="outreach-goal__action-link" data-action="{{ step.action }}" data-member-id="{{ step.member_id }}" data-zip="{{ zip }}" aria-label="{{ 'Call' if step.action == 'call' else 'Email' }} your {{ step.role_label }}"{% if step.done %} aria-disabled="true"{% endif %}>{{ 'Call' if step.action == 'call' else 'Email' }}</a>
-                </li>
-                {% endfor %}
-            </ol>
-            {% if goal_next_step %}
-            <p class="outreach-goal__next" id="outreach-goal-next">Next: <a href="#" class="outreach-goal__action-link outreach-goal__next-link" data-action="{{ goal_next_step.action }}" data-member-id="{{ goal_next_step.member_id }}" data-zip="{{ zip }}" aria-label="{{ goal_next_step.action|capitalize }} your {{ goal_next_step.role_label }}">{{ goal_next_step.action|capitalize }} your {{ goal_next_step.role_label }}</a></p>
-            {% else %}
-            <p class="outreach-goal__next" id="outreach-goal-next" hidden aria-hidden="true">Next: <span class="outreach-goal__next-placeholder"></span></p>
-            {% endif %}
-            {% if both_district_members_called|default(false) %}
-            <div class="outreach-goal__celebration" role="status" aria-live="polite">
-                <p class="outreach-goal__celebration-msg">You've reached both your district members.</p>
-                {% if broker %}
-                <p class="outreach-goal__optional">Want more impact? <a href="#" class="outreach-goal__action-link outreach-goal__cta-broker" data-action="call" data-member-id="{{ broker.id }}" data-zip="{{ zip }}" aria-label="Open call script for Power Broker">Call the Power Broker</a></p>
+                <ol class="outreach-goal__actions outreach-goal__actions--numbered" role="list"
+                    aria-label="District outreach steps (call then email for each member; order by impact)">
+                    {% for step in district_steps %}
+                    <li class="outreach-goal__action{% if step.done %} outreach-goal__action--done{% endif %}">
+                        <span class="outreach-goal__action-status" data-goal-member="{{ step.member_id }}"
+                            data-goal-kind="{{ step.action }}"
+                            aria-label="{{ 'Called' if step.action == 'call' and step.done else 'Not yet called' if step.action == 'call' else 'Emailed' if step.done else 'Not yet emailed' }}"></span>
+                        <span class="outreach-goal__action-label">{{ 'Call' if step.action == 'call' else 'Email' }} {{ step.role_label }}</span>
+                        <a href="#" class="outreach-goal__action-link" data-action="{{ step.action }}"
+                            data-member-id="{{ step.member_id }}" data-zip="{{ zip }}"
+                            aria-label="{{ 'Call' if step.action == 'call' else 'Email' }} your {{ step.role_label }}"
+                            {% if step.done %}aria-disabled="true"{% endif %}>{{ 'Call' if step.action == 'call' else 'Email' }}</a>
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% if goal_phase == 'district' and goal_next_step %}
+                <p class="outreach-goal__next" id="outreach-goal-next">Now: <a href="#"
+                        class="outreach-goal__action-link outreach-goal__next-link"
+                        data-action="{{ goal_next_step.action }}" data-member-id="{{ goal_next_step.member_id }}"
+                        data-zip="{{ zip }}"
+                        aria-label="{{ goal_next_step.action|capitalize }} your {{ goal_next_step.role_label }}">{{ goal_next_step.action|capitalize }} your {{ goal_next_step.role_label }}</a></p>
+                {% else %}
+                <p class="outreach-goal__next" id="outreach-goal-next" hidden aria-hidden="true">Now: <span class="outreach-goal__next-placeholder"></span></p>
+                {% endif %}
                 {% endif %}
             </div>
+
+            {# Phase 2: broker (bar + 2 steps + Next, then Completed goals as single line) — only when broker exists #}
+            {% if broker %}
+            <div class="outreach-goal__phase outreach-goal__phase--broker">
+                <div class="outreach-goal__bar-wrap" role="status" aria-live="polite">
+                    <p class="outreach-goal__bar-label" id="outreach-goal-bar-label-broker">{{ goal_done|default(0) }} of {{ goal_total|default(2) }} actions complete</p>
+                    <div class="outreach-goal__bar" role="progressbar" id="outreach-goal-bar-broker"
+                        aria-valuenow="{{ goal_done|default(0) }}" aria-valuemin="0"
+                        aria-valuemax="{{ goal_total|default(2) }}" aria-labelledby="outreach-goal-bar-label-broker">
+                        <div class="outreach-goal__bar-fill" id="outreach-goal-bar-fill-broker"
+                            style="width: {{ ((goal_done|default(0)) / (goal_total|default(2)) * 100)|int }}%;">
+                            <span class="outreach-goal__bar-truck" aria-hidden="true">🛻</span>
+                        </div>
+                    </div>
+                </div>
+                <ol class="outreach-goal__actions outreach-goal__actions--numbered" id="outreach-goal-actions-broker" role="list"
+                    aria-label="Power Broker outreach steps (call then email)">
+                    {% for step in broker_goal_steps|default([]) %}
+                    <li class="outreach-goal__action{% if step.done %} outreach-goal__action--done{% endif %}">
+                        <span class="outreach-goal__action-status" data-goal-member="{{ step.member_id }}"
+                            data-goal-kind="{{ step.action }}"
+                            aria-label="{{ 'Called' if step.action == 'call' and step.done else 'Not yet called' if step.action == 'call' else 'Emailed' if step.done else 'Not yet emailed' }}"></span>
+                        <span class="outreach-goal__action-label">{{ 'Call' if step.action == 'call' else 'Email' }} {{ step.role_label }}</span>
+                        <a href="#" class="outreach-goal__action-link" data-action="{{ step.action }}"
+                            data-member-id="{{ step.member_id }}" data-zip="{{ zip }}"
+                            aria-label="{{ 'Call' if step.action == 'call' else 'Email' }} your {{ step.role_label }}"
+                            {% if step.done %}aria-disabled="true"{% endif %}>{{ 'Call' if step.action == 'call' else 'Email' }}</a>
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% if goal_phase == 'broker' and goal_next_step %}
+                <p class="outreach-goal__next" id="outreach-goal-next-broker">Now: <a href="#"
+                        class="outreach-goal__action-link outreach-goal__next-link"
+                        data-action="{{ goal_next_step.action }}" data-member-id="{{ goal_next_step.member_id }}"
+                        data-zip="{{ zip }}"
+                        aria-label="{{ goal_next_step.action|capitalize }} your {{ goal_next_step.role_label }}">{{ goal_next_step.action|capitalize }} your {{ goal_next_step.role_label }}</a></p>
+                {% else %}
+                <p class="outreach-goal__next" id="outreach-goal-next-broker" hidden aria-hidden="true">Now: <span class="outreach-goal__next-placeholder"></span></p>
+                {% endif %}
+                <h3 id="outreach-goal-completed-heading" class="outreach-goal__completed-title">Completed goals</h3>
+                <p class="outreach-goal__completed-summary" aria-labelledby="outreach-goal-completed-heading">Outreach your district legislators</p>
+            </div>
             {% endif %}
+            {% if broker %}
+            <details class="outreach-goal__power-broker-details" id="outreach-goal-power-broker-details">
+                <summary class="outreach-goal__power-broker-summary">Who is the Power Broker?</summary>
+                <p class="outreach-goal__power-broker-explainer">The committee chair for your topic (default Transportation), or the highest Moneyball senator or representative outside your district. Reaching them can multiply impact.</p>
+            </details>
             {% endif %}
         </section>
         {% endif %}
@@ -727,10 +794,11 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                     <dt>Your Senator &amp; Representative</dt>
                     <dd>ZIP matched to IL Senate/House districts via Census.</dd>
                     <dt>Power Broker</dt>
-                    <dd>Committee chair for your topic (default Transportation), or highest <span class="moneyball-aside-trigger" role="button"
-                            tabindex="0" aria-expanded="false" aria-controls="aside-moneyball-def"
-                            aria-label="Toggle Moneyball definition"><span class="moneyball-term">Moneyball</span><span
-                                class="moneyball-help" style="font-size:0.75em;">?</span></span> senator or rep.
+                    <dd>Committee chair for your topic (default Transportation), or highest <span
+                            class="moneyball-aside-trigger" role="button" tabindex="0" aria-expanded="false"
+                            aria-controls="aside-moneyball-def" aria-label="Toggle Moneyball definition"><span
+                                class="moneyball-term">Moneyball</span><span class="moneyball-help"
+                                style="font-size:0.75em;">?</span></span> senator or rep.
                         <div class="moneyball-definition-block" id="aside-moneyball-def" aria-hidden="true">
                             <p class="moneyball-definition-text"><em>Moneyball</em> is a 0–100 composite score
                                 combining passage rate, bill progress, co-sponsor pull, cross-party work,
@@ -777,23 +845,36 @@ user_emailed_member_ids=none, outreach_heat=none) %}
         {% if show_my_outreach|default(false) %}
         <section class="outreach-sidebar" aria-labelledby="outreach-sidebar-heading">
             <h2 id="outreach-sidebar-heading" class="outreach-sidebar__title">My Outreach</h2>
-            <p class="outreach-sidebar__summary">You've made <strong>{{ outreach_calls_count|default(0) }}</strong> call{{ outreach_calls_count|default(0) != 1 and 's' or '' }} and <strong>{{ outreach_emails_count|default(0) }}</strong> email{{ outreach_emails_count|default(0) != 1 and 's' or '' }}.</p>
+            <p class="outreach-sidebar__summary">You've made <strong>{{ outreach_calls_count|default(0) }}</strong>
+                call{{ outreach_calls_count|default(0) != 1 and 's' or '' }} and <strong>{{
+                    outreach_emails_count|default(0) }}</strong> email{{ outreach_emails_count|default(0) != 1 and 's'
+                or '' }}.</p>
             <div class="outreach-sidebar__grid" role="list">
                 {% for m in outreach_sidebar|default([]) %}
-                <article class="outreach-sidebar-card {% if m.is_constituent %}outreach-sidebar-card--constituent{% endif %}" role="listitem">
+                <article
+                    class="outreach-sidebar-card {% if m.is_constituent %}outreach-sidebar-card--constituent{% endif %}"
+                    role="listitem">
                     <div class="outreach-sidebar-card__photo-wrap">
                         {% if m.photo_url %}
-                        <img src="{{ m.photo_url }}" alt="" class="outreach-sidebar-card__photo" width="64" height="64" loading="lazy">
+                        <img src="{{ m.photo_url }}" alt="" class="outreach-sidebar-card__photo" width="64" height="64"
+                            loading="lazy">
                         {% else %}
-                        <span class="outreach-sidebar-card__photo outreach-sidebar-card__photo--initials" aria-hidden="true">{% if m.name and m.name.split() %}{{ m.name.split()[0][0] }}{{ m.name.split()[-1][0] }}{% else %}?{% endif %}</span>
+                        <span class="outreach-sidebar-card__photo outreach-sidebar-card__photo--initials"
+                            aria-hidden="true">{% if m.name and m.name.split() %}{{ m.name.split()[0][0] }}{{
+                            m.name.split()[-1][0] }}{% else %}?{% endif %}</span>
                         {% endif %}
                     </div>
                     <div class="outreach-sidebar-card__info">
                         <p class="outreach-sidebar-card__name">{{ m.name }}</p>
-                        <p class="outreach-sidebar-card__district">{{ m.chamber|capitalize }} &ndash; {{ m.district }}</p>
+                        <p class="outreach-sidebar-card__district">{{ m.chamber|capitalize }} &ndash; {{ m.district }}
+                        </p>
                         <div class="outreach-sidebar-card__badges" role="group" aria-label="Outreach type">
-                            {% if m.called %}<span class="outreach-sidebar-card__badge outreach-sidebar-card__badge--call" title="Called">📞</span>{% endif %}
-                            {% if m.emailed %}<span class="outreach-sidebar-card__badge outreach-sidebar-card__badge--email" title="Emailed">✉️</span>{% endif %}
+                            {% if m.called %}<span
+                                class="outreach-sidebar-card__badge outreach-sidebar-card__badge--call"
+                                title="Called">📞</span>{% endif %}
+                            {% if m.emailed %}<span
+                                class="outreach-sidebar-card__badge outreach-sidebar-card__badge--email"
+                                title="Emailed">✉️</span>{% endif %}
                         </div>
                     </div>
                 </article>
@@ -819,7 +900,8 @@ user_emailed_member_ids=none, outreach_heat=none) %}
             {% endif %}
             {% if representative %}
             <div class="district-members-row__card" role="listitem">
-                {{ member_card(representative, "Your Representative", "role-rep", zip, user_called_member_ids|default([]),
+                {{ member_card(representative, "Your Representative", "role-rep", zip,
+                user_called_member_ids|default([]),
                 user_emailed_member_ids|default([]), outreach_heat|default(none)) }}
             </div>
             {% endif %}

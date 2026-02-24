@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+{% block title %}Mock Switchboard — {{ site_name }}{% endblock %}
+{% block body_class %}page-admin-mocks{% endblock %}
+
+{% block content %}
+<div class="mock-switchboard">
+  <header class="mock-switchboard-header">
+    <h1 class="mock-switchboard-title">Mock Switchboard</h1>
+    <p class="mock-switchboard-desc">Toggle lights and apply to set outreach state. Choose which account receives the mock below.</p>
+    <div class="mock-apply-to-row">
+      <label for="mock-apply-to" class="mock-apply-to-label">Apply to</label>
+      <select id="mock-apply-to" class="mock-apply-to-select" aria-label="Choose which user receives the mock state">
+        {% if current_user_email %}
+        <option value="current">Current user ({{ current_user_email }})</option>
+        <option value="dev">Dev user ({{ dev_user_email }})</option>
+        {% else %}
+        <option value="dev">Dev user ({{ dev_user_email }})</option>
+        <option value="current" disabled>Current user (sign in to use)</option>
+        {% endif %}
+      </select>
+    </div>
+  </header>
+
+  <div class="mock-zip-row">
+    <label for="mock-zip-input" class="mock-zip-label">ZIP</label>
+    <input type="text"
+           id="mock-zip-input"
+           class="mock-zip-input"
+           value="{{ zip_code }}"
+           inputmode="numeric"
+           pattern="[0-9]{5}"
+           maxlength="5"
+           placeholder="60007"
+           aria-describedby="mock-zip-hint">
+    <button type="button"
+            class="mock-patch-btn"
+            id="mock-patch-btn"
+            hx-get="/admin/mocks/resolve"
+            hx-target="#mock-grid-wrap"
+            hx-include="#mock-zip-param"
+            hx-swap="innerHTML"
+            aria-label="Resolve district and load legislators">
+      Patch In
+    </button>
+    <input type="hidden" name="zip" id="mock-zip-param" value="{{ zip_code }}">
+    <span id="mock-zip-hint" class="mock-hint">5-digit ZIP in district data</span>
+  </div>
+
+  <div class="mock-preset-bar" role="toolbar" aria-label="Scenario presets">
+    <span class="mock-preset-label">Preset</span>
+    <button type="button" class="mock-preset-btn" data-preset="fresh" aria-label="Fresh start: no outreach">Fresh Start</button>
+    <button type="button" class="mock-preset-btn" data-preset="called_both" aria-label="Called both legislators">Called Both</button>
+    <button type="button" class="mock-preset-btn" data-preset="full" aria-label="Full completion: call and email both">Full Completion</button>
+    <button type="button" class="mock-preset-btn" data-preset="mixed" aria-label="Mixed: call senator, email rep">Mixed</button>
+    <button type="button" class="mock-preset-btn" data-preset="senator_only" aria-label="Senator only: call and email">Senator Only</button>
+    <button type="button" class="mock-preset-btn" data-preset="email_only" aria-label="Email only: both legislators">Email Only</button>
+  </div>
+
+  <div id="mock-grid-wrap">
+    {% include "admin_mocks_grid.html" %}
+  </div>
+
+  <div class="mock-actions">
+    <button type="button" class="mock-apply-btn" id="mock-apply-btn" aria-label="Apply mock state to database">
+      Connect
+    </button>
+    <label class="mock-open-after-label">
+      <input type="checkbox" id="mock-open-after" class="mock-open-after-cb" aria-label="Open advocacy page in new tab after apply">
+      <span>Open advocacy after</span>
+    </label>
+    <span id="mock-apply-result" class="mock-apply-result" role="status" aria-live="polite"></span>
+  </div>
+  <p class="mock-view-hint" id="mock-view-hint" hidden aria-live="polite">
+    <a id="mock-view-advocacy-link" href="#" class="mock-view-link">View on advocacy page</a>
+  </p>
+
+  <section class="mock-preview" aria-label="Live preview">
+    <h2 class="mock-preview-title">Preview</h2>
+    <div id="mock-preview-content" class="mock-preview-content">
+      <p class="mock-preview-line"><span id="mock-preview-goal">0/4</span> actions</p>
+      <p class="mock-preview-next" id="mock-preview-next">Now: Call your Senator</p>
+      <p class="mock-preview-celebration" id="mock-preview-celebration" hidden>Both district members called</p>
+    </div>
+  </section>
+</div>
+
+<script>
+(function() {
+  var zipInput = document.getElementById('mock-zip-input');
+  var zipParam = document.getElementById('mock-zip-param');
+  var patchBtn = document.getElementById('mock-patch-btn');
+  var gridWrap = document.getElementById('mock-grid-wrap');
+  var applyBtn = document.getElementById('mock-apply-btn');
+  var applyResult = document.getElementById('mock-apply-result');
+  var previewGoal = document.getElementById('mock-preview-goal');
+  var previewNext = document.getElementById('mock-preview-next');
+  var previewCelebration = document.getElementById('mock-preview-celebration');
+
+  function syncZipParam() {
+    if (zipParam && zipInput) zipParam.value = (zipInput.value || '').trim();
+  }
+  if (zipInput) {
+    zipInput.addEventListener('change', syncZipParam);
+    zipInput.addEventListener('blur', syncZipParam);
+  }
+  if (patchBtn && zipInput) {
+    patchBtn.addEventListener('click', function() {
+      syncZipParam();
+    });
+  }
+
+  function getRows() {
+    return gridWrap ? gridWrap.querySelectorAll('.mock-row') : [];
+  }
+
+  function getRowByIndex(i) {
+    var rows = getRows();
+    return rows[i] || null;
+  }
+
+  function getJack(row, action) {
+    if (!row) return null;
+    return row.querySelector('.mock-jack[data-action="' + action + '"]');
+  }
+
+  var PRESETS = {
+    fresh:      { senator_call: 0, senator_email: 0, rep_call: 0, rep_email: 0 },
+    called_both: { senator_call: 1, senator_email: 0, rep_call: 1, rep_email: 0 },
+    full:      { senator_call: 1, senator_email: 1, rep_call: 1, rep_email: 1 },
+    mixed:      { senator_call: 1, senator_email: 0, rep_call: 0, rep_email: 1 },
+    senator_only: { senator_call: 1, senator_email: 1, rep_call: 0, rep_email: 0 },
+    email_only: { senator_call: 0, senator_email: 1, rep_call: 0, rep_email: 1 }
+  };
+
+  function applyPreset(presetKey) {
+    var p = PRESETS[presetKey];
+    if (!p) return;
+    var rows = getRows();
+    var senatorRow = rows[0] || null;
+    var repRow = rows[1] || null;
+    function setJack(row, action, on) {
+      var jack = row ? getJack(row, action) : null;
+      if (jack) {
+        jack.setAttribute('aria-pressed', on ? 'true' : 'false');
+        jack.classList.toggle('mock-jack--on', !!on);
+        jack.setAttribute('aria-label', jack.getAttribute('aria-label').replace(/: (on|off)$/i, ': ' + (on ? 'on' : 'off')));
+      }
+    }
+    setJack(senatorRow, 'call', p.senator_call);
+    setJack(senatorRow, 'email', p.senator_email);
+    setJack(repRow, 'call', p.rep_call);
+    setJack(repRow, 'email', p.rep_email);
+    updatePreview();
+  }
+
+  document.querySelectorAll('.mock-preset-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var preset = this.getAttribute('data-preset');
+      applyPreset(preset);
+      if (applyResult) applyResult.textContent = 'Preset applied. Click Connect to save.';
+    });
+  });
+
+  gridWrap && gridWrap.addEventListener('click', function(e) {
+    var jack = e.target.closest('.mock-jack');
+    if (!jack) return;
+    var pressed = jack.getAttribute('aria-pressed') === 'true';
+    jack.setAttribute('aria-pressed', !pressed);
+    jack.classList.toggle('mock-jack--on', !pressed);
+    var label = jack.getAttribute('aria-label');
+    jack.setAttribute('aria-label', label.replace(/: (on|off)$/i, ': ' + (pressed ? 'off' : 'on')));
+    updatePreview();
+  });
+
+  gridWrap && gridWrap.addEventListener('input', function(e) {
+    if (e.target.classList.contains('mock-heat-slider')) {
+      var span = gridWrap.querySelector('.mock-heat-value[data-member-id="' + e.target.getAttribute('data-member-id') + '"]');
+      if (span) span.textContent = e.target.value;
+    }
+  });
+
+  if (typeof htmx !== 'undefined') {
+    document.body.addEventListener('htmx:afterSwap', function(ev) {
+      if (ev.detail && ev.detail.target && ev.detail.target.id === 'mock-grid-wrap') updatePreview();
+    });
+  }
+
+  function updatePreview() {
+    var rows = getRows();
+    var done = 0;
+    var total = 0;
+    var bothCalled = true;
+    var nextStep = null;
+    var roles = [];
+    rows.forEach(function(row, i) {
+      var roleShort = (row.querySelector('.mock-legislator-role') || {}).textContent || '';
+      var isDistrict = roleShort.indexOf('Senator') !== -1 || roleShort.indexOf('Representative') !== -1;
+      if (!isDistrict) return;
+      total += 2;
+      var callJack = getJack(row, 'call');
+      var emailJack = getJack(row, 'email');
+      var called = callJack && callJack.getAttribute('aria-pressed') === 'true';
+      var emailed = emailJack && emailJack.getAttribute('aria-pressed') === 'true';
+      if (called) done++;
+      if (emailed) done++;
+      if (isDistrict && !called) bothCalled = false;
+      if (!nextStep && !called) nextStep = 'Call your ' + (roleShort.indexOf('Senator') !== -1 ? 'Senator' : 'Rep');
+      else if (!nextStep && !emailed) nextStep = 'Email your ' + (roleShort.indexOf('Senator') !== -1 ? 'Senator' : 'Rep');
+    });
+    if (previewGoal) previewGoal.textContent = done + '/' + (total || 4);
+    if (previewNext) previewNext.textContent = nextStep ? 'Now: ' + nextStep : 'All done';
+    if (previewCelebration) {
+      previewCelebration.hidden = !bothCalled;
+    }
+  }
+
+  function getState() {
+    var zip = (zipInput && zipInput.value) ? zipInput.value.trim() : '';
+    var applyToEl = document.getElementById('mock-apply-to');
+    var applyTo = (applyToEl && applyToEl.value) ? applyToEl.value : 'dev';
+    var events = [];
+    var heat = {};
+    getRows().forEach(function(row) {
+      var memberId = row.getAttribute('data-member-id');
+      if (!memberId) return;
+      var callJack = getJack(row, 'call');
+      var emailJack = getJack(row, 'email');
+      var supportSelect = row.querySelector('.mock-support-select');
+      var contactInput = row.querySelector('.mock-contact-input');
+      var constituentCb = row.querySelector('.mock-constituent-checkbox');
+      var heatSlider = row.querySelector('.mock-heat-slider');
+      events.push({
+        member_id: memberId,
+        call: callJack && callJack.getAttribute('aria-pressed') === 'true',
+        email: emailJack && emailJack.getAttribute('aria-pressed') === 'true',
+        support_score: supportSelect ? parseInt(supportSelect.value, 10) : 4,
+        contact_name: contactInput ? contactInput.value.trim() : '',
+        constituent: constituentCb ? constituentCb.checked : true
+      });
+      if (heatSlider) {
+        var v = parseInt(heatSlider.value, 10);
+        if (v > 0) heat[memberId] = v;
+      }
+    });
+    return { zip: zip, apply_to: applyTo, events: events, heat: heat };
+  }
+
+  function doApply() {
+    var state = getState();
+    if (!state.zip || state.zip.length !== 5) {
+      if (applyResult) applyResult.textContent = 'Enter a valid 5-digit ZIP.';
+      return;
+    }
+    var openAfter = document.getElementById('mock-open-after') && document.getElementById('mock-open-after').checked;
+    var viewLink = document.getElementById('mock-view-advocacy-link');
+    var viewHint = document.getElementById('mock-view-hint');
+    if (viewHint) viewHint.hidden = true;
+    applyResult.textContent = 'Applying…';
+    applyBtn.disabled = true;
+    fetch('/admin/mocks/apply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify(state)
+    })
+    .then(function(r) {
+      if (!r.ok) return r.json().then(function(d) { throw new Error(d.detail || 'Apply failed'); });
+      return r.json();
+    })
+    .then(function(d) {
+      var msg = 'Applied to ' + (d.applied_to || 'dev user') + ': ' + (d.events_created || 0) + ' events, ' + (d.heat_created || 0) + ' heat.';
+      applyResult.textContent = msg;
+      if (viewLink) {
+        viewLink.href = '/advocacy/?zip=' + encodeURIComponent(state.zip);
+        if (viewHint) viewHint.hidden = false;
+      }
+      if (openAfter) window.open('/advocacy/?zip=' + encodeURIComponent(state.zip), '_blank', 'noopener');
+    })
+    .catch(function(e) {
+      applyResult.textContent = 'Error: ' + (e.message || 'Request failed');
+    })
+    .finally(function() {
+      applyBtn.disabled = false;
+    });
+  }
+
+  if (applyBtn) {
+    applyBtn.addEventListener('click', doApply);
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      var panel = document.querySelector('.mock-switchboard');
+      if (panel && panel.contains(document.activeElement)) {
+        e.preventDefault();
+        if (applyBtn) doApply();
+      }
+    }
+  });
+
+  updatePreview();
+})();
+</script>
+{% endblock %}

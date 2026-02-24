@@ -9,6 +9,7 @@ The component playground lets you view and trigger UI components in isolation du
 - **URL:** `GET /dev/playground` with optional `?scene=<id>`, or `GET /dev/playground/<scene_id>` for deep links.
 - **Availability:** Only when `ILGA_DEV_MODE=1` (default in dev profile). When `DEV_MODE` is false, these routes return 404.
 - **API key:** `/dev` is exempt from API key middleware so the playground loads without headers.
+- **Secret shortcut (dev only):** From any page, type the four characters `*dev` (with focus *not* in an input, textarea, or contenteditable). The playground opens in a new tab. The sequence resets after 2 seconds or if you press a wrong key, and does not interfere with normal typing in form fields.
 
 ---
 
@@ -18,7 +19,7 @@ The component playground lets you view and trigger UI components in isolation du
 |----------------|-----------------------|-------------|
 | `truck`        | Truck animation       | Report-bug truck + status animation; "Run truck animation" button triggers it. |
 | `drawer-call`  | Drawer (call view)    | Advocacy drawer shell open with call script partial and mock legislator context. |
-| `drawer-email` | Drawer (email view)   | Same drawer shell with email compose partial and mock context. |
+| `drawer-email` | Drawer (email view)   | Same drawer shell with email compose partial and mock context. At viewport ≤480px the email drawer is responsive: step counter right-aligned, call banners hidden, From/To one line with ellipsis, subject "Looks good" icon-only, action buttons stacked. |
 
 ---
 

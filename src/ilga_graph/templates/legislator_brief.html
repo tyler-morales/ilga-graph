@@ -21,12 +21,12 @@
         registration for lawful owners.</p>
 
     <h3 id="brief-states-view">States with bills passed or in progress</h3>
-    <div class="brief-states-view" data-view="table" data-state-status="{{ brief_state_map_status_json }}">
+    <div class="brief-states-view" data-view="map" data-state-status="{{ brief_state_map_status_json }}">
         <div class="brief-states-view-toggle" role="group" aria-label="View as map or table">
-            <button type="button" class="brief-states-view-btn brief-states-view-btn--active" data-view="table"
-                aria-pressed="true" aria-controls="brief-view-map brief-view-table">Table</button>
-            <button type="button" class="brief-states-view-btn" data-view="map" aria-pressed="false"
-                aria-controls="brief-view-map brief-view-table">Map</button>
+            <button type="button" class="brief-states-view-btn brief-states-view-btn--active" data-view="map"
+                aria-pressed="true" aria-controls="brief-view-map brief-view-table">Map</button>
+            <button type="button" class="brief-states-view-btn" data-view="table" aria-pressed="false"
+                aria-controls="brief-view-map brief-view-table">Table</button>
         </div>
         <div class="brief-states-view-panel brief-states-view-panel--map" id="brief-view-map" role="region"
             aria-label="Map view">
@@ -137,12 +137,37 @@
     </ul>
 </section>
 
-<section aria-labelledby="brief-contact">
-    <h2 id="brief-contact">More information</h2>
-    <p>Constituents and advocates are reaching out through <a href="/advocacy/">our outreach tool</a>.
-        For a short overview of the issue from a constituent perspective, see <a href="/the-issue">The
-            Issue</a>.</p>
+<section aria-labelledby="brief-next-step">
+    <h2 id="brief-next-step">Next step</h2>
+    <p>Constituents and advocates are using our outreach tool to contact their legislators. View the tool or share it with constituents so they can find their legislators and send a message.</p>
+    <p><a href="/advocacy/" class="content-cta">View outreach tool</a></p>
+    <p>Short overview for constituents: <a href="/the-issue">The Issue</a>.</p>
 </section>
+
+{% if faq %}
+<section class="brief-faq" aria-labelledby="brief-faq-heading">
+    <h2 id="brief-faq-heading">{{ faq.title }}</h2>
+    {% if faq.intro %}<p class="brief-faq__intro">{{ faq.intro }}</p>{% endif %}
+    <div class="brief-faq__list">
+        {% for item in faq['items'] %}
+        <details class="brief-faq__item" id="brief-faq-{{ item.id }}">
+            <summary class="brief-faq__question">{{ item.question }}</summary>
+            <div class="brief-faq__answer">
+                <p>{{ item.answer }}</p>
+                {% if item.sources %}
+                <p class="brief-faq__sources-label">Sources:</p>
+                <ul class="brief-faq__sources" role="list">
+                    {% for src in item.sources %}
+                    <li><a href="{{ src.url }}" target="_blank" rel="noopener noreferrer" class="brief-faq__source-link">{{ src.label }}</a></li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+        </details>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
 {% endblock %}
 {% block brief_sidebar %}
 <aside class="legislator-brief-sidebar" aria-labelledby="brief-documents-heading">
@@ -211,6 +236,9 @@
             </li>
             {% endfor %}
         </ul>
+        {% with target='legislator', section_id='brief-share' %}
+        {% include "_share_section_sidebar.html" %}
+        {% endwith %}
     </div>
 </aside>
 {% endblock %}
