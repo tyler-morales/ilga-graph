@@ -11,6 +11,8 @@ from .analytics import (
     controversial_score,
     lobbyist_alignment,
 )
+from .date_parse import parse_bill_date as _parse_bill_date
+from .date_parse import safe_parse_date as _safe_parse_date
 from .metrics_definitions import get_metrics_glossary
 from .models import ActionEntry as ActionEntryModel
 from .models import Bill as BillModel
@@ -23,6 +25,14 @@ from .models import VoteEvent as VoteEventModel
 from .models import WitnessSlip as WitnessSlipModel
 from .moneyball import MoneyballProfile as MoneyballProfileModel
 from .search import SearchHit
+
+
+def _resolve_chamber(chamber: Chamber | None) -> str | None:
+    """Convert a Chamber enum value to the string used in data models."""
+    if chamber is None:
+        return None
+    return chamber.value
+
 
 # ── Enums ─────────────────────────────────────────────────────────────────────
 

@@ -724,18 +724,23 @@
     aspect-ratio: 100/152;
     height: auto;
   }
+
   .card .member-photo-placeholder {
     aspect-ratio: 100/152;
     height: auto;
   }
+
   @media (max-width: 768px) {
+
     .card .member-photo,
     .card .member-photo-placeholder {
       width: 96px;
       height: auto;
     }
   }
+
   @media (max-width: 480px) {
+
     .card .member-photo,
     .card .member-photo-placeholder {
       width: 88px;
@@ -773,8 +778,8 @@ padding-bottom: 4px;
     box-sizing: border-box;
   }
 
-  .card-badge-row .tooltip-wrap > .role-label,
-  .card-badge-row .tooltip-wrap > .power-badge {
+  .card-badge-row .tooltip-wrap>.role-label,
+  .card-badge-row .tooltip-wrap>.power-badge {
     display: block;
     width: 100%;
     text-align: center;
@@ -862,14 +867,6 @@ padding-bottom: 4px;
 
 .role-broker {
   background: #633;
-}
-
-.role-ally {
-  background: #363;
-}
-
-.role-super-ally {
-  background: #a60;
 }
 
 .role-badge {
@@ -1798,15 +1795,26 @@ a.vote-bill:visited {
   height: 10px;
   background: #e0e4ec;
   border-radius: 5px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .outreach-goal__bar-fill {
+  position: relative;
   height: 100%;
   min-width: 0;
   border-radius: 5px;
   background: linear-gradient(90deg, #4a7c59 0%, #5a9c69 100%);
   transition: width 0.25s ease-out;
+}
+
+.outreach-goal__bar-truck {
+  position: absolute;
+  right: 0;
+  bottom: 50%;
+  transform: translate(30%, 45%) scaleX(-1);
+  font-size: 40px;
+  line-height: 1;
+  pointer-events: none;
 }
 
 .outreach-goal__actions {

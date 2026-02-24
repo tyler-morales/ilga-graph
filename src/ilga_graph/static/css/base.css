@@ -1277,13 +1277,159 @@ ML Intelligence Dashboard
   min-width: 1.25em;
 }
 
+/* Single source of truth for map and table key colors (script reads these for SVG fills) */
+.legislator-brief {
+  --brief-color-passed: #086508;
+  --brief-color-pending: #e87700;
+  --brief-color-policy: #1a6fb5;
+  --brief-color-none: #d0d0d0;
+}
+
+/* AAA contrast (7:1) on table row backgrounds #fafafa / #f8f8ff */
 .brief-table-indicator--yes {
-  color: #0d7d0d;
+  color: var(--brief-color-passed, #086508);
+}
+
+.brief-table-indicator--pending {
+  color: var(--brief-color-pending, #e87700);
 }
 
 .brief-table-indicator--no {
-  color: #999;
-  font-weight: 400;
+  color: #383838;
+  font-weight: red;
+}
+
+/* Map / table toggle: map default; same key colors for both (--brief-color-* above) */
+.brief-states-view-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.brief-states-view-btn {
+  font: inherit;
+  font-size: var(--font-size-sm);
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #888;
+  border-radius: 4px;
+  background: #f4f4f0;
+  color: #222;
+  cursor: pointer;
+}
+
+.brief-states-view-btn:hover {
+  background: #e8e8e4;
+}
+
+.brief-states-view-btn:focus-visible {
+  outline: 2px solid #0645ad;
+  outline-offset: 2px;
+}
+
+.brief-states-view-btn--active,
+.brief-states-view-btn[aria-pressed="true"] {
+  background: #333;
+  color: #fff;
+  border-color: #333;
+}
+
+.brief-states-view-panel--map,
+.brief-states-view-panel--table {
+  display: none;
+}
+
+.brief-states-view[data-view="map"] .brief-states-view-panel--map {
+  display: block;
+}
+
+.brief-states-view[data-view="table"] .brief-states-view-panel--table {
+  display: block;
+}
+
+.brief-states-view-panel--table .brief-states-table-intro {
+  margin-bottom: 0.75rem;
+}
+
+/* US map: SVG fetched and injected by script; script applies fill by state */
+.brief-us-map-wrap {
+  margin-top: 1rem;
+  width: 100%;
+  max-width: 520px;
+  aspect-ratio: 959 / 593;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+
+.brief-us-map-wrap .brief-us-map {
+  width: 100%;
+  height: auto;
+  min-height: 280px;
+  /* SVG is 959×593; reserve height so object doesn’t collapse before load */
+  aspect-ratio: 959 / 593;
+}
+
+.brief-us-map-wrap .brief-us-map svg,
+.brief-us-map-wrap .brief-us-map-svg {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.brief-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  font-size: var(--font-size-sm);
+  margin-top: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.brief-map-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.brief-map-swatch {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.brief-map-swatch--passed {
+  background-color: var(--brief-color-passed, #086508);
+}
+
+.brief-map-swatch--pending {
+  background-color: var(--brief-color-pending, #e87700);
+}
+
+.brief-map-swatch--policy {
+  background-color: var(--brief-color-policy, #1a6fb5);
+}
+
+/* Legend below table: green ✓ passed, orange ● in progress, — no bill */
+.brief-table-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  font-size: var(--font-size-sm);
+  margin-top: 0.75rem;
+}
+
+.brief-table-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.brief-table-legend-item .brief-table-indicator {
+  font-weight: 600;
 }
 
 /* Legislator brief states table: no wrapper border; horizontal scroll on narrow viewports */

@@ -20,96 +20,87 @@
         written with this vehicle class in mind, leading to inconsistent interpretation and blocked
         registration for lawful owners.</p>
 
-    <h3 id="brief-states-table">Selected State Status: Authorization / Reversal Examples</h3>
-    <p>This table highlights recent, high-signal examples where states explicitly authorized or restored kei
-        registration through statute or formal policy. (Not an exhaustive list.)</p>
-    <div class="bill-actions-table-wrap" role="region" aria-label="State mechanisms table">
-        <table class="intel-table legislator-brief-states-table">
-            <thead>
-                <tr>
-                    <th scope="col">State</th>
-                    <th scope="col" class="brief-table-col-indicator" title="Legislation (statute or bill)">Bill</th>
-                    <th scope="col" class="brief-table-col-indicator" title="Administrative policy change">Policy</th>
-                    <th scope="col">Mechanism</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Notes</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td data-label="State">Texas</td>
-                    <td data-label="Bill" class="brief-table-cell-indicator"><span
-                            class="brief-table-indicator brief-table-indicator--yes" role="img"
-                            aria-label="Has bill: yes">✓</span></td>
-                    <td data-label="Policy" class="brief-table-cell-indicator"><span
-                            class="brief-table-indicator brief-table-indicator--no" role="img"
-                            aria-label="Policy change: no">—</span></td>
-                    <td data-label="Mechanism">SB 1816 — miniature vehicle; titling/registration</td>
-                    <td data-label="Status">Effective Sep 1, 2025</td>
-                    <td data-label="Notes">Highway operational rules</td>
-                </tr>
-                <tr>
-                    <td data-label="State">Colorado</td>
-                    <td data-label="Bill" class="brief-table-cell-indicator"><span
-                            class="brief-table-indicator brief-table-indicator--yes" role="img"
-                            aria-label="Has bill: yes">✓</span></td>
-                    <td data-label="Policy" class="brief-table-cell-indicator"><span
-                            class="brief-table-indicator brief-table-indicator--no" role="img"
-                            aria-label="Policy change: no">—</span></td>
-                    <td data-label="Mechanism">HB 25-1281 — kei road-legal; framework</td>
-                    <td data-label="Status">Signed May 2025; effective Jul 2027</td>
-                    <td data-label="Notes">55 mph limit</td>
-                </tr>
-                <tr>
-                    <td data-label="State">Massachusetts</td>
-                    <td data-label="Bill" class="brief-table-cell-indicator"><span
-                            class="brief-table-indicator brief-table-indicator--yes" role="img"
-                            aria-label="Has bill: yes">✓</span></td>
-                    <td data-label="Policy" class="brief-table-cell-indicator"><span
-                            class="brief-table-indicator brief-table-indicator--yes" role="img"
-                            aria-label="Policy change: yes">✓</span></td>
-                    <td data-label="Mechanism">Policy update &amp; Bill H.4053</td>
-                    <td data-label="Status">Resumed Sep 2024</td>
-                    <td data-label="Notes">RMV allows registration; H.4053 in committee</td>
-                </tr>
-                <tr>
-                    <td data-label="State">Michigan</td>
-                    <td data-label="Bill" class="brief-table-cell-indicator"><span
-                            class="brief-table-indicator brief-table-indicator--no" role="img"
-                            aria-label="Has bill: no">—</span></td>
-                    <td data-label="Policy" class="brief-table-cell-indicator"><span
-                            class="brief-table-indicator brief-table-indicator--yes" role="img"
-                            aria-label="Policy change: yes">✓</span></td>
-                    <td data-label="Mechanism">Policy update</td>
-                    <td data-label="Status">Resumed Nov 2024</td>
-                    <td data-label="Notes">Title &amp; registration allowed</td>
-                </tr>
-                <tr>
-                    <td data-label="State">Oregon</td>
-                    <td data-label="Bill" class="brief-table-cell-indicator"><span
-                            class="brief-table-indicator brief-table-indicator--yes" role="img"
-                            aria-label="Has bill: yes">✓</span></td>
-                    <td data-label="Policy" class="brief-table-cell-indicator"><span
-                            class="brief-table-indicator brief-table-indicator--no" role="img"
-                            aria-label="Policy change: no">—</span></td>
-                    <td data-label="Mechanism">SB 1213 — title/registration + operating rules</td>
-                    <td data-label="Status">Transportation committee</td>
-                    <td data-label="Notes">In committee</td>
-                </tr>
-                <tr>
-                    <td data-label="State">Maine</td>
-                    <td data-label="Bill" class="brief-table-cell-indicator"><span
-                            class="brief-table-indicator brief-table-indicator--yes" role="img"
-                            aria-label="Has bill: yes">✓</span></td>
-                    <td data-label="Policy" class="brief-table-cell-indicator"><span
-                            class="brief-table-indicator brief-table-indicator--no" role="img"
-                            aria-label="Policy change: no">—</span></td>
-                    <td data-label="Mechanism">H.4053</td>
-                    <td data-label="Status">In committee</td>
-                    <td data-label="Notes">Title/registration + working group</td>
-                </tr>
-            </tbody>
-        </table>
+    <h3 id="brief-states-view">States with bills passed or in progress</h3>
+    <div class="brief-states-view" data-view="table" data-state-status="{{ brief_state_map_status_json }}">
+        <div class="brief-states-view-toggle" role="group" aria-label="View as map or table">
+            <button type="button" class="brief-states-view-btn brief-states-view-btn--active" data-view="table"
+                aria-pressed="true" aria-controls="brief-view-map brief-view-table">Table</button>
+            <button type="button" class="brief-states-view-btn" data-view="map" aria-pressed="false"
+                aria-controls="brief-view-map brief-view-table">Map</button>
+        </div>
+        <div class="brief-states-view-panel brief-states-view-panel--map" id="brief-view-map" role="region"
+            aria-label="Map view">
+            <div class="brief-us-map-wrap" role="img"
+                aria-label="United States map. States with kei bills passed into law shown in green; states with bills in progress in orange; states with policy changes in blue; others in gray.">
+                <div class="brief-us-map" title="US states by bill status" aria-hidden="true"></div>
+            </div>
+            <p class="brief-map-legend" role="region" aria-label="Map legend">
+                <span class="brief-map-legend-item"><span class="brief-map-swatch brief-map-swatch--passed"
+                        aria-hidden="true"></span> Bill passed</span>
+                <span class="brief-map-legend-item"><span class="brief-map-swatch brief-map-swatch--pending"
+                        aria-hidden="true"></span> Bill in progress</span>
+                <span class="brief-map-legend-item"><span class="brief-map-swatch brief-map-swatch--policy"
+                        aria-hidden="true"></span> Policy change</span>
+            </p>
+        </div>
+        <div class="brief-states-view-panel brief-states-view-panel--table" id="brief-view-table" role="region"
+            aria-label="Table view">
+            <p class="brief-states-table-intro">Recent examples where states authorized or restored kei registration via
+                statute or policy. (Not exhaustive.)</p>
+            <div class="bill-actions-table-wrap" role="region" aria-label="State mechanisms table">
+                <table class="intel-table legislator-brief-states-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">State</th>
+                            <th scope="col" class="brief-table-col-indicator" title="Legislation (statute or bill)">Bill
+                            </th>
+                            <th scope="col" class="brief-table-col-indicator" title="Administrative policy change">
+                                Policy</th>
+                            <th scope="col">How</th>
+                            <th scope="col">Effective</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in brief_state_status|default([]) %}
+                        <tr>
+                            <td data-label="State">{{ s.state }}</td>
+                            <td data-label="Bill" class="brief-table-cell-indicator">
+                                {% if s.bill_status == 'passed' %}
+                                <span class="brief-table-indicator brief-table-indicator--yes" role="img"
+                                    aria-label="Has bill: yes">✓</span>
+                                {% elif s.bill_status == 'pending' %}
+                                <span class="brief-table-indicator brief-table-indicator--pending" role="img"
+                                    aria-label="Bill in progress">●</span>
+                                {% else %}
+                                <span class="brief-table-indicator brief-table-indicator--no" role="img"
+                                    aria-label="Has bill: no">—</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Policy" class="brief-table-cell-indicator">
+                                {% if s.policy %}
+                                <span class="brief-table-indicator brief-table-indicator--yes" role="img"
+                                    aria-label="Policy change: yes">✓</span>
+                                {% else %}
+                                <span class="brief-table-indicator brief-table-indicator--no" role="img"
+                                    aria-label="Policy change: no">—</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="How">{{ s.mechanism }}</td>
+                            <td data-label="Effective">{{ s.status }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="brief-table-legend" id="brief-table-key" role="region" aria-label="Indicator key">
+                <span class="brief-table-legend-item"><span class="brief-table-indicator brief-table-indicator--yes"
+                        aria-hidden="true">✓</span> Passed into law</span>
+                <span class="brief-table-legend-item"><span class="brief-table-indicator brief-table-indicator--pending"
+                        aria-hidden="true">●</span> Bill in progress</span>
+                <span class="brief-table-legend-item"><span class="brief-table-indicator brief-table-indicator--no"
+                        aria-hidden="true">—</span> No bill / no policy</span>
+            </p>
+        </div>
     </div>
 </section>
 
@@ -222,4 +213,73 @@
         </ul>
     </div>
 </aside>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+    (function () {
+        var viewEl = document.querySelector('.brief-states-view');
+        if (!viewEl) return;
+        var statusJson = viewEl.getAttribute('data-state-status');
+        if (!statusJson) return;
+        var status;
+        try { status = JSON.parse(statusJson); } catch (e) { return; }
+        var wrap = viewEl.querySelector('.brief-us-map-wrap');
+        var container = wrap ? wrap.querySelector('.brief-us-map') : null;
+        var root = document.querySelector('.legislator-brief') || document.documentElement;
+        var styles = root && root.getRootNode ? getComputedStyle(root) : getComputedStyle(document.documentElement);
+        var defaultFills = { passed: '#086508', pending: '#e87700', policy: '#1a6fb5', none: '#d0d0d0' };
+        function getFill(name) {
+            var val = styles.getPropertyValue('--brief-color-' + name);
+            return (val && val.trim()) || defaultFills[name];
+        }
+        var fills = {
+            passed: getFill('passed'),
+            pending: getFill('pending'),
+            policy: getFill('policy'),
+            none: getFill('none')
+        };
+        function applyFills(svg) {
+            if (!svg) return;
+            var paths = svg.querySelectorAll('path[class]');
+            for (var i = 0; i < paths.length; i++) {
+                var path = paths[i];
+                var cls = (path.getAttribute('class') || '').trim().split(/\s+/)[0];
+                if (status[cls] !== undefined) {
+                    path.style.fill = fills[status[cls]] || fills.none;
+                }
+            }
+        }
+        if (container) {
+            fetch('/static/images/us-states.svg')
+                .then(function (r) { return r.text(); })
+                .then(function (svgText) {
+                    container.innerHTML = svgText;
+                    var svg = container.querySelector('svg');
+                    if (svg) {
+                        svg.setAttribute('class', 'brief-us-map-svg');
+                        svg.setAttribute('viewBox', '0 0 959 593');
+                        svg.removeAttribute('width');
+                        svg.removeAttribute('height');
+                        applyFills(svg);
+                    }
+                })
+                .catch(function () { });
+        }
+        var toggles = viewEl.querySelectorAll('.brief-states-view-btn');
+        for (var j = 0; j < toggles.length; j++) {
+            toggles[j].addEventListener('click', function () {
+                var view = this.getAttribute('data-view');
+                if (!view) return;
+                viewEl.setAttribute('data-view', view);
+                var btns = viewEl.querySelectorAll('.brief-states-view-btn');
+                for (var k = 0; k < btns.length; k++) {
+                    var btn = btns[k];
+                    var isActive = btn.getAttribute('data-view') === view;
+                    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                    btn.classList.toggle('brief-states-view-btn--active', isActive);
+                }
+            });
+        }
+    })();
+</script>
 {% endblock %}
