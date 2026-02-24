@@ -551,14 +551,14 @@ def _kei_email_body_core(
     first_line = greeting_line if greeting_line is not None else "Hi [LEGISLATOR_NAME],\n\n"
     return (
         first_line
-        + "I live in [CITY_OR_ZIP]. [CONSTITUENT_INTRO]writing to share a brief on an issue "
+        + "I live in [CITY_OR_ZIP]. [CONSTITUENT_INTRO]writing to share a one-pager on an issue "
         "affecting vehicle registration under 625 ILCS 5/3-401(c-1).\n\n"
         "This matters to me because [ONE_SENTENCE_WHY]\n\n"
         "Currently, Illinois is treating federally lawful imported vehicles (commonly 25+ years "
         'old) as off-highway/non-highway based on how "originally manufactured for operation on '
         'highways" is being interpreted. In practice, this prevents otherwise lawful vehicles '
         "from being titled and registered for normal road use.\n\n"
-        "The attached briefing outlines:\n"
+        "The attached one-pager outlines:\n"
         "\t\u2022 The specific statutory ambiguity being relied upon\n"
         "\t\u2022 Why this is a legislative clarification issue rather than an administrative one\n"
         "\t\u2022 A narrow, targeted fix that preserves all existing Illinois safety, equipment, "
@@ -567,7 +567,7 @@ def _kei_email_body_core(
         "statute or formal policy\n\n"
         "The goal is not to create a new vehicle class or exemption, but to clarify how existing "
         "law applies to highway-built vehicles that are federally lawful to import.\n\n"
-        "Consistent with the briefing, I am asking your office to:\n"
+        "Consistent with the one-pager, I am asking your office to:\n"
         "\t\u2022 Help identify the appropriate legislative path and sponsor strategy within the "
         "Vehicle Code\n"
         "\t\u2022 Facilitate a staff-level discussion with the Secretary of State's office to "
