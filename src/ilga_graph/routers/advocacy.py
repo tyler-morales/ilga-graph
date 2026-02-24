@@ -572,6 +572,7 @@ async def advocacy_drawer(
         )
         legislator_display_name = ah.get_legislator_display_name(legislator_name, chamber, district)
         party_abbr = ah.party_abbr_for_member(member)
+        current_member_role = "Representative" if chamber == "House" else "Senator"
         return templates.TemplateResponse(
             "_advocacy_drawer_email.html",
             {
@@ -595,6 +596,7 @@ async def advocacy_drawer(
                 "zip_code": zip_code,
                 "is_constituent": is_constituent,
                 "party_abbr": party_abbr,
+                "current_member_role": current_member_role,
             },
         )
 

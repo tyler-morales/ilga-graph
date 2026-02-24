@@ -924,13 +924,14 @@
     margin: 0 0 16px 0;
 }
 
+/* Same inviting "go" green as email-drawer call-other CTA */
 .drawer-done-for-member__cta {
     display: inline-block;
     padding: 14px 24px;
     font-size: 1rem;
     font-weight: 600;
     color: #fff;
-    background: #2db84e;
+    background: #22c55e;
     border: none;
     border-radius: 12px;
     cursor: pointer;
@@ -938,7 +939,8 @@
 }
 
 .drawer-done-for-member__cta:hover {
-    background: #28a745;
+    background: #16a34a;
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.35);
 }
 
 .drawer-done-for-member__cta:active {
@@ -946,8 +948,8 @@
 }
 
 .drawer-done-for-member__cta:focus-visible {
-    outline: 2px solid #34c759;
-    outline-offset: 2px;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.5);
 }
 
 .drawer-done-for-member__district-done,

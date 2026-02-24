@@ -52,7 +52,7 @@
         <p class="drawer-done-for-member__message">You're done with <span id="drawer-done-member-name"></span>.</p>
         <p class="drawer-done-for-member__comeback" id="drawer-done-comeback" hidden>You can come back to send your follow-up email later.</p>
         <p class="drawer-done-for-member__next-wrap" id="drawer-done-next-wrap">
-            <button type="button" class="drawer-done-for-member__cta" id="drawer-done-next-cta">Call your <span id="drawer-done-next-label"></span></button>
+            <button type="button" class="drawer-done-for-member__cta" id="drawer-done-next-cta">Call your <span id="drawer-done-next-label"></span>, first</button>
         </p>
         <p class="drawer-done-for-member__district-done" id="drawer-done-district-done" hidden>You've completed outreach for your district members.</p>
         <p class="drawer-done-for-member__broker-nudge" id="drawer-done-broker-nudge" hidden>Optional: call the Power Broker for extra impact.</p>
@@ -1587,7 +1587,7 @@
         if (otherMemberId && otherLabel && !otherAlreadyCalled) {
             if (nextLabel) nextLabel.textContent = otherLabel;
             if (cta) {
-                cta.setAttribute('aria-label', 'Call your ' + otherLabel);
+                cta.setAttribute('aria-label', 'Call your ' + otherLabel + ', first');
                 var photoUrl = '';
                 var card = document.getElementById('card-' + otherMemberId);
                 if (card) {
@@ -2028,7 +2028,7 @@
         var el = null;
         if (name === 'sign_in') el = this.wrap.querySelector('#gmail-from-row');
         else if (name === 'subject') el = this.wrap.querySelector('#gmail-subject-row');
-        else if (name === 'madlibs') el = this.wrap.querySelector('#gmail-body-area');
+        else if (name === 'madlibs') { /* no container pulse; outline follows focus from madlib to madlib */ }
         else if (name === 'pdf') el = this.wrap.querySelector('#gmail-attachment-bar');
         else if (name === 'open_client') el = this.wrap.querySelector('#gmail-mailto-btn');
         else if (name === 'confirm_sent') el = this.wrap.querySelector('#gmail-sent-email-btn');
@@ -2085,20 +2085,24 @@
         var wrap = container && container.querySelector('.gmail-compose');
         if (!wrap) return;
         container.classList.add('drawer-email-open');
-        var nudgeOnInit = wrap.querySelector('#gmail-call-other-nudge');
-        if (nudgeOnInit) nudgeOnInit.setAttribute('hidden', '');
-        /* #region agent log */
-        var _drawer = document.getElementById('advocacy-drawer');
-        var _mid = (_drawer && _drawer.getAttribute('data-member-id')) || '';
-        var _zip = typeof getConstituentZip === 'function' ? getConstituentZip() : '';
-        var _progress = (typeof getGoalProgress === 'function' && _zip) ? getGoalProgress(_zip) : {};
-        var _currentCalled = !!(_mid && _progress[_mid] && _progress[_mid].call);
-        var _callFirstBanner = wrap.querySelector('.gmail-banner-tip');
-        if (_callFirstBanner && _mid && _zip && _currentCalled) {
-            _callFirstBanner.setAttribute('hidden', '');
+        var nudgeEl = wrap.querySelector('#gmail-call-other-nudge');
+        var nudgeBtn = wrap.querySelector('#gmail-call-other-btn');
+        var nudgeLabel = wrap.querySelector('#gmail-call-other-label');
+        var nudgeHint = wrap.querySelector('#gmail-call-other-hint');
+        if (nudgeEl) nudgeEl.setAttribute('hidden', '');
+        var hasPublicEmail = wrap.getAttribute('data-has-public-email') === 'true';
+        var currentRole = wrap.getAttribute('data-current-member-role') || '';
+        if (!hasPublicEmail && currentRole && nudgeEl && nudgeBtn && nudgeLabel) {
+            nudgeLabel.textContent = currentRole;
+            nudgeBtn.setAttribute('aria-label', 'Call your ' + currentRole + ', first');
+            nudgeBtn.onclick = function () {
+                if (typeof openAdvocacyDrawerFromDrawer === 'function') openAdvocacyDrawerFromDrawer('call');
+            };
+            if (nudgeHint) nudgeHint.removeAttribute('hidden');
+            nudgeEl.removeAttribute('hidden');
+        } else if (nudgeHint) {
+            nudgeHint.setAttribute('hidden', '');
         }
-        fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9b1dec'},body:JSON.stringify({sessionId:'9b1dec',location:'index.html:initDrawerEmailActions',message:'email init call-first',data:{hasBanner:!!_callFirstBanner,memberId:_mid,zip:_zip,currentMemberCalled:_currentCalled,hiddenBanner:_currentCalled&&!!_callFirstBanner},timestamp:Date.now(),hypothesisId:'H2'})}).catch(function(){});
-        /* #endregion */
         initDrawerFromAuth(wrap);
 
         var subjectEl = wrap.querySelector('#gmail-subject-text');
@@ -2468,9 +2472,11 @@
                             var nudge = wrap.querySelector('#gmail-call-other-nudge');
                             var nudgeBtn = wrap.querySelector('#gmail-call-other-btn');
                             var labelSpan = wrap.querySelector('#gmail-call-other-label');
+                            var hintEl = wrap.querySelector('#gmail-call-other-hint');
                             if (nudge && nudgeBtn && labelSpan) {
                                 labelSpan.textContent = ctx.otherLabel;
-                                nudgeBtn.setAttribute('aria-label', 'Call your ' + ctx.otherLabel);
+                                nudgeBtn.setAttribute('aria-label', 'Call your ' + ctx.otherLabel + ', first');
+                                if (hintEl) hintEl.setAttribute('hidden', '');
                                 var photoUrl = '';
                                 var card = document.getElementById('card-' + ctx.otherId);
                                 if (card) {

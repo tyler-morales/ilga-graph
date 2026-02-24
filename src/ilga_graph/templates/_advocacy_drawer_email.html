@@ -5,7 +5,9 @@
     data-subject-general="{{ subject_general|e }}" data-body="{{ body|e }}"
     data-contact-name="{{ (contact_name or '')|e }}" data-legislator-name="{{ (legislator_display_name or '')|e }}"
     data-drawer-zip="{{ zip_code or '' }}"
-    data-email-mode="{% if drawer_view == 'after_call' %}followup{% else %}first{% endif %}">
+    data-email-mode="{% if drawer_view == 'after_call' %}followup{% else %}first{% endif %}"
+    data-has-public-email="{{ 'true' if has_public_email else 'false' }}"
+    {% if current_member_role is defined %}data-current-member-role="{{ current_member_role|e }}"{% endif %}>
 
     {# ── Toolbar: New Message (left); dots + step label (right-aligned) ── #}
     <div class="gmail-toolbar">
@@ -23,21 +25,6 @@
         </div>
     </div>
 
-    {# ── Friendly reminder: call first if they haven’t already ── #}
-    {% if show_call_nudge is defined and show_call_nudge %}
-    <div class="gmail-banner gmail-banner-tip" id="gmail-call-first-banner" role="status" aria-live="polite">
-        <span class="gmail-banner-icon" aria-hidden="true">📞</span>
-        <div class="gmail-banner-text">
-            <strong>Call first when you can.</strong> It often gets a faster response and you can ask for their best
-            email. Switch to
-            <button type="button" class="gmail-banner-link" onclick="openAdvocacyDrawerFromDrawer('call')">Call</button>
-            above, then come back here to send your email.
-        </div>
-        <button type="button" class="gmail-banner-dismiss" aria-label="Dismiss tip"
-            onclick="document.getElementById('gmail-call-first-banner').setAttribute('hidden','')">&#215;</button>
-    </div>
-    {% endif %}
-
     {# ── Status banners (contextual) ── #}
     {% if drawer_view == 'call_only' %}
     <div class="gmail-banner gmail-banner-warning">
@@ -49,17 +36,6 @@
             {% if instructions %}
             <p class="gmail-banner-note"><strong>Your notes:</strong> {{ instructions }}</p>
             {% endif %}
-        </div>
-    </div>
-    {% endif %}
-
-    {% if not has_public_email and drawer_view == 'email_first' %}
-    <div class="gmail-banner gmail-banner-warning">
-        <span class="gmail-banner-icon">🔍</span>
-        <div class="gmail-banner-text">
-            This legislator's email isn't publicly listed. Switch to
-            <button type="button" class="gmail-banner-link" onclick="openAdvocacyDrawerFromDrawer('call')">Call</button>
-            above to get the right email, then come back here to send.
         </div>
     </div>
     {% endif %}
@@ -225,9 +201,10 @@
         </button>
         <div class="gmail-action-bar-nudge" id="gmail-call-other-nudge" hidden aria-live="polite">
             <button type="button" class="gmail-call-other-btn" id="gmail-call-other-btn"
-                aria-label="Call your Senator">
-                Call your <span id="gmail-call-other-label">Senator</span>
+                aria-label="Call your Senator, first">
+                Call your <span id="gmail-call-other-label">Senator</span>, first
             </button>
+            <p class="gmail-call-other-hint" id="gmail-call-other-hint" {% if has_public_email %}hidden{% endif %} role="status">No email on file. Call first to ask for an email.</p>
         </div>
     </div>
 </div>
