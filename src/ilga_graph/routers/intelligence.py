@@ -31,6 +31,8 @@ templates.env.globals["umami_website_id"] = cfg.UMAMI_WEBSITE_ID
 templates.env.globals["umami_script_url"] = cfg.UMAMI_SCRIPT_URL
 templates.env.globals["show_beta_banner"] = cfg.BETA_BANNER
 templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
+templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
+templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 
 # Procedural/routing committees: bills are assigned here after passing substantive
 # committees (e.g. "Referred to Rules * Reports"). "Advanced" in our pipeline

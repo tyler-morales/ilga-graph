@@ -156,12 +156,13 @@
                 <a href="{{ beta_banner_feedback_url }}" target="_blank" rel="noopener noreferrer">Report a bug</a>
                 <span class="footer-nav-sep" aria-hidden="true"> · </span>
                 {% endif %}
-                <a href="/privacy">Privacy</a>
-                <span class="footer-nav-sep" aria-hidden="true"> · </span>
                 <a href="/terms">Terms</a>
             </nav>
             <p class="footer-disclaimer">Not affiliated with the Illinois General Assembly. Information here is for advocacy and educational purposes only.</p>
             <p class="footer-usage-notice">We use minimal usage data to improve the service. <a href="/privacy">Privacy policy</a>.</p>
+            {% if footer_last_updated %}
+            <p class="footer-last-updated">Last updated: <time datetime="{{ footer_last_updated_iso }}">{{ footer_last_updated }}</time></p>
+            {% endif %}
         </footer>
     </div>
 

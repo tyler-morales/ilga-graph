@@ -375,7 +375,8 @@ a:visited {
 }
 
 .footer-disclaimer,
-.footer-usage-notice {
+.footer-usage-notice,
+.footer-last-updated {
   font-size: var(--font-size-sm);
   color: #888;
   text-align: center;
@@ -386,7 +387,8 @@ a:visited {
 @media (max-width: 640px) {
 
   .footer-disclaimer,
-  .footer-usage-notice {
+  .footer-usage-notice,
+  .footer-last-updated {
     white-space: normal;
   }
 }
@@ -792,6 +794,11 @@ a:visited {
   margin: 0.15rem 0 0 0.15rem;
   font-size: 0.6875rem;
   line-height: 1.25;
+}
+
+/* "What we are asking your office to do" list: numbers inside the text block. */
+.legislator-brief .brief-ask-list {
+  list-style-position: inside;
 }
 
 /* FAQ section at end of brief main content (the-issue, legislator-brief). */
@@ -1746,7 +1753,8 @@ ML Intelligence Dashboard
     font-size: var(--font-size-body);
   }
 
-  .footer-disclaimer {
+  .footer-disclaimer,
+  .footer-last-updated {
     font-size: var(--font-size-label);
   }
 }

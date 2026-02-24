@@ -24,6 +24,8 @@ templates.env.globals["umami_website_id"] = cfg.UMAMI_WEBSITE_ID
 templates.env.globals["umami_script_url"] = cfg.UMAMI_SCRIPT_URL
 templates.env.globals["show_beta_banner"] = cfg.BETA_BANNER
 templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
+templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
+templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 
 # Documents listed in the legislator brief sidebar (title, url, file_type for icon).
 # Optional: available=False and note="..." for placeholders (disabled style, note under title).
@@ -31,6 +33,11 @@ BRIEF_DOCUMENTS = [
     {
         "title": "IL Kei Vehicle Registration Fix Brief",
         "url": "/static/advocacy/IL_Kei_Vehicle_Registration_Fix_Brief.pdf",
+        "file_type": "pdf",
+    },
+    {
+        "title": "IL Kei Vehicle Registration Fix Internal Summary",
+        "url": "/static/IL_Kei_Vehicle_Registration_Fix_Internal_Summary.pdf",
         "file_type": "pdf",
     },
     {

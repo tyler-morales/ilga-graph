@@ -65,6 +65,8 @@ templates.env.globals["umami_website_id"] = cfg.UMAMI_WEBSITE_ID
 templates.env.globals["umami_script_url"] = cfg.UMAMI_SCRIPT_URL
 templates.env.globals["show_beta_banner"] = cfg.BETA_BANNER
 templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
+templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
+templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 
 _HERO_SUBHEAD = (
     "Illinois is currently blocking registration for federally lawful Kei vehicles "
@@ -74,7 +76,7 @@ _HERO_SUBHEAD = (
 
 # Two-line subhead: break after "below"; second line starts with "to".
 _HERO_SUBHEAD_ADVOCACY_LINE1 = "Enter your ZIP below"
-_HERO_SUBHEAD_ADVOCACY_LINE2 = "to find your legislators and start outreaching today."
+_HERO_SUBHEAD_ADVOCACY_LINE2 = "to find your legislators and start outreach today."
 
 
 def _hero_context() -> dict[str, Any]:
