@@ -690,7 +690,9 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                 <div class="outreach-goal__bar" role="progressbar" id="outreach-goal-bar"
                     aria-valuenow="{{ district_goal_done|default(0) }}" aria-valuemin="0" aria-valuemax="{{ district_goal_total }}"
                     aria-labelledby="outreach-goal-bar-label">
-                    <div class="outreach-goal__bar-fill" id="outreach-goal-bar-fill" style="width: {{ ((district_goal_done|default(0)) / district_goal_total * 100)|int }}%;"></div>
+                    <div class="outreach-goal__bar-fill" id="outreach-goal-bar-fill" style="width: {{ ((district_goal_done|default(0)) / district_goal_total * 100)|int }}%;">
+                        <span class="outreach-goal__bar-truck" aria-hidden="true">🛻</span>
+                    </div>
                 </div>
             </div>
             <ol class="outreach-goal__actions outreach-goal__actions--numbered" role="list" aria-label="District outreach steps (call then email for each member; order by impact)">

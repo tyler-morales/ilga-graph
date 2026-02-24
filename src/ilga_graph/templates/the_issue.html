@@ -1,13 +1,15 @@
-{% extends "base.html" %}
+{% extends "_brief_skeleton.html" %}
 {% block title %}The Issue — {{ site_name }}{% endblock %}
-{% block content %}
-<div class="legal-page">
-    <h1>The issue</h1>
-    <p class="legal-page-intro">Illinois is blocking registration for federally lawful Kei (軽) vehicles due to a statutory interpretation gap. Here’s what’s happening and how a narrow fix can restore registration without weakening safety or insurance rules.</p>
-
+{% block brief_title %}The issue{% endblock %}
+{% block brief_intro %}
+<p>Illinois is blocking registration for federally lawful Kei (軽) vehicles due to a statutory interpretation gap. Here's what's happening and how a narrow fix can restore registration without weakening safety or insurance rules.</p>
+{% endblock %}
+{% block brief_layout_class %}legislator-brief-layout--no-sidebar{% endblock %}
+{% block brief_main_heading %}Overview{% endblock %}
+{% block brief_main %}
     <section aria-labelledby="issue-what">
-        <h2 id="issue-what">What’s happening</h2>
-        <p>Registration is being denied or revoked for Kei-class vehicles that are legally imported and federally compliant. Illinois is applying <strong>625 ILCS 5/3-401(c-1)</strong> to treat these vehicles as “non-highway” and therefore ineligible for normal registration, even though they are street-legal in other states and meet federal standards.</p>
+        <h2 id="issue-what">What's happening</h2>
+        <p>Registration is being denied or revoked for Kei-class vehicles that are legally imported and federally compliant. Illinois is applying <strong>625 ILCS 5/3-401(c-1)</strong> to treat these vehicles as "non-highway" and therefore ineligible for normal registration, even though they are street-legal in other states and meet federal standards.</p>
     </section>
 
     <section aria-labelledby="issue-why">
@@ -17,13 +19,13 @@
 
     <section aria-labelledby="issue-fix">
         <h2 id="issue-fix">The fix</h2>
-        <p>A <strong>narrow clarification amendment</strong> can restore normal registration for these vehicles while keeping all existing safety, equipment, and insurance requirements intact. The goal is to align Illinois’s treatment of federally compliant Kei vehicles with the intent of the law and with how other states handle them.</p>
+        <p>A <strong>narrow clarification amendment</strong> can restore normal registration for these vehicles while keeping all existing safety, equipment, and insurance requirements intact. The goal is to align Illinois's treatment of federally compliant Kei vehicles with the intent of the law and with how other states handle them.</p>
     </section>
 
     <section aria-labelledby="issue-action">
         <h2 id="issue-action">What you can do</h2>
-        <p>Contact your state senator and representative. We’ll look up your legislators by ZIP code and give you a short script and email template so you can make your voice heard in under a minute.</p>
+        <p>Contact your state senator and representative. We'll look up your legislators by ZIP code and give you a short script and email template so you can make your voice heard in under a minute.</p>
         <p><a href="/advocacy/" class="content-cta">Find your legislators and start outreach</a></p>
     </section>
-</div>
 {% endblock %}
+{# No brief_sidebar: issue page has no documents sidebar. #}

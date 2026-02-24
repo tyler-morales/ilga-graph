@@ -20,6 +20,8 @@ env/
 .idea/
 .vscode/
 .cursor/debug-*.log
+.cursor/plans/
+.pr-body.md
 *.swp
 *.swo
 *~

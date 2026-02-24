@@ -1,0 +1,23 @@
+{# Reusable brief-style page layout: header, main content area, optional sidebar. No content; extend and fill blocks. #}
+{% extends "base.html" %}
+{% block content %}
+<div class="legal-page legislator-brief legislator-brief-layout {% block brief_layout_class %}{% endblock %}">
+    <header class="legislator-brief-header" aria-label="Page title and introduction">
+        <h1>{% block brief_title %}{% endblock %}</h1>
+        <div class="legal-page-intro">{% block brief_intro %}{% endblock %}</div>
+    </header>
+
+    <div class="legislator-brief-main legislator-brief-main--grid">
+        <section class="legislator-brief-summary-section" aria-labelledby="brief-main-heading">
+            <h2 id="brief-main-heading" class="legislator-brief-main__head">{% block brief_main_heading %}{% endblock %}</h2>
+            <div class="legislator-brief-main__body">
+                {% block brief_main %}{% endblock %}
+            </div>
+        </section>
+    </div>
+
+    <div class="legislator-brief-divider" role="presentation" aria-hidden="true"></div>
+
+    {% block brief_sidebar %}{% endblock %}
+</div>
+{% endblock %}
