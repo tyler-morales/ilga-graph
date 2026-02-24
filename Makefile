@@ -1,4 +1,4 @@
-.PHONY: scrape scrape-full dev serve dev-reset install test smoke-outreach lint lint-fix pre-commit clean help ml-setup ml-run ml-pipeline ml-resolve ml-predict ml-embed scrape-fulltext scrape-members scrape-full-members snapshot-mocks logs docs docs-serve
+.PHONY: scrape scrape-full dev serve dev-reset install test smoke-outreach lint lint-fix pre-commit clean help ml-setup ml-run ml-pipeline ml-resolve ml-predict ml-embed scrape-fulltext scrape-members scrape-full-members snapshot-mocks logs docs docs-serve seed-outreach seed-demo
 
 # ── Virtual environment ─────────────────────────────────────────────────────
 VENV ?= $(or $(wildcard .venv), $(wildcard venv), $(wildcard src/ilga_graph/.venv))
@@ -152,6 +152,9 @@ clean: ## Remove cache/, processed/, and generated vault files
 
 seed-outreach: ## Seed outreach DB: real backlog always; mock community data only when ILGA_PROFILE=dev. Dev uses data/ilga_dev.db, prod uses data/ilga.db.
 	$(PYTHON) scripts/seed_outreach.py
+
+seed-demo: ## Seed demo account outreach data (demo@landofkei.org) and enable /auth/demo login. Set ILGA_DEMO_EMAIL to override. Works with any profile.
+	ILGA_DEMO_ENABLED=1 $(PYTHON) scripts/seed_outreach.py
 
 clean-outreach-funky-mama-only: ## One-time: remove all outreach_events not from funky_mama11@gmail.com (dev fresh start). Uses ILGA_DB_PATH.
 	$(PYTHON) scripts/clean_outreach_funky_mama_only.py

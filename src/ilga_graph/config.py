@@ -216,6 +216,15 @@ AUTH_SECRET: str = _env("ILGA_AUTH_SECRET", "dev-secret-change-me")
 AUTH_COOKIE_MAX_AGE: int = int(_env("ILGA_AUTH_COOKIE_MAX_AGE", str(60 * 60 * 24 * 30)))
 AUTH_COOKIE_NAME: str = "ilga_session"
 
+# ── Demo mode ────────────────────────────────────────────────────────────────
+# When ILGA_DEMO_ENABLED=1, the /demo route auto-logs the visitor in as the
+# demo account (no email verification) and redirects to /advocacy.  Useful for
+# sharing a "power-advocate already logged in" preview link.
+# NEVER enable in production without first seeding the demo user (make seed-demo).
+DEMO_ENABLED: bool = _env("ILGA_DEMO_ENABLED", "0") == "1"
+# Email address of the read-only demo account.  Seed with: make seed-demo.
+DEMO_EMAIL: str = _env("ILGA_DEMO_EMAIL", "demo@landofkei.org").strip().lower()
+
 # SMTP for sending auth codes.  When empty, codes are logged to console (dev).
 SMTP_HOST: str = _env("ILGA_SMTP_HOST", "").strip()
 SMTP_PORT: int = int(_env("ILGA_SMTP_PORT", "587"))

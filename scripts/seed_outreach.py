@@ -598,6 +598,85 @@ async def _main() -> None:
                 f"Inserted {this_week_created} dev 'this week' + fire-pill events (relative dates, poll score 1–5)."
             )
 
+        # Seed the demo account (any profile) when ILGA_DEMO_ENABLED=1 or when demo email is set.
+        # The demo user gets the same rich backlog as the primary advocate so the preview link
+        # shows a realistic "power advocate who has done a lot of outreach."
+        demo_email = cfg.DEMO_EMAIL
+        if demo_email:
+            r = await session.execute(select(User).where(User.email == demo_email))
+            demo_user = r.scalar_one_or_none()
+            if not demo_user:
+                demo_user = User(email=demo_email)
+                session.add(demo_user)
+                await session.flush()
+                print(f"Created demo user: {demo_email} (id={demo_user.id})")
+            else:
+                print(f"Using existing demo user: {demo_email} (id={demo_user.id})")
+
+            # Re-seed demo outreach (idempotent: clear then insert).
+            from sqlalchemy import delete
+
+            del_demo = await session.execute(
+                delete(OutreachEvent).where(OutreachEvent.user_id == demo_user.id)
+            )
+            if del_demo.rowcount:
+                print(f"Removed {del_demo.rowcount} existing demo outreach events (re-seeding).")
+            await session.flush()
+
+            demo_created = 0
+            for (
+                date_str,
+                rep_name,
+                constituent,
+                called,
+                emailed,
+                support_score,
+                notes,
+                contact_name,
+            ) in _SEED_ROWS:
+                member_id = _resolve_member_id(rep_name, by_name, by_norm)
+                if member_id is None:
+                    continue
+                dt = _parse_date(date_str)
+                if called:
+                    session.add(
+                        OutreachEvent(
+                            user_id=demo_user.id,
+                            user_email=demo_email,
+                            member_id=member_id,
+                            kind="call",
+                            zip_code=None,
+                            outcome=None,
+                            notes=notes,
+                            contact_name=contact_name or None,
+                            support_score=support_score,
+                            constituent=constituent,
+                            created_at=dt,
+                        )
+                    )
+                    demo_created += 1
+                if emailed:
+                    session.add(
+                        OutreachEvent(
+                            user_id=demo_user.id,
+                            user_email=demo_email,
+                            member_id=member_id,
+                            kind="email",
+                            zip_code=None,
+                            outcome=None,
+                            notes=notes,
+                            contact_name=contact_name or None,
+                            support_score=support_score,
+                            constituent=constituent,
+                            created_at=dt,
+                        )
+                    )
+                    demo_created += 1
+            await session.commit()
+            print(f"Inserted {demo_created} outreach events for demo user {demo_email}.")
+            demo_url = f"{cfg.APP_BASE_URL}/auth/demo"
+            print(f"  → Enable with ILGA_DEMO_ENABLED=1 then visit {demo_url}")
+
 
 if __name__ == "__main__":
     asyncio.run(_main())

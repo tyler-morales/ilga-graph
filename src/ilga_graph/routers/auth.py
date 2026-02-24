@@ -16,8 +16,8 @@ import sys
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 
-from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -258,3 +258,41 @@ async def me(user: User | None = Depends(get_current_user_optional)):
     if user is None:
         return {"authenticated": False}
     return {"authenticated": True, "email": user.email}
+
+
+@router.get("/demo", include_in_schema=False)
+async def demo_login(
+    db: AsyncSession = Depends(get_db),
+):
+    """Auto-log the visitor in as the demo account and redirect to /advocacy.
+
+    Only active when ILGA_DEMO_ENABLED=1.  The demo user must be seeded first
+    (run: make seed-demo).  This endpoint never requires email verification —
+    it exists solely for sharing a read-only "power advocate" preview link.
+    """
+    if not cfg.DEMO_ENABLED:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    now = datetime.now(timezone.utc)
+    result = await db.execute(select(User).where(User.email == cfg.DEMO_EMAIL))
+    user = result.scalar_one_or_none()
+    if user is None:
+        user = User(email=cfg.DEMO_EMAIL)
+        db.add(user)
+        await db.flush()
+        LOGGER.info("Demo user created: %s (id=%d)", user.email, user.id)
+    user.last_login_at = now
+    await db.commit()
+
+    token = create_session_token(user.id)
+    response = RedirectResponse(url="/advocacy", status_code=302)
+    response.set_cookie(
+        key=cfg.AUTH_COOKIE_NAME,
+        value=token,
+        max_age=cfg.AUTH_COOKIE_MAX_AGE,
+        httponly=True,
+        samesite="lax",
+        secure=cfg.PROFILE == "prod",
+    )
+    LOGGER.info("Demo login: issued session for %s (id=%d)", user.email, user.id)
+    return response
