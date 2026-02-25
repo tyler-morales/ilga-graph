@@ -41,9 +41,9 @@ def _load_constituent_brief() -> dict | None:
             line = line.strip()
             if not line:
                 continue
-            # Bullet: starts with �, •, or "- " or "• "
-            if line.startswith("�") or line.startswith("•") or re.match(r"^[-•]\s*", line):
-                bullets.append(line.lstrip("�•-\t ").strip())
+            # Bullet: starts with • (U+2022) or "- " / "• "
+            if line.startswith("•") or re.match(r"^[-•]\s*", line):
+                bullets.append(line.lstrip("••-	 ").strip())
             else:
                 paragraphs.append(line)
         section: dict = {"heading": heading, "paragraphs": paragraphs}
@@ -101,7 +101,12 @@ def _load_legislator_brief() -> dict | None:
         if line.strip() == "Attachments":
             i += 1
             attach_lines = []
-            while i < len(lines) and lines[i].strip() and not lines[i].startswith("Illinois ") and not lines[i].startswith("Point of "):
+            while (
+                i < len(lines)
+                and lines[i].strip()
+                and not lines[i].startswith("Illinois ")
+                and not lines[i].startswith("Point of ")
+            ):
                 attach_lines.append(lines[i].strip())
                 i += 1
             out["attachments"] = "\n".join(attach_lines)
@@ -118,12 +123,20 @@ def _load_legislator_brief() -> dict | None:
             continue
         # Section heading (title case, no colon at end)
         stripped = line.strip()
-        if stripped and i + 1 < len(lines) and not stripped.startswith(("Issue in", "Core ambiguity", "Illinois ", "Point of ")):
+        if (
+            stripped
+            and i + 1 < len(lines)
+            and not stripped.startswith(("Issue in", "Core ambiguity", "Illinois ", "Point of "))
+        ):
             section_body: list[str] = []
             i += 1
-            while i < len(lines) and lines[i].strip() and not re.match(
-                r"^(What we are asking|Attachments|Illinois statutory|Point of contact)",
-                lines[i],
+            while (
+                i < len(lines)
+                and lines[i].strip()
+                and not re.match(
+                    r"^(What we are asking|Attachments|Illinois statutory|Point of contact)",
+                    lines[i],
+                )
             ):
                 section_body.append(lines[i].strip())
                 i += 1
@@ -161,6 +174,17 @@ STRATEGIC_FIVE_POINTS: list[str] = [
     "The fix is a narrow clarifying amendment — no new regulatory framework.",
     "This affects real IL residents who own legal vehicles they can't register.",
 ]
+# How we measure advocacy success (things we control). Road-legal outcome is the campaign objective.
+STRATEGIC_SUCCESS_MEASURE = (
+    "We measure success by what we can control: legislator contacts from constituents, "
+    "co-sponsors secured, witness slips filed, and a coalition ready to act when a bill moves."
+)
+STRATEGIC_SUCCESS_MEASURE_ITEMS: list[str] = [
+    "Legislator contacts from constituents",
+    "Co-sponsors secured",
+    "Witness slips filed",
+    "A coalition ready to act when a bill moves",
+]
 
 # Documents listed in the legislator brief sidebar (title, url, file_type for icon).
 # Optional: available=False and note="..." for placeholders (disabled style, note under title).
@@ -187,8 +211,11 @@ BRIEF_DOCUMENTS = [
 # Single source of truth for state table and map. bill_status: "passed" | "pending" | "none".
 # state_abbr is two-letter lowercase for SVG map class matching.
 # speed_limited: True if roads are restricted (e.g. 55 mph max or no Interstates).
+# speed: Optional short text for Speed column (e.g. "55 mph or less", "45 mph max", "No Interstates"). If absent, column shows "Limited" when speed_limited else "—".
 # aamva_fix: True if state had a ban (often AAMVA-driven) and reversed it via law/policy (post-2020).
 # explicit_kei_law: True if state passed a new law explicitly naming kei/mini vehicles (not dependent on AAMVA interpretation).
+# how: Optional. The law or policy that made Keis registrable (e.g. statute, bill number, "DMV policy"). If none, leave "".
+# effective: Optional. The date the change or law came into effect (e.g. "Sep 2025"). If no date, leave "".
 BRIEF_STATE_STATUS: list[dict] = [
     {
         "state": "Arizona",
@@ -197,6 +224,8 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "Primary On-Road Use decal; legal on all roads including Interstates.",
         "status": "A.R.S. Title 28, Article 16",
+        "how": "A.R.S. Title 28, Article 16",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
@@ -207,24 +236,30 @@ BRIEF_STATE_STATUS: list[dict] = [
         "state_abbr": "ar",
         "bill_status": "passed",
         "policy": False,
-        "mechanism": "Allowed on roads with speed limits 55 mph or less; prohibited on Interstates.",
+        "mechanism": "Allowed on roads 55 mph or less; prohibited on Interstates.",
         "status": "Ark. Code § 27-14-726",
+        "how": "Ark. Code § 27-14-726",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
         "speed_limited": True,
+        "speed": "55 mph or less",
     },
     {
         "state": "Colorado",
         "state_abbr": "co",
         "bill_status": "passed",
         "policy": False,
-        "mechanism": "HB 25-1281 — kei road-legal framework; 55 mph limit",
+        "mechanism": "HB 25-1281 — kei road-legal framework.",
         "status": "Jul 2027",
+        "how": "Colorado HB 25-1281",
+        "effective": "Jul 2027",
         "notes": "",
         "bill_url": "https://leg.colorado.gov/bills/hb25-1281",
         "bill_title": "Colorado HB 25-1281",
         "speed_limited": True,
+        "speed": "55 mph",
         "aamva_fix": True,
         "explicit_kei_law": True,
     },
@@ -235,6 +270,8 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": True,
         "mechanism": "Standard registration possible; subject to strict safety inspection.",
         "status": "DMV Registration Policy",
+        "how": "DMV Registration Policy",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
@@ -247,6 +284,8 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "Treated as standard motor vehicle if >25 years old.",
         "status": "Idaho Code § 49-402",
+        "how": "Idaho Code § 49-402",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
@@ -259,22 +298,28 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "Mini-Truck Title Application & police inspection; no Interstates.",
         "status": "Ind. Code § 9-13-2-103",
+        "how": "Ind. Code § 9-13-2-103",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
         "speed_limited": True,
+        "speed": "No Interstates",
     },
     {
         "state": "Louisiana",
         "state_abbr": "la",
         "bill_status": "passed",
         "policy": False,
-        "mechanism": "Allowed on roads with speed limits of 55 mph or less.",
+        "mechanism": "Allowed on roads 55 mph or less.",
         "status": "La. R.S. 32:299",
+        "how": "La. R.S. 32:299",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
         "speed_limited": True,
+        "speed": "55 mph or less",
     },
     {
         "state": "Maine",
@@ -283,6 +328,8 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "H.4053 — title/registration and working group (in committee)",
         "status": "In committee",
+        "how": "Maine H.4053",
+        "effective": "",
         "notes": "",
         "bill_url": "https://legislature.maine.gov/legis/bills/display_ps.asp?ld=4053&num=H",
         "bill_title": "Maine H.4053",
@@ -296,6 +343,8 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "Registered as Historic (20+ years); occasional use restrictions apply.",
         "status": "Md. Transp. Code § 13-936",
+        "how": "Md. Transp. Code § 13-936",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
@@ -308,6 +357,8 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": True,
         "mechanism": "Ban reversed Sept 2024; now registrable as standard auto.",
         "status": "Sep 2024",
+        "how": "RMV policy reversal",
+        "effective": "Sep 2024",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
@@ -321,6 +372,8 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": True,
         "mechanism": "Ban reversed Nov 2024; registrable as Pickup/Station Wagon.",
         "status": "Nov 2024",
+        "how": "SOS policy reversal",
+        "effective": "Nov 2024",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
@@ -334,6 +387,8 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "Standard registration if federal import docs (Form 7501) provided.",
         "status": "Miss. Code § 27-19",
+        "how": "Miss. Code § 27-19",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
@@ -346,6 +401,8 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "Permanent registration available for vehicles 11+ years old.",
         "status": "Mont. Code § 61-3-321",
+        "how": "Mont. Code § 61-3-321",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
@@ -358,10 +415,13 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "Legal on all public roads except Interstates/Expressways.",
         "status": "Neb. Rev. Stat. § 60-339",
+        "how": "Neb. Rev. Stat. § 60-339",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
         "speed_limited": True,
+        "speed": "No Interstates/Expressways",
     },
     {
         "state": "North Carolina",
@@ -370,10 +430,13 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "Allowed on roads with posted speed limits of 55 mph or less.",
         "status": "N.C. Gen. Stat. § 20-4.01",
+        "how": "N.C. Gen. Stat. § 20-4.01",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
         "speed_limited": True,
+        "speed": "55 mph or less",
     },
     {
         "state": "North Dakota",
@@ -382,10 +445,13 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "Allowed on roads with posted speed limits of 55 mph or less.",
         "status": "N.D. Cent. Code § 39-29",
+        "how": "N.D. Cent. Code § 39-29",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
         "speed_limited": True,
+        "speed": "55 mph or less",
     },
     {
         "state": "Oklahoma",
@@ -394,10 +460,13 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "Legal on state roads; prohibited on Interstates.",
         "status": "Okla. Stat. tit. 47 § 1151.3",
+        "how": "Okla. Stat. tit. 47 § 1151.3",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
         "speed_limited": True,
+        "speed": "No Interstates",
     },
     {
         "state": "Oregon",
@@ -406,6 +475,8 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "SB 1213 — title/registration and operating rules (Transportation committee)",
         "status": "In committee",
+        "how": "Oregon SB 1213",
+        "effective": "",
         "notes": "",
         "bill_url": "https://olis.oregonlegislature.gov/liz/2025R1/Measures/Overview/SB1213",
         "bill_title": "Oregon SB 1213",
@@ -419,6 +490,8 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "Antique plates available for vehicles 25+ years old.",
         "status": "S.C. Code § 56-3",
+        "how": "S.C. Code § 56-3",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
@@ -431,6 +504,8 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "Registered as Antique (Class C); general road use allowed.",
         "status": "Tenn. Code § 55-4-111",
+        "how": "Tenn. Code § 55-4-111",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
@@ -443,6 +518,8 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "SB 1816 — miniature vehicle statute; titling, registration, highway rules",
         "status": "Sep 2025",
+        "how": "Texas SB 1816",
+        "effective": "Sep 2025",
         "notes": "",
         "bill_url": "https://capitol.texas.gov/BillLookup/History.aspx?LegSess=89R&Bill=SB1816",
         "bill_title": "Texas SB 1816",
@@ -457,6 +534,8 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "Road legal if safety equipment (lights/mirrors) is retrofitted.",
         "status": "RCW 46.16A.080",
+        "how": "RCW 46.16A.080",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
@@ -469,6 +548,8 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "Registered as Street-Legal SPV; max 20-mile range often waived.",
         "status": "W. Va. Code § 17A-13-1",
+        "how": "W. Va. Code § 17A-13-1",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
@@ -481,10 +562,13 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "Registered as MPV; prohibited on Interstates.",
         "status": "Wyo. Stat. § 31-2-232",
+        "how": "Wyo. Stat. § 31-2-232",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
         "speed_limited": True,
+        "speed": "No Interstates",
     },
     # Restricted (antique/collector/speed or radius caps only).
     {
@@ -494,6 +578,8 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "Antique plates only; must be 20+ years old; limited use.",
         "status": "C.G.S. § 14-20",
+        "how": "C.G.S. § 14-20",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
@@ -505,12 +591,15 @@ BRIEF_STATE_STATUS: list[dict] = [
         "state_abbr": "mo",
         "bill_status": "passed",
         "policy": False,
-        "mechanism": "Speed cap: max 45 mph roads; requires local ordinance.",
+        "mechanism": "Speed cap; requires local ordinance.",
         "status": "Mo. Rev. Stat. § 304.032",
+        "how": "Mo. Rev. Stat. § 304.032",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
         "speed_limited": True,
+        "speed": "45 mph max",
         "restricted": True,
     },
     {
@@ -518,12 +607,15 @@ BRIEF_STATE_STATUS: list[dict] = [
         "state_abbr": "nh",
         "bill_status": "passed",
         "policy": False,
-        "mechanism": "Radius cap: max 25 miles from home; 35 mph speed limit.",
+        "mechanism": "Radius cap: max 25 miles from home.",
         "status": "RSA 261:41-a",
+        "how": "RSA 261:41-a",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
         "speed_limited": True,
+        "speed": "35 mph",
         "restricted": True,
     },
     {
@@ -533,6 +625,8 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "Antique plates only; stock condition required; no daily use.",
         "status": "PennDOT Fact Sheet",
+        "how": "PennDOT policy",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
@@ -544,12 +638,15 @@ BRIEF_STATE_STATUS: list[dict] = [
         "state_abbr": "ut",
         "bill_status": "passed",
         "policy": False,
-        "mechanism": "Speed cap: max 50 mph roads; banned on Interstates.",
+        "mechanism": "Speed cap; banned on Interstates.",
         "status": "Utah Code § 41-6a-1505",
+        "how": "Utah Code § 41-6a-1505",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
         "speed_limited": True,
+        "speed": "50 mph max",
         "restricted": True,
     },
     {
@@ -559,6 +656,8 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "Antique/farm only; strict driving limits (e.g. car shows only).",
         "status": "Va. Code § 46.2-730",
+        "how": "Va. Code § 46.2-730",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
@@ -572,6 +671,8 @@ BRIEF_STATE_STATUS: list[dict] = [
         "policy": False,
         "mechanism": "Collector plates only; owner must prove another daily driver.",
         "status": "Wis. Stat. § 341.266",
+        "how": "Wis. Stat. § 341.266",
+        "effective": "",
         "notes": "",
         "bill_url": "",
         "bill_title": "",
@@ -768,10 +869,22 @@ FAQ_ADVOCACY = {
             "id": "adv1",
             "question": "What is the goal of this advocacy?",
             "answer": (
-                "The goal is to get kei vehicles legally registered for normal road use in Illinois. "
+                "The campaign objective is to get kei vehicles legally registered for normal road use in Illinois. "
                 "That requires a narrow statutory clarification to 625 ILCS 5/3-401(c-1) so that "
                 "highway-built, federally lawful imports can be titled and registered under normal "
-                "Illinois requirements (insurance, equipment, traffic enforcement)."
+                "Illinois requirements (insurance, equipment, traffic enforcement). "
+                "Whether a bill passes is up to the legislature; we focus on what we can control."
+            ),
+        },
+        {
+            "id": "adv1b",
+            "question": "What does success look like for this advocacy?",
+            "answer": (
+                "Success is what we can control: how many legislators hear from constituents (calls and emails), "
+                "whether we secure co-sponsors when a bill exists, whether we get witness slips and testimony on the record, "
+                "and whether the coalition is ready to act when a bill moves. Road-legal status is the outcome we're "
+                "working toward, but we measure success by these actions so we can see progress and stay motivated "
+                "even when the legislature hasn't yet passed a fix."
             ),
         },
         {
@@ -1029,6 +1142,7 @@ async def legislator_brief_page(request: Request):
         {
             "request": request,
             "legislator_brief": legislator_brief,
+            "strategic_five_points": STRATEGIC_FIVE_POINTS,
             "brief_documents": BRIEF_DOCUMENTS,
             "brief_state_status": BRIEF_STATE_STATUS,
             "brief_state_map_status_json": json.dumps(brief_state_map_status),

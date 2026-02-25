@@ -14,7 +14,7 @@ When you add or edit **substantive content** (copy, key points, FAQs, brief sect
 | Mission, vision, 5-point message | content.py: STRATEGIC_MISSION, STRATEGIC_VISION, STRATEGIC_FIVE_POINTS |
 | Legislator brief page (any section or key points) | legislator_brief.html existing sections + STRATEGIC_FIVE_POINTS (for a key points block) |
 | The Issue page / constituent narrative | the_issue.html prose + content.py STRATEGIC_* |
-| FAQs | content.py: FAQ_ADVOCATES, FAQ_LEGISLATORS |
+| FAQs | content.py: FAQ_LAW, FAQ_ADVOCACY (The Issue), FAQ_LEGISLATORS (legislator brief) |
 | State table, bills, doc links | content.py: BRIEF_STATE_STATUS, BRIEF_*, BRIEF_SOURCES, BRIEF_DOCUMENTS |
 
 ## One-pager and constituent brief continuity
