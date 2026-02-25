@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import config as cfg
 from ..db import get_db
 from ..db_models import BugReport
+from ..routers.content import STRATEGIC_FIVE_POINTS
 from ..security import (
     CSRF_COOKIE_NAME,
     rate_limit_bug_report,
@@ -80,6 +81,8 @@ templates.env.globals["show_beta_banner"] = cfg.BETA_BANNER
 templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
 templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
+templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
+templates.env.globals["features"] = cfg.get_client_features()
 
 
 def _mime_type_for_filename(filename: str) -> tuple[str, str]:

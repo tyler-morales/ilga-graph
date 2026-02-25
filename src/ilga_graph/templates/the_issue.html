@@ -2,7 +2,7 @@
 {% block title %}The Issue — {{ site_name }}{% endblock %}
 {% block brief_title %}Illinois Kei Vehicle Registration{% endblock %}
 {% block brief_intro %}
-<p>{% if constituent_brief and constituent_brief.sections and constituent_brief.sections[0].paragraphs %}{{ constituent_brief.sections[0].paragraphs[0] }}{% else %}Illinois is currently treating lawfully imported kei vehicles as &lsquo;off-highway&rsquo; vehicles, so owners cannot register them for normal road use. Here&rsquo;s what residents need to know and what you can do.{% endif %}</p>
+<p>{% if constituent_brief and constituent_brief.sections and constituent_brief.sections[0].paragraphs %}{{ constituent_brief.sections[0].paragraphs[0] }}{% else %}Illinois is treating lawfully imported kei vehicles as off-highway, so owners cannot register them for normal road use. Here&rsquo;s what residents need to know and what you can do.{% endif %}</p>
 {% endblock %}
 {% block brief_layout_class %}{% endblock %}
 {% block brief_main_heading %}What Illinois Residents Need to Know{% endblock %}
@@ -37,7 +37,7 @@
         {% else %}
         <section aria-labelledby="issue-plain">
             <h3 id="issue-plain">The Issue in Plain English</h3>
-            <p>Illinois is currently treating lawfully imported kei vehicles as &lsquo;off-highway&rsquo; vehicles, which means owners cannot register them for normal road use. This is not because the vehicles were illegally imported, and not because owners failed inspection or insurance requirements. It is based on how Illinois is interpreting <strong>625 ILCS 5/3-401(c-1)</strong>.</p>
+            <p>Illinois is treating lawfully imported kei vehicles as off-highway, so owners cannot register them for normal road use. This is based on how Illinois interprets <strong>625 ILCS 5/3-401(c-1)</strong>, not on federal law or missing paperwork.</p>
         </section>
 
         <section aria-labelledby="issue-why-happening">
@@ -60,7 +60,7 @@
             {% if strategic_vision %}
             <p class="strategic-vision-callout"><strong>Our vision:</strong> {{ strategic_vision }}</p>
             {% endif %}
-            <p>The General Assembly can clarify that a vehicle originally manufactured for highway use in any jurisdiction, and legally importable under federal law, may be titled and registered in Illinois under normal road-use conditions. This preserves enforcement authority while resolving ambiguity in 625 ILCS 5/3-401(c-1).</p>
+            <p>We are asking for a narrow statutory clarification so that vehicles originally manufactured for highway use (in any jurisdiction) and lawfully importable under federal law may be titled and registered in Illinois under normal requirements (insurance, equipment, traffic laws). No weakening of safety or enforcement. This preserves enforcement authority while resolving ambiguity in 625 ILCS 5/3-401(c-1).</p>
         </section>
 
         <section aria-labelledby="issue-matters">
@@ -252,8 +252,17 @@
 <aside class="legislator-brief-sidebar" aria-labelledby="issue-brief-documents-heading">
     <h2 id="issue-brief-documents-heading" class="legislator-brief-sidebar__title">Documents</h2>
     <div class="legislator-brief-sidebar__content">
-        <h4 id="issue-brief-docs-heading" class="legislator-brief-sidebar__subtitle">Constituent brief</h4>
+        <h4 id="issue-brief-docs-heading" class="legislator-brief-sidebar__subtitle">Documents</h4>
         <ul class="legislator-brief-docs" role="list" aria-labelledby="issue-brief-docs-heading">
+            <li class="legislator-brief-doc">
+                <a class="legislator-brief-doc__link" href="{{ fact_sheet_pdf_url }}"
+                    target="_blank" rel="noopener noreferrer"
+                    aria-label="Download Kei Vehicle Registration Fact Sheet for volunteers (PDF)">
+                    <img class="legislator-brief-doc__icon" src="/static/images/icon-pdf.svg" alt="" width="24"
+                        height="24" aria-hidden="true">
+                    <span class="legislator-brief-doc__title">Fact sheet for volunteers</span>
+                </a>
+            </li>
             <li class="legislator-brief-doc">
                 <a class="legislator-brief-doc__link" href="/static/images/Illinois_Kei_Vehicle_Registration_Constituent_Brief.pdf"
                     target="_blank" rel="noopener noreferrer"

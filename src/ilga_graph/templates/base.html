@@ -35,7 +35,9 @@
     <link rel="stylesheet" href="/static/css/whats-happening.css">
     <link rel="stylesheet" href="/static/css/mission-statement.css">
     <link rel="stylesheet" href="/static/css/strategic-points.css">
+    {% if features.get('message_marquee') %}
     <link rel="stylesheet" href="/static/css/message-marquee.css">
+    {% endif %}
     <link rel="stylesheet" href="/static/css/share-section.css">
     <link rel="stylesheet" href="/static/css/intelligence-dashboard.css">
     <link rel="stylesheet" href="/static/css/intelligence-tables.css">
@@ -85,7 +87,7 @@
         })();
     </script>
     {% endif %}
-    {% if strategic_five_points %}
+    {% if features.get('message_marquee') and strategic_five_points %}
     <div class="message-marquee" role="region" aria-label="Our message in 5 points">
         <div class="message-marquee__track">
             <span class="message-marquee__text">{{ strategic_five_points|join(' • ') }}</span>
@@ -161,6 +163,8 @@
                 <a href="/the-issue">The Issue</a>
                 <span class="footer-nav-sep" aria-hidden="true"> · </span>
                 <a href="/legislator-brief">Legislator brief</a>
+                <span class="footer-nav-sep" aria-hidden="true"> · </span>
+                <a href="/fact-sheet">Fact sheet</a>
             </nav>
             <nav class="footer-nav footer-nav-secondary" aria-label="Legal and support">
                 {% if show_beta_banner %}

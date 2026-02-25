@@ -30,6 +30,7 @@ from ..member_lookup import (
     find_member_by_id,
     is_constituent_for_zip_member,
 )
+from ..routers.content import STRATEGIC_FIVE_POINTS
 from ..routers.outreach import get_outreach_aggregate
 from ..security import (
     CSRF_COOKIE_NAME,
@@ -67,10 +68,12 @@ templates.env.globals["show_beta_banner"] = cfg.BETA_BANNER
 templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
 templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
+templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
+templates.env.globals["features"] = cfg.get_client_features()
 
 _HERO_SUBHEAD = (
-    "Illinois is currently blocking registration for federally lawful Kei vehicles "
-    "due to a statutory gap. You can help fix it—contact your legislator with a "
+    "Illinois is treating lawfully imported kei vehicles as off-highway, so owners cannot "
+    "register them for normal road use. You can help fix it—contact your legislator with a "
     "pre-written script in under a minute."
 )
 
@@ -82,15 +85,15 @@ _HERO_SUBHEAD_ADVOCACY_LINE2 = "to find your legislators and start outreach toda
 def _hero_context() -> dict[str, Any]:
     """Shared hero headline/subhead for home page (issue-focused)."""
     return {
-        "hero_headline": "Fix Illinois Law. Allow Kei Vehicle Registration.",
-        "hero_headline_line1": "Fix Illinois Law.",
+        "hero_headline": "Fix the statutory gap. Allow kei vehicle registration.",
+        "hero_headline_line1": "Fix the statutory gap.",
         "hero_headline_line1_prefix": "",
         "hero_headline_line1_highlight": "Fix",
-        "hero_headline_line1_suffix": " Illinois Law.",
-        "hero_headline_line2": "Allow Kei Vehicle Registration.",
+        "hero_headline_line1_suffix": " the statutory gap.",
+        "hero_headline_line2": "Allow kei vehicle registration.",
         "hero_headline_line2_prefix": "Allow ",
-        "hero_headline_highlight": "Kei Vehicle",
-        "hero_headline_line2_suffix": " Registration.",
+        "hero_headline_highlight": "kei vehicle",
+        "hero_headline_line2_suffix": " registration.",
         "hero_subhead": _HERO_SUBHEAD,
     }
 
@@ -154,6 +157,8 @@ async def _build_search_results_context(
             senator_member.name,
             senator_card["script_hint"],
             has_public_email=bool(senator_member.email),
+            chamber=senator_member.chamber,
+            one_pager_points=STRATEGIC_FIVE_POINTS,
         )
     elif senate_district:
         warnings.append(
@@ -179,6 +184,8 @@ async def _build_search_results_context(
             rep_member.name,
             rep_card["script_hint"],
             has_public_email=bool(rep_member.email),
+            chamber=rep_member.chamber,
+            one_pager_points=STRATEGIC_FIVE_POINTS,
         )
     elif house_district:
         warnings.append(
@@ -223,6 +230,8 @@ async def _build_search_results_context(
             broker_member.name,
             broker_card["script_hint"],
             has_public_email=bool(broker_member.email),
+            chamber=broker_member.chamber,
+            one_pager_points=STRATEGIC_FIVE_POINTS,
         )
 
     error = "; ".join(warnings) if warnings else None
@@ -674,6 +683,7 @@ async def advocacy_drawer(
             chamber=chamber,
             district=district,
             target_type=target_type,
+            one_pager_points=STRATEGIC_FIVE_POINTS,
         )
         body_followup = ah.build_after_call_email_body(
             "",
@@ -683,6 +693,7 @@ async def advocacy_drawer(
             district=district,
             target_type=target_type,
             call_date="",
+            one_pager_points=STRATEGIC_FIVE_POINTS,
         )
         legislator_display_name = ah.get_legislator_display_name(legislator_name, chamber, district)
         party_abbr = ah.party_abbr_for_member(member)
@@ -808,6 +819,7 @@ async def advocacy_call_wrapup(
         district=district,
         target_type=target_type,
         call_date=call_date,
+        one_pager_points=STRATEGIC_FIVE_POINTS,
     )
     body_first = ah.build_email_first_body(
         legislator_name,
@@ -815,6 +827,7 @@ async def advocacy_call_wrapup(
         chamber=chamber,
         district=district,
         target_type=target_type,
+        one_pager_points=STRATEGIC_FIVE_POINTS,
     )
 
     contact_name = staffer or ""

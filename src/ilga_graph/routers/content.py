@@ -164,27 +164,46 @@ templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 # Strategic plan (Hardball Ch 5): single source of truth for mission, vision, 5-point message.
 STRATEGIC_MISSION = "Fix the statutory gap that prevents road-legal kei vehicles in Illinois."
 STRATEGIC_VISION = (
-    "A narrow amendment to 625 ILCS 5/3-401(c-1) that allows properly imported kei vehicles "
-    "to be registered and titled in Illinois, consistent with 21+ other states."
+    "A narrow statutory clarification to 625 ILCS 5/3-401(c-1) so highway-built, federally lawful "
+    "kei vehicles can be titled and registered in Illinois, consistent with 21+ other states."
 )
 STRATEGIC_FIVE_POINTS: list[str] = [
     "Kei vehicles are federally legal to import (25-year rule).",
-    "21+ states already allow registration — IL is the outlier.",
-    "The current IL statute has an ambiguity, not a prohibition.",
-    "The fix is a narrow clarifying amendment — no new regulatory framework.",
-    "This affects real IL residents who own legal vehicles they can't register.",
+    "21+ states already allow registration—Illinois is the outlier.",
+    "The current Illinois statute has an ambiguity, not a prohibition.",
+    "The fix is a narrow clarifying amendment—no new regulatory framework.",
+    "This affects real Illinois residents who own legal vehicles they can't register.",
 ]
+templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
+templates.env.globals["features"] = cfg.get_client_features()
 # How we measure advocacy success (things we control). Road-legal outcome is the campaign objective.
 STRATEGIC_SUCCESS_MEASURE = (
-    "We measure success by what we can control: legislator contacts from constituents, "
-    "co-sponsors secured, witness slips filed, and a coalition ready to act when a bill moves."
+    "We measure success by what we can control: constituent contacts, co-sponsors secured, "
+    "witness slips filed, and a coalition ready to act when a bill moves."
 )
 STRATEGIC_SUCCESS_MEASURE_ITEMS: list[str] = [
-    "Legislator contacts from constituents",
+    "Constituent contacts",
     "Co-sponsors secured",
     "Witness slips filed",
     "A coalition ready to act when a bill moves",
 ]
+
+# Fact sheet for the base (Hardball Ch7; content matches docs/advocacy/focused-next-steps-1-2-4-5-6.md §5).
+FACT_SHEET_ISSUE = (
+    "Illinois is treating lawfully imported kei vehicles as off-highway, so owners cannot "
+    "register them for normal road use. This is based on how Illinois interprets "
+    "625 ILCS 5/3-401(c-1), not on federal law or missing paperwork."
+)
+FACT_SHEET_POSITION = (
+    "We are asking for a narrow statutory clarification so that vehicles originally "
+    "manufactured for highway use (in any jurisdiction) and lawfully importable under "
+    "federal law may be titled and registered in Illinois under normal requirements "
+    "(insurance, equipment, traffic laws). No weakening of safety or enforcement."
+)
+FACT_SHEET_SUPPORTERS_PLACEHOLDER = (
+    "Add names or groups when you have them (e.g. Land of Kei Illinois advocacy group, "
+    'local clubs, businesses). Leave blank or "Coalition forming" until you have a list.'
+)
 
 # Documents listed in the legislator brief sidebar (title, url, file_type for icon).
 # Optional: available=False and note="..." for placeholders (disabled style, note under title).
@@ -869,55 +888,47 @@ FAQ_ADVOCACY = {
             "id": "adv1",
             "question": "What is the goal of this advocacy?",
             "answer": (
-                "The campaign objective is to get kei vehicles legally registered for normal road use in Illinois. "
-                "That requires a narrow statutory clarification to 625 ILCS 5/3-401(c-1) so that "
-                "highway-built, federally lawful imports can be titled and registered under normal "
-                "Illinois requirements (insurance, equipment, traffic enforcement). "
-                "Whether a bill passes is up to the legislature; we focus on what we can control."
+                "To get kei vehicles legally registered for normal road use in Illinois via a narrow "
+                "clarification to 625 ILCS 5/3-401(c-1). We focus on what we can control: constituent "
+                "contacts, co-sponsors, witness slips, coalition readiness."
             ),
         },
         {
             "id": "adv1b",
             "question": "What does success look like for this advocacy?",
             "answer": (
-                "Success is what we can control: how many legislators hear from constituents (calls and emails), "
-                "whether we secure co-sponsors when a bill exists, whether we get witness slips and testimony on the record, "
-                "and whether the coalition is ready to act when a bill moves. Road-legal status is the outcome we're "
-                "working toward, but we measure success by these actions so we can see progress and stay motivated "
-                "even when the legislature hasn't yet passed a fix."
+                "Success is what we can control: constituent contacts, co-sponsors secured, witness "
+                "slips filed, and a coalition ready to act when a bill moves. Road-legal status is the "
+                "outcome we're working toward, but we measure success by these actions so we can see "
+                "progress and stay motivated even when the legislature hasn't yet passed a fix."
             ),
         },
         {
             "id": "adv2",
             "question": "How does the advocacy group intend to achieve that goal?",
             "answer": (
-                "By building awareness and constituent pressure. We encourage Illinois residents to "
-                "contact their legislators so they hear that this is a real issue in their districts. "
-                "When the time comes, we will support a bill (sponsor, committee, votes). Right now "
-                "we are in the outreach stage: the more people who reach out by district or ZIP, the "
-                "more clearly legislators see that constituents care and that the issue deserves a fix."
+                "By building awareness and constituent pressure—Illinois residents contact their "
+                "legislators so they hear this is a real issue in their districts. When a bill "
+                "exists, we support it (sponsor, committee, votes). Right now we are in the outreach "
+                "stage: the more people who reach out by district or ZIP, the more clearly "
+                "legislators see that constituents care and that the issue deserves a fix."
             ),
         },
         {
             "id": "adv3",
             "question": "Why is it important to voice my concerns?",
             "answer": (
-                "Legislators prioritize issues they hear about from their constituents. Volume and "
-                "geography matter: when many people in a district contact their senator or "
-                "representative, it signals that this is a real issue that deserves attention. "
-                "Your call or email helps put the issue on the map and builds the case for a "
-                "legislative fix."
+                "Legislators prioritize issues they hear about from constituents. Your contact helps "
+                "put the issue on the map and builds the case for a legislative fix."
             ),
         },
         {
             "id": "adv4",
             "question": "Where are we in the process?",
             "answer": (
-                "There is no bill in the General Assembly yet. We are in the outreach and awareness "
-                "stage. The first step is for constituents to contact their legislators, learn about "
-                "the issue, and make it clear that kei vehicle registration is something Illinois "
-                "residents care about. As momentum builds, we can contact legislators by district or "
-                "ZIP to show where support exists."
+                "No bill yet. We are in the outreach stage: constituents contact legislators and "
+                "make it clear that kei registration is something Illinois residents care about. As "
+                "momentum builds, we coordinate contact by district or ZIP to show where support exists."
             ),
         },
         {
@@ -946,11 +957,10 @@ FAQ_ADVOCACY = {
             "id": "adv7",
             "question": "What should I say when I call or email?",
             "answer": (
-                "The advocacy tool provides a call script and an email template tailored to the ask: "
-                "support a narrow statutory clarification to 625 ILCS 5/3-401(c-1) so kei vehicles "
-                "that were built for highway use and are lawfully imported can be registered in "
-                "Illinois. You can use them as-is or adapt them in your own words. The key message: "
-                "constituents care about this issue and want a legislative fix."
+                "Use the advocacy tool's script or email template: ask for support for a narrow "
+                "statutory clarification to 625 ILCS 5/3-401(c-1) so kei vehicles that were built "
+                "for highway use and are lawfully imported can be registered in Illinois. Key "
+                "message: constituents care and want a fix."
             ),
         },
     ],
@@ -1102,6 +1112,9 @@ def _issue_sources_from_faq(faq: dict) -> list[dict[str, str]]:
 
 ISSUE_SOURCES: list[dict[str, str]] = _issue_sources_from_faq(FAQ_LAW)
 
+# Fact sheet document (PDF) linked from The Issue sidebar. Place the PDF at this path (e.g. print /fact-sheet to PDF).
+FACT_SHEET_PDF_URL = "/static/advocacy/Kei_Registration_Fact_Sheet.pdf"
+
 
 @router.get("/the-issue", include_in_schema=False)
 async def the_issue_page(request: Request):
@@ -1116,6 +1129,7 @@ async def the_issue_page(request: Request):
         {
             "request": request,
             "constituent_brief": constituent_brief,
+            "fact_sheet_pdf_url": FACT_SHEET_PDF_URL,
             "faq_law": FAQ_LAW,
             "faq_advocacy": FAQ_ADVOCACY,
             "brief_state_status": BRIEF_STATE_STATUS,
@@ -1151,6 +1165,24 @@ async def legislator_brief_page(request: Request):
             "brief_bills_current": BRIEF_BILLS_CURRENT,
             "brief_sources": BRIEF_SOURCES,
             "faq": FAQ_LEGISLATORS,
+        },
+    )
+
+
+@router.get("/fact-sheet", include_in_schema=False)
+async def fact_sheet_page(request: Request):
+    """Serve the one-page fact sheet for volunteers (Hardball Ch7; content from focused-next-steps doc §5)."""
+    fact_sheet_faq_ids = ("adv1", "adv1b", "adv2", "adv3", "adv4", "adv7")
+    fact_sheet_faq_items = [i for i in FAQ_ADVOCACY["items"] if i["id"] in fact_sheet_faq_ids]
+    return templates.TemplateResponse(
+        "fact_sheet.html",
+        {
+            "request": request,
+            "strategic_five_points": STRATEGIC_FIVE_POINTS,
+            "fact_sheet_issue": FACT_SHEET_ISSUE,
+            "fact_sheet_position": FACT_SHEET_POSITION,
+            "fact_sheet_supporters_placeholder": FACT_SHEET_SUPPORTERS_PLACEHOLDER,
+            "fact_sheet_faq_items": fact_sheet_faq_items,
         },
     )
 

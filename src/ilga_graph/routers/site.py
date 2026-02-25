@@ -18,6 +18,7 @@ _SITEMAP_PATHS = (
     "/explore",
     "/the-issue",
     "/legislator-brief",
+    "/fact-sheet",
     "/privacy",
     "/terms",
 )

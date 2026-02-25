@@ -157,7 +157,15 @@ LOAD_ONLY: bool = _env("ILGA_LOAD_ONLY") == "1"
 
 # ── Feature flags (single source of truth; profile defaults, ILGA_FEATURE_* overrides) ─
 # Each entry: key (JS/template), env_var, dev_default, prod_default, expose_to_client.
-_FEATURE_REGISTRY: list[dict[str, str | bool]] = []
+_FEATURE_REGISTRY: list[dict[str, str | bool]] = [
+    {
+        "key": "message_marquee",
+        "env_var": "ILGA_FEATURE_MESSAGE_MARQUEE",
+        "dev_default": "1",
+        "prod_default": "0",
+        "expose_to_client": True,
+    },
+]
 
 
 def _feature_value(entry: dict[str, str | bool]) -> bool:

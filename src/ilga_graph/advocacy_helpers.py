@@ -440,22 +440,37 @@ def script_wow_line(card: dict) -> str:
     return " " + parts[0] + "."
 
 
+# Three conclusions we want every legislator to remember (elevator version; Hardball Ch7).
+# Use in scripts and verbal pitch. Full 5 points live in content.STRATEGIC_FIVE_POINTS.
+SCRIPT_ELEVATOR_THREE: tuple[str, ...] = (
+    "Federally legal imports are being blocked by an Illinois interpretation, not federal law.",
+    "A narrow statutory clarification fixes it without weakening safety or enforcement.",
+    "Constituents in your district are affected and want a fix.",
+)
+
+
 def build_script_sections_senator(card: dict, zip_code: str, district: str) -> dict:
     wow = script_wow_line(card)
     return {
         "opening": (
             f"Hi, I\u2019m a constituent calling from ZIP {zip_code}, Senate District {district}. "
-            "I\u2019d like to leave a message for the Senator about kei truck legislation."
+            "I\u2019d like to leave a message for the Senator about kei vehicle registration."
         ),
         "why_them": (
             "This is your state senator \u2014 your direct representative in Springfield. "
             "Constituent calls are tracked; yours counts." + wow
         ),
         "the_ask": (
-            "I'm calling to ask for the Senator's support for kei truck legalization in Illinois. "
-            "Please support [bill number / the bill] when it comes to a vote. Thank you."
+            "I'm calling to ask for the Senator's support for a narrow statutory clarification to "
+            "625 ILCS 5/3-401(c-1) so kei vehicles that are federally legal to import can be "
+            "registered in Illinois. Twenty-one plus states already allow this\u2014Illinois is the outlier. "
+            "Benefit to your district: residents who own or want to register these vehicles get "
+            "clarity and fairness\u2014they can register and drive like residents in many other states, "
+            "without weakening safety or insurance requirements. Please support [bill number / the bill] "
+            "when it comes to a vote. Thank you."
         ),
         "closing": "Thank you for your time and your service.",
+        "conclusions": SCRIPT_ELEVATOR_THREE,
     }
 
 
@@ -464,17 +479,23 @@ def build_script_sections_rep(card: dict, zip_code: str, district: str) -> dict:
     return {
         "opening": (
             f"Hi, I\u2019m a constituent from ZIP {zip_code}, House District {district}. "
-            "I\u2019d like to leave a message for the Representative about kei truck legislation."
+            "I\u2019d like to leave a message for the Representative about kei vehicle registration."
         ),
         "why_them": (
             "This is your state representative. They vote on bills in the House before they reach "
             "the Senate, so their support is critical." + wow
         ),
         "the_ask": (
-            "I'm calling to ask them to sponsor or support kei truck legislation. "
-            "Please support [bill number / the bill] when it comes to a vote. Thank you."
+            "I'm calling to ask them to sponsor or support a narrow statutory clarification to "
+            "625 ILCS 5/3-401(c-1) so kei vehicles that are federally legal to import can be "
+            "registered in Illinois. Twenty-one plus states already allow this\u2014Illinois is the outlier. "
+            "Benefit to your district: residents who own or want to register these vehicles get "
+            "clarity and fairness\u2014they can register and drive like residents in many other states, "
+            "without weakening safety or insurance requirements. Please support [bill number / the bill] "
+            "when it comes to a vote. Thank you."
         ),
         "closing": "Thank you for your time and your service.",
+        "conclusions": SCRIPT_ELEVATOR_THREE,
     }
 
 
@@ -494,15 +515,18 @@ def build_script_sections_broker(card: dict, broker_why: str) -> dict:
         )
     return {
         "opening": (
-            "Hi, I\u2019m calling about kei truck legislation in Illinois. "
+            "Hi, I\u2019m calling about kei vehicle registration in Illinois. "
             "I\u2019d like to leave a message about co-sponsorship."
         ),
         "why_them": why,
         "the_ask": (
-            "I'm asking them to co-sponsor the bill. Mention that constituents across the state "
-            "support this, and that their support would help move it through the process."
+            "I'm asking them to co-sponsor a narrow statutory clarification to 625 ILCS 5/3-401(c-1). "
+            "Federally legal imports are being blocked by an Illinois interpretation; a narrow fix "
+            "doesn't weaken safety or enforcement. Twenty-one plus states already allow this. "
+            "Constituents across the state are affected and want a fix; their support would help move it through."
         ),
         "closing": "Thank you for your time.",
+        "conclusions": SCRIPT_ELEVATOR_THREE,
     }
 
 
@@ -529,8 +553,8 @@ def build_email_subject(zip_code: str) -> str:
 def build_email_subject_line(zip_code: str, variant: str = "constituent") -> str:
     """Subject line keyed by variant: constituent | general."""
     if variant == "general":
-        return "Request: clarify Illinois registration for kei vehicles (25+ years old)"
-    return "Constituent request: clarify Illinois registration for kei vehicles (25+ years old)"
+        return "Request: narrow statutory clarification for kei vehicle registration (625 ILCS 5/3-401(c-1))"
+    return "Constituent request: narrow statutory clarification for kei vehicle registration (625 ILCS 5/3-401(c-1))"
 
 
 def _kei_email_body_core(
@@ -538,6 +562,7 @@ def _kei_email_body_core(
     legislator_last: str,
     *,
     greeting_line: str | None = None,
+    one_pager_points: list[str] | None = None,
 ) -> str:
     """Kei vehicle email body with mad-lib placeholders.
 
@@ -547,24 +572,35 @@ def _kei_email_body_core(
     [CALLER_NAME], [CALLER_PHONE], [CALLER_EMAIL] are filled by the user in the drawer.
     If greeting_line is set (e.g. "Good [TIME_OF_DAY] [CONTACT_NAME],\\n\\n"), use it instead
     of "Hi [LEGISLATOR_NAME]," for after-call personalization.
+    one_pager_points: when provided (e.g. STRATEGIC_FIVE_POINTS), used as the "one-pager outlines" bullets
+    so the email matches the 3–5 conclusions we want every legislator to remember.
     """
     first_line = greeting_line if greeting_line is not None else "Hi [LEGISLATOR_NAME],\n\n"
+    if one_pager_points:
+        outlines = "".join(f"\t\u2022 {p}\n" for p in one_pager_points)
+    else:
+        outlines = (
+            "\t\u2022 The specific statutory ambiguity being relied upon\n"
+            "\t\u2022 Why this is a legislative clarification issue rather than an administrative one\n"
+            "\t\u2022 A narrow, targeted fix that preserves all existing Illinois safety, equipment, "
+            "and insurance requirements\n"
+            "\t\u2022 Examples of other states that have authorized or restored registration through "
+            "statute or formal policy\n"
+        )
     return (
         first_line
         + "I live in [CITY_OR_ZIP]. [CONSTITUENT_INTRO]writing to share a one-pager on an issue "
         "affecting vehicle registration under 625 ILCS 5/3-401(c-1).\n\n"
         "This matters to me because [ONE_SENTENCE_WHY]\n\n"
-        "Currently, Illinois is treating federally lawful imported vehicles (commonly 25+ years "
-        'old) as off-highway/non-highway based on how "originally manufactured for operation on '
-        'highways" is being interpreted. In practice, this prevents otherwise lawful vehicles '
-        "from being titled and registered for normal road use.\n\n"
+        "Illinois is treating lawfully imported kei vehicles as off-highway, so owners cannot "
+        "register them for normal road use. This is based on how Illinois interprets "
+        "625 ILCS 5/3-401(c-1), not on federal law or missing paperwork. This issue affects "
+        "Illinois residents in your district: registrations have been denied or revoked and "
+        'titles branded "Not Eligible for Registration." A narrow statutory clarification '
+        "gives them the same predictability and fairness that other states already provide to "
+        "owners of these legal vehicles.\n\n"
         "The attached one-pager outlines:\n"
-        "\t\u2022 The specific statutory ambiguity being relied upon\n"
-        "\t\u2022 Why this is a legislative clarification issue rather than an administrative one\n"
-        "\t\u2022 A narrow, targeted fix that preserves all existing Illinois safety, equipment, "
-        "and insurance requirements\n"
-        "\t\u2022 Examples of other states that have authorized or restored registration through "
-        "statute or formal policy\n\n"
+        f"{outlines}\n"
         "The goal is not to create a new vehicle class or exemption, but to clarify how existing "
         "law applies to highway-built vehicles that are federally lawful to import.\n\n"
         "Consistent with the one-pager, I am asking your office to:\n"
@@ -588,6 +624,7 @@ def build_email_body(
     has_public_email: bool,
     *,
     chamber: str | None = None,
+    one_pager_points: list[str] | None = None,
 ) -> str:
     """Legacy: card prefill body. Same Kei email as drawer."""
     if chamber:
@@ -597,7 +634,7 @@ def build_email_body(
     else:
         title_label = "Rep./Sen."
         legislator_last = member_name.split()[-1] if member_name else "[Last Name]"
-    return _kei_email_body_core(title_label, legislator_last)
+    return _kei_email_body_core(title_label, legislator_last, one_pager_points=one_pager_points)
 
 
 def _legislator_email_context(
@@ -674,6 +711,7 @@ def build_after_call_email_body(
     district: str | None = None,
     target_type: str = "NON_COMMITTEE",
     call_date: str = "",
+    one_pager_points: list[str] | None = None,
 ) -> str:
     """After-call follow-up email body (simplified Kei template with mad-lib placeholders).
 
@@ -686,7 +724,9 @@ def build_after_call_email_body(
     greeting = None
     if (staffer_name or "").strip():
         greeting = "Good [TIME_OF_DAY] [CONTACT_NAME],\n\n"
-    return _kei_email_body_core(title_label, legislator_last, greeting_line=greeting)
+    return _kei_email_body_core(
+        title_label, legislator_last, greeting_line=greeting, one_pager_points=one_pager_points
+    )
 
 
 def build_email_first_subject(zip_code: str) -> str:
@@ -700,12 +740,13 @@ def build_email_first_body(
     chamber: str | None = None,
     district: str | None = None,
     target_type: str = "NON_COMMITTEE",
+    one_pager_points: list[str] | None = None,
 ) -> str:
     """Email-first (no prior call) body (simplified Kei template with mad-lib placeholders)."""
     title_label, legislator_last, _, _, _ = _legislator_email_context(
         legislator_name, chamber, district
     )
-    return _kei_email_body_core(title_label, legislator_last)
+    return _kei_email_body_core(title_label, legislator_last, one_pager_points=one_pager_points)
 
 
 def find_power_broker(

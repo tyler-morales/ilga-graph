@@ -34,12 +34,18 @@ This doc defines the **approved sources** for all substantive content on the sit
 - **Canonical text in repo:** `src/ilga_graph/templates/the_issue.html` — narrative sections (The Issue in Plain English, Why This Is Happening, What This Means, The Narrow Fix, Why This Matters, etc.) plus `content.py` STRATEGIC_* for Key points and vision
 - **Rule:** Constituent-facing copy must align with the Issue page and STRATEGIC_*. If you need wording that should come from the constituent PDF and it isn’t in the template or content.py, add a text extract to this folder (e.g. `constituent-brief-extract.md`) or ask the user to provide it. Do not invent.
 
-### 4. FAQs
+### 4. Fact sheet for volunteers
+
+- **PDF:** `/static/advocacy/Kei_Registration_Fact_Sheet.pdf` (linked from The Issue sidebar as "Fact sheet for volunteers"). Place the file at this path; you can generate it by printing the `/fact-sheet` page to PDF.
+- **Canonical text in repo:** `content.py` — `FACT_SHEET_ISSUE`, `FACT_SHEET_POSITION`, `FACT_SHEET_SUPPORTERS_PLACEHOLDER`, plus `STRATEGIC_FIVE_POINTS` and selected `FAQ_ADVOCACY` items. The web page at `/fact-sheet` renders this content.
+- **Rule:** Fact sheet copy must match these constants and `docs/advocacy/focused-next-steps-1-2-4-5-6.md` §5. Do not invent.
+
+### 5. FAQs
 
 - **Where:** `content.py` — `FAQ_LAW` and `FAQ_ADVOCACY` (The Issue: law/registration + advocacy/how we work), `FAQ_LEGISLATORS` (legislator brief)
 - **Rule:** FAQ answers and sources come only from these. Do not add new Q&A unless the user provides the wording or you add it to content.py and the user approves.
 
-### 5. State table, bills, documents, sources
+### 6. State table, bills, documents, sources
 
 - **Where:** `content.py` — `BRIEF_STATE_STATUS`, `BRIEF_BILLS_PASSED`, `BRIEF_BILLS_CURRENT`, `BRIEF_SOURCES`, `BRIEF_DOCUMENTS`
 - **Rule:** Any state/bill/source list or doc link must come from these. Do not invent states, bill titles, or URLs.
@@ -49,6 +55,7 @@ This doc defines the **approved sources** for all substantive content on the sit
 - **Strategic message:** Edit `STRATEGIC_MISSION`, `STRATEGIC_VISION`, `STRATEGIC_SUCCESS_MEASURE`, `STRATEGIC_FIVE_POINTS` in content.py.
 - **Legislator brief:** Edit `IL_Kei_Vehicle_Registration_Fix_Brief 1.txt` in the repo root. The legislator brief page reads it at request time. Keep the PDF in sync for downloads.
 - **Constituent brief:** Edit `Illinois_Kei_Vehicle_Registration_Constituent_Brief.txt` in the repo root. The Issue page narrative reads it at request time. Keep the PDF in sync for downloads.
+- **Fact sheet:** Edit `FACT_SHEET_ISSUE`, `FACT_SHEET_POSITION`, `FACT_SHEET_SUPPORTERS_PLACEHOLDER` in content.py. The `/fact-sheet` page renders this; for the sidebar document, place a PDF at `src/ilga_graph/static/advocacy/Kei_Registration_Fact_Sheet.pdf` (e.g. print /fact-sheet to PDF).
 - **FAQs:** Edit `FAQ_LAW`, `FAQ_ADVOCACY`, and `FAQ_LEGISLATORS` in content.py.
 
 ## For the AI

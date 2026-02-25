@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Fact sheet — {{ site_name }}{% endblock %}
+{% block body_class %}page-fact-sheet{% endblock %}
+{% block meta_description %}One-page fact sheet for volunteers: kei vehicle registration in Illinois, our position, five points to remember, and FAQs.{% endblock %}
+
+{% block content %}
+<div class="fact-sheet legal-page">
+    <header class="fact-sheet-header" aria-label="Fact sheet title and purpose">
+        <h1 class="fact-sheet-title">Kei Vehicle Registration in Illinois — Fact Sheet for Volunteers</h1>
+        <p class="fact-sheet-intro">Stay on message. Use this page to share the issue, our position, and five points with volunteers and supporters.</p>
+    </header>
+
+    <div class="fact-sheet-main">
+        <section class="fact-sheet-section" aria-labelledby="fact-issue-heading">
+            <h2 id="fact-issue-heading">The issue</h2>
+            <p>{{ fact_sheet_issue }}</p>
+        </section>
+
+        <section class="fact-sheet-section" aria-labelledby="fact-position-heading">
+            <h2 id="fact-position-heading">Our position</h2>
+            <p>{{ fact_sheet_position }}</p>
+        </section>
+
+        <section class="fact-sheet-section" aria-labelledby="fact-points-heading">
+            <h2 id="fact-points-heading">Five points to remember (stay on message)</h2>
+            <ol class="fact-sheet-points-list" role="list">
+                {% for point in strategic_five_points %}
+                <li class="fact-sheet-points-item">{{ point }}</li>
+                {% endfor %}
+            </ol>
+        </section>
+
+        <section class="fact-sheet-section" aria-labelledby="fact-supporters-heading">
+            <h2 id="fact-supporters-heading">Supporters</h2>
+            <p class="fact-sheet-placeholder">{{ fact_sheet_supporters_placeholder }}</p>
+        </section>
+
+        <section class="fact-sheet-section fact-sheet-faq" aria-labelledby="fact-faq-heading">
+            <h2 id="fact-faq-heading">Five FAQs for volunteers</h2>
+            <dl class="fact-sheet-faq-list">
+                {% for item in fact_sheet_faq_items %}
+                <div class="fact-sheet-faq-item">
+                    <dt id="faq-{{ item.id }}"><strong>{{ item.question }}</strong></dt>
+                    <dd aria-labelledby="faq-{{ item.id }}">{{ item.answer }}</dd>
+                </div>
+                {% endfor %}
+            </dl>
+        </section>
+
+        <section class="fact-sheet-section" aria-labelledby="fact-links-heading">
+            <h2 id="fact-links-heading">Links</h2>
+            <ul class="fact-sheet-links" role="list">
+                <li><a href="/the-issue">The Issue</a> (constituent narrative)</li>
+                <li><a href="/legislator-brief">Legislator brief</a> (one-pager)</li>
+                <li><a href="/advocacy/">Advocacy tool</a> (find your legislators, call/email)</li>
+            </ul>
+        </section>
+    </div>
+</div>
+{% endblock %}

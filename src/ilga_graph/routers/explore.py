@@ -12,6 +12,7 @@ from .. import config as cfg
 from ..app_state import state
 from ..constants import CATEGORY_CHOICES, CATEGORY_COMMITTEES
 from ..member_lookup import find_member_by_district
+from ..routers.content import STRATEGIC_FIVE_POINTS
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
 router = APIRouter()
@@ -28,6 +29,8 @@ templates.env.globals["show_beta_banner"] = cfg.BETA_BANNER
 templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
 templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
+templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
+templates.env.globals["features"] = cfg.get_client_features()
 
 
 @router.get("/explore")

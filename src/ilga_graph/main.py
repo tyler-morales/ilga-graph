@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 import logging
 import random
 import sys
+import time
 
 import strawberry
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -98,6 +100,7 @@ templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
 templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
+templates.env.globals["features"] = cfg.get_client_features()
 
 
 def _wants_html(request: Request) -> bool:
@@ -242,6 +245,32 @@ async def _validation_exception_handler(request: Request, exc: RequestValidation
 
 async def _uncaught_exception_handler(request: Request, exc: Exception) -> Response:
     LOGGER.exception("Uncaught exception while handling %s %s", request.method, request.url.path)
+    # #region agent log
+    try:
+        import traceback
+
+        with open("/Users/tyler/Projects/Code/hardball/.cursor/debug-93f598.log", "a") as _f:
+            _f.write(
+                json.dumps(
+                    {
+                        "sessionId": "93f598",
+                        "hypothesisId": "500_cause",
+                        "location": "main.py:uncaught_exception",
+                        "message": "500 exception details",
+                        "data": {
+                            "path": request.url.path,
+                            "exc_type": type(exc).__name__,
+                            "exc_msg": str(exc)[:200],
+                            "tb": traceback.format_exc()[-1500:],
+                        },
+                        "timestamp": int(time.time() * 1000),
+                    }
+                )
+                + "\n"
+            )
+    except Exception:  # noqa: S110
+        pass
+    # #endregion
     if _wants_html(request):
         return templates.TemplateResponse("500.html", {"request": request}, status_code=500)
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
