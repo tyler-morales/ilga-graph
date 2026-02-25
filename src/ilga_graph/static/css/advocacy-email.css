@@ -27,6 +27,7 @@
 .gmail-toolbar-title {
   font-size: var(--font-size-label);
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .gmail-toolbar-steps {
@@ -1138,6 +1139,10 @@
   .gmail-toolbar-steps {
     flex-wrap: nowrap;
     justify-content: flex-end;
+  }
+
+  .guide-step-counter {
+    display: none;
   }
 
   .gmail-action-bar {
