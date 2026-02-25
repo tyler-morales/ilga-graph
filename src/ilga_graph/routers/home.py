@@ -12,6 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import config as cfg
 from ..db import get_db
 from ..routers.advocacy import DEFAULT_HERO_ZIP, _hero_context
+from ..routers.content import (
+    STRATEGIC_FIVE_POINTS,
+    STRATEGIC_MISSION,
+    STRATEGIC_VISION,
+)
 from ..routers.outreach import get_outreach_aggregate
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -52,5 +57,8 @@ async def home(
         "calls_total": calls_total,
         "calls_this_week": calls_this_week,
         "zip": (cfg.DEV_MODE and DEFAULT_HERO_ZIP) or "",
+        "strategic_mission": STRATEGIC_MISSION,
+        "strategic_vision": STRATEGIC_VISION,
+        "strategic_five_points": STRATEGIC_FIVE_POINTS,
     }
     return templates.TemplateResponse("home.html", ctx)

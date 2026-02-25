@@ -5,6 +5,7 @@
     <header class="legislator-brief-header" aria-label="Page title and introduction">
         <h1>{% block brief_title %}{% endblock %}</h1>
         <div class="legal-page-intro">{% block brief_intro %}{% endblock %}</div>
+        {% block brief_header_after %}{% endblock %}
     </header>
 
     <div class="legislator-brief-main legislator-brief-main--grid">

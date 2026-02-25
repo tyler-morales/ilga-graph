@@ -1,0 +1,27 @@
+---
+description: Use the Hardball spec (docs/hardball-spec/) as source of truth when planning features, bugs, or writing code
+alwaysApply: true
+---
+
+# Hardball Spec as Source of Truth
+
+The project’s product and advocacy behavior are defined by **Hardball Lobbying for Nonprofits** (Barry Hessenius). The content is chunked in `docs/hardball-spec/`.
+
+## What to do
+
+- **Planning features or fixing bugs:** Before proposing changes that touch advocacy, lobbying, legislator outreach, coalitions, or “making the case,” read the relevant chunk(s) from `docs/hardball-spec/` (see the README there for which chunk to use).
+- **When writing code:** Align behavior with the spec. For example: framing the issue (Ch 7), 501(c)(3)/501(h)/PAC/527 distinctions (Ch 4), decision-making and pay-to-play (Ch 3), managing the lobbying effort (Ch 6).
+- **When in doubt:** Prefer definitions and processes from the spec over generic or assumed behavior. Cite the chunk (and optionally a short quote) when a decision comes from the spec.
+- **Content vs process:** Use the Hardball spec to decide *whether* to do something (e.g. add a key points section). Use **canonical sources only** for *what* the content says (see rule no-hallucination-content and docs/canonical/README.md). Never invent copy or key points.
+
+## Chunk index
+
+- `00-foreword.md` — Lobbying as core function; 501c(4), PAC, 527.
+- `01-introduction.md` — Why nonprofit lobbying matters for democracy.
+- `02-ch1-framing-context.md` — Advocacy vs lobbying; coalitions; hardball vs softball.
+- `04-ch3-decision-making.md` — How decisions get made; money; who to influence.
+- `05-ch4-advocacy-law.md` — Legal framework (501(c)(3), 501(h), 501(c)(4), PAC, 527).
+- `07-ch6-managing-lobbying.md` — Roles and structure (ED, comms, volunteers, media).
+- `08-ch7-influencing-process.md` — Objectives, strategy, framing, making the case, timeline.
+
+Full index: `docs/hardball-spec/README.md`.

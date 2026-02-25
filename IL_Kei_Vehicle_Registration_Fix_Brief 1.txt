@@ -1,0 +1,32 @@
+Illinois Kei Vehicle Registration: A Narrow Statutory Fix to Clarify 625 ILCS 5/3-401(c-1)
+Two-page briefing for Illinois legislators and staff (as of 2026-02-19).
+
+Issue in one sentence: Illinois is treating Kei vehicles that are lawfully imported under federal rules as off- highway/non-highway based on an interpretation of 625 ILCS 5/3-401(c-1)-blocking normal titling and registration for road use.
+
+Core ambiguity: SOS reads "manufactured for operation on highways" as "manufactured for U.S. highways."
+
+
+What the Secretary of State is relying on (current posture)
+The Secretary of State has pointed to 625 ILCS 5/3-401(c-1), which says a vehicle may not be registered unless it: 1) was originally manufactured for operation on highways; 2) is a modification of a vehicle originally manufactured for operation on highways; or 3) was assembled from component parts designed for highway vehicles.
+We are not disputing SOS's authority to enforce the Vehicle Code; we are asking the General Assembly to clarify how highway-built imported vehicles fit within it.
+Key takeaway: Under the SOS's own framing, the barrier is not a paperwork glitch-it's a statutory clarity gap. In practice, states that allow ongoing registration generally do so through explicit statutory authorization and/ or documented agency policy.
+
+Why a narrowly tailored statute is the most direct fix
+Illinois can keep existing safety and equipment enforcement intact while clarifying that a foreign- manufactured vehicle originally designed for highway use (in another country) can be titled/registered here when it is lawfully imported under federal rules (often via the 25-year NHTSA exemption; emissions requirements still apply).
+
+Proposed legislative concept (drafting direction)
+Add a targeted clarification to 625 ILCS 5/3-401(c-1) (or a related definitional section) so that a vehicle may be registered if it was originally manufactured for operation on highways in any jurisdiction and is legally importable into the United States under federal law (commonly 25+ years). Eligibility would still require normal Illinois titling documentation, insurance, and compliance with Illinois equipment and traffic laws.
+Policy posture: We are asking for normal registration for highway-built Kei vehicles. If operating limits are desired, they should be narrowly tailored and evidence-based-not achieved by categorizing all highway-built Kei vehicles as off-highway.
+
+What we are asking your office to do
+1) Help identify the best legislative vehicle and sponsor path (Transportation / Vehicle Code).
+2) Facilitate a staff-level meeting with SOS legal/policy to confirm what statutory language would satisfy their interpretation.
+3) If supportive, commit to carry or co-sponsor a narrowly drafted fix in the next filing window.
+Attachments
+- State-by-state authorization approaches (next page)
+- A short one-page summary for quick internal sharing
+- Examples of SOS denial/revocation letters
+
+Illinois statutory reference: 625 ILCS 5/3-401(c-1) (text available via ILGA).
+
+Point of contact: Tyler Morales, 773 318 8539, tyler@tylermorales.pro

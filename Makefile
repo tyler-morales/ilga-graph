@@ -54,10 +54,10 @@ scrape-full: ## Full reset: delete cache/, then scrape all members (~177) + full
 	$(MAKE) scrape FRESH=1 FULL=1
 
 dev: ## Serve from cache (dev mode, auto-reload)
-	ILGA_LOAD_ONLY=1 ILGA_PROFILE=dev $(BIN)uvicorn ilga_graph.main:app --reload --app-dir src
+	ILGA_LOAD_ONLY=1 ILGA_PROFILE=dev $(PYTHON) -m uvicorn ilga_graph.main:app --reload --app-dir src
 
 serve: ## Serve from cache (prod mode)
-	ILGA_LOAD_ONLY=1 ILGA_PROFILE=prod $(BIN)uvicorn ilga_graph.main:app --app-dir src
+	ILGA_LOAD_ONLY=1 ILGA_PROFILE=prod $(PYTHON) -m uvicorn ilga_graph.main:app --app-dir src
 
 dev-reset: ## Clear dev cache (next make dev uses mocks/dev seed data)
 	rm -rf cache/dev

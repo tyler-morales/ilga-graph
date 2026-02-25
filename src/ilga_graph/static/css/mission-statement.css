@@ -55,6 +55,14 @@
   text-align: left;
 }
 
+.mission-statement-vision {
+  font-family: Georgia, "Times New Roman", "Liberation Serif", serif;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  color: #333;
+  margin: 0;
+}
+
 .mission-statement-attribution {
   font-size: 1.25rem;
   font-weight: 600;

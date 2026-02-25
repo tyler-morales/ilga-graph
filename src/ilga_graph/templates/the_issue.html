@@ -2,45 +2,84 @@
 {% block title %}The Issue — {{ site_name }}{% endblock %}
 {% block brief_title %}Illinois Kei Vehicle Registration{% endblock %}
 {% block brief_intro %}
-<p>Illinois is currently treating lawfully imported kei vehicles as &lsquo;off-highway&rsquo; vehicles, so owners cannot register them for normal road use. Here&rsquo;s what residents need to know and what you can do.</p>
+<p>{% if constituent_brief and constituent_brief.sections and constituent_brief.sections[0].paragraphs %}{{ constituent_brief.sections[0].paragraphs[0] }}{% else %}Illinois is currently treating lawfully imported kei vehicles as &lsquo;off-highway&rsquo; vehicles, so owners cannot register them for normal road use. Here&rsquo;s what residents need to know and what you can do.{% endif %}</p>
 {% endblock %}
 {% block brief_layout_class %}{% endblock %}
 {% block brief_main_heading %}What Illinois Residents Need to Know{% endblock %}
 {% block brief_main %}
-    <section aria-labelledby="issue-plain">
-        <h2 id="issue-plain">The Issue in Plain English</h2>
-        <p>Illinois is currently treating lawfully imported kei vehicles as &lsquo;off-highway&rsquo; vehicles, which means owners cannot register them for normal road use. This is not because the vehicles were illegally imported, and not because owners failed inspection or insurance requirements. It is based on how Illinois is interpreting <strong>625 ILCS 5/3-401(c-1)</strong>.</p>
+    {% if strategic_five_points %}
+    <section class="strategic-points strategic-points--issue" id="issue-key-points" aria-labelledby="issue-key-points-heading">
+        <h2 id="issue-key-points-heading">Key points</h2>
+        <ul class="strategic-points-list" role="list">
+            {% for point in strategic_five_points %}
+            <li class="strategic-points-item">{{ point }}</li>
+            {% endfor %}
+        </ul>
     </section>
+    {% endif %}
+    <section aria-labelledby="issue-legislation-heading">
+        <h2 id="issue-legislation-heading">Current legislation in Illinois</h2>
+        {% if constituent_brief %}
+        {% for sec in constituent_brief.sections %}
+        <section aria-labelledby="issue-sec-{{ loop.index }}">
+            <h3 id="issue-sec-{{ loop.index }}">{{ sec.heading }}</h3>
+            {% if sec.heading == 'The Narrow Fix' and strategic_vision %}
+            <p class="strategic-vision-callout"><strong>Our vision:</strong> {{ strategic_vision }}</p>
+            {% endif %}
+            {% for p in sec.paragraphs %}<p>{{ p }}</p>{% endfor %}
+            {% if sec.bullets %}
+            <ul role="list">
+                {% for b in sec.bullets %}<li>{{ b }}</li>{% endfor %}
+            </ul>
+            {% endif %}
+        </section>
+        {% endfor %}
+        {% else %}
+        <section aria-labelledby="issue-plain">
+            <h3 id="issue-plain">The Issue in Plain English</h3>
+            <p>Illinois is currently treating lawfully imported kei vehicles as &lsquo;off-highway&rsquo; vehicles, which means owners cannot register them for normal road use. This is not because the vehicles were illegally imported, and not because owners failed inspection or insurance requirements. It is based on how Illinois is interpreting <strong>625 ILCS 5/3-401(c-1)</strong>.</p>
+        </section>
 
-    <section aria-labelledby="issue-why-happening">
-        <h2 id="issue-why-happening">Why This Is Happening</h2>
-        <p>Under federal law, vehicles that are 25 years old or older may be legally imported into the United States under established federal pathways. However, Illinois registration is controlled at the state level. The Secretary of State has cited 625 ILCS 5/3-401(c-1), which restricts registration eligibility based on how a vehicle was originally manufactured for highway use. The current interpretation treats that phrase as meaning &lsquo;manufactured for U.S. highways.&rsquo;</p>
-    </section>
+        <section aria-labelledby="issue-why-happening">
+            <h3 id="issue-why-happening">Why This Is Happening</h3>
+            <p>Under federal law, vehicles that are 25 years old or older may be legally imported into the United States under established federal pathways. However, Illinois registration is controlled at the state level. The Secretary of State has cited 625 ILCS 5/3-401(c-1), which restricts registration eligibility based on how a vehicle was originally manufactured for highway use. The current interpretation treats that phrase as meaning &lsquo;manufactured for U.S. highways.&rsquo;</p>
+        </section>
 
-    <section aria-labelledby="issue-means">
-        <h2 id="issue-means">What This Means for Residents</h2>
-        <p>Registrations have been denied or revoked. Titles have been branded &lsquo;Not Eligible for Registration.&rsquo; Some owners have been instructed to surrender license plates. Contesting a decision requires a formal administrative hearing and filing fee.</p>
-    </section>
+        <section aria-labelledby="issue-means">
+            <h3 id="issue-means">What This Means for Residents</h3>
+            <p>Registrations have been denied or revoked. Titles have been branded &lsquo;Not Eligible for Registration.&rsquo; Some owners have been instructed to surrender license plates. Contesting a decision requires a formal administrative hearing and filing fee.</p>
+        </section>
 
-    <section aria-labelledby="issue-not-about">
-        <h2 id="issue-not-about">What This Is NOT About</h2>
-        <p>This is not about weakening safety laws or bypassing insurance requirements. Illinois would continue to enforce equipment requirements, insurance requirements, titling documentation, and traffic laws. The request is simply for normal registration eligibility.</p>
-    </section>
+        <section aria-labelledby="issue-not-about">
+            <h3 id="issue-not-about">What This Is NOT About</h3>
+            <p>This is not about weakening safety laws or bypassing insurance requirements. Illinois would continue to enforce equipment requirements, insurance requirements, titling documentation, and traffic laws. The request is simply for normal registration eligibility.</p>
+        </section>
 
-    <section aria-labelledby="issue-fix">
-        <h2 id="issue-fix">The Narrow Fix</h2>
-        <p>The General Assembly can clarify that a vehicle originally manufactured for highway use in any jurisdiction, and legally importable under federal law, may be titled and registered in Illinois under normal road-use conditions. This preserves enforcement authority while resolving ambiguity in 625 ILCS 5/3-401(c-1).</p>
-    </section>
+        <section aria-labelledby="issue-fix">
+            <h3 id="issue-fix">The Narrow Fix</h3>
+            {% if strategic_vision %}
+            <p class="strategic-vision-callout"><strong>Our vision:</strong> {{ strategic_vision }}</p>
+            {% endif %}
+            <p>The General Assembly can clarify that a vehicle originally manufactured for highway use in any jurisdiction, and legally importable under federal law, may be titled and registered in Illinois under normal road-use conditions. This preserves enforcement authority while resolving ambiguity in 625 ILCS 5/3-401(c-1).</p>
+        </section>
 
-    <section aria-labelledby="issue-matters">
-        <h2 id="issue-matters">Why This Matters</h2>
-        <p>Clear law protects residents. When statutory language is ambiguous, regular people absorb the consequences. This issue is about fairness, predictability, and consistent application of Illinois law.</p>
-    </section>
+        <section aria-labelledby="issue-matters">
+            <h3 id="issue-matters">Why This Matters</h3>
+            <p>Clear law protects residents. When statutory language is ambiguous, regular people absorb the consequences. This issue is about fairness, predictability, and consistent application of Illinois law.</p>
+        </section>
+        {% endif %}
 
-    <section aria-labelledby="issue-other-states">
-        <h2 id="issue-other-states">Where Other States Stand</h2>
-        <p>Many states already allow kei vehicle registration—by passing laws or updating policy. The map and table below show where laws have passed, where bills are in progress, and where agencies have allowed registration without a new law.</p>
-        <div class="brief-states-view" data-view="map" data-state-status="{{ brief_state_map_status_json }}">
+        <section aria-labelledby="issue-other-states">
+            <h3 id="issue-other-states">Where Other States Stand</h3>
+            <p>Many states already allow kei vehicle registration—by passing laws or updating policy. The map and table below show where laws have passed, where bills are in progress, and where agencies have allowed registration without a new law.</p>
+        <div class="brief-states-view" data-view="map" data-state-status="{{ brief_state_map_status_json }}"
+            data-aamva-fix-abbrs="{{ brief_aamva_fix_state_abbrs_json|default('[]') }}">
+            <div class="brief-states-filter-toggle" role="group" aria-label="Filter by legal to register or countered AAMVA">
+                <button type="button" class="brief-states-filter-btn brief-states-filter-btn--active" data-filter="all"
+                    aria-pressed="true" aria-controls="issue-view-map issue-view-table">All legal to register</button>
+                <button type="button" class="brief-states-filter-btn" data-filter="aamva"
+                    aria-pressed="false" aria-controls="issue-view-map issue-view-table">Countered AAMVA</button>
+            </div>
             <div class="brief-states-view-toggle" role="group" aria-label="View as map or table">
                 <button type="button" class="brief-states-view-btn brief-states-view-btn--active" data-view="map"
                     aria-pressed="true" aria-controls="issue-view-map issue-view-table">Map</button>
@@ -50,7 +89,7 @@
             <div class="brief-states-view-panel brief-states-view-panel--map" id="issue-view-map" role="region"
                 aria-label="Map view">
                 <div class="brief-us-map-wrap" role="img"
-                    aria-label="United States map. States with kei bills passed into law shown in green; states with bills in progress in orange; states with policy changes in blue; others in gray.">
+                    aria-label="United States map. States with kei bills passed in green; bills in progress in orange; policy change in blue; restricted (antique/speed cap) in yellow; others in gray.">
                     <div class="brief-us-map" title="US states by bill status" aria-hidden="true"></div>
                 </div>
                 <p class="brief-map-legend" role="region" aria-label="Map legend">
@@ -60,6 +99,8 @@
                             aria-hidden="true"></span> Bill in progress</span>
                     <span class="brief-map-legend-item"><span class="brief-map-swatch brief-map-swatch--policy"
                             aria-hidden="true"></span> Policy change</span>
+                    <span class="brief-map-legend-item"><span class="brief-map-swatch brief-map-swatch--restricted"
+                            aria-hidden="true"></span> Restricted</span>
                 </p>
             </div>
             <div class="brief-states-view-panel brief-states-view-panel--table" id="issue-view-table" role="region"
@@ -74,14 +115,19 @@
                                 <th scope="col" class="brief-table-col-indicator" title="Administrative policy change">Policy</th>
                                 <th scope="col">How</th>
                                 <th scope="col">Effective</th>
+                                <th scope="col" class="brief-table-col-indicator" title="Max speed or route restricted (e.g. 55 mph or no Interstates)">Speed</th>
+                                <th scope="col" class="brief-table-col-indicator" title="State reversed a prior ban (e.g. AAMVA-driven) or passed explicit kei/mini law">AAMVA fix</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for s in brief_state_status|default([]) %}
-                            <tr>
+                            <tr data-aamva-fix="{{ 'true' if s.get('aamva_fix') else 'false' }}">
                                 <td data-label="State">{{ s.state }}</td>
                                 <td data-label="Bill" class="brief-table-cell-indicator">
-                                    {% if s.bill_status == 'passed' %}
+                                    {% if s.get('restricted') %}
+                                    <span class="brief-table-indicator brief-table-indicator--restricted" role="img"
+                                        aria-label="Restricted use (e.g. antique/collector or speed cap)">Restricted</span>
+                                    {% elif s.bill_status == 'passed' %}
                                     <span class="brief-table-indicator brief-table-indicator--yes" role="img"
                                         aria-label="Has bill: yes">✓</span>
                                     {% elif s.bill_status == 'pending' %}
@@ -103,6 +149,24 @@
                                 </td>
                                 <td data-label="How">{{ s.mechanism }}</td>
                                 <td data-label="Effective">{{ s.status }}</td>
+                                <td data-label="Speed" class="brief-table-cell-indicator">
+                                    {% if s.get('speed_limited') %}
+                                    <span class="brief-table-indicator brief-table-indicator--yes" role="img"
+                                        aria-label="Max speed or route limited">Limited</span>
+                                    {% else %}
+                                    <span class="brief-table-indicator brief-table-indicator--no" role="img"
+                                        aria-label="No speed limit restriction">—</span>
+                                    {% endif %}
+                                </td>
+                                <td data-label="AAMVA fix" class="brief-table-cell-indicator">
+                                    {% if s.get('aamva_fix') %}
+                                    <span class="brief-table-indicator brief-table-indicator--yes" role="img"
+                                        aria-label="Countered AAMVA: reversed prior ban or passed explicit kei law">✓</span>
+                                    {% else %}
+                                    <span class="brief-table-indicator brief-table-indicator--no" role="img"
+                                        aria-label="Not an AAMVA-fix state">—</span>
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -115,27 +179,21 @@
                             aria-hidden="true">●</span> Bill in progress</span>
                     <span class="brief-table-legend-item"><span class="brief-table-indicator brief-table-indicator--no"
                             aria-hidden="true">—</span> No bill or policy change</span>
+                    <span class="brief-table-legend-item"><span class="brief-table-indicator brief-table-indicator--restricted"
+                            aria-hidden="true">Restricted</span> Antique/collector or speed/radius cap only.</span>
+                    <span class="brief-table-legend-item">Speed: <strong>Limited</strong> = max speed or route restricted (e.g. 55&nbsp;mph or no Interstates).</span>
+                    <span class="brief-table-legend-item"><strong>AAMVA fix</strong> = state reversed a prior ban (e.g. AAMVA-driven) or passed explicit kei/mini law (CO, TX, MI, MA, OR, ME).</span>
                 </p>
             </div>
         </div>
-    </section>
+        </section>
 
-    <section aria-labelledby="issue-action">
-        <h2 id="issue-action">What You Can Do</h2>
-        <ul class="content-list" role="list">
-            <li>Contact your Illinois State Representative and State Senator.</li>
-            <li>Ask them to support a narrow statutory clarification to 625 ILCS 5/3-401(c-1).</li>
-            <li>Encourage them to meet with the Secretary of State&rsquo;s office to confirm language that resolves the ambiguity while preserving safety and insurance requirements.</li>
-        </ul>
-        <p><a href="/advocacy/" class="content-cta">Find your legislators and start outreach</a></p>
-    </section>
-
-    {% if faq %}
-    <section class="brief-faq" aria-labelledby="issue-faq-heading">
-        <h2 id="issue-faq-heading">{{ faq.title }}</h2>
-        {% if faq.intro %}<p class="brief-faq__intro">{{ faq.intro }}</p>{% endif %}
+    {% if faq_law %}
+    <section class="brief-faq" aria-labelledby="issue-faq-law-heading">
+        <h2 id="issue-faq-law-heading">{{ faq_law.title }}</h2>
+        {% if faq_law.intro %}<p class="brief-faq__intro">{{ faq_law.intro }}</p>{% endif %}
         <div class="brief-faq__list">
-            {% for item in faq['items'] %}
+            {% for item in faq_law['items'] %}
             <details class="brief-faq__item" id="issue-faq-{{ item.id }}">
                 <summary class="brief-faq__question">{{ item.question }}</summary>
                 <div class="brief-faq__answer">
@@ -154,6 +212,45 @@
         </div>
     </section>
     {% endif %}
+    </section>
+
+    <section aria-labelledby="issue-advocacy-heading">
+        <h2 id="issue-advocacy-heading">Advocacy &amp; how you can help</h2>
+        <section aria-labelledby="issue-action">
+            <h3 id="issue-action">What You Can Do</h3>
+            <ul class="content-list" role="list">
+                <li>Contact your Illinois State Representative and State Senator.</li>
+                <li>Ask them to support a narrow statutory clarification to 625 ILCS 5/3-401(c-1).</li>
+                <li>Encourage them to meet with the Secretary of State&rsquo;s office to confirm language that resolves the ambiguity while preserving safety and insurance requirements.</li>
+            </ul>
+            <p><a href="/advocacy/" class="content-cta">Find your legislators and start outreach</a></p>
+        </section>
+
+    {% if faq_advocacy %}
+    <section class="brief-faq" aria-labelledby="issue-faq-advocacy-heading">
+        <h2 id="issue-faq-advocacy-heading">{{ faq_advocacy.title }}</h2>
+        {% if faq_advocacy.intro %}<p class="brief-faq__intro">{{ faq_advocacy.intro }}</p>{% endif %}
+        <div class="brief-faq__list">
+            {% for item in faq_advocacy['items'] %}
+            <details class="brief-faq__item" id="issue-faq-advocacy-{{ item.id }}">
+                <summary class="brief-faq__question">{{ item.question }}</summary>
+                <div class="brief-faq__answer">
+                    <p>{{ item.answer }}</p>
+                    {% if item.sources %}
+                    <p class="brief-faq__sources-label">Sources:</p>
+                    <ul class="brief-faq__sources" role="list">
+                        {% for src in item.sources %}
+                        <li><a href="{{ src.url }}" target="_blank" rel="noopener noreferrer" class="brief-faq__source-link">{{ src.label }}</a></li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+            </details>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+    </section>
 {% endblock %}
 {% block brief_sidebar %}
 <aside class="legislator-brief-sidebar" aria-labelledby="issue-brief-documents-heading">
@@ -201,11 +298,18 @@
         if (!statusJson) return;
         var status;
         try { status = JSON.parse(statusJson); } catch (e) { return; }
+        var aamvaJson = viewEl.getAttribute('data-aamva-fix-abbrs') || '[]';
+        var aamvaSet = {};
+        try {
+            var arr = JSON.parse(aamvaJson);
+            for (var a = 0; a < arr.length; a++) { aamvaSet[arr[a].toLowerCase()] = true; }
+        } catch (e) {}
+        var currentFilter = 'all';
         var wrap = viewEl.querySelector('.brief-us-map-wrap');
         var container = wrap ? wrap.querySelector('.brief-us-map') : null;
         var root = document.querySelector('.legislator-brief') || document.documentElement;
         var styles = root && root.getRootNode ? getComputedStyle(root) : getComputedStyle(document.documentElement);
-        var defaultFills = { passed: '#086508', pending: '#e87700', policy: '#1a6fb5', none: '#d0d0d0' };
+        var defaultFills = { passed: '#086508', pending: '#e87700', policy: '#1a6fb5', restricted: '#e6c200', none: '#d0d0d0' };
         function getFill(name) {
             var val = styles.getPropertyValue('--brief-color-' + name);
             return (val && val.trim()) || defaultFills[name];
@@ -214,18 +318,40 @@
             passed: getFill('passed'),
             pending: getFill('pending'),
             policy: getFill('policy'),
+            restricted: getFill('restricted'),
             none: getFill('none')
         };
-        function applyFills(svg) {
+        function applyFills(svg, filter) {
             if (!svg) return;
+            var onlyAamva = filter === 'aamva';
             var paths = svg.querySelectorAll('path[class]');
             for (var i = 0; i < paths.length; i++) {
                 var path = paths[i];
                 var cls = (path.getAttribute('class') || '').trim().split(/\s+/)[0];
-                if (status[cls] !== undefined) {
-                    path.style.fill = fills[status[cls]] || fills.none;
+                if (cls.indexOf('-') >= 0) continue;
+                var fillColor;
+                if (onlyAamva && !aamvaSet[cls]) {
+                    fillColor = fills.none;
+                } else if (status[cls] !== undefined) {
+                    fillColor = fills[status[cls]] || fills.none;
+                } else {
+                    continue;
                 }
+                path.style.fill = fillColor;
+                path.style.stroke = fillColor;
+                path.style.strokeWidth = '0.5';
             }
+        }
+        function applyFilter(filter) {
+            currentFilter = filter;
+            var rows = viewEl.querySelectorAll('.legislator-brief-states-table tbody tr');
+            for (var r = 0; r < rows.length; r++) {
+                var row = rows[r];
+                var isAamva = row.getAttribute('data-aamva-fix') === 'true';
+                row.style.display = (filter === 'aamva' && !isAamva) ? 'none' : '';
+            }
+            var svg = container ? container.querySelector('svg') : null;
+            if (svg) applyFills(svg, filter);
         }
         if (container) {
             fetch('/static/images/us-states.svg')
@@ -238,10 +364,26 @@
                         svg.setAttribute('viewBox', '0 0 959 593');
                         svg.removeAttribute('width');
                         svg.removeAttribute('height');
-                        applyFills(svg);
+                        applyFills(svg, currentFilter);
                     }
                 })
                 .catch(function () { });
+        }
+        var filterBtns = viewEl.querySelectorAll('.brief-states-filter-btn');
+        for (var f = 0; f < filterBtns.length; f++) {
+            filterBtns[f].addEventListener('click', function () {
+                var filter = this.getAttribute('data-filter');
+                if (!filter) return;
+                viewEl.setAttribute('data-filter', filter);
+                var btns = viewEl.querySelectorAll('.brief-states-filter-btn');
+                for (var k = 0; k < btns.length; k++) {
+                    var btn = btns[k];
+                    var isActive = btn.getAttribute('data-filter') === filter;
+                    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                    btn.classList.toggle('brief-states-filter-btn--active', isActive);
+                }
+                applyFilter(filter);
+            });
         }
         var toggles = viewEl.querySelectorAll('.brief-states-view-btn');
         for (var j = 0; j < toggles.length; j++) {

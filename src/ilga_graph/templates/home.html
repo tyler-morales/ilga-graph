@@ -8,6 +8,16 @@
 {% include "_hero_home.html" %}
 {% include "_whats_happening.html" %}
 {% include "_mission_statement.html" %}
+{% if strategic_five_points %}
+<section class="strategic-points" id="strategic-points" aria-labelledby="strategic-points-heading">
+    <h2 class="strategic-points-heading" id="strategic-points-heading">Our message in 5 points</h2>
+    <ul class="strategic-points-list" role="list">
+        {% for point in strategic_five_points %}
+        <li class="strategic-points-item">{{ point }}</li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
 {% include "_mission_cta.html" %}
 {% include "_share_section.html" %}
 {% endblock %}

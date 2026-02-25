@@ -801,6 +801,111 @@ a:visited {
   list-style-position: inside;
 }
 
+/* Legislator brief: above-the-fold CTA (endorse / sponsor / get in touch). */
+.legislator-brief-cta {
+  margin-top: 1.5rem;
+  padding: 1.25rem 1.25rem 1.5rem;
+  background: linear-gradient(135deg, #fef7ed 0%, #fffbeb 100%);
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(180, 83, 9, 0.08);
+}
+
+.legislator-brief-cta__heading {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #92400e;
+}
+
+.legislator-brief-cta__copy {
+  margin: 0 0 1rem;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: #78350f;
+}
+
+.legislator-brief-cta__copy a {
+  color: var(--color-hero-cta, #b45309);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.legislator-brief-cta__copy a:hover {
+  color: #92400e;
+}
+
+.legislator-brief-cta__copy a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-hero-cta-focus-ring, rgba(180, 83, 9, 0.4));
+  border-radius: 2px;
+}
+
+.legislator-brief-cta__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.legislator-brief-cta__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.legislator-brief-cta__btn--primary {
+  background: var(--color-hero-cta, #b45309);
+  color: #fff;
+  border: 2px solid transparent;
+}
+
+.legislator-brief-cta__btn--primary:hover {
+  background: #92400e;
+  color: #fff;
+}
+
+.legislator-brief-cta__btn--primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-hero-cta-focus-ring, rgba(180, 83, 9, 0.5));
+}
+
+/* Point of contact section: card treatment so it stands out when scrolling. */
+.brief-contact {
+  padding: 1.25rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.brief-contact h2 {
+  margin-top: 0;
+}
+
+.brief-contact p {
+  margin-bottom: 0.5rem;
+}
+
+.brief-contact a[href^="tel:"],
+.brief-contact a[href^="mailto:"] {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.brief-contact a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(26, 13, 171, 0.35);
+  border-radius: 2px;
+}
+
 /* FAQ section at end of brief main content (the-issue, legislator-brief). */
 .brief-faq {
   margin-top: 2rem;
@@ -1389,6 +1494,7 @@ ML Intelligence Dashboard
   --brief-color-passed: #086508;
   --brief-color-pending: #e87700;
   --brief-color-policy: #1a6fb5;
+  --brief-color-restricted: #e6c200;
   --brief-color-none: #d0d0d0;
 }
 
@@ -1401,12 +1507,50 @@ ML Intelligence Dashboard
   color: var(--brief-color-pending, #e87700);
 }
 
+.brief-table-indicator--restricted {
+  color: var(--brief-color-restricted, #e6c200);
+  font-size: 0.9em;
+}
+
 .brief-table-indicator--no {
   color: #383838;
   font-weight: red;
 }
 
 /* Map / table toggle: map default; same key colors for both (--brief-color-* above) */
+.brief-states-filter-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.brief-states-filter-btn {
+  font: inherit;
+  font-size: var(--font-size-sm);
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #888;
+  border-radius: 4px;
+  background: #f4f4f0;
+  color: #222;
+  cursor: pointer;
+}
+
+.brief-states-filter-btn:hover {
+  background: #e8e8e4;
+}
+
+.brief-states-filter-btn:focus-visible {
+  outline: 2px solid #0645ad;
+  outline-offset: 2px;
+}
+
+.brief-states-filter-btn--active,
+.brief-states-filter-btn[aria-pressed="true"] {
+  background: #333;
+  color: #fff;
+  border-color: #333;
+}
+
 .brief-states-view-toggle {
   display: flex;
   gap: 0.5rem;
@@ -1518,6 +1662,10 @@ ML Intelligence Dashboard
 
 .brief-map-swatch--policy {
   background-color: var(--brief-color-policy, #1a6fb5);
+}
+
+.brief-map-swatch--restricted {
+  background-color: var(--brief-color-restricted, #e6c200);
 }
 
 /* Legend below table: green ✓ passed, orange ● in progress, — no bill */

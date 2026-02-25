@@ -1,0 +1,29 @@
+---
+description: Never invent substantive content; use only approved canonical sources (one-pagers, content.py, templates)
+alwaysApply: true
+---
+
+# No Hallucination of Content
+
+When writing or editing **substantive content** on the site (copy, key points, FAQs, messaging, legislator or constituent brief text), **do not invent**. Use **only** approved canonical sources. If the content is not in a canonical source, ask the user or note that it must be supplied.
+
+## Approved canonical sources
+
+| Audience / use | Source | Location |
+|----------------|--------|----------|
+| **Strategic message** (mission, vision, 5 points) | content.py | STRATEGIC_MISSION, STRATEGIC_VISION, STRATEGIC_FIVE_POINTS |
+| **Legislator brief / one-pager** | Canonical .txt (repo root) | `IL_Kei_Vehicle_Registration_Fix_Brief 1.txt` — legislator brief page sources from this at runtime |
+| **Legislator brief PDF** | Same as .txt | `/static/advocacy/IL_Kei_Vehicle_Registration_Fix_Brief.pdf` |
+| **Constituent brief** | Canonical .txt (repo root) | `Illinois_Kei_Vehicle_Registration_Constituent_Brief.txt` — The Issue page narrative sources from this at runtime |
+| **Constituent brief PDF** | Same as .txt | `/static/images/Illinois_Kei_Vehicle_Registration_Constituent_Brief.pdf` |
+| **FAQs** | content.py | FAQ_ADVOCATES (The Issue), FAQ_LEGISLATORS (legislator brief) |
+| **State table, bills, sources** | content.py | BRIEF_STATE_STATUS, BRIEF_BILLS_*, BRIEF_SOURCES, BRIEF_DOCUMENTS |
+
+## Rules
+
+1. **Key points, bullets, or new sections:** Pull only from STRATEGIC_FIVE_POINTS, the existing brief sections in legislator_brief.html, or the_issue.html. Do not add new “key points” that are not in these or in a user-provided source.
+2. **Facts, statute refs, policy claims:** Use only what appears in content.py or the templates. Do not invent statistics or legal conclusions.
+3. **If you need wording from a PDF** (e.g. constituent brief) and it is not in the repo: say so and ask the user to paste the relevant text or add a text extract to `docs/canonical/`. Do not guess the PDF’s wording.
+4. **Evaluating “do we need X?”** (e.g. key points on leg brief): Use the Hardball spec (docs/hardball-spec/) for *whether* a section or tactic is appropriate; use this rule for *what the content says* — only from canonical sources.
+
+Full list and rationale: `docs/canonical/README.md`.
