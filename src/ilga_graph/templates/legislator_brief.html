@@ -18,6 +18,16 @@
 {% endblock %}
 {% block brief_main_heading %}Official brief{% endblock %}
 {% block brief_main %}
+{% if strategic_five_points %}
+<section class="strategic-points strategic-points--brief" id="brief-key-points" aria-labelledby="brief-key-points-heading">
+    <h2 id="brief-key-points-heading">Key points</h2>
+    <ul class="strategic-points-list" role="list">
+        {% for point in strategic_five_points %}
+        <li class="strategic-points-item">{{ point }}</li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
 {% if legislator_brief %}
 <section aria-labelledby="brief-issue">
     <h2 id="brief-issue">Issue in one sentence</h2>
@@ -135,7 +145,6 @@
                             <th scope="col">How</th>
                             <th scope="col">Effective</th>
                             <th scope="col" class="brief-table-col-indicator" title="Max speed or route restricted (e.g. 55 mph or no Interstates)">Speed</th>
-                            <th scope="col" class="brief-table-col-indicator" title="State reversed a prior ban (e.g. AAMVA-driven) or passed explicit kei/mini law">AAMVA fix</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -145,7 +154,7 @@
                             <td data-label="Bill" class="brief-table-cell-indicator">
                                 {% if s.get('restricted') %}
                                 <span class="brief-table-indicator brief-table-indicator--restricted" role="img"
-                                    aria-label="Restricted use (e.g. antique/collector or speed cap)">Restricted</span>
+                                    aria-label="Restricted use (e.g. antique/collector or speed cap)">⚠</span>
                                 {% elif s.bill_status == 'passed' %}
                                 <span class="brief-table-indicator brief-table-indicator--yes" role="img"
                                     aria-label="Has bill: yes">✓</span>
@@ -166,10 +175,13 @@
                                     aria-label="Policy change: no">—</span>
                                 {% endif %}
                             </td>
-                            <td data-label="How">{{ s.mechanism }}</td>
-                            <td data-label="Effective">{{ s.status }}</td>
+                            <td data-label="How">{{ s.get('how') or '—' }}</td>
+                            <td data-label="Effective">{{ s.get('effective') or '—' }}</td>
                             <td data-label="Speed" class="brief-table-cell-indicator">
-                                {% if s.get('speed_limited') %}
+                                {% if s.get('speed') %}
+                                <span class="brief-table-indicator brief-table-indicator--yes" role="text"
+                                    aria-label="Speed or route restriction: {{ s.speed }}">{{ s.speed }}</span>
+                                {% elif s.get('speed_limited') %}
                                 <span class="brief-table-indicator brief-table-indicator--yes" role="img"
                                     aria-label="Max speed or route limited">Limited</span>
                                 {% else %}
@@ -177,32 +189,26 @@
                                     aria-label="No speed limit restriction">—</span>
                                 {% endif %}
                             </td>
-                            <td data-label="AAMVA fix" class="brief-table-cell-indicator">
-                                {% if s.get('aamva_fix') %}
-                                <span class="brief-table-indicator brief-table-indicator--yes" role="img"
-                                    aria-label="Countered AAMVA: reversed prior ban or passed explicit kei law">✓</span>
-                                {% else %}
-                                <span class="brief-table-indicator brief-table-indicator--no" role="img"
-                                    aria-label="Not an AAMVA-fix state">—</span>
-                                {% endif %}
-                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-            <p class="brief-table-legend" id="brief-table-key" role="region" aria-label="Indicator key">
-                <span class="brief-table-legend-item"><span class="brief-table-indicator brief-table-indicator--yes"
-                        aria-hidden="true">✓</span> Passed into law</span>
-                <span class="brief-table-legend-item"><span class="brief-table-indicator brief-table-indicator--pending"
-                        aria-hidden="true">●</span> Bill in progress</span>
-                <span class="brief-table-legend-item"><span class="brief-table-indicator brief-table-indicator--no"
-                        aria-hidden="true">—</span> No bill / no policy</span>
-                <span class="brief-table-legend-item"><span class="brief-table-indicator brief-table-indicator--restricted"
-                        aria-hidden="true">Restricted</span> Antique/collector or speed/radius cap only.</span>
-                <span class="brief-table-legend-item">Speed: <strong>Limited</strong> = max speed or route restricted (e.g. 55&nbsp;mph or no Interstates).</span>
-                <span class="brief-table-legend-item"><strong>AAMVA fix</strong> = state reversed a prior ban (e.g. AAMVA-driven) or passed explicit kei/mini law (CO, TX, MI, MA, OR, ME).</span>
-            </p>
+            <footer class="brief-table-notes" id="brief-table-key" role="region" aria-label="Table notes and indicators">
+                <div class="brief-table-notes__col brief-table-notes__col--indicators">
+                    <span class="brief-table-notes__label">Indicators</span>
+                    <ul class="brief-table-notes__list" role="list">
+                        <li><span class="brief-table-indicator brief-table-indicator--yes" aria-hidden="true">✓</span> Passed into law</li>
+                        <li><span class="brief-table-indicator brief-table-indicator--pending" aria-hidden="true">●</span> Bill in progress</li>
+                        <li><span class="brief-table-indicator brief-table-indicator--no" aria-hidden="true">—</span> No bill / no policy</li>
+                        <li><span class="brief-table-indicator brief-table-indicator--restricted" aria-hidden="true">⚠</span> Restricted: antique/collector or speed/radius cap only.</li>
+                    </ul>
+                </div>
+                <div class="brief-table-notes__col brief-table-notes__col--notes">
+                    <span class="brief-table-notes__label">Notes</span>
+                    <p class="brief-table-notes__text"><strong>How:</strong> Law or policy that made Keis registrable (— if none). <strong>Effective:</strong> Date the change or law took effect (— if no date). Speed: value when set; <strong>Limited</strong> when restricted but no value; — when no restriction.</p>
+                </div>
+            </footer>
         </div>
     </div>
 </section>

@@ -3,6 +3,7 @@
 Split hardball.txt into chunked markdown files under docs/hardball-spec/.
 Run from repo root: python scripts/split_hardball_spec.py
 """
+
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -15,7 +16,12 @@ SECTIONS = [
     (138, 182, "00-foreword.md", "Foreword"),
     (184, 218, "01-introduction.md", "Introduction: The Value of Nonprofit Lobbying to Democracy"),
     (221, 317, "02-ch1-framing-context.md", "Ch 1: Framing the Context for a New Approach"),
-    (319, 379, "03-ch2-new-paradigm.md", "Ch 2: Toward a New Paradigm for Nonprofit Advocacy/Lobbying"),
+    (
+        319,
+        379,
+        "03-ch2-new-paradigm.md",
+        "Ch 2: Toward a New Paradigm for Nonprofit Advocacy/Lobbying",
+    ),  # noqa: E501
     (381, 700, "04-ch3-decision-making.md", "Ch 3: The Decision-Making Process"),
     (703, 874, "05-ch4-advocacy-law.md", "Ch 4: Advocacy, Lobbying, and the Law"),
     (876, 1089, "06-ch5-advocacy-foundation.md", "Ch 5: Building an Advocacy Foundation"),
@@ -37,7 +43,8 @@ def main() -> None:
         end_idx = min(end_1, len(lines))
         section_lines = lines[start_idx:end_idx]
         content = "\n".join(section_lines)
-        body = f"# {title}\n\nSource: hardball.txt (Barry Hessenius, *Hardball Lobbying for Nonprofits*)\n\n---\n\n{content}"
+        header = "Source: hardball.txt (Barry Hessenius, *Hardball Lobbying for Nonprofits*)"
+        body = f"# {title}\n\n{header}\n\n---\n\n{content}"
         (OUT_DIR / filename).write_text(body, encoding="utf-8")
         print(f"Wrote {filename} ({len(section_lines)} lines)")
 

@@ -4,6 +4,11 @@ from __future__ import annotations
 
 import pytest
 
+try:
+    import networkx  # noqa: F401
+except ImportError:
+    networkx = None
+
 from ilga_graph.analytics import (
     PipelineStage,
     classify_pipeline_stage,
@@ -207,6 +212,7 @@ class TestAvgPipelineDepth:
 # ── Full Moneyball compute ────────────────────────────────────────────────────
 
 
+@pytest.mark.skipif(networkx is None, reason="optional [ml] networkx not installed")
 class TestComputeMoneyball:
     def test_profiles_created(
         self,

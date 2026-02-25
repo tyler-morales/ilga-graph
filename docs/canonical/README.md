@@ -10,10 +10,10 @@ This doc defines the **approved sources** for all substantive content on the sit
 
 ## Canonical sources
 
-### 1. Strategic message (mission, vision, 5 points)
+### 1. Strategic message (mission, vision, success measure, 5 points)
 
-- **Where:** `src/ilga_graph/routers/content.py` — `STRATEGIC_MISSION`, `STRATEGIC_VISION`, `STRATEGIC_FIVE_POINTS`
-- **Used on:** Home, The Issue (Key points + vision callout), and anywhere we need the shared message
+- **Where:** `src/ilga_graph/routers/content.py` — `STRATEGIC_MISSION`, `STRATEGIC_VISION`, `STRATEGIC_SUCCESS_MEASURE`, `STRATEGIC_FIVE_POINTS`
+- **Used on:** Home (mission block + success measure), The Issue (Key points + vision callout), and anywhere we need the shared message
 - **Rule:** Any “key points” or mission/vision text must match these constants. Do not add new bullets that aren’t in STRATEGIC_FIVE_POINTS or approved by you.
 
 ### 2. Legislator one-pager / official brief
@@ -36,7 +36,7 @@ This doc defines the **approved sources** for all substantive content on the sit
 
 ### 4. FAQs
 
-- **Where:** `content.py` — `FAQ_ADVOCATES` (The Issue), `FAQ_LEGISLATORS` (legislator brief)
+- **Where:** `content.py` — `FAQ_LAW` and `FAQ_ADVOCACY` (The Issue: law/registration + advocacy/how we work), `FAQ_LEGISLATORS` (legislator brief)
 - **Rule:** FAQ answers and sources come only from these. Do not add new Q&A unless the user provides the wording or you add it to content.py and the user approves.
 
 ### 5. State table, bills, documents, sources
@@ -46,10 +46,10 @@ This doc defines the **approved sources** for all substantive content on the sit
 
 ## Adding or changing canonical text
 
-- **Strategic message:** Edit `STRATEGIC_MISSION`, `STRATEGIC_VISION`, `STRATEGIC_FIVE_POINTS` in content.py.
+- **Strategic message:** Edit `STRATEGIC_MISSION`, `STRATEGIC_VISION`, `STRATEGIC_SUCCESS_MEASURE`, `STRATEGIC_FIVE_POINTS` in content.py.
 - **Legislator brief:** Edit `IL_Kei_Vehicle_Registration_Fix_Brief 1.txt` in the repo root. The legislator brief page reads it at request time. Keep the PDF in sync for downloads.
 - **Constituent brief:** Edit `Illinois_Kei_Vehicle_Registration_Constituent_Brief.txt` in the repo root. The Issue page narrative reads it at request time. Keep the PDF in sync for downloads.
-- **FAQs:** Edit `FAQ_ADVOCATES` and `FAQ_LEGISLATORS` in content.py.
+- **FAQs:** Edit `FAQ_LAW`, `FAQ_ADVOCACY`, and `FAQ_LEGISLATORS` in content.py.
 
 ## For the AI
 

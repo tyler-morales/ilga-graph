@@ -1,13 +1,31 @@
-{# ── Home only: mission + vision from strategic plan (content.py). Quote + attribution. ── #}
+{# ── Home only: mission (truck bg) + vision & success section below (content.py). ── #}
 <section class="mission-statement" id="mission-statement" aria-labelledby="mission-statement-heading">
     <h2 class="mission-statement-heading" id="mission-statement-heading">Mission Statement</h2>
     <div class="mission-statement-body">
         <blockquote class="mission-statement-quote" cite="">
             {{ strategic_mission|default('Fix the statutory gap that prevents road-legal kei vehicles in Illinois.') }}
         </blockquote>
-        {% if strategic_vision %}
-        <p class="mission-statement-vision">{{ strategic_vision }}</p>
-        {% endif %}
         <p class="mission-statement-attribution" aria-label="Attribution">– Land of Kei Illinois advocacy group</p>
     </div>
 </section>
+{% if strategic_vision or strategic_success_measure_items %}
+<section class="vision-and-success" id="vision-and-success" aria-labelledby="vision-statement-label">
+    <div class="vision-statement-block">
+        {% if strategic_vision %}
+        <h2 class="vision-statement-label" id="vision-statement-label">Vision Statement</h2>
+        <div class="vision-statement-line" aria-hidden="true"></div>
+        <p class="vision-statement-text" id="vision-text">{{ strategic_vision }}</p>
+        {% endif %}
+        {% if strategic_success_measure_items %}
+        <div class="vision-and-success-list-wrap">
+            <h3 class="vision-and-success-list-heading" id="success-measure-label">How we measure success</h3>
+            <ul class="vision-and-success-list" role="list" aria-labelledby="success-measure-label">
+                {% for item in strategic_success_measure_items %}
+                <li class="vision-and-success-list-item">{{ item }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endif %}

@@ -1668,22 +1668,58 @@ ML Intelligence Dashboard
   background-color: var(--brief-color-restricted, #e6c200);
 }
 
-/* Legend below table: green ✓ passed, orange ● in progress, — no bill */
-.brief-table-legend {
+/* Table notes (NYT/journal-style): two columns — Indicators + Notes below state table */
+.brief-table-notes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.5rem 2rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border-muted, #d0d0d0);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-text-muted, #555);
+}
+
+@media (max-width: 35rem) {
+  .brief-table-notes {
+    grid-template-columns: 1fr;
+  }
+}
+
+.brief-table-notes__col {
+  min-width: 0;
+}
+
+.brief-table-notes__label {
+  display: block;
+  font-weight: 600;
+  color: var(--color-text, #222);
+  margin-bottom: 0.25rem;
+}
+
+.brief-table-notes__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.brief-table-notes__list li {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 1.25rem;
-  font-size: var(--font-size-sm);
-  margin-top: 0.75rem;
-}
-
-.brief-table-legend-item {
-  display: inline-flex;
-  align-items: center;
+  align-items: baseline;
   gap: 0.35rem;
+  margin-bottom: 0.2rem;
 }
 
-.brief-table-legend-item .brief-table-indicator {
+.brief-table-notes__list li:last-child {
+  margin-bottom: 0;
+}
+
+.brief-table-notes__text {
+  margin: 0;
+}
+
+.brief-table-notes .brief-table-indicator {
   font-weight: 600;
 }
 

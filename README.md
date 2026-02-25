@@ -344,13 +344,15 @@ The graph is configured with color groups:
 make install        # pip install -e ".[dev]"
 ```
 
-Or manually:
+Or manually (create the venv with Python 3.10+ so editable install works; e.g. `python3.12 -m venv .venv` on macOS with Homebrew):
 
 ```bash
+python3.12 -m venv .venv   # or python3.10 / python3.11 if available
+source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
-**Pre-commit (recommended):** To enforce line length (100 chars) and formatting on every commit, install the git hooks once:
+**Pre-commit (recommended):** To enforce line length (100 chars) and formatting on every commit, install the git hooks once. Run from the project root with **this project's** virtualenv activated so the hook uses this repo's Python:
 
 ```bash
 pre-commit install
