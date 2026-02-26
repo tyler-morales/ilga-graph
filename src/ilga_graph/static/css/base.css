@@ -25,6 +25,66 @@ body.page-home {
   font-family: var(--font-sans);
 }
 
+/* Home: consistent spacing between sections; split so top/bottom of each section are even */
+.page-home #main-content > * {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+.page-home #main-content > *:first-child {
+  margin-top: 0;
+}
+.page-home #main-content > *:last-child {
+  margin-bottom: 0;
+}
+@media (min-width: 768px) {
+  .page-home #main-content > * {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+  }
+  .page-home #main-content > *:first-child {
+    margin-top: 0;
+  }
+  .page-home #main-content > *:last-child {
+    margin-bottom: 0;
+  }
+}
+@media (min-width: 1024px) {
+  .page-home #main-content > * {
+    margin-top: 2.75rem;
+    margin-bottom: 2.75rem;
+  }
+  .page-home #main-content > *:first-child {
+    margin-top: 0;
+  }
+  .page-home #main-content > *:last-child {
+    margin-bottom: 0;
+  }
+}
+
+/* Section-inner rhythm: same top/bottom padding and title-to-content gap on all home sections */
+.page-home {
+  --home-section-padding-block: 2rem;
+  --home-section-title-gap: 1.5rem;
+}
+@media (min-width: 768px) {
+  .page-home {
+    --home-section-padding-block: 2.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .page-home {
+    --home-section-padding-block: 3rem;
+  }
+}
+
+/* So section padding alone controls top/bottom; content margins don't add to or eat it */
+.page-home #main-content > * > *:first-child {
+  margin-top: 0;
+}
+.page-home #main-content > * > *:last-child {
+  margin-bottom: 0;
+}
+
 .container {
   width: 100%;
   max-width: 1120px;
@@ -1025,6 +1085,12 @@ a:visited {
 
 .brief-faq__answer p {
   margin: 0;
+  line-height: 1.5;
+}
+
+.brief-faq__answer-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
   line-height: 1.5;
 }
 

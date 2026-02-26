@@ -56,40 +56,186 @@
   border-radius: 0 4px 4px 0;
 }
 
-/* Home page: single-column editorial list, no cards; first point emphasized (form/layout only). */
+/* Home page: card grid with icons (matches What's happening). Heroicons via Iconify. */
 .strategic-points--home {
-  margin-top: 1.25rem;
-  padding: 1.5rem 0;
+  margin-top: 0;
+  padding: var(--home-section-padding-block, 2rem) 0;
   border-top: 1px solid var(--color-border-light, #e5e5e5);
 }
 
 .strategic-points--home .strategic-points-heading {
-  font-size: var(--font-size-h2, 1.35rem);
+  font-size: clamp(1.5rem, 4vw, 2rem);
   font-weight: 600;
   color: var(--color-text-muted, #444);
-  margin: 0 0 1rem 0;
+  margin: 0 0 var(--home-section-title-gap, 1.5rem) 0;
+  text-align: center;
 }
 
-.strategic-points--home .strategic-points-list {
-  list-style: decimal;
-  padding-left: 2rem;
+.strategic-points--home .strategic-points-rows {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+  max-width: 56rem;
+}
+
+.strategic-points--home .strategic-points-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
   margin: 0;
-  max-width: 65ch;
+  padding: 0;
 }
 
-.strategic-points--home .strategic-points-item {
-  font-size: var(--font-size-body, 1rem);
-  line-height: 1.55;
-  color: var(--color-text-muted, #444);
-  margin-bottom: 1rem;
+.strategic-points--home .strategic-points-row .strategic-points-card {
+  max-width: 28rem;
 }
 
-.strategic-points--home .strategic-points-item:first-child {
-  font-size: 1.0625rem;
-  font-weight: 600;
-  color: var(--color-text, #1a1a1a);
+.strategic-points--home .strategic-points-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 1rem 1.25rem;
+  background: var(--color-bg-muted, #fafafa);
+  border: 1px solid var(--color-border-light, #ddd);
+  border-radius: 8px;
+  text-align: center;
 }
 
-.strategic-points--home .strategic-points-item:last-child {
+/* Iconify-icon defaults to height: 1em; sizing by font-size makes the icon scale. */
+.strategic-points--home .strategic-points-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 6rem;
+  height: 6rem;
   margin-bottom: 0;
+  font-size: 6rem;
+}
+
+.strategic-points--home .strategic-points-icon iconify-icon {
+  display: block;
+  flex-shrink: 0;
+  font-size: inherit;
+}
+
+/* Inline state-shapes SVG for "21+ states" card: fill icon area, inherit color. */
+.strategic-points--home .strategic-points-icon .strategic-points-states-icon {
+  width: 100%;
+  height: 100%;
+  max-width: 6rem;
+  max-height: 6rem;
+  object-fit: contain;
+  display: block;
+}
+
+/* State groups: click to bring to front; pointer and focus for a11y. */
+.strategic-points--home .strategic-points-states-icon .strategic-states-co,
+.strategic-points--home .strategic-points-states-icon .strategic-states-mi,
+.strategic-points--home .strategic-points-states-icon .strategic-states-tx {
+  cursor: pointer;
+}
+
+/* Wrapper for states icon + custom tooltip (position relative so tooltip can be fixed relative to viewport). */
+.strategic-states-icon-wrap {
+  display: inline-block;
+  position: relative;
+}
+
+/* Pill tooltip: small, minimal; appears on hover with fade + slide up, leaves with slide down + fade. */
+.strategic-states-tooltip {
+  position: fixed;
+  z-index: 100;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--color-tooltip-text, #1a1a1a);
+  background: var(--color-tooltip-bg, #f5f5f5);
+  border: 1px solid var(--color-tooltip-border, #e0e0e0);
+  border-radius: 999px;
+  white-space: nowrap;
+  max-width: 18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transform: translate(-50%, 100%) translateY(8px);
+  opacity: 0;
+  transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .strategic-states-tooltip {
+    transition-duration: 0s;
+  }
+}
+
+.strategic-states-tooltip--visible {
+  opacity: 1;
+  transform: translate(-50%, 100%) translateY(0);
+}
+
+.strategic-states-tooltip--leaving {
+  opacity: 0;
+  transform: translate(-50%, 100%) translateY(8px);
+}
+
+.strategic-points--home .strategic-points-states-icon [role="button"]:focus {
+  outline: none;
+}
+
+.strategic-points--home .strategic-points-states-icon [role="button"]:focus-visible {
+  outline: 2px solid var(--color-primary, #1a73e8);
+  outline-offset: 2px;
+}
+
+/* Dynamic text from STRATEGIC_FIVE_POINTS; consistent size, max 3 lines.
+   text-wrap: pretty avoids orphan words so more text stays on the line above (weighs down).
+   No hyphenation: break only at spaces so no mid-word hyphens. */
+.strategic-points--home .strategic-points-card-text {
+  font-size: clamp(0.9375rem, 1.75vw, 1.125rem);
+  line-height: 1.4;
+  color: var(--color-text-muted, #444);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  text-wrap: pretty;
+  hyphens: none;
+}
+
+/* Two lines only: top row 2 cards, bottom row 3 (more on lower line). No wrap. */
+@media (min-width: 900px) {
+  .strategic-points--home .strategic-points-row {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: center;
+    gap: 0.75rem 1rem;
+  }
+}
+
+/* Narrow: single-column stack. */
+@supports (container-type: inline-size) {
+  .strategic-points--home {
+    container-type: inline-size;
+    container-name: strategic-points;
+  }
+
+  @container strategic-points (min-width: 900px) {
+    .strategic-points--home .strategic-points-row {
+      flex-direction: row;
+      flex-wrap: nowrap;
+      justify-content: center;
+      gap: 0.75rem 1rem;
+    }
+  }
 }

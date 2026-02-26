@@ -11,6 +11,11 @@
   position: relative;
   isolation: isolate;
 }
+.page-home .mission-statement {
+  margin-top: 0;
+  padding-top: var(--home-section-padding-block, 2rem);
+  padding-bottom: var(--home-section-padding-block, 2rem);
+}
 
 .mission-statement::before {
   content: "";
@@ -72,6 +77,9 @@
   padding: 2.5rem 0;
   border-top: 1px solid var(--color-border-light, #e5e5e5);
 }
+.page-home .vision-and-success {
+  padding: var(--home-section-padding-block, 2rem) 0;
+}
 
 .vision-statement-block {
   margin-bottom: 0;
@@ -105,6 +113,9 @@
   height: 4px;
   background: #1a1a1a;
   margin: 0 0 1.25rem 0;
+}
+.page-home .vision-statement-line {
+  margin-bottom: var(--home-section-title-gap, 1.5rem);
 }
 
 .vision-statement-text {
@@ -158,6 +169,11 @@
   align-items: center;
   gap: 0.75rem;
   text-align: center;
+}
+.page-home .home-cta {
+  margin-top: 0;
+  padding-top: var(--home-section-padding-block, 2rem);
+  padding-bottom: var(--home-section-padding-block, 2rem);
 }
 
 .mission-statement-cta-btn {

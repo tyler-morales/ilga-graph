@@ -50,6 +50,7 @@
         integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
         crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.0.0/dist/iconify-icon.min.js" async crossorigin="anonymous"></script>
 </head>
 
 <body class="{% block body_class %}{% endblock %}">
@@ -180,6 +181,46 @@
             {% endif %}
         </footer>
     </div>
+
+    {# Strategic states icon: click a state to bring it to the front (swap front/back). #}
+    <script>
+        (function () {
+            function initStrategicStatesIcon() {
+                var svg = document.querySelector('.strategic-points-states-icon');
+                if (!svg) return;
+                var states = svg.querySelectorAll('.strategic-states-co, .strategic-states-mi, .strategic-states-tx');
+                function setFront(el) {
+                    states.forEach(function (g) {
+                        g.classList.remove('strategic-states-front');
+                        g.classList.add('strategic-states-back');
+                        g.setAttribute('opacity', '0.35');
+                    });
+                    el.classList.remove('strategic-states-back');
+                    el.classList.add('strategic-states-front');
+                    el.removeAttribute('opacity');
+                    svg.appendChild(el);
+                }
+                function handleActivate(e) {
+                    if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+                    if (e.type === 'keydown') {
+                        e.preventDefault();
+                    }
+                    var g = e.currentTarget;
+                    if (g.classList.contains('strategic-states-front')) return;
+                    setFront(g);
+                }
+                states.forEach(function (g) {
+                    g.addEventListener('click', handleActivate);
+                    g.addEventListener('keydown', handleActivate);
+                });
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initStrategicStatesIcon);
+            } else {
+                initStrategicStatesIcon();
+            }
+        })();
+    </script>
 
     {% if dev_available %}
     {# ── Dev Bar: floating toolbar for fast feature testing ─────────────── #}
