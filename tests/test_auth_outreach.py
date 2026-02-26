@@ -542,3 +542,74 @@ class TestParsingHelpers:
         assert _parse_constituent("no") is False
         assert _parse_constituent("") is None
         assert _parse_constituent("other") is None
+
+
+class TestDemoLogin:
+    """Tests for the /auth/demo auto-login endpoint."""
+
+    def test_demo_disabled_returns_404(self, client: TestClient) -> None:
+        """When ILGA_DEMO_ENABLED=0 (default), /auth/demo must return 404."""
+        with patch.dict(os.environ, {"ILGA_DEMO_ENABLED": "0"}):
+            importlib.reload(cfg_mod)
+            importlib.reload(auth_router_mod)
+            resp = client.get("/auth/demo", follow_redirects=False)
+            assert resp.status_code == 404
+
+    def test_demo_enabled_redirects_to_advocacy(self, test_db_path: Path) -> None:
+        """When ILGA_DEMO_ENABLED=1, /auth/demo sets a session cookie and redirects."""
+        env = {
+            "ILGA_DB_PATH": str(test_db_path),
+            "ILGA_AUTH_SECRET": "test-secret-for-pytest",
+            "ILGA_PROFILE": "dev",
+            "ILGA_DEMO_ENABLED": "1",
+            "ILGA_DEMO_EMAIL": "demo@example.com",
+        }
+        with patch.dict(os.environ, env, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            importlib.reload(deps_mod)
+            importlib.reload(auth_router_mod)
+            app = _make_test_app(test_db_path)
+            with TestClient(app, raise_server_exceptions=True) as c:
+                c.get("/auth/me")  # trigger lifespan / init_db
+                resp = c.get("/auth/demo", follow_redirects=False)
+                assert resp.status_code == 302
+                assert resp.headers["location"] == "/advocacy"
+                assert "ilga_session" in resp.cookies
+
+    def test_demo_enabled_creates_user_once(self, test_db_path: Path) -> None:
+        """Repeated /auth/demo calls reuse the same user (no duplicates)."""
+        import asyncio
+
+        env = {
+            "ILGA_DB_PATH": str(test_db_path),
+            "ILGA_AUTH_SECRET": "test-secret-for-pytest",
+            "ILGA_PROFILE": "dev",
+            "ILGA_DEMO_ENABLED": "1",
+            "ILGA_DEMO_EMAIL": "demo@example.com",
+        }
+        with patch.dict(os.environ, env, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            importlib.reload(deps_mod)
+            importlib.reload(auth_router_mod)
+            app = _make_test_app(test_db_path)
+            with TestClient(app, raise_server_exceptions=True) as c:
+                c.get("/auth/me")  # init_db
+                c.get("/auth/demo", follow_redirects=False)
+                c.get("/auth/demo", follow_redirects=False)
+
+            # Verify exactly one demo user in DB.
+            from sqlalchemy import select
+
+            from ilga_graph.db_models import User
+
+            async def _count():
+                async with db_mod.async_session_factory() as session:
+                    result = await session.execute(
+                        select(User).where(User.email == "demo@example.com")
+                    )
+                    return result.scalars().all()
+
+            users = asyncio.run(_count())
+            assert len(users) == 1
