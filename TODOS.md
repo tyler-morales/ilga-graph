@@ -28,6 +28,7 @@
 
 | Date       | Area                         | Summary |
 |------------|------------------------------|--------|
+| 2026-02-26 | Pitch one-pagers             | **docs/pitch/:** Four audience one-pagers (Markdown): advocacy-nonprofit, lobbyist, candidate, investor. Hardball tone, tactful and genuine; consistent structure (problem, why it works, what you get, proof, CTA). docs/index.md links to pitch/. Optional later: README in pitch/, PDF export. |
 | 2026-02-26 | Branch bug-check + PR batch  | Lint pass: E501/I001 fixed in config, email_utils, updates, test_updates; ruff format. All tests pass (352 passed, 10 skipped). Git: squashed main..HEAD into one commit; force-pushed; PR #41 title/body updated from TODOS + commit. |
 | 2026-02-26 | Sprint 1 loose ends: static/updates | **Policy:** Campaign update images (admin uploads at compose) are not committed. `.gitignore`: `static/updates/*.jpg`, `*.png`, `*.webp`; `!static/updates/.gitkeep` so the directory exists on clone. Migrations (update_type, image_path) already in branch. |
 | 2026-02-26 | Where we are: campaign timeline | **/updates:** Under "Where we are" text, added a campaign timeline: checkpoints from outreach to "Keis be legal" (content.py: CAMPAIGN_TIMELINE_CHECKPOINTS, CAMPAIGN_TIMELINE_ACHIEVED_COUNT). Achieved steps at 100% opacity, pending at 0.45. Update checkpoints and achieved count in content.py as the campaign advances. Template: updates.html campaign-timeline list; CSS: base.css .campaign-timeline; tests: test_updates_page_shows_campaign_timeline; docs: app-overview.md. |
