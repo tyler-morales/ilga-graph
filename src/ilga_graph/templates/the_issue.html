@@ -232,6 +232,13 @@
                 <summary class="brief-faq__question">{{ item.question }}</summary>
                 <div class="brief-faq__answer">
                     <p>{{ item.answer }}</p>
+                    {% if item.answer_list %}
+                    <ul class="brief-faq__answer-list" role="list">
+                        {% for entry in item.answer_list %}
+                        <li>{{ entry }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
                     {% if item.sources %}
                     <p class="brief-faq__sources-label">Sources:</p>
                     <ul class="brief-faq__sources" role="list">

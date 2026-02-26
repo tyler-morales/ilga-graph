@@ -904,6 +904,12 @@ FAQ_ADVOCACY = {
             ),
         },
         {
+            "id": "success-measures",
+            "question": "How we measure success?",
+            "answer": STRATEGIC_SUCCESS_MEASURE,
+            "answer_list": STRATEGIC_SUCCESS_MEASURE_ITEMS,
+        },
+        {
             "id": "adv2",
             "question": "How does the advocacy group intend to achieve that goal?",
             "answer": (
@@ -1090,6 +1096,19 @@ def _brief_map_fill_status(s: dict) -> str:
 def _brief_aamva_fix_state_abbrs() -> list[str]:
     """State abbrs where aamva_fix is True (reversed prior ban or passed explicit kei law)."""
     return [s["state_abbr"] for s in BRIEF_STATE_STATUS if s.get("aamva_fix")]
+
+
+# State abbrs shown in the home-page strategic states icon (order: back row CO, MI; front TX).
+STRATEGIC_STATES_ICON_ABBR = ("co", "mi", "tx")
+
+
+def get_strategic_states_tooltips() -> dict[str, dict[str, str]]:
+    """Tooltip data for states in the strategic states icon: state name and law/policy (from BRIEF_STATE_STATUS)."""
+    return {
+        s["state_abbr"]: {"state": s["state"], "how": s.get("how") or "Allows registration"}
+        for s in BRIEF_STATE_STATUS
+        if s["state_abbr"] in STRATEGIC_STATES_ICON_ABBR
+    }
 
 
 def _issue_sources_from_faq(faq: dict) -> list[dict[str, str]]:

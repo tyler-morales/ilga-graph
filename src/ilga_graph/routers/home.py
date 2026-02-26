@@ -15,9 +15,8 @@ from ..routers.advocacy import DEFAULT_HERO_ZIP, _hero_context
 from ..routers.content import (
     STRATEGIC_FIVE_POINTS,
     STRATEGIC_MISSION,
-    STRATEGIC_SUCCESS_MEASURE,
-    STRATEGIC_SUCCESS_MEASURE_ITEMS,
     STRATEGIC_VISION,
+    get_strategic_states_tooltips,
 )
 from ..routers.outreach import get_outreach_aggregate
 
@@ -63,8 +62,7 @@ async def home(
         "zip": (cfg.DEV_MODE and DEFAULT_HERO_ZIP) or "",
         "strategic_mission": STRATEGIC_MISSION,
         "strategic_vision": STRATEGIC_VISION,
-        "strategic_success_measure": STRATEGIC_SUCCESS_MEASURE,
-        "strategic_success_measure_items": STRATEGIC_SUCCESS_MEASURE_ITEMS,
         "strategic_five_points": STRATEGIC_FIVE_POINTS,
+        "strategic_states_tooltips": get_strategic_states_tooltips(),
     }
     return templates.TemplateResponse("home.html", ctx)
