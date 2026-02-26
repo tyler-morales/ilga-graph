@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import pytest
+
+pytest.importorskip("numpy", reason="optional [ml] deps not installed")
 from ilga_graph.ml.action_classifier import (
     bill_outcome_from_actions,
     classify_action_history,

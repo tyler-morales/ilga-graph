@@ -25,6 +25,66 @@ body.page-home {
   font-family: var(--font-sans);
 }
 
+/* Home: consistent spacing between sections; split so top/bottom of each section are even */
+.page-home #main-content > * {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+.page-home #main-content > *:first-child {
+  margin-top: 0;
+}
+.page-home #main-content > *:last-child {
+  margin-bottom: 0;
+}
+@media (min-width: 768px) {
+  .page-home #main-content > * {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+  }
+  .page-home #main-content > *:first-child {
+    margin-top: 0;
+  }
+  .page-home #main-content > *:last-child {
+    margin-bottom: 0;
+  }
+}
+@media (min-width: 1024px) {
+  .page-home #main-content > * {
+    margin-top: 2.75rem;
+    margin-bottom: 2.75rem;
+  }
+  .page-home #main-content > *:first-child {
+    margin-top: 0;
+  }
+  .page-home #main-content > *:last-child {
+    margin-bottom: 0;
+  }
+}
+
+/* Section-inner rhythm: same top/bottom padding and title-to-content gap on all home sections */
+.page-home {
+  --home-section-padding-block: 2rem;
+  --home-section-title-gap: 1.5rem;
+}
+@media (min-width: 768px) {
+  .page-home {
+    --home-section-padding-block: 2.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .page-home {
+    --home-section-padding-block: 3rem;
+  }
+}
+
+/* So section padding alone controls top/bottom; content margins don't add to or eat it */
+.page-home #main-content > * > *:first-child {
+  margin-top: 0;
+}
+.page-home #main-content > * > *:last-child {
+  margin-bottom: 0;
+}
+
 .container {
   width: 100%;
   max-width: 1120px;
@@ -618,6 +678,68 @@ a:visited {
   margin: 0 auto;
 }
 
+/* Fact sheet (volunteers): sections from focused-next-steps doc §5 */
+.fact-sheet-header {
+  margin-bottom: 2rem;
+}
+.fact-sheet-title {
+  font-size: var(--font-size-h2);
+  margin-bottom: 0.5rem;
+}
+.fact-sheet-intro {
+  color: #555;
+  font-size: var(--font-size-body);
+  margin: 0;
+}
+.fact-sheet-section {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e5e7eb;
+}
+.fact-sheet-section:first-of-type {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+.fact-sheet-section h2 {
+  font-size: var(--font-size-h3);
+  margin: 0 0 0.5rem;
+}
+.fact-sheet-points-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.5rem;
+}
+.fact-sheet-points-item {
+  margin-bottom: 0.35rem;
+}
+.fact-sheet-placeholder {
+  font-style: italic;
+  color: #666;
+  margin: 0;
+}
+.fact-sheet-faq-list {
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+.fact-sheet-faq-item {
+  margin-bottom: 1rem;
+}
+.fact-sheet-faq-item dt {
+  margin: 0 0 0.25rem;
+  font-weight: 600;
+}
+.fact-sheet-faq-item dd {
+  margin: 0 0 0 1rem;
+}
+.fact-sheet-links {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+}
+.fact-sheet-links li {
+  margin-bottom: 0.35rem;
+}
+
 /* Legislator brief: mobile-first. Default = single column (header → main → Documents). Wide = 3-column grid. */
 .legislator-brief-layout {
   max-width: none;
@@ -801,6 +923,111 @@ a:visited {
   list-style-position: inside;
 }
 
+/* Legislator brief: above-the-fold CTA (endorse / sponsor / get in touch). */
+.legislator-brief-cta {
+  margin-top: 1.5rem;
+  padding: 1.25rem 1.25rem 1.5rem;
+  background: linear-gradient(135deg, #fef7ed 0%, #fffbeb 100%);
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(180, 83, 9, 0.08);
+}
+
+.legislator-brief-cta__heading {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #92400e;
+}
+
+.legislator-brief-cta__copy {
+  margin: 0 0 1rem;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: #78350f;
+}
+
+.legislator-brief-cta__copy a {
+  color: var(--color-hero-cta, #b45309);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.legislator-brief-cta__copy a:hover {
+  color: #92400e;
+}
+
+.legislator-brief-cta__copy a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-hero-cta-focus-ring, rgba(180, 83, 9, 0.4));
+  border-radius: 2px;
+}
+
+.legislator-brief-cta__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.legislator-brief-cta__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.legislator-brief-cta__btn--primary {
+  background: var(--color-hero-cta, #b45309);
+  color: #fff;
+  border: 2px solid transparent;
+}
+
+.legislator-brief-cta__btn--primary:hover {
+  background: #92400e;
+  color: #fff;
+}
+
+.legislator-brief-cta__btn--primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-hero-cta-focus-ring, rgba(180, 83, 9, 0.5));
+}
+
+/* Point of contact section: card treatment so it stands out when scrolling. */
+.brief-contact {
+  padding: 1.25rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.brief-contact h2 {
+  margin-top: 0;
+}
+
+.brief-contact p {
+  margin-bottom: 0.5rem;
+}
+
+.brief-contact a[href^="tel:"],
+.brief-contact a[href^="mailto:"] {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.brief-contact a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(26, 13, 171, 0.35);
+  border-radius: 2px;
+}
+
 /* FAQ section at end of brief main content (the-issue, legislator-brief). */
 .brief-faq {
   margin-top: 2rem;
@@ -858,6 +1085,12 @@ a:visited {
 
 .brief-faq__answer p {
   margin: 0;
+  line-height: 1.5;
+}
+
+.brief-faq__answer-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
   line-height: 1.5;
 }
 
@@ -1389,6 +1622,7 @@ ML Intelligence Dashboard
   --brief-color-passed: #086508;
   --brief-color-pending: #e87700;
   --brief-color-policy: #1a6fb5;
+  --brief-color-restricted: #e6c200;
   --brief-color-none: #d0d0d0;
 }
 
@@ -1401,12 +1635,50 @@ ML Intelligence Dashboard
   color: var(--brief-color-pending, #e87700);
 }
 
+.brief-table-indicator--restricted {
+  color: var(--brief-color-restricted, #e6c200);
+  font-size: 0.9em;
+}
+
 .brief-table-indicator--no {
   color: #383838;
   font-weight: red;
 }
 
 /* Map / table toggle: map default; same key colors for both (--brief-color-* above) */
+.brief-states-filter-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.brief-states-filter-btn {
+  font: inherit;
+  font-size: var(--font-size-sm);
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #888;
+  border-radius: 4px;
+  background: #f4f4f0;
+  color: #222;
+  cursor: pointer;
+}
+
+.brief-states-filter-btn:hover {
+  background: #e8e8e4;
+}
+
+.brief-states-filter-btn:focus-visible {
+  outline: 2px solid #0645ad;
+  outline-offset: 2px;
+}
+
+.brief-states-filter-btn--active,
+.brief-states-filter-btn[aria-pressed="true"] {
+  background: #333;
+  color: #fff;
+  border-color: #333;
+}
+
 .brief-states-view-toggle {
   display: flex;
   gap: 0.5rem;
@@ -1520,22 +1792,62 @@ ML Intelligence Dashboard
   background-color: var(--brief-color-policy, #1a6fb5);
 }
 
-/* Legend below table: green ✓ passed, orange ● in progress, — no bill */
-.brief-table-legend {
+.brief-map-swatch--restricted {
+  background-color: var(--brief-color-restricted, #e6c200);
+}
+
+/* Table notes (NYT/journal-style): two columns — Indicators + Notes below state table */
+.brief-table-notes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.5rem 2rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border-muted, #d0d0d0);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-text-muted, #555);
+}
+
+@media (max-width: 35rem) {
+  .brief-table-notes {
+    grid-template-columns: 1fr;
+  }
+}
+
+.brief-table-notes__col {
+  min-width: 0;
+}
+
+.brief-table-notes__label {
+  display: block;
+  font-weight: 600;
+  color: var(--color-text, #222);
+  margin-bottom: 0.25rem;
+}
+
+.brief-table-notes__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.brief-table-notes__list li {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 1.25rem;
-  font-size: var(--font-size-sm);
-  margin-top: 0.75rem;
-}
-
-.brief-table-legend-item {
-  display: inline-flex;
-  align-items: center;
+  align-items: baseline;
   gap: 0.35rem;
+  margin-bottom: 0.2rem;
 }
 
-.brief-table-legend-item .brief-table-indicator {
+.brief-table-notes__list li:last-child {
+  margin-bottom: 0;
+}
+
+.brief-table-notes__text {
+  margin: 0;
+}
+
+.brief-table-notes .brief-table-indicator {
   font-weight: 600;
 }
 

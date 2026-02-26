@@ -722,7 +722,7 @@
 
         function openGoogleCalendar() {
             var d = getModalData();
-            var title = 'Follow up: ' + d.legislator + ' — kei truck email';
+            var title = 'Follow up: ' + d.legislator + ' — kei vehicle registration email';
             var details = 'Follow up with an email to the office (constituent mail).\n\nCall script (open this link to get back to the exact script):\n' + d.callScriptUrl;
             var startDate = d.dateVal && d.timeVal ? new Date(d.dateVal + 'T' + d.timeVal) : new Date();
             if (!d.dateVal) startDate.setDate(startDate.getDate() + 2);
@@ -737,7 +737,7 @@
 
         function openMailto() {
             var d = getModalData();
-            var subject = 'Reminder: Follow up ' + d.legislator + ' — kei truck email';
+            var subject = 'Reminder: Follow up ' + d.legislator + ' — kei vehicle registration email';
             var body = 'Follow up with an email to the office (constituent mail). You left a voicemail; a short email with the SOS memo and sample letters doubles your touchpoint.\n\nCall script (open this link to get back to the exact script):\n' + d.callScriptUrl;
             window.location.href = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
             closeReminderModal();
@@ -1001,7 +1001,7 @@
             var callScriptUrl = buildCallScriptUrl(memberId, zipCode);
             var dateVal = (inlineDate && inlineDate.value) || '';
             var timeVal = (inlineTime && inlineTime.value) || '09:00';
-            var title = 'Follow up: ' + legislator + ' — kei truck email';
+            var title = 'Follow up: ' + legislator + ' — kei vehicle registration email';
             var details = 'Follow up with an email to the office (constituent mail).\n\nCall script (open this link to get back to the exact script):\n' + callScriptUrl;
             var startDate = dateVal && timeVal ? new Date(dateVal + 'T' + timeVal) : new Date();
             if (!dateVal) startDate.setDate(startDate.getDate() + 2);

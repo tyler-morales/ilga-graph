@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from . import advocacy_helpers as ah
+from .routers.content import STRATEGIC_FIVE_POINTS
 
 # Type for a scene: id, label, template, context dict, optional trigger key for JS.
 _SCENES: list[dict] = []
@@ -39,6 +40,7 @@ def _drawer_email_context() -> dict:
         chamber="House",
         district="5",
         target_type="NON_COMMITTEE",
+        one_pager_points=STRATEGIC_FIVE_POINTS,
     )
     body_followup = ah.build_after_call_email_body(
         "",
@@ -48,6 +50,7 @@ def _drawer_email_context() -> dict:
         district="5",
         target_type="NON_COMMITTEE",
         call_date="",
+        one_pager_points=STRATEGIC_FIVE_POINTS,
     )
     return {
         "drawer_view": "email_first",

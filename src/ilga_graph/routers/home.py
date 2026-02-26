@@ -12,6 +12,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import config as cfg
 from ..db import get_db
 from ..routers.advocacy import DEFAULT_HERO_ZIP, _hero_context
+from ..routers.content import (
+    STRATEGIC_FIVE_POINTS,
+    STRATEGIC_MISSION,
+    STRATEGIC_VISION,
+    get_strategic_states_tooltips,
+)
 from ..routers.outreach import get_outreach_aggregate
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -30,6 +36,8 @@ templates.env.globals["show_beta_banner"] = cfg.BETA_BANNER
 templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
 templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
+templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
+templates.env.globals["features"] = cfg.get_client_features()
 
 
 @router.get("/", include_in_schema=False)
@@ -52,5 +60,9 @@ async def home(
         "calls_total": calls_total,
         "calls_this_week": calls_this_week,
         "zip": (cfg.DEV_MODE and DEFAULT_HERO_ZIP) or "",
+        "strategic_mission": STRATEGIC_MISSION,
+        "strategic_vision": STRATEGIC_VISION,
+        "strategic_five_points": STRATEGIC_FIVE_POINTS,
+        "strategic_states_tooltips": get_strategic_states_tooltips(),
     }
     return templates.TemplateResponse("home.html", ctx)

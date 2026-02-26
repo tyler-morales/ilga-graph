@@ -1,0 +1,96 @@
+{# Formation: Texas front and center; Colorado and Michigan partly behind on left and right. Paths from us-states.svg
+(959×593). Custom pill tooltips on hover (fade + slide); data from content.py via strategic_states_tooltips. #}
+<span class="strategic-states-icon-wrap">
+<svg class="strategic-points-states-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 115" transform="scale(1.3)"
+  fill="currentColor" focusable="false" role="group" aria-label="State shapes: hover for law or policy; click a state to bring it to the front">
+  {# Back row (drawn first): CO and MI with lower opacity so they read behind Texas #}
+  <g class="strategic-states-back strategic-states-co"
+    transform="translate(40, 52) scale(0.5, 0.5) translate(-367, -290)" opacity="0.35"
+    role="button" tabindex="0"
+    {% if strategic_states_tooltips and strategic_states_tooltips.get('co') %}data-state="{{ strategic_states_tooltips.co.state }}" data-how="{{ strategic_states_tooltips.co.how }}"{% endif %}
+    aria-label="{% if strategic_states_tooltips and strategic_states_tooltips.get('co') %}{{ strategic_states_tooltips.co.state }}: {{ strategic_states_tooltips.co.how }}. {% endif %}Click to bring to front">
+    {% if strategic_states_tooltips and strategic_states_tooltips.get('co') %}<title>{{ strategic_states_tooltips.co.state }}: {{ strategic_states_tooltips.co.how }}</title>{% endif %}
+    <path d="m 374.6,323.3 -16.5,-1 -51.7,-4.8 -52.6,-6.5 11.5,-88.3 44.9,5.7 37.5,3.4 33.1,2.4 -1.4,22.1 z" />
+  </g>
+  <g class="strategic-states-back strategic-states-mi" transform="translate(141, 52) scale(0.70) translate(-670, -180)"
+    opacity="0.35"
+    role="button" tabindex="0"
+    {% if strategic_states_tooltips and strategic_states_tooltips.get('mi') %}data-state="{{ strategic_states_tooltips.mi.state }}" data-how="{{ strategic_states_tooltips.mi.how }}"{% endif %}
+    aria-label="{% if strategic_states_tooltips and strategic_states_tooltips.get('mi') %}{{ strategic_states_tooltips.mi.state }}: {{ strategic_states_tooltips.mi.how }}. {% endif %}Click to bring to front">
+    {% if strategic_states_tooltips and strategic_states_tooltips.get('mi') %}<title>{{ strategic_states_tooltips.mi.state }}: {{ strategic_states_tooltips.mi.how }}</title>{% endif %}
+    <path
+      d="m 663.3,209.8 .1,1.4 21.4,-3.5 .5,-1.2 3.9,-5.9 v -4.3 l .8,-2.1 2.2,-.8 2,-7.8 1,-.5 1,.6 -.2,.6 -1.1,.8 .3,.9 .8,.4 1.9,-1.4 .4,-9.8 -1.6,-2.3 -1.2,-3.7 v -2.5 l -2.3,-4.4 v -1.8 l -1.2,-3.3 -2.3,-3 -2.9,-1 -4.8,3 -2.5,4.6 -.2,.9 -3,3.5 -1.5,-.2 -2.9,-2.8 -.1,-3.4 1.5,-1.9 2,-.2 1.2,-1.7 .2,-4 .8,-.8 1.1,-.1 .9,-1.7 -.2,-9.6 -.3,-1.3 -1.2,-1.2 -1.7,-1 -.1,-1.8 .7,-.6 1.8,.8 -.3,-1.7 -1.9,-2.7 -.7,-1.6 -1.1,-1.1 h -2.2 l -8.1,-2.9 -1.4,-1.7 -3.1,-.3 -1.2,.3 -4.4,-2.3 h -1.4 l .5,1 -2.7,-.1 .1,.6 .6,.6 -2.5,2.1 .1,1.8 1.5,2.3 1.5,.2 v .6 l -1.5,.5 -2.1,-.1 -2.8,2.5 .1,2.5 .4,5.8 -2.2,3.4 .8,-4.5 -.8,-.6 -.9,5.3 -1,-2.3 .5,-2.3 -.5,-1 .6,-1.3 -.6,-1.1 1,-1 v -1.2 l -1.3,.6 -1.3,3.1 -.7,.7 -1.3,2.4 -1.7,-.2 -.1,1.2 h -1.6 l .2,1.5 .2,2 -3,1.2 .1,1.3 1,1.7 -.1,5.2 -1.3,4.4 -1.7,2.5 1.2,1.4 .8,3.5 -1,2.5 -.2,2.1 1.7,3.4 2.5,4.9 1.2,1.9 1.6,6.9 -.1,8.8 -.9,3.9 -2,3.2 -.9,3.7 -2,3 -1.2,1 z m -95.8,-96.8 3,3.8 17,3.8 1.4,1 4,.8 .7,.5 2.8,-.2 4.9,.8 1.4,1.5 -1,1 .8,.8 3.8,.7 1.2,1.2 .1,4.4 -1.3,2.8 2,.1 1,-.8 .9,.8 -1.1,3.1 1,1.6 1.2,.3 .8,-1.8 2.9,-4.6 1.6,-6 2.3,-2 -.5,-1.6 .5,-.9 1,1.6 -.3,2.2 2.9,-2.2 .2,-2.3 2.1,.6 .8,-1.6 .7,.6 -.7,1.5 -1,.5 -1,2 1.4,1.8 1.1,-.5 -.5,-.7 1,-1.5 1.9,-1.7 h .8 l .2,-2.6 2,-1.8 7.9,-.5 1.9,-3.1 3.8,-.3 3.8,1.2 4.2,2.7 .7,-.2 -.2,-3.5 .7,-.2 4.5,1.1 1.5,-.2 2.9,-.7 1.7,.4 1.8,.1 v -1.1 l -.7,-.9 -1.5,-.2 -1.1,-.8 .5,-1.4 -.8,-.3 -2.6,.1 -.1,-1 1.1,-.8 .6,.8 .5,-1.8 -.7,-.7 .7,-.2 -1.4,-1.3 .3,-1.3 .1,-1.9 h -1.3 l -1.5,1 -1.9,.1 -.5,1.8 -1.9,.2 -.3,-1.2 -2.2,.1 -1,1.2 -.7,-.1 -.2,-.8 -2.6,.4 -.1,-4.8 1,-2 -.7,-.1 -1.8,1.1 h -2.2 l -3.8,2.7 -6.2,.3 -4.1,.8 -1.9,1.5 -1.4,1.3 -2.5,1.7 -.3,.8 -.6,-1.7 -1.3,-.6 v .6 l .7,.7 v 1.3 l -1.5,-.6 h -.6 l -.3,1.2 -2,-1.9 -1.3,-.2 -1.3,1.5 -3.2,-.1 -.5,-1.4 -2,-1.9 -1.3,-1.6 v -.7 l -1.1,-1.4 -2.6,-1.2 -3.3,-.1 -1.1,-.9 h -1.4 l -.7,.4 -2.2,2.2 -.7,1.1 -1,-.7 .2,-1 .8,-2.1 3.2,-5 .8,-.2 1.7,-1.9 .7,-1.6 3,-.6 .8,-.6 -.1,-1 -.5,-.5 -4.5,.2 -2,.5 -2.6,1.2 -1.2,1.2 -1.7,2.2 -1.8,1 -3.3,3.4 -.4,1.6 -7.4,4.6 -4,.5 -1.8,.4 -2.3,3 -1.8,.7 -4.4,2.3 z m 100.7,3.8 3.8,.1 .6,-.5 -.2,-2 -1.7,-1.8 -1.9,.1 -.1,.5 1.1,.4 -1.6,.8 -.3,1 -.6,-.6 -.4,.8 z m -75.1,-41.9 -2.3,.2 -2.7,1.9 -7.1,5.3 .8,1 1.8,.3 2.8,-2 -1.1,-.5 2.3,-1.6 h 1 l 3,-1.9 -.1,-.9 z m 41.1,62.8 v 1 l 2.1,1.6 -.2,-2.4 z m -.7,2.8 1.1,.1 v .9 h -1 z m 21.4,-21.3 v .9 l .8,-.2 v -.5 z m 4.7,3.1 -.1,-1.1 -1.6,-.2 -.6,-.4 h -.9 l -.4,.3 .9,.4 1.1,1.1 z m -18,1.2 -.1,1.1 -.3,.7 .2,2.2 .4,.3 .7,.1 .5,-.9 .1,-1.6 -.3,-.6 -.1,-1.1 z" />
+  </g>
+  {# Front: Texas full opacity, centered on top so CO and MI appear partly behind #}
+  <g class="strategic-states-front strategic-states-tx" transform="translate(60, 52) scale(0.38) translate(-370, -450)"
+    role="button" tabindex="0"
+    {% if strategic_states_tooltips and strategic_states_tooltips.get('tx') %}data-state="{{ strategic_states_tooltips.tx.state }}" data-how="{{ strategic_states_tooltips.tx.how }}"{% endif %}
+    aria-label="{% if strategic_states_tooltips and strategic_states_tooltips.get('tx') %}{{ strategic_states_tooltips.tx.state }}: {{ strategic_states_tooltips.tx.how }}. {% endif %}Click to bring to front">
+    {% if strategic_states_tooltips and strategic_states_tooltips.get('tx') %}<title>{{ strategic_states_tooltips.tx.state }}: {{ strategic_states_tooltips.tx.how }}</title>{% endif %}
+    <path
+      d="m 282.3,429 .3,-3 34.4,3.6 31.8,2.6 7.9,-99.3 .8,0 52.6,3.2 -1.4,42.7 2.7,1.3 2.5,3 1.5,.3 1.1,-1 1.2,.4 1.4,1 1.1,-1.5 2.3,1.7 .5,2.9 1.2,.7 2.3,-.1 3.5,1.9 2,-.1 1.4,-.4 2.3,2.2 2,-2.3 3.5,1.1 1.9,3 2.3,-.1 -.7,2.1 2.3,1.1 3,-2.6 2.6,1.7 1.3,-.5 .1,1.5 1.7,1.2 2.3,-2.5 1.2,.7 -.3,2 1,1.8 1.2,-.8 2.5,-4.2 1.8,2 2,.5 2.1,-.7 2,1.8 1.2,-.1 1.3,1.2 3.6,-.9 .6,-1.7 3.7,-.3 1.6,.7 5,-2.5 .6,1.5 5.1,-.3 .5,-1.6 2.2,.9 4.6,3.8 6.4,1.9 2.6,2.3 2.8,-1.3 3.2,.8 .2,11.9 .5,19.9 .7,3.4 2.6,2.8 .7,5.4 3.8,4.6 .8,4.3 h 1 l -.1,7.3 -3.3,6.4 1.3,2.3 -1.3,1.5 .7,3 -.1,4.3 -2.2,3.5 -.1,.8 -1.7,1.2 1,1.8 1.2,1.1 -3.5,.3 -8.4,3.9 -3.5,1.4 -1.8,1.8 -.7,-.5 2.1,-2.3 1.8,-.7 .5,-.9 -2.9,-.1 -.7,-.8 .8,-2 -.9,-1.8 h -.6 l -2.4,1.3 -1.9,2.6 .3,1.7 3.3,3.4 1.3,.3 v .8 l -2.3,1.6 -4.9,4 -4,3.9 -3.2,1.4 -5,3 -3.7,2 -4.5,1.9 -4.1,2.5 3.2,-3 v -1.1 l .6,-.8 -.2,-1.8 -1.5,-.1 -1.1,1.5 -2.6,1.3 -1.8,-1.2 -.3,-1.7 h -1.5 l .8,2.2 1.4,.7 1.2,.9 1.8,1.6 -.7,.8 -3.9,1.7 -1.7,.1 -1.2,-1.2 -.5,2.1 .5,1.1 -2.7,2 -1.5,.2 -.8,.7 -.4,1.7 -1.8,3.3 -1.6,.7 -1.6,-.6 -1.8,1.1 .3,1.4 1.3,.8 1,.8 -1.8,3.5 -.3,2.8 -1,1.7 -1.4,1 -2.9,.4 1.8,.6 1.9,-.6 -.4,3.2 -1.1,-.1 .2,1.2 .3,1.4 -1.3,.9 v 3.1 l 1.6,1.4 .6,3.1 -.4,2.2 -1,.4 .4,1.5 1.1,.4 .8,1.7 v 2.6 l 1.1,2.1 2.2,2.6 -.1,.7 -2.2,-.2 -1.6,1.4 .2,1.4 -.9,-.3 -1.4,-.2 -3.4,-3.7 -2.3,-.6 h -7.1 l -2.8,-.8 -3.6,-3 -1.7,-1 -2.1,.1 -3.2,-2.6 -5.4,-1.6 v -1.3 l -1.4,-1.8 -.9,-4.7 -1.1,-1.7 -1.7,-1.4 v -1.6 l -1.4,-.6 .6,-2.6 -.3,-2.2 -1.3,-1.4 .7,-3 -.8,-3.2 -1.7,-1.4 h -1.1 l -4,-3.5 .1,-1.9 -.8,-1.7 -.8,-.2 -.9,-2.4 -2,-1.6 -2.9,-2.5 -.2,-2.1 -1,-.7 .2,-1.6 .5,-.7 -1.4,-1.5 .1,-.7 -2,-2.2 .1,-2.1 -2.7,-4.9 -.1,-1.7 -1.8,-3.1 -5.1,-4.8 v -1.1 l -3.3,-1.7 -.1,-1.8 -1.2,-.4 v -.7 l -.8,-.2 -2.1,-2.8 h -.8 l -.7,-.6 -1.3,1.1 h -2.2 l -2.6,-1.1 h -4.6 l -4.2,-2.1 -1.3,1.9 -2.2,-.6 -3.3,1.2 -1.7,2.8 -2,3.2 -1.1,4.4 -1.4,1.2 -1.1,.1 -.9,1.6 -1.3,.6 -.1,1.8 -2.9,.1 -1.8,-1.5 h -1 l -2,-2.9 -3.6,-.5 -1.7,-2.3 -1.3,-.2 -2.1,-.8 -3.4,-3.4 .2,-.8 -1.6,-1.2 -1,-.1 -3.4,-3.1 -.1,-2 -2.3,-4 .2,-1.6 -.7,-1.3 .8,-1.5 -.1,-2.4 -2.6,-4.1 -.6,-4.2 -1.6,-1.6 v -1 l -1.2,-.2 -.7,-1.1 -2.4,-1.7 -.9,-.1 -1.9,-1.6 v -1.1 l -2.9,-1.8 -.6,-2.1 -2.6,-2.3 -3.2,-4.4 -3,-1.3 -2.1,-1.8 .2,-1.2 -1.3,-1.4 -1.7,-3.7 -2.4,-1 z m 174.9,138.3 .8,.1 -.6,-4.8 -3.5,-12.3 -.2,-8.1 4.9,-10.5 6.1,-8.2 7.2,-5.1 v -.7 h -.8 l -2.6,1 -3.6,2.3 -.7,1.5 -8.2,11.6 -2.8,7.9 v 8.8 l 3.6,12 z" />
+  </g>
+</svg>
+  <span class="strategic-states-tooltip" role="tooltip" aria-live="polite" id="strategic-states-tooltip" hidden></span>
+</span>
+<script>
+(function() {
+  function init() {
+    var wrap = document.querySelector('.strategic-states-icon-wrap');
+    if (!wrap) return;
+    var tooltip = wrap.querySelector('.strategic-states-tooltip');
+    var triggers = wrap.querySelectorAll('.strategic-states-co, .strategic-states-mi, .strategic-states-tx');
+    var leaveTimeout = null;
+    var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function positionTooltip(rect) {
+      tooltip.style.left = rect.left + rect.width / 2 + 'px';
+      tooltip.style.top = rect.top - 8 + 'px';
+    }
+
+    function show(state, how, rect) {
+      if (leaveTimeout) { clearTimeout(leaveTimeout); leaveTimeout = null; }
+      tooltip.textContent = state + ': ' + how;
+      tooltip.setAttribute('aria-hidden', 'false');
+      tooltip.removeAttribute('hidden');
+      positionTooltip(rect);
+      tooltip.classList.remove('strategic-states-tooltip--leaving');
+      tooltip.offsetHeight;
+      tooltip.classList.add('strategic-states-tooltip--visible');
+    }
+
+    function hide() {
+      tooltip.classList.add('strategic-states-tooltip--leaving');
+      tooltip.classList.remove('strategic-states-tooltip--visible');
+      var duration = reducedMotion ? 0 : 180;
+      leaveTimeout = setTimeout(function() {
+        tooltip.setAttribute('aria-hidden', 'true');
+        tooltip.setAttribute('hidden', '');
+        tooltip.classList.remove('strategic-states-tooltip--leaving');
+        leaveTimeout = null;
+      }, duration);
+    }
+
+    triggers.forEach(function(g) {
+      g.addEventListener('mouseenter', function(ev) {
+        var state = g.getAttribute('data-state');
+        var how = g.getAttribute('data-how');
+        if (!state || !how) return;
+        var rect = g.getBoundingClientRect();
+        show(state, how, rect);
+      });
+      g.addEventListener('mouseleave', function() { hide(); });
+      g.addEventListener('focus', function() {
+        var state = g.getAttribute('data-state');
+        var how = g.getAttribute('data-how');
+        if (!state || !how) return;
+        var rect = g.getBoundingClientRect();
+        show(state, how, rect);
+      });
+      g.addEventListener('blur', function() { hide(); });
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>

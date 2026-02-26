@@ -1,10 +1,19 @@
-{# ── Home only: mission statement block below What's happening. Large italic Helvetica bold quote; attribution bottom-right. ── #}
+{# ── Home only: mission (truck bg) + vision & success section below (content.py). ── #}
 <section class="mission-statement" id="mission-statement" aria-labelledby="mission-statement-heading">
     <h2 class="mission-statement-heading" id="mission-statement-heading">Mission Statement</h2>
     <div class="mission-statement-body">
         <blockquote class="mission-statement-quote" cite="">
-            We advocate for a precise and responsible update to Illinois law so federally lawful Kei vehicles can be titled and registered for normal road use — without weakening existing safety, insurance, or equipment standards.
+            {{ strategic_mission|default('Fix the statutory gap that prevents road-legal kei vehicles in Illinois.') }}
         </blockquote>
-        <p class="mission-statement-attribution" aria-label="Attribution">– Land of Kei Illinois advocacy group:</p>
+        <p class="mission-statement-attribution" aria-label="Attribution">– Land of Kei Illinois advocacy group</p>
     </div>
 </section>
+{% if strategic_vision %}
+<section class="vision-and-success" id="vision-and-success" aria-labelledby="vision-statement-label">
+    <div class="vision-statement-block">
+        <h2 class="vision-statement-label" id="vision-statement-label">Vision Statement</h2>
+        <div class="vision-statement-line" aria-hidden="true"></div>
+        <p class="vision-statement-text" id="vision-text">{{ strategic_vision }}</p>
+    </div>
+</section>
+{% endif %}

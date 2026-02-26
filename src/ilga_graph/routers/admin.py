@@ -21,6 +21,7 @@ from ..db import get_db
 from ..db_models import OutreachEvent, OutreachStepEvent, User
 from ..dependencies import get_current_user_optional
 from ..member_lookup import find_member_by_district
+from ..routers.content import STRATEGIC_FIVE_POINTS
 from ..run_log import get_log_path, load_recent_runs
 from ..security import validate_photo_url_for_drawer
 
@@ -39,6 +40,8 @@ templates.env.globals["show_beta_banner"] = cfg.BETA_BANNER
 templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
 templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
+templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
+templates.env.globals["features"] = cfg.get_client_features()
 
 _ZIP_RE = re.compile(r"^\d{5}$")
 MOCK_DEV_USER_EMAIL = "funky_mama11@gmail.com"

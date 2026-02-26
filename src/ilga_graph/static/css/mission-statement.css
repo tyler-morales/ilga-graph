@@ -11,6 +11,11 @@
   position: relative;
   isolation: isolate;
 }
+.page-home .mission-statement {
+  margin-top: 0;
+  padding-top: var(--home-section-padding-block, 2rem);
+  padding-bottom: var(--home-section-padding-block, 2rem);
+}
 
 .mission-statement::before {
   content: "";
@@ -39,20 +44,21 @@
 .mission-statement-body {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 2rem;
   min-height: 8rem;
 }
 
 .mission-statement-quote {
-  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-size: clamp(1.75rem, 5vw, 3.25rem);
   font-weight: 600;
   font-style: italic;
-  line-height: 1.35;
-  color: #1a1a1a;
+  line-height: 1.5;
+  color: var(--color-text, #1a1a1a);
   margin: 0;
   padding: 0;
   border: none;
   text-align: left;
+  max-width: 18em;
 }
 
 .mission-statement-attribution {
@@ -65,6 +71,94 @@
   text-align: right;
 }
 
+/* Vision & how we measure success — vision block: small label, thick line, large statement (reference layout). */
+.vision-and-success {
+  margin-top: 1.25rem;
+  padding: 2.5rem 0;
+  border-top: 1px solid var(--color-border-light, #e5e5e5);
+}
+.page-home .vision-and-success {
+  padding: var(--home-section-padding-block, 2rem) 0;
+}
+
+.vision-statement-block {
+  margin-bottom: 0;
+  margin-inline: auto;
+  max-width: 42rem;
+  padding-inline: 2rem;
+  padding-left: 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .vision-statement-block {
+    padding-inline: 0;
+    padding-left: 0;
+    border-left: none;
+  }
+}
+
+.vision-statement-label {
+  font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1a1a1a;
+  margin: 0 0 0.35rem 0;
+  text-align: left;
+}
+
+.vision-statement-line {
+  width: 3.5rem;
+  height: 4px;
+  background: #1a1a1a;
+  margin: 0 0 1.25rem 0;
+}
+.page-home .vision-statement-line {
+  margin-bottom: var(--home-section-title-gap, 1.5rem);
+}
+
+.vision-statement-text {
+  font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: #1a1a1a;
+  margin: 0;
+  text-align: left;
+}
+
+.vision-and-success-list-wrap {
+  margin: 2.5rem 0 0 0;
+  padding: 0;
+}
+
+.vision-and-success-list-heading {
+  font-size: var(--font-size-label, 0.875rem);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary, #555);
+  margin: 0 0 0.5rem 0;
+}                                
+
+.vision-and-success-list {
+  list-style: disc;
+  padding-left: 1.5rem;
+  margin: 0;
+}
+
+.vision-and-success-list-item {
+  font-size: var(--font-size-body, 1rem);
+  line-height: 1.5;
+  color: var(--color-text-muted, #444);
+  margin-bottom: 0.35rem;
+}
+
+.vision-and-success-list-item:last-child {
+  margin-bottom: 0;
+}
+
 /* CTA lives in .home-cta (between mission statement and Share) so it is not on the truck image. */
 .home-cta {
   margin-top: 2rem;
@@ -75,6 +169,11 @@
   align-items: center;
   gap: 0.75rem;
   text-align: center;
+}
+.page-home .home-cta {
+  margin-top: 0;
+  padding-top: var(--home-section-padding-block, 2rem);
+  padding-bottom: var(--home-section-padding-block, 2rem);
 }
 
 .mission-statement-cta-btn {
@@ -118,6 +217,7 @@
 
 @media (max-width: 640px) {
   .mission-statement-quote {
-    font-size: 1.35rem;
+    font-size: 1.5rem;
+    max-width: none;
   }
 }

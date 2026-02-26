@@ -1,0 +1,4 @@
+interface:
+  display_name: "PR UI Screenshot Update"
+  short_description: "Capture UI screenshots on push and update PR"
+  default_prompt: "When a new commit is pushed, detect UI changes, capture updated screenshots if applicable, and update the PR comment."

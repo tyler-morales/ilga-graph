@@ -7,6 +7,10 @@ respect ``as_of_date`` filtering.
 
 from __future__ import annotations
 
+import pytest
+
+pytest.importorskip("polars", reason="optional [ml] deps not installed")
+
 from datetime import datetime, timedelta
 
 import polars as pl
