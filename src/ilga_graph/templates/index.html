@@ -1176,6 +1176,11 @@
             if (typeof window._guideGoVerifiedHook === 'function') {
                 window._guideGoVerifiedHook(email);
             }
+            var params = new URLSearchParams(window.location.search || '');
+            var next = params.get('next');
+            if (next && next.indexOf('/') === 0 && next.indexOf('://') === -1 && next.indexOf('javascript') === -1) {
+                window.location.href = next;
+            }
         }
 
         function goInput() {

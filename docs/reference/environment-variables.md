@@ -53,6 +53,8 @@ The app loads `.env` from the project root via `python-dotenv`. Copy `.env.examp
 | `ILGA_TURNSTILE_SECRET_KEY` | *(empty)* | Cloudflare Turnstile **secret key** (server-only). Required for server-side verification when using Turnstile. |
 | `ILGA_VOTE_BILL_URLS` | *(built-in)* | Comma-separated bill status URLs for votes/slips. |
 | `ILGA_AUTH_COOKIE_MAX_AGE` | `2592000` (30 days) | Session cookie max-age in seconds. |
+| `ILGA_AUTH_SECRET` | `dev-secret-change-me` | Secret for signing session and CSRF tokens. **Set a strong random value in production.** |
+| `ILGA_ADMIN_EMAILS` | *(empty)* | Comma-separated email addresses allowed to access the admin area (`/admin`, `/admin/updates`, `/admin/users`, `/admin/outreach`). Sign in at `/admin/login` (same email-code flow as the rest of the site). |
 | `ILGA_SMTP_HOST` | *(empty)* | SMTP server (e.g. `smtp-relay.brevo.com`). **If unset, verification codes are logged to the terminal only** — no email is sent. See [Email (Brevo)](email-brevo.md). |
 | `ILGA_SMTP_PORT` | `587` | SMTP port. |
 | `ILGA_SMTP_USER` | *(empty)* | SMTP login (Brevo: use the SMTP login from the SMTP tab, not your account email). |

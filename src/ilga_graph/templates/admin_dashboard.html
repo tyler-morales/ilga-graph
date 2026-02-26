@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Admin — {{ site_name }}{% endblock %}
+{% block content %}
+{% set os = outreach_summary %}
+{% set outreach_total = os.total_calls + os.total_emails %}
+{% set calls_pct = (100 * os.total_calls / outreach_total)|round(1) if outreach_total else 0 %}
+{% set emails_pct = (100 * os.total_emails / outreach_total)|round(1) if outreach_total else 0 %}
+<div class="admin-dashboard">
+  <header class="admin-dashboard-header">
+    <h1 id="admin-dashboard-heading">Admin</h1>
+    {% include "_admin_nav.html" %}
+  </header>
+
+  <section class="admin-dashboard-stats" aria-labelledby="admin-dashboard-stats-heading">
+    <h2 id="admin-dashboard-stats-heading" class="admin-dashboard-stats-heading">At a glance</h2>
+
+    <h3 id="admin-dashboard-key-heading" class="admin-dashboard-stats-subheading">Key metrics</h3>
+    <div class="admin-dashboard-stats-grid admin-dashboard-stats-grid--primary" aria-labelledby="admin-dashboard-key-heading">
+      <div class="admin-dashboard-stat admin-dashboard-stat--primary">
+        <span class="admin-dashboard-stat-value">{{ total_users }}</span>
+        <span class="admin-dashboard-stat-label">Users</span>
+      </div>
+      <div class="admin-dashboard-stat admin-dashboard-stat--primary">
+        <span class="admin-dashboard-stat-value">{{ subscribers }}</span>
+        <span class="admin-dashboard-stat-label">Subscribers</span>
+      </div>
+      <div class="admin-dashboard-stat admin-dashboard-stat--primary">
+        <span class="admin-dashboard-stat-value">{{ os.total_outreach_actions }}</span>
+        <span class="admin-dashboard-stat-label">Outreach actions</span>
+        <span class="admin-dashboard-stat-sublabel">last {{ os.window_days }}d</span>
+      </div>
+      <div class="admin-dashboard-stat admin-dashboard-stat--primary">
+        <span class="admin-dashboard-stat-value">{{ os.users_completed_outreach }}</span>
+        <span class="admin-dashboard-stat-label">Advocates</span>
+        <span class="admin-dashboard-stat-sublabel">last {{ os.window_days }}d</span>
+      </div>
+    </div>
+
+    <div class="admin-dashboard-charts" aria-label="Charts">
+      <div class="admin-dashboard-chart">
+        <span class="admin-dashboard-chart-label" id="admin-chart-list-label">List health</span>
+        <div class="admin-dashboard-bar-wrap" role="img" aria-labelledby="admin-chart-list-label" aria-valuenow="{{ subscriber_rate_pct }}" aria-valuemin="0" aria-valuemax="100">
+          <div class="admin-dashboard-bar admin-dashboard-bar--fill" style="width: {{ subscriber_rate_pct }}%"></div>
+        </div>
+        <span class="admin-dashboard-chart-caption">{{ subscribers }} of {{ total_users }} subscribed ({{ subscriber_rate_pct }}%)</span>
+      </div>
+      <div class="admin-dashboard-chart">
+        <span class="admin-dashboard-chart-label" id="admin-chart-outreach-label">Outreach mix (last {{ os.window_days }}d)</span>
+        <div class="admin-dashboard-bar admin-dashboard-bar--stacked" role="img" aria-labelledby="admin-chart-outreach-label">
+          <span class="admin-dashboard-bar-segment admin-dashboard-bar-segment--calls" style="width: {{ calls_pct }}%" title="Calls: {{ os.total_calls }}"></span>
+          <span class="admin-dashboard-bar-segment admin-dashboard-bar-segment--emails" style="width: {{ emails_pct }}%" title="Emails: {{ os.total_emails }}"></span>
+        </div>
+        <span class="admin-dashboard-chart-caption">{{ os.total_calls }} calls · {{ os.total_emails }} emails</span>
+      </div>
+    </div>
+
+    <h3 id="admin-dashboard-email-heading" class="admin-dashboard-stats-subheading">Email</h3>
+    <div class="admin-dashboard-stats-grid admin-dashboard-stats-grid--secondary" aria-labelledby="admin-dashboard-email-heading">
+      <div class="admin-dashboard-stat admin-dashboard-stat--secondary">
+        <span class="admin-dashboard-stat-value">{{ campaigns_sent }}</span>
+        <span class="admin-dashboard-stat-label">Campaigns sent</span>
+      </div>
+      <div class="admin-dashboard-stat admin-dashboard-stat--secondary">
+        <span class="admin-dashboard-stat-value">{{ total_emails_sent }}</span>
+        <span class="admin-dashboard-stat-label">Emails delivered</span>
+      </div>
+      <div class="admin-dashboard-stat admin-dashboard-stat--secondary">
+        <span class="admin-dashboard-stat-value">{{ drafts }}</span>
+        <span class="admin-dashboard-stat-label">Drafts</span>
+      </div>
+    </div>
+
+    <h3 id="admin-dashboard-growth-heading" class="admin-dashboard-stats-subheading">Growth & funnel</h3>
+    <div class="admin-dashboard-stats-grid admin-dashboard-stats-grid--supporting" aria-labelledby="admin-dashboard-growth-heading">
+      <div class="admin-dashboard-stat admin-dashboard-stat--supporting">
+        <span class="admin-dashboard-stat-value">{{ new_users_7d }}</span>
+        <span class="admin-dashboard-stat-label">New this week</span>
+      </div>
+      <div class="admin-dashboard-stat admin-dashboard-stat--supporting">
+        <span class="admin-dashboard-stat-value">{{ os.identities_opened_drawer }}</span>
+        <span class="admin-dashboard-stat-label">Drawer opens</span>
+        <span class="admin-dashboard-stat-sublabel">last {{ os.window_days }}d</span>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

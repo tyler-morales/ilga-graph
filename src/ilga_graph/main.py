@@ -9,7 +9,7 @@ import time
 import strawberry
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.staticfiles import StaticFiles as BaseStaticFiles
 from strawberry.fastapi import GraphQLRouter
@@ -31,6 +31,7 @@ from .routers.intelligence import router as _intelligence_router
 from .routers.legal import router as _legal_router
 from .routers.outreach import router as _outreach_router
 from .routers.site import router as _site_router
+from .routers.updates import router as _updates_router
 
 # ── Configure logging ────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -225,6 +226,21 @@ def _404_context(request: Request) -> dict:
 # ── Exception handlers (custom error pages + consistent JSON for API) ─────────
 async def _http_exception_handler(request: Request, exc: HTTPException) -> Response:
     if _wants_html(request):
+        if exc.status_code == 401:
+            from urllib.parse import quote
+
+            next_path = request.url.path
+            if request.query_params:
+                next_path = f"{next_path}?{request.query_params}"
+            if next_path.startswith("/admin") and next_path != "/admin/login":
+                return RedirectResponse(
+                    url=f"/admin/login?next={quote(next_path, safe='')}", status_code=302
+                )
+            return RedirectResponse(url=f"/?next={quote(next_path, safe='')}", status_code=302)
+        if exc.status_code == 403:
+            if request.url.path.startswith("/admin"):
+                return RedirectResponse(url="/admin/login?error=forbidden", status_code=302)
+            return templates.TemplateResponse("403.html", {"request": request}, status_code=403)
         if exc.status_code == 404:
             return templates.TemplateResponse("404.html", _404_context(request), status_code=404)
         if exc.status_code >= 500:
@@ -292,6 +308,7 @@ app.include_router(_dev_router, prefix="/dev")
 app.include_router(_advocacy_router, prefix="/advocacy")
 app.include_router(_auth_router)
 app.include_router(_content_router)
+app.include_router(_updates_router)
 app.include_router(_feedback_router)
 app.include_router(_legal_router)
 app.include_router(_bills_router, prefix="/api")

@@ -1,0 +1,84 @@
+{% extends "_brief_skeleton.html" %}
+{% block title %}Updates — {{ site_name }}{% endblock %}
+{% block brief_layout_class %}updates-page{% endblock %}
+{% block brief_title %}Updates{% endblock %}
+{% block brief_intro %}
+<p class="legal-page-intro">Where we are in the campaign and what we&rsquo;ve shared.</p>
+{% endblock %}
+
+{% block brief_main_heading %}Where we are{% endblock %}
+{% block brief_main %}
+<p class="updates-campaign-status" id="where-we-are">{{ campaign_status }}</p>
+
+<ol class="campaign-timeline" role="list" aria-label="Campaign milestones from current phase to Keis be legal">
+    {% for step in campaign_timeline %}
+    <li class="campaign-timeline__item campaign-timeline__item--{{ 'achieved' if step.achieved else 'pending' }}"><span class="campaign-timeline__num" aria-hidden="true">{{ loop.index }}.</span> {{ step.label }}</li>
+    {% endfor %}
+</ol>
+
+<section class="updates-subscribe" id="subscribe-section" aria-labelledby="subscribe-heading">
+    <h2 id="subscribe-heading">Email updates</h2>
+    {% if user %}
+        {% if wants_updates %}
+        <p>You&rsquo;re subscribed to campaign updates at <strong>{{ user.email }}</strong>.</p>
+        <p>To stop receiving emails, use the unsubscribe link at the bottom of any update email.</p>
+        {% else %}
+        <p>You&rsquo;re not subscribed. Get campaign updates by email:</p>
+        <form method="post" action="/updates/subscribe" class="updates-subscribe-form">
+            <button type="submit" class="btn btn-primary">Re-subscribe</button>
+        </form>
+        {% endif %}
+    {% else %}
+    <p>Get campaign updates by email when we post news and calls to action.</p>
+    <p><a href="/advocacy">Sign in</a> with your email to subscribe, or check back here for past updates.</p>
+    {% endif %}
+</section>
+
+{% if updates %}
+{% for u in updates %}
+<article id="update-{{ u.id }}" class="updates-article" aria-labelledby="updates-article-heading-{{ u.id }}">
+    <p class="updates-article__type updates-article__type--{{ u.update_type or 'other' }}">
+        {{ update_type_phrases.get(u.update_type, 'Update') }}
+    </p>
+    <h2 id="updates-article-heading-{{ u.id }}" class="updates-article__title">{{ u.title }}</h2>
+    <p class="updates-article__date">
+        <time datetime="{{ u.sent_at.isoformat() if u.sent_at else '' }}">{{ u.sent_at.strftime('%B %d, %Y') if u.sent_at else '' }}</time>
+    </p>
+    {% if u.image_path %}
+    <figure class="updates-article__figure">
+        <img class="updates-article__image" src="/static/{{ u.image_path }}" alt="Update image">
+    </figure>
+    {% endif %}
+    <div class="updates-article__body prose">{% if u.body_html %}{{ u.body_html|safe }}{% else %}{{ u.body_plain }}{% endif %}</div>
+</article>
+{% endfor %}
+{% else %}
+<p class="updates-none">No updates have been sent yet. Check back later.</p>
+{% endif %}
+{% endblock %}
+
+{% block brief_sidebar %}
+<aside class="legislator-brief-sidebar updates-sidebar" aria-labelledby="past-updates-heading">
+    <h2 id="past-updates-heading" class="legislator-brief-sidebar__title">Past updates</h2>
+    <div class="legislator-brief-sidebar__content">
+        {% if updates %}
+        <ul class="updates-sidebar-list" role="list" aria-labelledby="past-updates-heading">
+            {% for u in updates %}
+            <li class="updates-sidebar-item">
+                <a class="updates-sidebar-link" href="#update-{{ u.id }}">
+                    <span class="updates-sidebar-link__title">{{ u.title }}</span>
+                    <span class="updates-sidebar-link__meta">
+                        <span class="updates-sidebar-link__type">{{ update_type_labels.get(u.update_type, 'Other') }}</span>
+                        <span aria-hidden="true"> · </span>
+                        <time class="updates-sidebar-link__date" datetime="{{ u.sent_at.isoformat() if u.sent_at else '' }}">{{ u.sent_at.strftime('%b %d, %Y') if u.sent_at else '' }}</time>
+                    </span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="updates-sidebar-empty">No updates yet.</p>
+        {% endif %}
+    </div>
+</aside>
+{% endblock %}

@@ -44,8 +44,8 @@ def intelligence_trailing_slash_redirect(request: Request) -> RedirectResponse:
 
 @router.get("/favicon.ico", include_in_schema=False)
 def favicon() -> FileResponse:
-    """Serve theme-matching favicon (Kei truck SVG) at /favicon.ico."""
-    path = _STATIC_DIR / "favicon.svg"
+    """Letter avatar at /favicon.ico for email clients; site tab icon remains truck in base."""
+    path = _STATIC_DIR / "favicon-email.svg"
     return FileResponse(path, media_type="image/svg+xml")
 
 

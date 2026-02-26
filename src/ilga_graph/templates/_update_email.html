@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+    <p style="font-size: 0.9em; color: #666;">{{ site_name }}</p>
+    <h2 style="margin-top: 1em;">{{ title }}</h2>
+    {% if image_url %}
+    <p style="margin: 1em 0;"><img src="{{ image_url }}" alt="Update image" style="max-width: 100%; height: auto;"></p>
+    {% endif %}
+    <div style="margin: 1em 0;">
+        {{ body_html|safe }}
+    </div>
+    <hr style="border: none; border-top: 1px solid #eee; margin: 2em 0;">
+    <p style="font-size: 0.85em; color: #666;">
+        You're receiving this because you subscribed to campaign updates.
+    </p>
+    <p style="font-size: 0.85em;">
+        <a href="{{ unsub_url }}">Unsubscribe</a>
+    </p>
+</body>
+</html>

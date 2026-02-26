@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Choose recipients — {{ update.title }} — Admin — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="admin-updates-page admin-recipients">
+    <header class="admin-updates-header">
+        <h1 id="admin-recipients-heading">Choose recipients</h1>
+        <p class="admin-recipients-subtitle">{{ update.title }}</p>
+        <p><a href="/admin/updates">Back to compose</a></p>
+    </header>
+
+    {% if flash == 'no_recipients' %}
+    <div class="admin-updates-flash admin-updates-flash--error" role="alert">Select at least one recipient.</div>
+    {% endif %}
+
+    <section class="admin-recipients-section" aria-labelledby="admin-recipients-heading">
+        {% if subscribers %}
+        <form method="post" action="/admin/updates/{{ update.id }}/send" class="admin-recipients-form" id="recipients-form">
+            <input type="hidden" name="from_recipients_page" value="1">
+            <div class="admin-recipients-actions">
+                <button type="button" class="btn btn-secondary" id="select-all" aria-describedby="recipients-hint">Select all</button>
+                <button type="button" class="btn btn-secondary" id="deselect-all" aria-describedby="recipients-hint">Deselect all</button>
+            </div>
+            <p id="recipients-hint" class="admin-recipients-hint">Select who will receive this update.</p>
+            <ul class="admin-recipients-list" role="list" aria-describedby="recipients-hint">
+                {% for user in subscribers %}
+                <li class="admin-recipients-item">
+                    <input type="checkbox" name="recipient_ids" value="{{ user.id }}" id="recipient-{{ user.id }}" class="admin-recipients-checkbox" checked>
+                    <label for="recipient-{{ user.id }}">{{ user.email }}</label>
+                </li>
+                {% endfor %}
+            </ul>
+            <p class="admin-recipients-submit">
+                <button type="submit" class="btn btn-primary" id="send-to-n">Send to <span id="selected-count">{{ subscribers | length }}</span> selected</button>
+            </p>
+        </form>
+        {% else %}
+        <p>No subscribers. <a href="/admin/updates">Back to compose</a></p>
+        {% endif %}
+    </section>
+</div>
+
+{% if subscribers %}
+<script>
+(function() {
+    var form = document.getElementById('recipients-form');
+    var checkboxes = form.querySelectorAll('input[name="recipient_ids"]');
+    var countEl = document.getElementById('selected-count');
+    var sendBtn = document.getElementById('send-to-n');
+
+    function updateCount() {
+        var n = 0;
+        for (var i = 0; i < checkboxes.length; i++) if (checkboxes[i].checked) n++;
+        countEl.textContent = n;
+        sendBtn.setAttribute('aria-label', 'Send to ' + n + ' selected');
+    }
+
+    document.getElementById('select-all').addEventListener('click', function() {
+        for (var i = 0; i < checkboxes.length; i++) checkboxes[i].checked = true;
+        updateCount();
+    });
+    document.getElementById('deselect-all').addEventListener('click', function() {
+        for (var i = 0; i < checkboxes.length; i++) checkboxes[i].checked = false;
+        updateCount();
+    });
+    for (var i = 0; i < checkboxes.length; i++) {
+        checkboxes[i].addEventListener('change', updateCount);
+    }
+    updateCount();
+})();
+</script>
+{% endif %}
+{% endblock %}

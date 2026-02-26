@@ -22,8 +22,27 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False)
     zip_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    wants_updates: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class Update(Base):
+    """Campaign update or announcement. sent_at is set when email blast is sent."""
+
+    __tablename__ = "updates"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(256), nullable=False)
+    body_plain: Mapped[str] = mapped_column(Text, nullable=False)
+    body_html: Mapped[str | None] = mapped_column(Text, nullable=True)
+    update_type: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="other", server_default="other"
+    )
+    image_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sent_count: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class AuthCode(Base):

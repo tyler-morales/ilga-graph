@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <link rel="icon" href="/favicon.ico" type="image/svg+xml">
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
     <title>{% block title %}{{ site_name }}{% endblock %}</title>
     <meta name="description" content="{% block meta_description %}{{ meta_description }}{% endblock %}">
     <link rel="canonical" href="{{ app_base_url }}{{ request.url.path }}">
@@ -42,6 +42,9 @@
     <link rel="stylesheet" href="/static/css/intelligence-dashboard.css">
     <link rel="stylesheet" href="/static/css/intelligence-tables.css">
     <link rel="stylesheet" href="/static/css/admin-mocks.css">
+    <link rel="stylesheet" href="/static/css/admin-updates.css">
+    <link rel="stylesheet" href="/static/css/admin-dashboard.css">
+    <link rel="stylesheet" href="/static/css/admin-login.css">
     <script src="https://unpkg.com/@floating-ui/dom@1.6.11/dist/floating-ui.dom.umd.min.js"
         crossorigin="anonymous"></script>
     <script src="https://unpkg.com/@popperjs/core@2" crossorigin="anonymous"></script>
@@ -166,6 +169,8 @@
                 <a href="/legislator-brief">Legislator brief</a>
                 <span class="footer-nav-sep" aria-hidden="true"> · </span>
                 <a href="/fact-sheet">Fact sheet</a>
+                <span class="footer-nav-sep" aria-hidden="true"> · </span>
+                <a href="/updates">Updates</a>
             </nav>
             <nav class="footer-nav footer-nav-secondary" aria-label="Legal and support">
                 {% if show_beta_banner %}

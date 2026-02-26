@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import String, cast, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,8 +18,8 @@ from .. import config as cfg
 from ..app_state import state
 from ..constants import CATEGORY_COMMITTEES, GENERAL_COMMITTEE_CODES
 from ..db import get_db
-from ..db_models import OutreachEvent, OutreachStepEvent, User
-from ..dependencies import get_current_user_optional
+from ..db_models import OutreachEvent, OutreachStepEvent, Update, User
+from ..dependencies import get_current_user_optional, require_admin
 from ..member_lookup import find_member_by_district
 from ..routers.content import STRATEGIC_FIVE_POINTS
 from ..run_log import get_log_path, load_recent_runs
@@ -48,6 +48,102 @@ MOCK_DEV_USER_EMAIL = "funky_mama11@gmail.com"
 DEFAULT_MOCK_ZIP = "60007"
 
 
+def _safe_admin_next(next_param: str | None) -> str:
+    """Return next path for redirect if safe (same-origin path); else /admin."""
+    if not next_param or not next_param.strip():
+        return "/admin"
+    s = next_param.strip()
+    path = s.split("?")[0]
+    if not path.startswith("/") or "//" in path or path == "/admin/login":
+        return "/admin"
+    return s
+
+
+@router.get("/admin/login", include_in_schema=False)
+async def admin_login_page(
+    request: Request,
+    next_param: str | None = None,
+    error: str | None = None,
+    user: User | None = Depends(get_current_user_optional),
+):
+    """Admin login page. Same email-code flow; redirects to dashboard or next on success."""
+    if user is not None:
+        if user.email.lower() in cfg.ADMIN_EMAILS:
+            target = _safe_admin_next(next_param)
+            if "?" in target:
+                return RedirectResponse(url=target, status_code=302)
+            return RedirectResponse(url=target, status_code=302)
+        return RedirectResponse(url="/admin/login?error=forbidden", status_code=302)
+    csrf_token = getattr(request.state, "csrf_token", None) or ""
+    return templates.TemplateResponse(
+        "admin_login.html",
+        {
+            "request": request,
+            "csrf_token": csrf_token,
+            "next_param": next_param or "",
+            "error": error,
+        },
+    )
+
+
+@router.get("/admin", include_in_schema=False)
+async def admin_dashboard(
+    request: Request,
+    admin_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin dashboard: at-a-glance stats and links to Email, Users, Outreach stats."""
+    now = datetime.now(timezone.utc)
+    window_7d = now - timedelta(days=7)
+
+    total_users = (await db.execute(select(func.count(User.id)))).scalar() or 0
+    subscribers = (
+        await db.execute(select(func.count(User.id)).where(User.wants_updates.is_(True)))
+    ).scalar() or 0
+    new_users_7d = (
+        await db.execute(select(func.count(User.id)).where(User.created_at >= window_7d))
+    ).scalar() or 0
+
+    campaigns_sent = (
+        await db.execute(select(func.count(Update.id)).where(Update.sent_at.isnot(None)))
+    ).scalar() or 0
+    drafts = (
+        await db.execute(select(func.count(Update.id)).where(Update.sent_at.is_(None)))
+    ).scalar() or 0
+    total_emails_sent = (
+        await db.execute(
+            select(func.coalesce(func.sum(Update.sent_count), 0)).where(Update.sent_at.isnot(None))
+        )
+    ).scalar() or 0
+
+    conversion_data = await _get_outreach_conversion_data(db)
+    outreach_summary = {
+        "window_days": conversion_data["window_days"],
+        "identities_opened_drawer": conversion_data["volumes"]["identities_opened_drawer"],
+        "users_completed_outreach": conversion_data["volumes"]["users_completed_outreach"],
+        "total_calls": conversion_data["volumes"]["total_calls"],
+        "total_emails": conversion_data["volumes"]["total_emails"],
+        "total_outreach_actions": conversion_data["volumes"]["total_outreach_actions"],
+    }
+
+    subscriber_rate_pct = round(100.0 * subscribers / total_users) if total_users else 0
+
+    return templates.TemplateResponse(
+        "admin_dashboard.html",
+        {
+            "request": request,
+            "total_users": total_users,
+            "subscribers": subscribers,
+            "new_users_7d": new_users_7d,
+            "campaigns_sent": campaigns_sent,
+            "drafts": drafts,
+            "total_emails_sent": total_emails_sent,
+            "outreach_summary": outreach_summary,
+            "subscriber_rate_pct": subscriber_rate_pct,
+        },
+    )
+
+
 @router.get("/logs", include_in_schema=False)
 async def logs_dashboard(request: Request):
     """Unified run log dashboard — scrape, ML, startup. Minimal 2000s-hacker UI."""
@@ -73,6 +169,39 @@ async def logs_dashboard(request: Request):
             "runs": runs,
             "bottleneck": bottleneck,
             "log_path": str(get_log_path()),
+        },
+    )
+
+
+ADMIN_USERS_PAGE_SIZE = 50
+
+
+@router.get("/admin/users", include_in_schema=False)
+async def admin_users_page(
+    request: Request,
+    page: int = 1,
+    admin_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """List users with pagination. Columns: email, wants_updates, last_login_at, created_at."""
+    if page < 1:
+        page = 1
+    offset = (page - 1) * ADMIN_USERS_PAGE_SIZE
+    total = (await db.execute(select(func.count(User.id)))).scalar() or 0
+    result = await db.execute(
+        select(User).order_by(User.created_at.desc()).offset(offset).limit(ADMIN_USERS_PAGE_SIZE)
+    )
+    users = list(result.scalars().all())
+    total_pages = (total + ADMIN_USERS_PAGE_SIZE - 1) // ADMIN_USERS_PAGE_SIZE if total else 1
+    return templates.TemplateResponse(
+        "admin_users.html",
+        {
+            "request": request,
+            "users": users,
+            "page": page,
+            "total_pages": total_pages,
+            "total": total,
+            "page_size": ADMIN_USERS_PAGE_SIZE,
         },
     )
 
@@ -107,18 +236,8 @@ def _pct(denom: int, num: int) -> float:
     return round(100.0 * num / denom, 2)
 
 
-@router.get("/admin/outreach/conversion", include_in_schema=False)
-async def outreach_conversion(
-    db: AsyncSession = Depends(get_db),
-):
-    """Conversion and volume report for advocacy funnel (last 90 days).
-
-    Returns conversions (rates) and volumes (counts). Identity = user_id when set,
-    else session_id. Protected: only when DEV_MODE is true (internal/admin or Metabase).
-    """
-    if not cfg.DEV_MODE:
-        return JSONResponse(status_code=404, content={"detail": "Not available"})
-
+async def _get_outreach_conversion_data(db: AsyncSession) -> dict[str, Any]:
+    """Conversion and volume for advocacy funnel (last 90d). Used by JSON and HTML routes."""
     now = datetime.now(timezone.utc)
     window_start = now - timedelta(days=CONVERSION_WINDOW_DAYS)
     identity_expr = func.coalesce(
@@ -226,6 +345,30 @@ async def outreach_conversion(
         "conversions": conversions,
         "volumes": volumes,
     }
+
+
+@router.get("/admin/outreach/conversion", include_in_schema=False)
+async def outreach_conversion(
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+):
+    """Conversion/volume for advocacy funnel (last 90d). Admin-only; available in prod."""
+    data = await _get_outreach_conversion_data(db)
+    return data
+
+
+@router.get("/admin/outreach", include_in_schema=False)
+async def admin_outreach_page(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+):
+    """Outreach stats page: conversion rates and volumes (server-rendered)."""
+    data = await _get_outreach_conversion_data(db)
+    return templates.TemplateResponse(
+        "admin_outreach.html",
+        {"request": request, "conversion_data": data},
+    )
 
 
 def _resolve_mock_legislators(zip_code: str) -> list[dict[str, Any]]:

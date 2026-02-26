@@ -188,6 +188,24 @@ STRATEGIC_SUCCESS_MEASURE_ITEMS: list[str] = [
     "A coalition ready to act when a bill moves",
 ]
 
+# "Where we are" block on /updates. Update as the campaign progresses.
+CAMPAIGN_STATUS = (
+    "We are in the outreach phase. No bill has been introduced yet. "
+    "We are building constituent contacts and identifying a sponsor."
+)
+
+# Campaign timeline: checkpoints from current phase to Keis be legal. Update achieved count as campaign advances.
+CAMPAIGN_TIMELINE_CHECKPOINTS: list[str] = [
+    "Outreach & building contacts",
+    "Sponsor identified",
+    "Bill introduced",
+    "Committee hearing",
+    "Passes legislature",
+    "Governor signature",
+    "Keis be legal",
+]
+CAMPAIGN_TIMELINE_ACHIEVED_COUNT: int = 1  # Steps 1..N at full opacity; rest at reduced opacity.
+
 # Fact sheet for the base (Hardball Ch7; content matches docs/advocacy/focused-next-steps-1-2-4-5-6.md §5).
 FACT_SHEET_ISSUE = (
     "Illinois is treating lawfully imported kei vehicles as off-highway, so owners cannot "

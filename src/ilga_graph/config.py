@@ -119,6 +119,9 @@ FOOTER_LAST_UPDATED_ISO: str = _env("ILGA_FOOTER_LAST_UPDATED_ISO", "2026-02-24"
 # Bug report image uploads (optional). Empty = no uploads. Dir created on first report with image.
 BUG_REPORT_UPLOAD_DIR: str = _env("ILGA_BUG_REPORT_UPLOAD_DIR", "data/bug_report_uploads").strip()
 BUG_REPORT_MAX_IMAGE_BYTES: int = int(_env("ILGA_BUG_REPORT_MAX_IMAGE_MB", "5")) * 1024 * 1024
+# Update image uploads: subdir under static (e.g. updates → /static/updates/). Created on first use.
+UPDATE_IMAGE_UPLOAD_DIR: str = _env("ILGA_UPDATE_IMAGE_UPLOAD_DIR", "updates").strip()
+UPDATE_MAX_IMAGE_BYTES: int = int(_env("ILGA_UPDATE_MAX_IMAGE_MB", "5")) * 1024 * 1024
 
 # Rate limits (per key: IP or IP+email). In-memory; resets on process restart.
 RATE_LIMIT_BUG_REPORT_PER_HOUR: int = int(_env("ILGA_RATE_LIMIT_BUG_REPORT_PER_HOUR", "10"))
@@ -228,6 +231,10 @@ AUTH_SECRET: str = _env("ILGA_AUTH_SECRET", "dev-secret-change-me")
 # Cookie max-age in seconds (default 30 days).
 AUTH_COOKIE_MAX_AGE: int = int(_env("ILGA_AUTH_COOKIE_MAX_AGE", str(60 * 60 * 24 * 30)))
 AUTH_COOKIE_NAME: str = "ilga_session"
+# Comma-separated emails allowed to access admin (e.g. compose/send updates).
+ADMIN_EMAILS: list[str] = [
+    e.strip().lower() for e in _env("ILGA_ADMIN_EMAILS", "").split(",") if e.strip()
+]
 
 # SMTP for sending auth codes.  When empty, codes are logged to console (dev).
 SMTP_HOST: str = _env("ILGA_SMTP_HOST", "").strip()
