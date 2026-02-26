@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Compose update — Admin — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="admin-updates-page">
+    <header class="admin-updates-header">
+        <h1 id="admin-updates-heading">Compose campaign update</h1>
+        {% include "_admin_nav.html" %}
+        <p><a href="/updates">View public updates page</a></p>
+    </header>
+
+    {% if flash == 'draft_saved' %}
+    <div class="admin-updates-flash admin-updates-flash--success" role="status">Draft saved.</div>
+    {% endif %}
+    {% if flash == 'sent' %}
+    <div class="admin-updates-flash admin-updates-flash--success" role="status">Update sent to {{ request.query_params.get('count', '') }} subscribers.</div>
+    {% endif %}
+    {% if flash == 'already_sent' %}
+    <div class="admin-updates-flash admin-updates-flash--error" role="alert">That update was already sent.</div>
+    {% endif %}
+    {% if flash == 'not_found' %}
+    <div class="admin-updates-flash admin-updates-flash--error" role="alert">Update not found.</div>
+    {% endif %}
+    {% if flash == 'error' %}
+    <div class="admin-updates-flash admin-updates-flash--error" role="alert">Please enter a title and body.</div>
+    {% endif %}
+
+    <section class="admin-updates-compose" aria-labelledby="compose-heading">
+        <h2 id="compose-heading">New draft</h2>
+        <form method="post" action="/admin/updates" class="admin-updates-form" enctype="multipart/form-data">
+            <div class="admin-updates-field">
+                <label for="title">Title</label>
+                <input type="text" id="title" name="title" required maxlength="256" placeholder="e.g. February 2026 outreach update">
+            </div>
+            <div class="admin-updates-field">
+                <label for="body_plain">Body (Markdown supported)</label>
+                <textarea id="body_plain" name="body_plain" rows="12" required placeholder="Write your update here. Markdown (headings, lists, **bold**, links) is supported and rendered in the email and on the public updates page."></textarea>
+            </div>
+            <div class="admin-updates-field">
+                <label for="image">Image (optional)</label>
+                <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/webp" aria-describedby="image-hint">
+                <span id="image-hint" class="admin-updates-hint">Shown on the updates page and in the email. JPEG, PNG, or WebP; max 5 MB.</span>
+            </div>
+            <fieldset class="admin-updates-fieldset" aria-labelledby="update-type-legend">
+                <legend id="update-type-legend" class="admin-updates-legend">Update type</legend>
+                {% for slug, label in update_types %}
+                <div class="admin-updates-radio-wrap">
+                    <input type="radio" id="update_type_{{ slug }}" name="update_type" value="{{ slug }}"{% if slug == default_update_type %} checked{% endif %} class="admin-updates-radio">
+                    <label for="update_type_{{ slug }}">{{ label }}</label>
+                </div>
+                {% endfor %}
+            </fieldset>
+            <button type="submit" class="btn btn-primary">Save draft</button>
+        </form>
+    </section>
+
+    <section class="admin-updates-list" aria-labelledby="list-heading">
+        <h2 id="list-heading">Drafts and sent updates</h2>
+        {% if updates %}
+        <ul class="admin-updates-list-ul" role="list">
+            {% for u in updates %}
+            <li class="admin-updates-list-item {% if u.sent_at %}admin-updates-list-item--sent{% endif %}">
+                <span class="admin-updates-list-title">{{ u.title }}</span>
+                <span class="admin-updates-list-meta">
+                    <span class="admin-updates-list-type">{{ update_type_labels.get(u.update_type, 'Other') }}</span>
+                    {% if u.sent_at %} · Sent {{ u.sent_at.strftime('%Y-%m-%d') }} to {{ u.sent_count }} subscribers{% else %} · Draft — {{ u.created_at.strftime('%Y-%m-%d') }}{% endif %}
+                </span>
+                {% if not u.sent_at %}
+                <a href="/admin/updates/{{ u.id }}/preview" target="_blank" rel="noopener noreferrer">Preview</a>
+                <a href="/admin/updates/{{ u.id }}/recipients" class="btn btn-primary">Send</a>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No drafts or updates yet. Create one above.</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

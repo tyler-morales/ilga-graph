@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Outreach stats — Admin — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="admin-outreach-page">
+  <header class="admin-outreach-header">
+    <h1 id="admin-outreach-heading">Outreach stats</h1>
+    {% include "_admin_nav.html" %}
+  </header>
+
+  {% set d = conversion_data %}
+  <section class="admin-outreach-section" aria-labelledby="admin-outreach-heading">
+    <p class="admin-outreach-window">Last {{ d.window_days }} days ({{ d.window_start[:10] }} – {{ d.window_end[:10] }})</p>
+
+    <h2 id="admin-outreach-volumes">Volumes</h2>
+    <ul class="admin-outreach-list" aria-labelledby="admin-outreach-volumes">
+      <li>Identities opened drawer: <strong>{{ d.volumes.identities_opened_drawer }}</strong></li>
+      <li>Identities clicked phone: <strong>{{ d.volumes.identities_clicked_phone }}</strong></li>
+      <li>Users completed outreach (call or email): <strong>{{ d.volumes.users_completed_outreach }}</strong></li>
+      <li>Total calls: <strong>{{ d.volumes.total_calls }}</strong></li>
+      <li>Total emails: <strong>{{ d.volumes.total_emails }}</strong></li>
+      <li>Total outreach actions: <strong>{{ d.volumes.total_outreach_actions }}</strong></li>
+    </ul>
+
+    <h2 id="admin-outreach-conversions">Conversion rates</h2>
+    <p class="admin-outreach-definitions">Each rate = (Count ÷ Denominator) × 100. <strong>Denominator</strong> = distinct identities (user or anonymous session) who reached that funnel step in the window; <strong>Count</strong> = distinct users who completed the outcome (e.g. call or email). Definitions and step slugs: <code>docs/development/db-and-outreach.md</code> (§ Anonymous funnel and conversion).</p>
+    <div class="admin-outreach-table-wrap">
+      <table class="admin-outreach-table">
+        <thead>
+          <tr>
+            <th scope="col">Funnel step</th>
+            <th scope="col">Rate</th>
+            <th scope="col">Count</th>
+            <th scope="col">Denominator</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Drawer → outreach (call or email)</td>
+            <td>{{ d.conversions.drawer_to_outreach.conversion_pct }}%</td>
+            <td>{{ d.conversions.drawer_to_outreach.numerator }}</td>
+            <td>{{ d.conversions.drawer_to_outreach.denominator }}</td>
+          </tr>
+          <tr>
+            <td>Phone clicked → call (or no answer)</td>
+            <td>{{ d.conversions.phone_to_call.conversion_pct }}%</td>
+            <td>{{ d.conversions.phone_to_call.numerator }}</td>
+            <td>{{ d.conversions.phone_to_call.denominator }}</td>
+          </tr>
+          <tr>
+            <td>Drawer → email</td>
+            <td>{{ d.conversions.drawer_to_email.conversion_pct }}%</td>
+            <td>{{ d.conversions.drawer_to_email.numerator }}</td>
+            <td>{{ d.conversions.drawer_to_email.denominator }}</td>
+          </tr>
+          <tr>
+            <td>Signed in → outreach</td>
+            <td>{{ d.conversions.signed_in_to_outreach.conversion_pct }}%</td>
+            <td>{{ d.conversions.signed_in_to_outreach.numerator }}</td>
+            <td>{{ d.conversions.signed_in_to_outreach.denominator }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

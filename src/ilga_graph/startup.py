@@ -68,6 +68,9 @@ def _collect_unique_bills_by_number(bills_lookup: dict[str, Bill]) -> dict[str, 
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     import time as _time
 
+    # In-memory job store for campaign send progress (single-worker; keyed by job_id).
+    _app.state.send_jobs = {}
+
     t_startup_begin = _time.perf_counter()
     elapsed_load = 0.0
     elapsed_analytics = 0.0

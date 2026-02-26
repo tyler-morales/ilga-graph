@@ -1,0 +1,345 @@
+/**
+ * Admin dashboard and shared admin nav.
+ */
+
+.admin-dashboard-header {
+  margin-bottom: 1.5rem;
+}
+
+.admin-dashboard-header h1 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+}
+
+.admin-nav {
+  font-size: 0.9375rem;
+}
+
+.admin-nav a,
+.admin-nav .admin-nav-logout {
+  color: var(--color-primary, #1e88e5);
+}
+
+.admin-nav a:hover,
+.admin-nav .admin-nav-logout:hover {
+  text-decoration: underline;
+}
+
+.admin-nav .admin-nav-sep {
+  margin: 0 0.5rem;
+  color: #888;
+}
+
+.admin-nav .admin-nav-logout {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}
+
+.admin-nav .admin-nav-logout:focus-visible {
+  outline: 2px solid var(--color-primary, #1e88e5);
+  outline-offset: 2px;
+}
+
+/* At-a-glance stats: hierarchy + charts */
+.admin-dashboard-stats {
+  margin-bottom: var(--space-2xl, 1.5rem);
+}
+
+.admin-dashboard-stats-heading {
+  margin: 0 0 var(--space-lg, 1rem) 0;
+  font-size: var(--font-size-h2, 1.2rem);
+  font-weight: 600;
+}
+
+.admin-dashboard-stats-subheading {
+  margin: var(--space-xl, 1.25rem) 0 var(--space-sm, 0.5rem) 0;
+  font-size: var(--font-size-label, 0.875rem);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted, #555);
+}
+
+.admin-dashboard-stats-subheading:first-of-type {
+  margin-top: 0;
+}
+
+.admin-dashboard-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-md, 12px);
+}
+
+.admin-dashboard-stats-grid--primary {
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-lg, 1rem);
+}
+
+.admin-dashboard-stats-grid--secondary {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.admin-dashboard-stats-grid--supporting {
+  grid-template-columns: repeat(2, 1fr);
+  max-width: 24em;
+}
+
+@media (max-width: 520px) {
+  .admin-dashboard-stats-grid--primary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .admin-dashboard-stats-grid--secondary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.admin-dashboard-stat {
+  padding: var(--space-lg, 1rem);
+  border: 1px solid var(--color-border, #ccc);
+  border-radius: 8px;
+  background: var(--color-bg-card, #fff);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.admin-dashboard-stat--primary {
+  padding: var(--space-xl, 1.25rem);
+  border-radius: 10px;
+  border-color: var(--color-border-light, #ddd);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.admin-dashboard-stat--primary .admin-dashboard-stat-value {
+  font-size: 2.25rem;
+}
+
+.admin-dashboard-stat--secondary,
+.admin-dashboard-stat--supporting {
+  padding: var(--space-md, 0.75rem);
+}
+
+.admin-dashboard-stat--secondary .admin-dashboard-stat-value,
+.admin-dashboard-stat--supporting .admin-dashboard-stat-value {
+  font-size: 1.5rem;
+}
+
+.admin-dashboard-stat--supporting .admin-dashboard-stat-value {
+  font-size: 1.35rem;
+}
+
+.admin-dashboard-stat-value {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: bold;
+  line-height: 1.1;
+  color: var(--color-text, #222);
+}
+
+.admin-dashboard-stat-label {
+  display: block;
+  font-size: var(--font-size-label, 0.875rem);
+  color: var(--color-text-muted, #555);
+  margin-top: var(--space-xs, 4px);
+}
+
+.admin-dashboard-stat-sublabel {
+  display: block;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-quiet, #777);
+  margin-top: 2px;
+}
+
+/* Charts */
+.admin-dashboard-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2xl, 1.5rem);
+  margin-top: var(--space-xl, 1.25rem);
+  max-width: 36em;
+}
+
+@media (max-width: 480px) {
+  .admin-dashboard-charts {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-dashboard-chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm, 0.5rem);
+}
+
+.admin-dashboard-chart-label {
+  font-size: var(--font-size-label, 0.875rem);
+  font-weight: 600;
+  color: var(--color-text, #222);
+}
+
+.admin-dashboard-bar-wrap {
+  height: 12px;
+  background: var(--color-bg-muted, #fafafa);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-light, #ddd);
+}
+
+.admin-dashboard-bar--fill {
+  height: 100%;
+  min-width: 2px;
+  background: var(--color-success, #059669);
+  border-radius: 5px;
+  transition: width 0.3s ease;
+}
+
+.admin-dashboard-bar--stacked {
+  display: flex;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-light, #ddd);
+}
+
+.admin-dashboard-bar-segment {
+  min-width: 2px;
+  transition: width 0.3s ease;
+}
+
+.admin-dashboard-bar-segment--calls {
+  background: var(--color-link-action, #1a73e8);
+}
+
+.admin-dashboard-bar-segment--emails {
+  background: var(--color-text-muted, #555);
+}
+
+.admin-dashboard-chart-caption {
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-quiet, #777);
+}
+
+@media (max-width: 380px) {
+  .admin-dashboard-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Admin users list */
+.admin-users-header {
+  margin-bottom: 1rem;
+}
+
+.admin-users-header h1 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.admin-users-meta {
+  margin-bottom: 1rem;
+  font-size: 0.9375rem;
+  color: var(--color-text-muted, #555);
+}
+
+.admin-users-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.admin-users-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.admin-users-table th,
+.admin-users-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.admin-users-table th {
+  font-weight: 600;
+  background: #f5f5f5;
+}
+
+.admin-users-table tbody tr:hover {
+  background: #fafafa;
+}
+
+.admin-users-pagination {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.admin-users-pagination a {
+  color: var(--color-primary, #1e88e5);
+}
+
+.admin-users-pagination a:focus-visible {
+  outline: 2px solid var(--color-primary, #1e88e5);
+  outline-offset: 2px;
+}
+
+.admin-users-pagination-current {
+  color: var(--color-text-muted, #555);
+}
+
+/* Admin outreach stats */
+.admin-outreach-header {
+  margin-bottom: 1rem;
+}
+
+.admin-outreach-header h1 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.admin-outreach-window {
+  margin-bottom: 1.5rem;
+  font-size: 0.9375rem;
+  color: var(--color-text-muted, #555);
+}
+
+.admin-outreach-section h2 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.125rem;
+}
+
+.admin-outreach-list {
+  margin: 0 0 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.admin-outreach-list li {
+  margin-bottom: 0.25rem;
+}
+
+.admin-outreach-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.admin-outreach-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.admin-outreach-table th,
+.admin-outreach-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.admin-outreach-table th {
+  font-weight: 600;
+  background: #f5f5f5;
+}

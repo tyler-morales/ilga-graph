@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Sending campaign update — Admin — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="admin-updates-page admin-send-status">
+    <header class="admin-updates-header">
+        <h1 id="admin-send-status-heading">Sending campaign update</h1>
+        {% if update_title %}
+        <p class="admin-send-status-subtitle">{{ update_title }}</p>
+        {% endif %}
+    </header>
+
+    {% if job_not_found %}
+    <div class="admin-updates-flash admin-updates-flash--error" role="alert">
+        Job not found. The send may have completed or the server restarted.
+    </div>
+    <p><a href="/admin/updates" class="btn btn-primary">Back to compose</a></p>
+    {% else %}
+    <div class="admin-send-status-progress" role="status" aria-live="polite" aria-atomic="true" id="send-status-live">
+        <p id="send-status-text">Starting…</p>
+        <div class="admin-send-status-bar-wrap" aria-hidden="true" id="send-status-bar-wrap" hidden>
+            <div class="admin-send-status-bar" id="send-status-bar"></div>
+        </div>
+    </div>
+    <p class="admin-send-status-back" id="send-status-back-wrap" hidden>
+        <a href="/admin/updates" id="send-status-back-link" class="btn btn-primary">Back to compose</a>
+    </p>
+    <p class="admin-send-status-redirect" id="send-status-redirect" hidden aria-live="polite">
+        Redirecting to compose in <span id="send-status-countdown">3</span> seconds…
+    </p>
+    {% endif %}
+</div>
+
+{% if not job_not_found %}
+<script>
+(function() {
+    var jobId = {{ job_id | tojson }};
+    var updateId = {{ update_id | tojson }};
+    var statusUrl = '/admin/updates/send/status/' + jobId;
+    var pollInterval = 1500;
+    var redirectDelay = 3000;
+    var countdownStart = 3;
+
+    var liveEl = document.getElementById('send-status-live');
+    var textEl = document.getElementById('send-status-text');
+    var barWrap = document.getElementById('send-status-bar-wrap');
+    var bar = document.getElementById('send-status-bar');
+    var backWrap = document.getElementById('send-status-back-wrap');
+    var backLink = document.getElementById('send-status-back-link');
+    var redirectEl = document.getElementById('send-status-redirect');
+    var countdownEl = document.getElementById('send-status-countdown');
+
+    function setProgress(total, sent, failed, done, error) {
+        if (error) {
+            textEl.textContent = 'Error: ' + error;
+            backWrap.hidden = false;
+            return;
+        }
+        if (total > 0) {
+            if (!barWrap.hidden) barWrap.hidden = false;
+            var pct = Math.min(100, (sent / total) * 100);
+            bar.style.width = pct + '%';
+        }
+        if (done) {
+            textEl.textContent = 'Complete — ' + sent + ' email' + (sent !== 1 ? 's' : '') + ' sent.' + (failed > 0 ? ' (' + failed + ' failed.)' : '');
+            backWrap.hidden = false;
+            var count = sent;
+            backLink.href = '/admin/updates?flash=sent&count=' + count;
+            redirectEl.hidden = false;
+            var left = countdownStart;
+            countdownEl.textContent = left;
+            var t = setInterval(function() {
+                left--;
+                if (left >= 0) countdownEl.textContent = left;
+                if (left <= 0) {
+                    clearInterval(t);
+                    window.location.href = '/admin/updates?flash=sent&count=' + count;
+                }
+            }, 1000);
+            return;
+        }
+        if (total > 0) {
+            textEl.textContent = 'Sent ' + sent + ' of ' + total + '.';
+        } else {
+            textEl.textContent = 'Starting…';
+        }
+    }
+
+    function poll() {
+        fetch(statusUrl, { headers: { 'Accept': 'application/json' } })
+            .then(function(r) {
+                if (r.status === 404) {
+                    setProgress(0, 0, 0, true, 'Job not found');
+                    return null;
+                }
+                return r.json();
+            })
+            .then(function(data) {
+                if (!data) return;
+                setProgress(data.total || 0, data.sent || 0, data.failed || 0, data.done || false, data.error || null);
+                if (!data.done) setTimeout(poll, pollInterval);
+            })
+            .catch(function() {
+                setProgress(0, 0, 0, true, 'Could not load status');
+            });
+    }
+
+    poll();
+})();
+</script>
+{% endif %}
+{% endblock %}

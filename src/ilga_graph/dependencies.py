@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import Cookie, Depends
+from fastapi import Cookie, Depends, HTTPException
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -51,7 +51,12 @@ async def require_user(
 ) -> User:
     """Raise 401 if the user is not authenticated."""
     if user is None:
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=401, detail="Not authenticated")
+    return user
+
+
+async def require_admin(user: User = Depends(require_user)) -> User:
+    """Raise 403 if the user is not in ADMIN_EMAILS."""
+    if user.email.lower() not in cfg.ADMIN_EMAILS:
+        raise HTTPException(status_code=403, detail="Admin access required")
     return user

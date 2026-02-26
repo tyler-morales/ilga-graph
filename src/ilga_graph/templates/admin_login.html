@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Admin sign in — {{ site_name }}{% endblock %}
+{% block body_class %}admin-login-page{% endblock %}
+{% block content %}
+<div class="admin-login" role="main" aria-labelledby="admin-login-heading">
+    <h1 id="admin-login-heading">Admin sign in</h1>
+    <p class="admin-login-intro">Sign in with an admin account to access the dashboard.</p>
+
+    {% if error == 'forbidden' %}
+    <div class="admin-login-error" role="alert">
+        <p>This account doesn't have admin access.</p>
+    </div>
+    {% endif %}
+
+    <div id="admin-login-state-email" class="admin-login-state">
+        <label for="admin-login-email">Email</label>
+        <input type="email" id="admin-login-email" class="admin-login-input" placeholder="Your email"
+            autocomplete="email" inputmode="email" aria-required="true">
+        <button type="button" class="admin-login-btn" id="admin-login-request-btn">Send code</button>
+    </div>
+    <div id="admin-login-state-code" class="admin-login-state" hidden>
+        <span class="admin-login-code-hint" id="admin-login-code-hint">Check your email for a 6-digit code</span>
+        {% if dev_available %}
+        <p class="admin-login-dev-hint" aria-live="polite">Dev mode: your code appears in the <strong>server terminal</strong> (where you ran the app), not in the browser.</p>
+        {% endif %}
+        <div class="admin-login-code-row">
+            <label for="admin-login-code-input" class="visually-hidden">Verification code</label>
+            <input type="text" id="admin-login-code-input" class="admin-login-code-input"
+                placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code"
+                aria-describedby="admin-login-code-hint">
+            <button type="button" class="admin-login-btn" id="admin-login-verify-btn">Confirm</button>
+        </div>
+        <span class="admin-login-error-inline" id="admin-login-error" hidden role="alert"></span>
+        <button type="button" class="admin-login-resend" id="admin-login-resend">Resend code</button>
+    </div>
+    <p class="admin-login-back"><a href="/">Back to home</a></p>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+(function() {
+    var nextParam = new URLSearchParams(window.location.search).get('next') || '';
+    var safeNext = nextParam && nextParam.startsWith('/') && nextParam !== '/admin/login' && nextParam.indexOf('//') === -1
+        ? nextParam : '/admin';
+
+    var stateEmail = document.getElementById('admin-login-state-email');
+    var stateCode = document.getElementById('admin-login-state-code');
+    var emailInput = document.getElementById('admin-login-email');
+    var codeInput = document.getElementById('admin-login-code-input');
+    var codeHint = document.getElementById('admin-login-code-hint');
+    var codeError = document.getElementById('admin-login-error');
+    var requestBtn = document.getElementById('admin-login-request-btn');
+    var verifyBtn = document.getElementById('admin-login-verify-btn');
+    var resendBtn = document.getElementById('admin-login-resend');
+
+    function getCsrfToken() {
+        var match = document.cookie.match(/\bXSRF-TOKEN=([^;]*)/);
+        return match ? decodeURIComponent(match[1].replace(/^\s+|\s+$/g, '')) : '';
+    }
+
+    function showState(which) {
+        stateEmail.hidden = (which !== 'email');
+        stateCode.hidden = (which !== 'code');
+        if (which === 'code' && codeHint) codeHint.textContent = 'Code sent to ' + (emailInput ? emailInput.value : '');
+        if (codeError) { codeError.textContent = ''; codeError.hidden = true; }
+    }
+
+    function setRequestEnabled(enabled) {
+        if (requestBtn) requestBtn.disabled = !enabled;
+    }
+
+    function setVerifyEnabled(enabled) {
+        if (verifyBtn) verifyBtn.disabled = !enabled;
+    }
+
+    function isEmailLike(val) {
+        var s = (val || '').trim();
+        return s.length > 0 && s.indexOf('@') >= 1 && s.indexOf('@') < s.length - 1;
+    }
+
+    if (emailInput) {
+        emailInput.addEventListener('input', function() { setRequestEnabled(isEmailLike(emailInput.value)); });
+        emailInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); if (requestBtn && !requestBtn.disabled) requestBtn.click(); } });
+    }
+    setRequestEnabled(isEmailLike(emailInput ? emailInput.value : ''));
+
+    if (requestBtn) {
+        requestBtn.addEventListener('click', function() {
+            var email = (emailInput && emailInput.value) ? emailInput.value.trim().toLowerCase() : '';
+            if (!isEmailLike(email)) return;
+            requestBtn.disabled = true;
+            var body = new FormData();
+            body.append('email', email);
+            body.append('csrf_token', getCsrfToken());
+            fetch('/auth/request-code', { method: 'POST', body: body, credentials: 'same-origin' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.error) {
+                        if (codeError) { codeError.textContent = data.error; codeError.hidden = false; }
+                        requestBtn.disabled = false;
+                        return;
+                    }
+                    showState('code');
+                    if (codeInput) { codeInput.value = ''; codeInput.focus(); }
+                    setVerifyEnabled(false);
+                })
+                .catch(function() {
+                    if (codeError) { codeError.textContent = 'Something went wrong. Try again.'; codeError.hidden = false; }
+                    requestBtn.disabled = false;
+                });
+        });
+    }
+
+    function doVerify() {
+        var email = (emailInput && emailInput.value) ? emailInput.value.trim().toLowerCase() : '';
+        var code = (codeInput && codeInput.value) ? codeInput.value.trim() : '';
+        if (!email || !code) return;
+        verifyBtn.disabled = true;
+        if (codeError) { codeError.textContent = ''; codeError.hidden = true; }
+        var body = new FormData();
+        body.append('email', email);
+        body.append('code', code);
+        body.append('csrf_token', getCsrfToken());
+        fetch('/auth/verify-code', { method: 'POST', body: body, credentials: 'same-origin' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.ok) {
+                    window.location.href = safeNext;
+                    return;
+                }
+                if (codeError) { codeError.textContent = data.error || 'Invalid or expired code'; codeError.hidden = false; }
+                verifyBtn.disabled = false;
+            })
+            .catch(function() {
+                if (codeError) { codeError.textContent = 'Something went wrong. Try again.'; codeError.hidden = false; }
+                verifyBtn.disabled = false;
+            });
+    }
+
+    if (codeInput) {
+        codeInput.addEventListener('input', function() { setVerifyEnabled((codeInput.value || '').trim().length >= 4); });
+        codeInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); doVerify(); } });
+    }
+    if (verifyBtn) verifyBtn.addEventListener('click', doVerify);
+
+    if (resendBtn) {
+        resendBtn.addEventListener('click', function() {
+            if (requestBtn) requestBtn.click();
+        });
+    }
+})();
+</script>
+{% endblock %}

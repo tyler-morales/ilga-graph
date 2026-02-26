@@ -1,0 +1,27 @@
+<nav class="admin-nav" aria-label="Admin">
+  <a href="/admin">Dashboard</a>
+  <span class="admin-nav-sep" aria-hidden="true">|</span>
+  <a href="/admin/updates">Email</a>
+  <span class="admin-nav-sep" aria-hidden="true">|</span>
+  <a href="/admin/users">Users</a>
+  <span class="admin-nav-sep" aria-hidden="true">|</span>
+  <a href="/admin/outreach">Stats</a>
+  {% if dev_available %}
+  <span class="admin-nav-sep" aria-hidden="true">|</span>
+  <a href="/admin/mocks">Mocks</a>
+  {% endif %}
+  <span class="admin-nav-sep" aria-hidden="true">|</span>
+  <button type="button" class="admin-nav-logout" aria-label="Sign out and return to admin login">Log out</button>
+</nav>
+<script>
+(function() {
+  var btn = document.querySelector('.admin-nav-logout');
+  if (!btn || window.__adminNavLogoutBound) return;
+  window.__adminNavLogoutBound = true;
+  btn.addEventListener('click', function() {
+    fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' })
+      .then(function() { window.location.href = '/admin/login'; })
+      .catch(function() { window.location.href = '/admin/login'; });
+  });
+})();
+</script>

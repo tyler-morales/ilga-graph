@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import config as cfg
 from ..db import get_db
 from ..db_models import BugReport
+from ..email_utils import send_message
 from ..routers.content import STRATEGIC_FIVE_POINTS
 from ..security import (
     CSRF_COOKIE_NAME,
@@ -182,8 +183,6 @@ async def _send_bug_report_notification(
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
 
-    import aiosmtplib
-
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     base_url = (cfg.APP_BASE_URL or "").rstrip("/")
     attachment_urls: list[str] = []
@@ -249,18 +248,7 @@ async def _send_bug_report_notification(
         msg.attach(MIMEText(plain_body, "plain"))
         msg.attach(MIMEText(html_body, "html"))
 
-    use_tls = cfg.SMTP_USE_TLS and cfg.SMTP_PORT == 465
-    start_tls = cfg.SMTP_USE_TLS and cfg.SMTP_PORT == 587
-    await aiosmtplib.send(
-        msg,
-        hostname=cfg.SMTP_HOST,
-        port=cfg.SMTP_PORT,
-        username=cfg.SMTP_USER or None,
-        password=cfg.SMTP_PASS or None,
-        use_tls=use_tls,
-        start_tls=start_tls,
-    )
-    LOGGER.info("Bug report notification sent to %s", cfg.BETA_BANNER_EMAIL)
+    await send_message(msg)
 
 
 @router.get("/report-bug/attachments/{filename:path}")

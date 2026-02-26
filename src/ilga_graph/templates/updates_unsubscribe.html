@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{% if success %}Unsubscribed{% else %}Unsubscribe{% endif %} — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="updates-unsubscribe-page legal-page">
+    <h1 id="unsubscribe-heading">{% if success %}Unsubscribed{% else %}Unsubscribe{% endif %}</h1>
+    <p class="updates-unsubscribe-message" role="status">{{ message }}</p>
+    <p><a href="/updates">Back to Updates</a></p>
+</div>
+{% endblock %}

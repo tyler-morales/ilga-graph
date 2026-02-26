@@ -53,3 +53,9 @@ site/
 
 # Seed data: mocks/dev/ is committed so "make dev" works without cache or network.
 # Do NOT add mocks/ here.
+
+# Campaign update images: admin uploads at compose time; do not commit (directory kept via .gitkeep)
+src/ilga_graph/static/updates/*.jpg
+src/ilga_graph/static/updates/*.png
+src/ilga_graph/static/updates/*.webp
+!src/ilga_graph/static/updates/.gitkeep

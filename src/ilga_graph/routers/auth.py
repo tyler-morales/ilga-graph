@@ -14,7 +14,6 @@ import logging
 import secrets
 import sys
 from datetime import datetime, timedelta, timezone
-from email.message import EmailMessage
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import JSONResponse
@@ -25,6 +24,7 @@ from .. import config as cfg
 from ..db import get_db
 from ..db_models import AuthCode, OutreachStepEvent, User
 from ..dependencies import create_session_token, get_current_user_optional
+from ..email_utils import send_email
 from ..security import (
     CSRF_COOKIE_NAME,
     rate_limit_request_code,
@@ -60,7 +60,14 @@ def _verification_email_html(code: str) -> str:
 
 async def _send_code_email(email: str, code: str) -> None:
     """Send the verification code via SMTP, or log it in dev."""
-    if not cfg.SMTP_HOST:
+    subject = f"Your {cfg.SITE_NAME} verification code: {code}"
+    plain = (
+        f"Your verification code is: {code}\n\n"
+        f"This code expires in 10 minutes.\n\n"
+        f"If you didn't request this, you can ignore this email."
+    )
+    sent = await send_email(email, subject, plain, _verification_email_html(code))
+    if not sent:
         banner = (
             "\n"
             "╔══════════════════════════════════════════════════════════╗\n"
@@ -71,36 +78,6 @@ async def _send_code_email(email: str, code: str) -> None:
         )
         print(banner, file=sys.stderr, flush=True)
         LOGGER.warning("Auth code for %s (no SMTP): %s", email, code)
-        return
-
-    import aiosmtplib
-
-    msg = EmailMessage()
-    msg["Subject"] = f"Your {cfg.SITE_NAME} verification code: {code}"
-    msg["From"] = cfg.SMTP_FROM
-    msg["To"] = email
-    plain = (
-        f"Your verification code is: {code}\n\n"
-        f"This code expires in 10 minutes.\n\n"
-        f"If you didn't request this, you can ignore this email."
-    )
-    msg.set_content(plain)
-    msg.add_alternative(_verification_email_html(code), subtype="html")
-
-    # Port 587 = STARTTLS (plain then upgrade). Port 465 = immediate TLS (mutually exclusive).
-    use_tls = cfg.SMTP_USE_TLS and cfg.SMTP_PORT == 465
-    start_tls = cfg.SMTP_USE_TLS and cfg.SMTP_PORT == 587
-
-    await aiosmtplib.send(
-        msg,
-        hostname=cfg.SMTP_HOST,
-        port=cfg.SMTP_PORT,
-        username=cfg.SMTP_USER or None,
-        password=cfg.SMTP_PASS or None,
-        use_tls=use_tls,
-        start_tls=start_tls,
-    )
-    LOGGER.info("Auth code sent to %s via %s:%d", email, cfg.SMTP_HOST, cfg.SMTP_PORT)
 
 
 def _client_ip(request: Request) -> str:

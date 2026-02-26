@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Users — Admin — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="admin-users-page">
+  <header class="admin-users-header">
+    <h1 id="admin-users-heading">Users</h1>
+    {% include "_admin_nav.html" %}
+  </header>
+
+  <section class="admin-users-section" aria-labelledby="admin-users-heading">
+    <p class="admin-users-meta">Showing {{ users|length }} of {{ total }} users.</p>
+    {% if users %}
+    <div class="admin-users-table-wrap">
+      <table class="admin-users-table">
+        <thead>
+          <tr>
+            <th scope="col">Email</th>
+            <th scope="col">Subscriber</th>
+            <th scope="col">Last login</th>
+            <th scope="col">Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>{{ u.email }}</td>
+            <td>{% if u.wants_updates %}Yes{% else %}No{% endif %}</td>
+            <td>{% if u.last_login_at %}{{ u.last_login_at.strftime('%Y-%m-%d %H:%M') }}{% else %}—{% endif %}</td>
+            <td>{{ u.created_at.strftime('%Y-%m-%d') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if total_pages > 1 %}
+    <nav class="admin-users-pagination" aria-label="Users pagination">
+      {% if page > 1 %}
+      <a href="?page={{ page - 1 }}">Previous</a>
+      {% endif %}
+      <span class="admin-users-pagination-current">Page {{ page }} of {{ total_pages }}</span>
+      {% if page < total_pages %}
+      <a href="?page={{ page + 1 }}">Next</a>
+      {% endif %}
+    </nav>
+    {% endif %}
+    {% else %}
+    <p>No users yet.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

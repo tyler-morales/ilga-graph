@@ -918,6 +918,143 @@ a:visited {
   line-height: 1.25;
 }
 
+/* Public updates page: campaign timeline and sidebar TOC (blog-style, date prominent). */
+.campaign-timeline {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+}
+
+.campaign-timeline__item {
+  padding: 0.25rem 0;
+  border-left: 3px solid #e5e7eb;
+  padding-left: 0.75rem;
+  margin-left: 0.25rem;
+}
+
+.campaign-timeline__item--achieved {
+  opacity: 1;
+  border-left-color: var(--color-success, #059669);
+  color: var(--color-success, #059669);
+}
+
+.campaign-timeline__item--pending {
+  opacity: 0.45;
+}
+
+.campaign-timeline__num {
+  margin-right: 0.25rem;
+  font-weight: 600;
+}
+
+.updates-sidebar .updates-sidebar-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.updates-sidebar .updates-sidebar-item {
+  margin-bottom: 0.5rem;
+}
+
+.updates-sidebar .updates-sidebar-link {
+  display: block;
+  text-decoration: none;
+  color: #202124;
+  padding: 0.2rem 0;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+}
+
+.updates-sidebar .updates-sidebar-link:hover {
+  text-decoration: underline;
+}
+
+.updates-sidebar .updates-sidebar-link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(26, 13, 171, 0.35);
+  border-radius: 2px;
+}
+
+.updates-sidebar .updates-sidebar-link__title {
+  font-weight: 500;
+  display: block;
+}
+
+.updates-sidebar .updates-sidebar-link__date {
+  font-size: var(--font-size-xs, 0.75rem);
+  color: #5f6368;
+  font-weight: 400;
+  display: block;
+  margin-top: 0.15rem;
+}
+
+.updates-article {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.updates-article__type {
+  font-size: var(--font-size-sm, 0.875rem);
+  color: #5f6368;
+  margin: 0 0 0.25rem;
+  font-weight: 500;
+}
+
+.updates-article__type--major {
+  color: var(--color-primary, #1a73e8);
+  font-weight: 600;
+}
+
+.updates-article__title {
+  font-size: var(--font-size-h2);
+  margin-top: 0;
+  margin-bottom: 0.35rem;
+}
+
+.updates-article__date {
+  font-size: var(--font-size-sm, 0.875rem);
+  color: #5f6368;
+  margin: 0 0 1rem;
+}
+
+.updates-article__body.prose {
+  line-height: 1.6;
+}
+
+.updates-article__body.prose p {
+  margin: 0 0 0.75rem;
+}
+
+.updates-article__body.prose p:last-child {
+  margin-bottom: 0;
+}
+
+.updates-article__figure {
+  margin: 0 0 1rem;
+}
+
+.updates-article__image {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 4px;
+}
+
+.updates-pick,
+.updates-none {
+  margin-top: 1rem;
+  color: #5f6368;
+}
+
+.updates-sidebar-empty {
+  margin: 0;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: #5f6368;
+}
+
 /* "What we are asking your office to do" list: numbers inside the text block. */
 .legislator-brief .brief-ask-list {
   list-style-position: inside;
