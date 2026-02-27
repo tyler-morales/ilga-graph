@@ -260,17 +260,30 @@
         {% if faq_session.intro %}<p class="brief-faq__intro">{{ faq_session.intro }}</p>{% endif %}
         <div class="brief-faq__list">
             {% for item in faq_session['items'] %}
-            <details class="brief-faq__item" id="issue-faq-session-{{ item.id }}" open>
+            <details class="brief-faq__item" id="issue-faq-session-{{ item.id }}">
                 <summary class="brief-faq__question">{{ item.question }}</summary>
                 <div class="brief-faq__answer">
                     <p>{{ item.answer }}</p>
                     {% if session_deadlines %}
                     <p class="brief-faq__sources-label">Key deadlines (104th GA Spring 2026):</p>
-                    <ul class="brief-faq__answer-list" role="list">
-                        {% for d in session_deadlines %}
-                        <li><strong>{{ d.date }}</strong> ({{ d.chamber }}): {{ d.description }}</li>
-                        {% endfor %}
-                    </ul>
+                    <table class="brief-faq__table session-deadlines-table" aria-label="Key legislative deadlines by date and chamber">
+                        <thead>
+                            <tr>
+                                <th scope="col">Date</th>
+                                <th scope="col">Chamber</th>
+                                <th scope="col">Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for d in session_deadlines %}
+                            <tr>
+                                <td>{{ d.date }}</td>
+                                <td>{{ d.chamber }}</td>
+                                <td>{{ d.description }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                     {% endif %}
                 </div>
             </details>
