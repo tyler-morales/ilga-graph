@@ -2,12 +2,16 @@
 {% block title %}Updates — {{ site_name }}{% endblock %}
 {% block brief_layout_class %}updates-page{% endblock %}
 {% block brief_title %}Updates{% endblock %}
+{% block current_action_banner %}{% endblock %}
 {% block brief_intro %}
 <p class="legal-page-intro">Where we are in the campaign and what we&rsquo;ve shared.</p>
 {% endblock %}
 
 {% block brief_main_heading %}Where we are{% endblock %}
 {% block brief_main %}
+{% if active_campaign %}
+{% include "_campaign_banner.html" %}
+{% endif %}
 <p class="updates-campaign-status" id="where-we-are">{{ campaign_status }}</p>
 
 <ol class="campaign-timeline" role="list" aria-label="Campaign milestones from current phase to Keis be legal">
@@ -30,7 +34,7 @@
         {% endif %}
     {% else %}
     <p>Get campaign updates by email when we post news and calls to action.</p>
-    <p><a href="/advocacy">Sign in</a> with your email to subscribe, or check back here for past updates.</p>
+    <p><a href="/advocacy">Sign in on the Advocacy page</a> to subscribe, or check back here for past updates.</p>
     {% endif %}
 </section>
 

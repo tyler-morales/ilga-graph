@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}{% if campaign %}Edit campaign{% else %}New campaign{% endif %} — Admin — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="admin-campaign-form-page">
+    <header class="admin-campaign-form-header">
+        <h1 id="admin-campaign-form-heading">{% if campaign %}Edit campaign{% else %}New campaign{% endif %}</h1>
+        {% include "_admin_nav.html" %}
+        <p><a href="/admin/campaigns">Back to campaigns</a></p>
+    </header>
+
+    {% if campaign and breakdown %}
+    <section class="admin-campaign-reporting" aria-labelledby="reporting-heading">
+        <h2 id="reporting-heading">Outreach for this campaign</h2>
+        <p><strong>{{ breakdown.total }}</strong> total actions · <strong>{{ breakdown.unique_users }}</strong> advocates</p>
+        {% if breakdown.by_kind %}
+        <ul role="list">
+            {% for kind, count in breakdown.by_kind.items() %}
+            <li>{{ kind }}: {{ count }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    {% if flash == 'updated' %}
+    <div class="admin-updates-flash admin-updates-flash--success" role="status">Campaign updated.</div>
+    {% endif %}
+    {% if flash == 'activated' %}
+    <div class="admin-updates-flash admin-updates-flash--success" role="status">Campaign is now active.</div>
+    {% endif %}
+    {% if flash == 'deactivated' %}
+    <div class="admin-updates-flash admin-updates-flash--success" role="status">Campaign deactivated.</div>
+    {% endif %}
+    {% if flash == 'not_found' %}
+    <div class="admin-updates-flash admin-updates-flash--error" role="alert">Campaign not found.</div>
+    {% endif %}
+
+    <section class="admin-campaign-form-section" aria-labelledby="form-heading">
+        <h2 id="form-heading">{% if campaign %}Edit{% else %}Create{% endif %} campaign</h2>
+        <form method="post" action="{% if campaign %}/admin/campaigns/{{ campaign.id }}{% else %}/admin/campaigns{% endif %}" class="admin-updates-form">
+            <div class="admin-updates-field">
+                <label for="title">Title</label>
+                <input type="text" id="title" name="title" required maxlength="200" value="{{ campaign.title if campaign else '' }}" placeholder="e.g. Contact your rep this week">
+            </div>
+            <div class="admin-updates-field">
+                <label for="message">Message</label>
+                <textarea id="message" name="message" rows="4" required placeholder="Short message shown in the banner.">{{ campaign.message if campaign else '' }}</textarea>
+            </div>
+            <div class="admin-updates-field">
+                <label for="ask">Ask (CTA button text)</label>
+                <input type="text" id="ask" name="ask" required maxlength="100" value="{{ campaign.ask if campaign else 'Contact your rep' }}" placeholder="e.g. Contact your rep">
+            </div>
+            <fieldset class="admin-updates-fieldset" aria-labelledby="target-type-legend">
+                <legend id="target-type-legend" class="admin-updates-legend">Who sees this</legend>
+                <div class="admin-updates-radio-wrap">
+                    <input type="radio" id="target_type_all" name="target_type" value="all"{% if not campaign or campaign.target_type == 'all' %} checked{% endif %}>
+                    <label for="target_type_all">Everyone</label>
+                </div>
+                <div class="admin-updates-radio-wrap">
+                    <input type="radio" id="target_type_by_district" name="target_type" value="by_district"{% if campaign and campaign.target_type == 'by_district' %} checked{% endif %}>
+                    <label for="target_type_by_district">Only specific districts</label>
+                </div>
+            </fieldset>
+            <div class="admin-updates-field" id="target-district-wrap">
+                <label for="target_district_ids">District IDs (one per line)</label>
+                <textarea id="target_district_ids" name="target_district_ids" rows="4" placeholder="il_house:9&#10;il_senate:5" aria-describedby="district-ids-hint">{{ district_ids_plain|default('') }}</textarea>
+                <span id="district-ids-hint" class="admin-updates-hint">Format: il_house:9 or il_senate:5. Options: {% for val, label in district_options %}{{ val }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
+            </div>
+            <div class="admin-updates-field">
+                <label for="target_member_ids">Target member IDs (optional, one per line)</label>
+                <textarea id="target_member_ids" name="target_member_ids" rows="2" placeholder="3264">{{ member_ids_plain|default('') }}</textarea>
+            </div>
+            <div class="admin-updates-field">
+                <label for="start_at">Start at (optional)</label>
+                <input type="datetime-local" id="start_at" name="start_at" value="{{ campaign.start_at.strftime('%Y-%m-%dT%H:%M') if campaign and campaign.start_at else '' }}">
+            </div>
+            <div class="admin-updates-field">
+                <label for="end_at">End at (optional)</label>
+                <input type="datetime-local" id="end_at" name="end_at" value="{{ campaign.end_at.strftime('%Y-%m-%dT%H:%M') if campaign and campaign.end_at else '' }}">
+            </div>
+            <div class="admin-updates-field">
+                <label class="admin-campaign-checkbox-wrap">
+                    <input type="checkbox" name="is_active" value="1"{% if campaign and campaign.is_active %} checked{% endif %}>
+                    <span>Active (show as current action; only one campaign can be active)</span>
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary">{% if campaign %}Save changes{% else %}Create campaign{% endif %}</button>
+        </form>
+    </section>
+</div>
+{% endblock %}

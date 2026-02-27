@@ -176,6 +176,11 @@ STRATEGIC_FIVE_POINTS: list[str] = [
 ]
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
 templates.env.globals["features"] = cfg.get_client_features()
+
+from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
+
+templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
+
 # How we measure advocacy success (things we control). Road-legal outcome is the campaign objective.
 STRATEGIC_SUCCESS_MEASURE = (
     "We measure success by what we can control: constituent contacts, co-sponsors secured, "
@@ -188,11 +193,8 @@ STRATEGIC_SUCCESS_MEASURE_ITEMS: list[str] = [
     "A coalition ready to act when a bill moves",
 ]
 
-# "Where we are" block on /updates. Update as the campaign progresses.
-CAMPAIGN_STATUS = (
-    "We are in the outreach phase. No bill has been introduced yet. "
-    "We are building constituent contacts and identifying a sponsor."
-)
+# "Where we are" block on /updates. One-line phase label; campaign banner (when active) carries detail and CTA.
+CAMPAIGN_STATUS = "We're in the outreach phase."
 
 # Campaign timeline: checkpoints from current phase to Keis be legal. Update achieved count as campaign advances.
 CAMPAIGN_TIMELINE_CHECKPOINTS: list[str] = [

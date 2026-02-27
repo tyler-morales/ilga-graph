@@ -26,37 +26,45 @@ body.page-home {
 }
 
 /* Home: consistent spacing between sections; split so top/bottom of each section are even */
-.page-home #main-content > * {
+.page-home #main-content>* {
   margin-top: 1rem;
   margin-bottom: 1rem;
 }
-.page-home #main-content > *:first-child {
+
+.page-home #main-content>*:first-child {
   margin-top: 0;
 }
-.page-home #main-content > *:last-child {
+
+.page-home #main-content>*:last-child {
   margin-bottom: 0;
 }
+
 @media (min-width: 768px) {
-  .page-home #main-content > * {
+  .page-home #main-content>* {
     margin-top: 2rem;
     margin-bottom: 2rem;
   }
-  .page-home #main-content > *:first-child {
+
+  .page-home #main-content>*:first-child {
     margin-top: 0;
   }
-  .page-home #main-content > *:last-child {
+
+  .page-home #main-content>*:last-child {
     margin-bottom: 0;
   }
 }
+
 @media (min-width: 1024px) {
-  .page-home #main-content > * {
+  .page-home #main-content>* {
     margin-top: 2.75rem;
     margin-bottom: 2.75rem;
   }
-  .page-home #main-content > *:first-child {
+
+  .page-home #main-content>*:first-child {
     margin-top: 0;
   }
-  .page-home #main-content > *:last-child {
+
+  .page-home #main-content>*:last-child {
     margin-bottom: 0;
   }
 }
@@ -66,11 +74,13 @@ body.page-home {
   --home-section-padding-block: 2rem;
   --home-section-title-gap: 1.5rem;
 }
+
 @media (min-width: 768px) {
   .page-home {
     --home-section-padding-block: 2.5rem;
   }
 }
+
 @media (min-width: 1024px) {
   .page-home {
     --home-section-padding-block: 3rem;
@@ -78,10 +88,11 @@ body.page-home {
 }
 
 /* So section padding alone controls top/bottom; content margins don't add to or eat it */
-.page-home #main-content > * > *:first-child {
+.page-home #main-content>*>*:first-child {
   margin-top: 0;
 }
-.page-home #main-content > * > *:last-child {
+
+.page-home #main-content>*>*:last-child {
   margin-bottom: 0;
 }
 
@@ -110,6 +121,12 @@ h2 {
 
 p {
   margin-bottom: 10px;
+}
+
+/* Bullet lists: marker at start of text; wrapped lines align with first character. */
+ul {
+  list-style-position: inside;
+  padding-left: 1em;
 }
 
 a {
@@ -597,6 +614,143 @@ a:visited {
   }
 }
 
+/* ── Current action banner (campaign palette: teal; same layout as beta) ── */
+.current-action-banner {
+  position: relative;
+  max-width: 1120px;
+  margin: 0 auto 10px auto;
+  padding: 10px 32px 10px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0 0.5em;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-label);
+  color: #134e4a;
+  background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 50%, #99f6e4 100%);
+  border: 1px solid #0d9488;
+  border-left: 4px solid #0d9488;
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.2);
+  text-align: center;
+}
+
+.current-action-banner--dismissed {
+  display: none;
+}
+
+.current-action-banner-emoji {
+  flex: 0 0 auto;
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.current-action-banner-pill {
+  font-size: inherit;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #0f766e;
+  flex: 0 0 auto;
+}
+
+.current-action-banner-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.current-action-banner-dismiss {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: 1.2em;
+  line-height: 1;
+  color: #0f766e;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.current-action-banner-dismiss:hover {
+  color: #115e59;
+}
+
+.current-action-banner-dismiss:focus {
+  outline: 2px solid #0f766e;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.current-action-banner-cta {
+  color: #0f766e;
+  font-weight: 600;
+  text-decoration: none;
+  position: relative;
+  display: inline-block;
+}
+
+.current-action-banner-cta::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2px;
+  height: 2px;
+  background: currentColor;
+}
+
+.current-action-banner-cta:hover {
+  color: #115e59;
+}
+
+.current-action-banner-cta:hover::after {
+  opacity: 0;
+}
+
+.current-action-banner-cta:focus {
+  outline: 2px solid #0f766e;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (max-width: 1024px) {
+  .current-action-banner {
+    padding-left: 20px;
+    padding-right: 36px;
+  }
+}
+
+@media (max-width: 480px) {
+  .current-action-banner {
+    padding-left: 14px;
+    padding-right: 30px;
+  }
+
+  .current-action-banner-dismiss {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Inline banner on Updates: more space before the "Where we are" status paragraph */
+.current-action-banner--full {
+  margin-bottom: 1.5rem;
+}
+
+.updates-campaign-status {
+  margin-top: 1.25rem;
+}
+
 /* ── Micro-interactions (confetti-like moments) ── */
 @media (prefers-reduced-motion: no-preference) {
   @keyframes micro-pop {
@@ -682,60 +836,74 @@ a:visited {
 .fact-sheet-header {
   margin-bottom: 2rem;
 }
+
 .fact-sheet-title {
   font-size: var(--font-size-h2);
   margin-bottom: 0.5rem;
 }
+
 .fact-sheet-intro {
   color: #555;
   font-size: var(--font-size-body);
   margin: 0;
 }
+
 .fact-sheet-section {
   margin-top: 1.75rem;
   padding-top: 1.25rem;
   border-top: 1px solid #e5e7eb;
 }
+
 .fact-sheet-section:first-of-type {
   border-top: none;
   padding-top: 0;
   margin-top: 0;
 }
+
 .fact-sheet-section h2 {
   font-size: var(--font-size-h3);
   margin: 0 0 0.5rem;
 }
+
 .fact-sheet-points-list {
   margin: 0.5rem 0 0;
   padding-left: 1.5rem;
 }
+
 .fact-sheet-points-item {
   margin-bottom: 0.35rem;
 }
+
 .fact-sheet-placeholder {
   font-style: italic;
   color: #666;
   margin: 0;
 }
+
 .fact-sheet-faq-list {
   margin: 0.5rem 0 0;
   padding: 0;
 }
+
 .fact-sheet-faq-item {
   margin-bottom: 1rem;
 }
+
 .fact-sheet-faq-item dt {
   margin: 0 0 0.25rem;
   font-weight: 600;
 }
+
 .fact-sheet-faq-item dd {
   margin: 0 0 0 1rem;
 }
+
 .fact-sheet-links {
   list-style: none;
   padding: 0;
   margin: 0.5rem 0 0;
 }
+
 .fact-sheet-links li {
   margin-bottom: 0.35rem;
 }

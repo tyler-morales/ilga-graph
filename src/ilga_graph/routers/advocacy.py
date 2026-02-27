@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import advocacy_helpers as ah
 from .. import config as cfg
 from ..app_state import state
+from ..campaign_helpers import get_active_campaign, is_campaign_visible_to_zip
 from ..community_email import get_effective_email_for_member
 from ..config import DEV_MODE
 from ..constants import CATEGORY_CHOICES, CATEGORY_COMMITTEES, GENERAL_COMMITTEE_CODES
@@ -71,6 +72,10 @@ templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
 templates.env.globals["features"] = cfg.get_client_features()
 
+from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
+
+templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
+
 _HERO_SUBHEAD = (
     "Illinois is treating lawfully imported kei vehicles as off-highway, so owners cannot "
     "register them for normal road use. You can help fix it—contact your legislator with a "
@@ -78,8 +83,10 @@ _HERO_SUBHEAD = (
 )
 
 # Two-line subhead: break after "below"; second line starts with "to".
-_HERO_SUBHEAD_ADVOCACY_LINE1 = "Enter your ZIP below"
-_HERO_SUBHEAD_ADVOCACY_LINE2 = "to find your legislators and start outreach today."
+_HERO_SUBHEAD_ADVOCACY_LINE1 = "We're building constituent support and identifying a sponsor."
+_HERO_SUBHEAD_ADVOCACY_LINE2 = (
+    " No bill yet — your rep needs to hear from you now so we're ready when legislation moves."
+)
 
 
 def _hero_context() -> dict[str, Any]:
@@ -101,15 +108,15 @@ def _hero_context() -> dict[str, Any]:
 def _hero_context_advocacy() -> dict[str, Any]:
     """Advocacy-page hero: advocate-focused headline (find legislators, take action)."""
     return {
-        "hero_headline": "Find your legislators. Take action on Kei vehicle registration.",
-        "hero_headline_line1": "Find your legislators.",
+        "hero_headline": "Find your legislators. Build support for the Kei vehicle registration.",
+        "hero_headline_line1": "Contact your legislators.",
         "hero_headline_line1_prefix": "",
         "hero_headline_line1_highlight": "",
         "hero_headline_line1_suffix": "",
-        "hero_headline_line2": "Take action on Kei vehicle registration.",
+        "hero_headline_line2": "Build support for the Kei registration fix",
         "hero_headline_line2_prefix": "",
-        "hero_headline_highlight": "Take action",
-        "hero_headline_line2_suffix": " on Kei vehicle registration.",
+        "hero_headline_highlight": "Build support",
+        "hero_headline_line2_suffix": " for Kei vehicle registration.",
         "hero_subhead_line1": _HERO_SUBHEAD_ADVOCACY_LINE1,
         "hero_subhead_line2": _HERO_SUBHEAD_ADVOCACY_LINE2,
     }
@@ -543,6 +550,20 @@ async def advocacy_index(
             sample = sorted(state.zip_to_district.keys())[:6]
             ctx["error"] += f" In dev mode, try ZIPs such as: {', '.join(sample)}."
         ctx["zip"] = DEFAULT_HERO_ZIP
+
+    active_campaign = await get_active_campaign(db)
+    if active_campaign:
+        if active_campaign.target_type == "all":
+            ctx["active_campaign"] = active_campaign
+        elif zip_param and is_campaign_visible_to_zip(
+            active_campaign, zip_param, state.zip_to_district
+        ):
+            ctx["active_campaign"] = active_campaign
+        else:
+            ctx["active_campaign"] = None
+    else:
+        ctx["active_campaign"] = None
+
     return templates.TemplateResponse("index.html", ctx)
 
 

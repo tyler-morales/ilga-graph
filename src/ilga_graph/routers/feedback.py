@@ -85,6 +85,10 @@ templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
 templates.env.globals["features"] = cfg.get_client_features()
 
+from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
+
+templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
+
 
 def _mime_type_for_filename(filename: str) -> tuple[str, str]:
     """Return (maintype, subtype) for add_attachment from a stored filename."""

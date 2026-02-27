@@ -60,7 +60,7 @@
     {% if show_beta_banner %}
     <div class="beta-banner" id="beta-banner" role="region" aria-label="Beta notice">
         <button type="button" class="beta-banner-emoji" id="beta-banner-emoji-btn" aria-label="Celebrate with confetti">🎉</button>
-        <span class="beta-banner-pill" aria-hidden="true">Beta</span>
+        <span class="beta-banner-pill" aria-hidden="true">BETA</span>
         <span class="beta-banner-text">You're early — we're in beta. Thanks for being here.</span>
         <button type="button" class="beta-banner-dismiss" id="beta-banner-dismiss" aria-label="Dismiss beta notice">&times;</button>
     </div>
@@ -91,6 +91,36 @@
         })();
     </script>
     {% endif %}
+    {% set active_campaign = get_current_action_campaign(request) if request is defined else none %}
+    {% block current_action_banner %}
+    {% include "_current_action_banner.html" %}
+    {% endblock %}
+    <script>
+        (function () {
+            function initActionBannerDismiss() {
+                document.querySelectorAll('.current-action-banner').forEach(function (banner) {
+                    var key = banner.getAttribute('data-dismiss-key');
+                    if (!key) return;
+                    if (sessionStorage.getItem(key) === '1') {
+                        banner.classList.add('current-action-banner--dismissed');
+                        return;
+                    }
+                    var dismiss = banner.querySelector('.current-action-banner-dismiss');
+                    if (dismiss) {
+                        dismiss.addEventListener('click', function () {
+                            sessionStorage.setItem(key, '1');
+                            banner.classList.add('current-action-banner--dismissed');
+                        });
+                    }
+                });
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initActionBannerDismiss);
+            } else {
+                initActionBannerDismiss();
+            }
+        })();
+    </script>
     {% if features.get('message_marquee') and strategic_five_points %}
     <div class="message-marquee" role="region" aria-label="Our message in 5 points">
         <div class="message-marquee__track">

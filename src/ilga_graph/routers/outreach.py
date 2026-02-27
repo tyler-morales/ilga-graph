@@ -18,6 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..app_state import state
+from ..campaign_helpers import get_active_campaign
 from ..db import get_db
 from ..db_models import CommunityMemberEmail, OutreachEvent, OutreachStepEvent, User
 from ..dependencies import get_current_user_optional
@@ -88,6 +89,7 @@ async def record_outreach(
     support_score: str = Form(""),
     constituent: str = Form(""),
     legislator_email: str = Form(""),
+    campaign_id: str = Form(""),
     csrf_token: str | None = Form(None),
     user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
@@ -120,6 +122,15 @@ async def record_outreach(
         )
 
     zip_val = zip_code.strip() or None
+    campaign_id_val: int | None = None
+    if campaign_id.strip():
+        try:
+            cid = int(campaign_id.strip())
+            active = await get_active_campaign(db)
+            if active and active.id == cid:
+                campaign_id_val = cid
+        except ValueError:
+            pass
     event = OutreachEvent(
         user_id=user.id,
         user_email=user.email,
@@ -131,6 +142,7 @@ async def record_outreach(
         contact_name=contact_name.strip() or None,
         support_score=_parse_support_score(support_score),
         constituent=_parse_constituent(constituent),
+        campaign_id=campaign_id_val,
     )
     db.add(event)
 

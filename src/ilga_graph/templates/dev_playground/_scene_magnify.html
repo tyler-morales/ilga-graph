@@ -25,81 +25,111 @@
                 <label for="magnify-playground-offset-x">Frame offset X (px)</label>
                 <input type="number" id="magnify-playground-offset-x" min="-30" max="30" value="18"
                     aria-describedby="magnify-playground-offset-x-value">
-                <span id="magnify-playground-offset-x-value" class="magnify-playground-value" aria-live="polite">18</span>
+                <span id="magnify-playground-offset-x-value" class="magnify-playground-value"
+                    aria-live="polite">18</span>
             </div>
             <div class="magnify-playground-row">
                 <label for="magnify-playground-offset-y">Frame offset Y (px)</label>
                 <input type="number" id="magnify-playground-offset-y" min="-30" max="30" value="-5"
                     aria-describedby="magnify-playground-offset-y-value">
-                <span id="magnify-playground-offset-y-value" class="magnify-playground-value" aria-live="polite">-5</span>
+                <span id="magnify-playground-offset-y-value" class="magnify-playground-value"
+                    aria-live="polite">-5</span>
             </div>
         </fieldset>
     </div>
-    <div class="magnify-playground-preview">
-        <div class="advocacy-hero advocacy-hero--centered">
-            <div class="hero-inner">
-                <p class="hero-eyebrow">Take action</p>
-                <h1 class="hero-headline">
-                    <span class="hero-headline-line">Find your <span class="hero-headline-mark" aria-hidden="true">legislators</span>.</span>
-                    <span class="hero-headline-line">Take action on <span class="hero-headline-mark" aria-hidden="true">Key</span> bills.</span>
-                </h1>
-            </div>
-        </div>
-    </div>
+
 </div>
 <script src="/static/js/magnify-lens.js" defer></script>
 <style>
-.magnify-playground { padding: 1rem 0; }
-.magnify-playground-controls { margin-bottom: 1.5rem; }
-.magnify-playground-fieldset { border: 1px solid var(--color-border, #e5e7eb); border-radius: 8px; padding: 1rem; max-width: 20rem; }
-.magnify-playground-legend { font-weight: 600; padding: 0 0.5rem; }
-.magnify-playground-row { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.75rem; }
-.magnify-playground-row:first-of-type { margin-top: 0; }
-.magnify-playground-row label { flex: 0 0 10rem; }
-.magnify-playground-row input[type="number"] { width: 5rem; padding: 0.35rem 0.5rem; }
-.magnify-playground-value { font-variant-numeric: tabular-nums; color: var(--color-muted, #6b7280); }
-.magnify-playground-preview { padding: 2rem 0; }
-</style>
-<script>
-(function() {
-    var wrap = document.getElementById('magnify-playground');
-    var sizeInput = document.getElementById('magnify-playground-size');
-    var frameInput = document.getElementById('magnify-playground-frame');
-    var paddingInput = document.getElementById('magnify-playground-padding');
-    var offsetXInput = document.getElementById('magnify-playground-offset-x');
-    var offsetYInput = document.getElementById('magnify-playground-offset-y');
-    var sizeValue = document.getElementById('magnify-playground-size-value');
-    var frameValue = document.getElementById('magnify-playground-frame-value');
-    var paddingValue = document.getElementById('magnify-playground-padding-value');
-    var offsetXValue = document.getElementById('magnify-playground-offset-x-value');
-    var offsetYValue = document.getElementById('magnify-playground-offset-y-value');
-    if (!wrap || !sizeInput || !frameInput) return;
-
-    function apply() {
-        var size = Math.max(80, Math.min(220, parseInt(sizeInput.value, 10) || 150));
-        var frame = Math.max(120, Math.min(320, parseInt(frameInput.value, 10) || 230));
-        var padding = Math.max(0, Math.min(60, parseInt(paddingInput.value, 10) || 1));
-        var offsetX = Math.max(-30, Math.min(30, parseInt(offsetXInput.value, 10) || 18));
-        var offsetY = Math.max(-30, Math.min(30, parseInt(offsetYInput.value, 10) || -5));
-        wrap.style.setProperty('--magnify-size', size + 'px');
-        wrap.style.setProperty('--magnify-frame-size', frame + 'px');
-        wrap.style.setProperty('--magnify-frame-padding', padding + 'px');
-        wrap.style.setProperty('--magnify-frame-offset-x', offsetX + 'px');
-        wrap.style.setProperty('--magnify-frame-offset-y', offsetY + 'px');
-        if (sizeValue) sizeValue.textContent = size;
-        if (frameValue) frameValue.textContent = frame;
-        if (paddingValue) paddingValue.textContent = padding;
-        if (offsetXValue) offsetXValue.textContent = offsetX;
-        if (offsetYValue) offsetYValue.textContent = offsetY;
+    .magnify-playground {
+        padding: 1rem 0;
     }
 
-    sizeInput.addEventListener('input', apply);
-    sizeInput.addEventListener('change', apply);
-    frameInput.addEventListener('input', apply);
-    frameInput.addEventListener('change', apply);
-    if (paddingInput) { paddingInput.addEventListener('input', apply); paddingInput.addEventListener('change', apply); }
-    if (offsetXInput) { offsetXInput.addEventListener('input', apply); offsetXInput.addEventListener('change', apply); }
-    if (offsetYInput) { offsetYInput.addEventListener('input', apply); offsetYInput.addEventListener('change', apply); }
-    apply();
-})();
+    .magnify-playground-controls {
+        margin-bottom: 1.5rem;
+    }
+
+    .magnify-playground-fieldset {
+        border: 1px solid var(--color-border, #e5e7eb);
+        border-radius: 8px;
+        padding: 1rem;
+        max-width: 20rem;
+    }
+
+    .magnify-playground-legend {
+        font-weight: 600;
+        padding: 0 0.5rem;
+    }
+
+    .magnify-playground-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-top: 0.75rem;
+    }
+
+    .magnify-playground-row:first-of-type {
+        margin-top: 0;
+    }
+
+    .magnify-playground-row label {
+        flex: 0 0 10rem;
+    }
+
+    .magnify-playground-row input[type="number"] {
+        width: 5rem;
+        padding: 0.35rem 0.5rem;
+    }
+
+    .magnify-playground-value {
+        font-variant-numeric: tabular-nums;
+        color: var(--color-muted, #6b7280);
+    }
+
+    .magnify-playground-preview {
+        padding: 2rem 0;
+    }
+</style>
+<script>
+    (function () {
+        var wrap = document.getElementById('magnify-playground');
+        var sizeInput = document.getElementById('magnify-playground-size');
+        var frameInput = document.getElementById('magnify-playground-frame');
+        var paddingInput = document.getElementById('magnify-playground-padding');
+        var offsetXInput = document.getElementById('magnify-playground-offset-x');
+        var offsetYInput = document.getElementById('magnify-playground-offset-y');
+        var sizeValue = document.getElementById('magnify-playground-size-value');
+        var frameValue = document.getElementById('magnify-playground-frame-value');
+        var paddingValue = document.getElementById('magnify-playground-padding-value');
+        var offsetXValue = document.getElementById('magnify-playground-offset-x-value');
+        var offsetYValue = document.getElementById('magnify-playground-offset-y-value');
+        if (!wrap || !sizeInput || !frameInput) return;
+
+        function apply() {
+            var size = Math.max(80, Math.min(220, parseInt(sizeInput.value, 10) || 150));
+            var frame = Math.max(120, Math.min(320, parseInt(frameInput.value, 10) || 230));
+            var padding = Math.max(0, Math.min(60, parseInt(paddingInput.value, 10) || 1));
+            var offsetX = Math.max(-30, Math.min(30, parseInt(offsetXInput.value, 10) || 18));
+            var offsetY = Math.max(-30, Math.min(30, parseInt(offsetYInput.value, 10) || -5));
+            wrap.style.setProperty('--magnify-size', size + 'px');
+            wrap.style.setProperty('--magnify-frame-size', frame + 'px');
+            wrap.style.setProperty('--magnify-frame-padding', padding + 'px');
+            wrap.style.setProperty('--magnify-frame-offset-x', offsetX + 'px');
+            wrap.style.setProperty('--magnify-frame-offset-y', offsetY + 'px');
+            if (sizeValue) sizeValue.textContent = size;
+            if (frameValue) frameValue.textContent = frame;
+            if (paddingValue) paddingValue.textContent = padding;
+            if (offsetXValue) offsetXValue.textContent = offsetX;
+            if (offsetYValue) offsetYValue.textContent = offsetY;
+        }
+
+        sizeInput.addEventListener('input', apply);
+        sizeInput.addEventListener('change', apply);
+        frameInput.addEventListener('input', apply);
+        frameInput.addEventListener('change', apply);
+        if (paddingInput) { paddingInput.addEventListener('input', apply); paddingInput.addEventListener('change', apply); }
+        if (offsetXInput) { offsetXInput.addEventListener('input', apply); offsetXInput.addEventListener('change', apply); }
+        if (offsetYInput) { offsetYInput.addEventListener('input', apply); offsetYInput.addEventListener('change', apply); }
+        apply();
+    })();
 </script>

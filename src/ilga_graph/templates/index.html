@@ -4,11 +4,15 @@
 
 {% block content %}
 <script type="application/json" id="ilga-features-json">{{ (features or { }) | tojson }}</script>
+<script type="application/json"
+    id="ilga-active-campaign-json">{{ { "id": active_campaign.id } if active_campaign else {} | tojson }}</script>
 <script>
-(function () {
-  var el = document.getElementById('ilga-features-json');
-  window.__ILGA_FEATURES = el ? JSON.parse(el.textContent) : {};
-})();
+    (function () {
+        var el = document.getElementById('ilga-features-json');
+        window.__ILGA_FEATURES = el ? JSON.parse(el.textContent) : {};
+        var campEl = document.getElementById('ilga-active-campaign-json');
+        window.__ILGA_ACTIVE_CAMPAIGN = campEl ? JSON.parse(campEl.textContent) : {};
+    })();
 </script>
 {# ── Hero section: advocacy-centered hero only (no "what's happening" block) ── #}
 {% include "_hero_advocacy.html" %}
@@ -1415,7 +1419,7 @@
             var body = new FormData();
             body.append('zip_code', newZip);
             body.append('csrf_token', getCsrfToken());
-            fetch('/advocacy/api/me/zip', { method: 'PATCH', body: body, credentials: 'same-origin' }).catch(function () {});
+            fetch('/advocacy/api/me/zip', { method: 'PATCH', body: body, credentials: 'same-origin' }).catch(function () { });
         }
         return true;
     }
@@ -1551,6 +1555,8 @@
         if (supportScore) body.append('support_score', String(supportScore));
         if (constituent === 'true' || constituent === 'false') body.append('constituent', constituent);
         if (legislatorEmail && typeof legislatorEmail === 'string' && legislatorEmail.trim()) body.append('legislator_email', legislatorEmail.trim());
+        var activeCampaign = typeof window !== 'undefined' && window.__ILGA_ACTIVE_CAMPAIGN && window.__ILGA_ACTIVE_CAMPAIGN.id;
+        if (activeCampaign) body.append('campaign_id', String(activeCampaign));
         body.append('csrf_token', getCsrfToken());
         return fetch('/outreach/record', { method: 'POST', body: body, credentials: 'same-origin' })
             .then(function (r) { return r.json ? r.json() : {}; })
@@ -1952,7 +1958,7 @@
                 // #region agent log
                 if (key === 'ONE_SENTENCE_WHY') {
                     var nextPart = parts[i + 1];
-                    fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e2192d' }, body: JSON.stringify({ sessionId: 'e2192d', location: 'index.html:renderMadLibsBody', message: 'ONE_SENTENCE_WHY trailing part', data: { nextPart: nextPart, nextPartLength: nextPart ? nextPart.length : 0 }, timestamp: Date.now(), hypothesisId: 'A' }) }).catch(function () {});
+                    fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e2192d' }, body: JSON.stringify({ sessionId: 'e2192d', location: 'index.html:renderMadLibsBody', message: 'ONE_SENTENCE_WHY trailing part', data: { nextPart: nextPart, nextPartLength: nextPart ? nextPart.length : 0 }, timestamp: Date.now(), hypothesisId: 'A' }) }).catch(function () { });
                 }
                 // #endregion
             }
@@ -1962,7 +1968,7 @@
         if (whyEl) {
             var next = whyEl.nextSibling;
             var disp = whyEl.ownerDocument.defaultView.getComputedStyle(whyEl).display;
-            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e2192d' }, body: JSON.stringify({ sessionId: 'e2192d', location: 'index.html:renderMadLibsBody:after', message: 'ONE_SENTENCE_WHY DOM', data: { display: disp, nextNodeType: next ? next.nodeType : null, nextText: next && next.nodeType === 3 ? next.textContent.slice(0, 20) : null }, timestamp: Date.now(), hypothesisId: 'B' }) }).catch(function () {});
+            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e2192d' }, body: JSON.stringify({ sessionId: 'e2192d', location: 'index.html:renderMadLibsBody:after', message: 'ONE_SENTENCE_WHY DOM', data: { display: disp, nextNodeType: next ? next.nodeType : null, nextText: next && next.nodeType === 3 ? next.textContent.slice(0, 20) : null }, timestamp: Date.now(), hypothesisId: 'B' }) }).catch(function () { });
         }
         // #endregion
         /* Footer fields (name, phone, email): same default width; they still resize on input/blur/focus */
@@ -2006,7 +2012,7 @@
         text = text.trim();
         if (text.indexOf('This matters to me because .') !== -1) {
             // #region agent log
-            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e2192d' }, body: JSON.stringify({ sessionId: 'e2192d', location: 'index.html:getComposedBody', message: 'Stripping empty why period', data: { hadEmptyWhy: true }, timestamp: Date.now(), hypothesisId: 'E' }) }).catch(function () {});
+            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e2192d' }, body: JSON.stringify({ sessionId: 'e2192d', location: 'index.html:getComposedBody', message: 'Stripping empty why period', data: { hadEmptyWhy: true }, timestamp: Date.now(), hypothesisId: 'E' }) }).catch(function () { });
             // #endregion
             text = text.replace(/This matters to me because \.\s*\n\n?/g, '');
         }
@@ -2945,6 +2951,18 @@
     });
 
     initReminderModal();
+
+    (function () {
+        document.querySelectorAll('[data-campaign-cta]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var zipEl = document.getElementById('zip_code');
+                if (zipEl) {
+                    zipEl.focus();
+                    zipEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+        });
+    })();
 
 </script>
 {% endblock %}

@@ -27,6 +27,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import config as cfg
+from ..campaign_helpers import get_active_campaign
 from ..db import async_session_factory, get_db
 from ..db_models import Update, User
 from ..dependencies import get_current_user_optional, require_admin, require_user
@@ -57,6 +58,10 @@ templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 templates.env.globals["features"] = cfg.get_client_features()
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
+
+from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
+
+templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
 
 # Email update types: slug -> display label. Default for new drafts is "other".
 UPDATE_TYPES = [("major", "Major"), ("minor", "Minor"), ("other", "Other")]
@@ -332,6 +337,8 @@ async def updates_page(
     )
     sent_updates = list(result.scalars().all())
     ctx = _updates_page_ctx(request, sent_updates, user)
+    active_campaign = await get_active_campaign(db)
+    ctx["active_campaign"] = active_campaign
     return templates.TemplateResponse(request, "updates.html", ctx)
 
 

@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import json
 import logging
 import random
 import sys
-import time
 
 import strawberry
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -21,6 +19,7 @@ from .routers.admin import router as _admin_router
 from .routers.advocacy import router as _advocacy_router
 from .routers.auth import router as _auth_router
 from .routers.bills import router as _bills_router
+from .routers.campaigns import router as _campaigns_router
 from .routers.content import STRATEGIC_FIVE_POINTS
 from .routers.content import router as _content_router
 from .routers.dev import router as _dev_router
@@ -53,6 +52,27 @@ from .graphql_query import (  # noqa: E402, F401 - _member_career_start for test
 )
 from .loaders import create_loaders  # noqa: E402
 from .startup import lifespan  # noqa: E402
+
+# #region agent log
+try:
+    import json as _json
+    import os as _os
+    import time as _t
+
+    _path = _os.path.join(_os.environ.get("TMPDIR", "/tmp"), "debug-d3a55a.log")
+    with open(_path, "a") as _f:
+        payload = {
+            "sessionId": "d3a55a",
+            "location": "main.py",
+            "message": "main_loaded",
+            "hypothesisId": "H3",
+            "data": {},
+            "timestamp": int(_t.time() * 1000),
+        }
+        _f.write(_json.dumps(payload) + "\n")
+except Exception:
+    pass
+# #endregion
 
 
 async def get_graphql_context() -> dict:
@@ -102,6 +122,14 @@ templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
 templates.env.globals["features"] = cfg.get_client_features()
+
+
+def _get_current_action_campaign(request: Request) -> object | None:
+    """Return active campaign for the request (set by middleware) for base template top bar."""
+    return getattr(request.state, "current_action_campaign", None)
+
+
+templates.env.globals["get_current_action_campaign"] = _get_current_action_campaign
 
 
 def _wants_html(request: Request) -> bool:
@@ -218,9 +246,14 @@ KEI_VEHICLE_FACTS: tuple[dict[str, str | None], ...] = (
 )
 
 
+def _error_page_context(request: Request) -> dict:
+    """Context for error pages (404, 500): request plus a random Kei vehicle fact."""
+    return {"request": request, "kei_fact": random.choice(KEI_VEHICLE_FACTS)}
+
+
 def _404_context(request: Request) -> dict:
     """Context for the 404 template: request plus a random Kei vehicle fact."""
-    return {"request": request, "kei_fact": random.choice(KEI_VEHICLE_FACTS)}
+    return _error_page_context(request)
 
 
 # ── Exception handlers (custom error pages + consistent JSON for API) ─────────
@@ -245,7 +278,7 @@ async def _http_exception_handler(request: Request, exc: HTTPException) -> Respo
             return templates.TemplateResponse("404.html", _404_context(request), status_code=404)
         if exc.status_code >= 500:
             return templates.TemplateResponse(
-                "500.html", {"request": request}, status_code=exc.status_code
+                "500.html", _error_page_context(request), status_code=exc.status_code
             )
     detail = exc.detail if isinstance(exc.detail, (str, dict, list)) else str(exc.detail)
     return JSONResponse(status_code=exc.status_code, content={"detail": detail})
@@ -261,34 +294,8 @@ async def _validation_exception_handler(request: Request, exc: RequestValidation
 
 async def _uncaught_exception_handler(request: Request, exc: Exception) -> Response:
     LOGGER.exception("Uncaught exception while handling %s %s", request.method, request.url.path)
-    # #region agent log
-    try:
-        import traceback
-
-        with open("/Users/tyler/Projects/Code/hardball/.cursor/debug-93f598.log", "a") as _f:
-            _f.write(
-                json.dumps(
-                    {
-                        "sessionId": "93f598",
-                        "hypothesisId": "500_cause",
-                        "location": "main.py:uncaught_exception",
-                        "message": "500 exception details",
-                        "data": {
-                            "path": request.url.path,
-                            "exc_type": type(exc).__name__,
-                            "exc_msg": str(exc)[:200],
-                            "tb": traceback.format_exc()[-1500:],
-                        },
-                        "timestamp": int(time.time() * 1000),
-                    }
-                )
-                + "\n"
-            )
-    except Exception:  # noqa: S110
-        pass
-    # #endregion
     if _wants_html(request):
-        return templates.TemplateResponse("500.html", {"request": request}, status_code=500)
+        return templates.TemplateResponse("500.html", _error_page_context(request), status_code=500)
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
@@ -303,6 +310,7 @@ app.include_router(graphql_app, prefix="/graphql")
 app.include_router(_home_router)
 app.include_router(_site_router)
 app.include_router(_admin_router)
+app.include_router(_campaigns_router)
 app.include_router(_dev_router, prefix="/dev")
 
 app.include_router(_advocacy_router, prefix="/advocacy")
