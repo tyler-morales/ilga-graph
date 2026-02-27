@@ -1,5 +1,22 @@
-{# ── Home only: CTA block between mission statement and Share; no mission-statement background image. ── #}
-<div class="home-cta" id="home-cta">
-    <a href="/advocacy" class="mission-statement-cta-btn">Start outreach</a>
-    <p class="mission-statement-cta-text">Ready to tell your legislators to fix the law?</p>
-</div>
+{# ── Home only: CTA block between mission statement and Share. Two clear choices: primary outreach, or subscribe. ── #}
+<section class="home-cta" id="home-cta" aria-labelledby="home-cta-heading">
+    <h2 id="home-cta-heading" class="visually-hidden">Take action</h2>
+    <div class="home-cta-primary">
+        <a href="/advocacy" class="home-cta-btn">Start outreach</a>
+        <p class="home-cta-caption">Ready to tell your legislators to fix the law?</p>
+    </div>
+    <p class="home-cta-divider" aria-hidden="true"><span class="home-cta-or">or</span></p>
+    <div class="home-cta-subscribe" id="home-cta-subscribe">
+        <p class="home-cta-subscribe-p">Not ready to call or email? Get one update when we move—no spam, only when it matters.</p>
+        <div id="home-cta-subscribe-wrap" class="home-cta-subscribe-wrap">
+            <form action="/updates/subscribe-email" method="post" class="home-cta-subscribe-form subscribe-form"
+                hx-post="/updates/subscribe-email" hx-target="#home-cta-subscribe-wrap" hx-swap="innerHTML"
+                aria-label="Subscribe to campaign updates by email">
+                <label for="home-cta-subscribe-email" class="visually-hidden">Your email</label>
+                <input type="email" id="home-cta-subscribe-email" name="email" class="home-cta-subscribe-input subscribe-input"
+                    placeholder="Your email" required autocomplete="email" inputmode="email" maxlength="320">
+                <button type="submit" class="home-cta-subscribe-btn subscribe-btn">Subscribe</button>
+            </form>
+        </div>
+    </div>
+</section>

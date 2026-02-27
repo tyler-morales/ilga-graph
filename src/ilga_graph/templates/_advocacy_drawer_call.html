@@ -220,12 +220,12 @@
                 <div class="chat-bubble chat-them">
                     <span class="chat-label">Stay informed</span>
                     <p class="drawer-subscribe-p">Want to know when the bill moves? We'll send one email.</p>
-                    <form action="/updates/subscribe-email" method="post" class="drawer-subscribe-form"
+                    <form action="/updates/subscribe-email" method="post" class="drawer-subscribe-form subscribe-form"
                         hx-post="/updates/subscribe-email" hx-target="this" hx-swap="outerHTML"
                         aria-label="Subscribe to campaign updates">
-                        <input type="email" name="email" class="drawer-subscribe-input" placeholder="Your email"
+                        <input type="email" name="email" class="drawer-subscribe-input subscribe-input" placeholder="Your email"
                             required autocomplete="email" inputmode="email" maxlength="320">
-                        <button type="submit" class="drawer-subscribe-btn">Subscribe</button>
+                        <button type="submit" class="drawer-subscribe-btn subscribe-btn">Subscribe</button>
                     </form>
                 </div>
             </div>

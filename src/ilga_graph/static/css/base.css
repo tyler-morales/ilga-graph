@@ -468,14 +468,25 @@ a:visited {
   margin-top: 1rem;
 }
 
-.footer-subscribe-form {
+/* Shared subscribe component: form, input, button (footer, sidebar, home CTA, updates, drawer). Variations in mission-statement.css (home), advocacy-drawer.css (drawer). */
+.footer-subscribe-form,
+.stay-informed-form,
+.home-cta-subscribe-form,
+.updates-subscribe-email-form,
+.drawer-subscribe-form,
+.subscribe-form {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
 }
 
-.footer-subscribe-input {
+.footer-subscribe-input,
+.stay-informed-input,
+.home-cta-subscribe-input,
+.updates-subscribe-email-input,
+.drawer-subscribe-input,
+.subscribe-input {
   flex: 1 1 180px;
   min-width: 0;
   padding: 0.4rem 0.6rem;
@@ -484,12 +495,22 @@ a:visited {
   border-radius: 6px;
 }
 
-.footer-subscribe-input:focus {
+.footer-subscribe-input:focus,
+.stay-informed-input:focus,
+.home-cta-subscribe-input:focus,
+.updates-subscribe-email-input:focus,
+.drawer-subscribe-input:focus,
+.subscribe-input:focus {
   outline: 2px solid var(--link-color, #5a2d82);
   outline-offset: 1px;
 }
 
-.footer-subscribe-btn {
+.footer-subscribe-btn,
+.stay-informed-btn,
+.home-cta-subscribe-btn,
+.updates-subscribe-email-btn,
+.drawer-subscribe-btn,
+.subscribe-btn {
   padding: 0.4rem 0.75rem;
   font-size: var(--font-size-sm);
   font-weight: 600;
@@ -500,11 +521,21 @@ a:visited {
   cursor: pointer;
 }
 
-.footer-subscribe-btn:hover {
+.footer-subscribe-btn:hover,
+.stay-informed-btn:hover,
+.home-cta-subscribe-btn:hover,
+.updates-subscribe-email-btn:hover,
+.drawer-subscribe-btn:hover,
+.subscribe-btn:hover {
   opacity: 0.9;
 }
 
-.footer-subscribe-btn:focus-visible {
+.footer-subscribe-btn:focus-visible,
+.stay-informed-btn:focus-visible,
+.home-cta-subscribe-btn:focus-visible,
+.updates-subscribe-email-btn:focus-visible,
+.drawer-subscribe-btn:focus-visible,
+.subscribe-btn:focus-visible {
   outline: 2px solid var(--link-color, #5a2d82);
   outline-offset: 2px;
 }
@@ -805,6 +836,11 @@ a:visited {
     pointer-events: none;
     white-space: nowrap;
     vertical-align: top;
+  }
+
+  /* Issue page: one subscribe on mobile; footer only (sidebar Stay informed hidden). */
+  .legislator-brief-sidebar__stay-informed {
+    display: none;
   }
 }
 
@@ -1269,50 +1305,8 @@ a:visited {
   color: #374151;
 }
 
-.stay-informed-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.stay-informed-input {
-  flex: 1 1 160px;
-  min-width: 0;
-  padding: 0.45rem 0.6rem;
-  font-size: var(--font-size-sm);
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-}
-
-.stay-informed-input:focus {
-  outline: 2px solid var(--link-color, #5a2d82);
-  outline-offset: 1px;
-}
-
 .updates-subscribe-email-wrap {
   margin: 0.5rem 0;
-}
-
-.updates-subscribe-email-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.updates-subscribe-email-input {
-  flex: 1 1 200px;
-  min-width: 0;
-  padding: 0.5rem 0.6rem;
-  font-size: 1rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-}
-
-.updates-subscribe-email-input:focus {
-  outline: 2px solid var(--link-color, #5a2d82);
-  outline-offset: 1px;
 }
 
 .updates-subscribe-note {

@@ -73,12 +73,12 @@
             <p class="drawer-done-subscribe-signed-in" id="drawer-done-subscribe-signed-in" hidden>You're on the list — we'll send one email when the bill moves.</p>
             <div class="drawer-done-subscribe-form-wrap" id="drawer-done-subscribe-form-wrap">
                 <p class="drawer-done-subscribe-p">Want to know when the bill moves? We'll send one email.</p>
-                <form action="/updates/subscribe-email" method="post" class="drawer-subscribe-form"
+                <form action="/updates/subscribe-email" method="post" class="drawer-subscribe-form subscribe-form"
                     hx-post="/updates/subscribe-email" hx-target="this" hx-swap="outerHTML"
                     aria-label="Subscribe to campaign updates">
-                    <input type="email" name="email" class="drawer-subscribe-input" placeholder="Your email"
+                    <input type="email" name="email" class="drawer-subscribe-input subscribe-input" placeholder="Your email"
                         required autocomplete="email" inputmode="email" maxlength="320">
-                    <button type="submit" class="drawer-subscribe-btn">Subscribe</button>
+                    <button type="submit" class="drawer-subscribe-btn subscribe-btn">Subscribe</button>
                 </form>
             </div>
         </div>

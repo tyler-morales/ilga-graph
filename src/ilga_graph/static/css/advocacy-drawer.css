@@ -925,19 +925,14 @@
     color: #1a1a1a;
 }
 
+/* Drawer subscribe: base from base.css .subscribe-*; variations below (green accent, 8px radius). */
 .drawer-subscribe-form {
-    display: flex;
-    flex-wrap: wrap;
     gap: 8px;
-    align-items: center;
 }
 
 .drawer-subscribe-input {
-    flex: 1 1 180px;
-    min-width: 0;
     padding: 10px 12px;
     font-size: 0.9375rem;
-    border: 1px solid #d1d5db;
     border-radius: 8px;
 }
 
@@ -950,15 +945,12 @@
 .drawer-subscribe-btn {
     padding: 10px 18px;
     font-size: 0.9375rem;
-    font-weight: 600;
-    color: #fff;
     background: #2db84e;
-    border: none;
     border-radius: 8px;
-    cursor: pointer;
 }
 
 .drawer-subscribe-btn:hover {
+    opacity: 1;
     background: #28a745;
 }
 
