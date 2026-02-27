@@ -53,8 +53,10 @@ scrape: ## Unified scrape: members + bills + votes + slips. Smart index (use FUL
 scrape-full: ## Full reset: delete cache/, then scrape all members (~177) + full bill index + ML. Use when data is wrong or incomplete (e.g. only 20 or 60 members).
 	$(MAKE) scrape FRESH=1 FULL=1
 
-dev: ## Serve from cache (dev mode, auto-reload)
-	ILGA_LOAD_ONLY=1 ILGA_PROFILE=dev $(PYTHON) -m uvicorn ilga_graph.main:app --reload --app-dir src
+dev: ## Serve from cache (dev mode, auto-reload). Migrate DB first so worker startup is fast; bind 0.0.0.0; watch src/ only.
+	@mkdir -p data
+	PYTHONPATH=src ILGA_PROFILE=dev $(PYTHON) -m alembic upgrade head
+	ILGA_LOAD_ONLY=1 ILGA_PROFILE=dev $(PYTHON) -m uvicorn ilga_graph.main:app --reload --app-dir src --reload-dir src --host 0.0.0.0
 
 serve: ## Serve from cache (prod mode)
 	ILGA_LOAD_ONLY=1 ILGA_PROFILE=prod $(PYTHON) -m uvicorn ilga_graph.main:app --app-dir src
