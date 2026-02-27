@@ -32,7 +32,7 @@
   opacity: 0.1;
 }
 
-/* Header matches .whats-happening-title */
+/* Header matches .why-you-care-title */
 .mission-statement-heading {
   font-size: var(--font-size-h2, 1.35rem);
   font-weight: 600;
@@ -159,60 +159,152 @@
   margin-bottom: 0;
 }
 
-/* CTA lives in .home-cta (between mission statement and Share) so it is not on the truck image. */
+/* CTA lives in .home-cta (between mission statement and Share). Two choices: primary action or subscribe. */
 .home-cta {
   margin-top: 2rem;
-  padding-top: 2rem;
+  padding-top: var(--home-section-padding-block, 2rem);
+  padding-bottom: var(--home-section-padding-block, 2rem);
   border-top: 1px solid var(--color-border-light, #e5e5e5);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1.5rem;
   text-align: center;
 }
 .page-home .home-cta {
   margin-top: 0;
-  padding-top: var(--home-section-padding-block, 2rem);
-  padding-bottom: var(--home-section-padding-block, 2rem);
 }
 
-.mission-statement-cta-btn {
+.home-cta-primary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.home-cta-btn {
   display: inline-block;
-  font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-sans, Helvetica, "Helvetica Neue", Arial, sans-serif);
   font-size: var(--font-size-body, 1rem);
   font-weight: 600;
-  padding: 12px 24px;
-  background: #1a73e8;
+  padding: 0.75rem 1.75rem;
+  background: var(--color-hero-cta);
   color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   text-decoration: none;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background 0.2s ease, transform 0.1s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 
-.mission-statement-cta-btn:link,
-.mission-statement-cta-btn:visited {
+.home-cta-btn:link,
+.home-cta-btn:visited {
   color: #fff;
 }
 
-.mission-statement-cta-btn:hover {
-  background: #1765cc;
+.home-cta-btn:hover {
+  background: var(--color-hero-cta-hover);
+  transform: translateY(-1px);
 }
 
-.mission-statement-cta-btn:focus-visible {
-  outline: 2px solid #1a73e8;
+.home-cta-btn:focus-visible {
+  outline: 2px solid var(--color-hero-cta-focus-ring);
   outline-offset: 2px;
 }
 
-.home-cta .mission-statement-cta-text {
-  font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+.home-cta-caption {
+  font-family: var(--font-sans);
   font-size: var(--font-size-body, 1rem);
   font-weight: 400;
-  font-style: normal;
-  color: #555;
+  color: var(--color-text-secondary, #555);
   line-height: 1.5;
   margin: 0;
+}
+
+.home-cta-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  max-width: 20rem;
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted, #737373);
+}
+
+.home-cta-divider::before,
+.home-cta-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-border-light, #e5e5e5);
+}
+
+.home-cta-or {
+  text-transform: lowercase;
+  font-weight: 500;
+}
+
+.home-cta-subscribe {
+  width: 100%;
+  max-width: 22rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--color-bg-subtle, #f8f9fa);
+  border: 1px solid var(--color-border-light, #e5e5e5);
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.home-cta-subscribe-p {
+  font-size: var(--font-size-body, 1rem);
+  color: var(--color-text-secondary, #555);
+  line-height: 1.45;
+  margin: 0 0 1rem;
+}
+
+.home-cta-subscribe-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+/* Home CTA subscribe: base from base.css .subscribe-*; variations below. */
+.home-cta-subscribe-form {
+  justify-content: center;
+}
+
+.home-cta-subscribe-input {
+  width: 100%;
+  min-width: 12rem;
+  max-width: 220px;
+  padding: 0.5rem 0.75rem;
+  font-size: var(--font-size-body, 1rem);
+  border-color: var(--color-border-light, #e5e5e5);
+  border-radius: 8px;
+}
+
+.home-cta-subscribe-input::placeholder {
+  color: var(--color-text-muted, #737373);
+}
+
+.home-cta-subscribe-input:focus {
+  outline: none;
+  border-color: var(--color-hero-cta);
+  box-shadow: 0 0 0 3px rgba(237, 122, 10, 0.2);
+}
+
+/* Color from base.css .subscribe-btn (purple); only layout/sizing here */
+.home-cta-subscribe-btn {
+  font-size: var(--font-size-body, 1rem);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+}
+
+.home-cta-subscribe .subscribe-email-success,
+.home-cta-subscribe .subscribe-email-error {
+  font-size: var(--font-size-sm);
+  margin: 0;
+  text-align: center;
 }
 
 @media (max-width: 640px) {

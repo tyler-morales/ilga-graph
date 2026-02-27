@@ -69,6 +69,10 @@
         </section>
         {% endif %}
 
+        {% set why_you_care_variant = 'full' %}
+        {% set why_you_care_heading_tag = 'h3' %}
+        {% include "_why_you_care.html" %}
+
         <section aria-labelledby="issue-other-states">
             <h3 id="issue-other-states">Where Other States Stand</h3>
             <p>Many states already allow kei vehicle registration—by passing laws or updating policy. The map and table below show where laws have passed, where bills are in progress, and where agencies have allowed registration without a new law.</p>
@@ -285,6 +289,17 @@
                         </tbody>
                     </table>
                     {% endif %}
+                    {% if session_schedule_terms %}
+                    <h3 id="issue-session-terms-heading" class="session-schedule-terms__heading">Terms used in this calendar</h3>
+                    <dl class="session-schedule-terms" aria-labelledby="issue-session-terms-heading">
+                        {% for t in session_schedule_terms %}
+                        <div class="session-schedule-terms__row">
+                            <dt id="session-term-{{ t.id }}">{{ t.term }}</dt>
+                            <dd>{{ t.definition }}</dd>
+                        </div>
+                        {% endfor %}
+                    </dl>
+                    {% endif %}
                 </div>
             </details>
             {% endfor %}
@@ -346,7 +361,7 @@
                     <label for="issue-subscribe-email-input" class="visually-hidden">Your email</label>
                     <input type="email" id="issue-subscribe-email-input" name="email" class="stay-informed-input"
                         placeholder="Your email" required autocomplete="email" inputmode="email" maxlength="320">
-                    <button type="submit" class="btn btn-primary stay-informed-btn">Subscribe</button>
+                    <button type="submit" class="stay-informed-btn">Subscribe</button>
                 </form>
             </div>
         </section>

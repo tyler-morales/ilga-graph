@@ -178,6 +178,28 @@ STRATEGIC_FIVE_POINTS: list[str] = [
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
 templates.env.globals["features"] = cfg.get_client_features()
 
+# Why should you care (Hardball Ch7: who benefits, why your voice matters). Canonical copy from constituent brief + FAQ_ADVOCACY + STRATEGIC_FIVE_POINTS.
+WHY_SHOULD_YOU_CARE_HEADING = "Why should you care?"
+WHY_SHOULD_YOU_CARE_INTRO = (
+    "Clear law protects residents. When statutory language is ambiguous, regular people absorb the consequences. "
+    "This issue is about fairness, predictability, and consistent application of Illinois law. "
+    "This affects real Illinois residents who own legal vehicles they can't register—registrations denied or revoked, "
+    "titles branded 'Not Eligible for Registration,' plates surrendered."
+)
+WHY_SHOULD_YOU_CARE_VOICE = (
+    "Legislators prioritize issues they hear about from constituents. Your contact helps put the issue on the map "
+    "and builds the case for a legislative fix."
+)
+WHY_SHOULD_YOU_CARE_TEASER_ITEMS: list[str] = [
+    "This affects real Illinois residents who own legal vehicles they can't register.",
+    "Even if you don't own one, it's about fair and consistent application of the law.",
+    "Your voice helps legislators see the issue deserves a fix.",
+]
+templates.env.globals["why_should_you_care_heading"] = WHY_SHOULD_YOU_CARE_HEADING
+templates.env.globals["why_should_you_care_intro"] = WHY_SHOULD_YOU_CARE_INTRO
+templates.env.globals["why_should_you_care_voice"] = WHY_SHOULD_YOU_CARE_VOICE
+templates.env.globals["why_should_you_care_teaser_items"] = WHY_SHOULD_YOU_CARE_TEASER_ITEMS
+
 from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
 
 templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
@@ -1023,6 +1045,45 @@ FAQ_SESSION = {
     ],
 }
 
+# Terms used in the session calendar. Definitions grounded in reference/ilga_rules.json (104th GA rules).
+SESSION_SCHEDULE_TERMS = [
+    {
+        "id": "lrb",
+        "term": "LRB",
+        "definition": "Legislative Reference Bureau. Legislators request bill drafting from the LRB. The LRB request deadline is the last day to submit requests for the session; after that, the LRB blackout begins and no new bill requests are accepted until the next session.",
+    },
+    {
+        "id": "committee-deadline",
+        "term": "Committee deadline",
+        "definition": "Final day for standing committees to report bills out of committee. Bills not reported by this date are re-referred to the gatekeeper (Senate: Committee on Assignments; House: Rules Committee)—not killed, but delayed. Senate Rule 2-10, House Rule 9.",
+    },
+    {
+        "id": "third-reading",
+        "term": "Third Reading",
+        "definition": "Final reading of a bill before a floor vote. A bill must be read by title on three different days before passage. The Third Reading deadline is the last day the chamber may pass bills on third reading; after that, bills not passed are re-referred. Senate Rule 2-10(a)(5), House Rule 9(b)(5).",
+    },
+    {
+        "id": "perfunctory-session",
+        "term": "Perfunctory session",
+        "definition": "A short session for procedural business (e.g. reading the journal, formalities). No substantive debate or votes on bills.",
+    },
+    {
+        "id": "substantive-bills",
+        "term": "Substantive bills",
+        "definition": "Bills that change law or policy (as opposed to appropriation-only or purely procedural measures). Session deadlines often set separate dates for substantive bills vs. appropriation bills.",
+    },
+    {
+        "id": "session",
+        "term": "Session",
+        "definition": "A day the chamber meets in Springfield. The schedule lists which days the House or Senate is in session.",
+    },
+    {
+        "id": "adjournment",
+        "term": "Adjournment",
+        "definition": "End of the legislative session (sine die). After adjournment, no further action on bills until the next session.",
+    },
+]
+
 # FAQ for Legislator Brief page (legislators & staff). Same shape: title, intro, items (id, question, answer, sources).
 FAQ_LEGISLATORS = {
     "title": "FAQ — For Legislators & Staff",
@@ -1219,6 +1280,7 @@ async def the_issue_page(request: Request):
             "faq_advocacy": FAQ_ADVOCACY,
             "faq_session": FAQ_SESSION,
             "session_deadlines": session_deadlines,
+            "session_schedule_terms": SESSION_SCHEDULE_TERMS,
             "brief_state_status": BRIEF_STATE_STATUS,
             "brief_state_map_status_json": json.dumps(brief_state_map_status),
             "brief_aamva_fix_state_abbrs_json": json.dumps(aamva_fix_abbrs),

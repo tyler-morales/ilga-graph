@@ -1,0 +1,63 @@
+{# ── Why should you care: home (teaser + marquee) or full (The Issue). Content from content.py. Set why_you_care_heading_tag to "h3" on The Issue. Marquee: placeholder images until real kei-owner stories; duplicate strip for seamless loop. ── #}
+<section class="why-you-care{% if why_you_care_variant == 'full' %} why-you-care--full{% endif %}" id="why-you-care" aria-labelledby="why-you-care-heading">
+    <div class="why-you-care-header">
+        <{{ why_you_care_heading_tag|default('h2') }} class="why-you-care-title" id="why-you-care-heading">{{ why_should_you_care_heading }}</{{ why_you_care_heading_tag|default('h2') }}>
+        {% if why_you_care_variant == 'home' %}
+        <ol class="why-you-care-teaser-list">
+            {% for item in why_should_you_care_teaser_items %}
+            <li class="why-you-care-teaser-item">{{ item }}</li>
+            {% endfor %}
+        </ol>
+        <p class="why-you-care-cta">
+            <a href="/the-issue" class="why-you-care-link">Learn about the issue</a> or
+            <a href="/advocacy" class="why-you-care-link">start outreach</a>.
+        </p>
+        {% else %}
+        <p class="why-you-care-intro">{{ why_should_you_care_intro }}</p>
+        <p class="why-you-care-voice">{{ why_should_you_care_voice }}</p>
+        {% endif %}
+    </div>
+
+    {# Scrolling marquee: real Illinois kei owners affected by registration (placeholder images until real stories). Duplicated strip for seamless infinite scroll. #}
+    {% set marquee_images = [
+        {'src': '/static/images/tyler_morales.png', 'alt': 'Tyler Morales, kei vehicle owner affected by registration', 'caption': 'Tyler Morales — kei owner affected by Illinois registration'},
+        {'src': 'https://picsum.photos/seed/kei1/360/240', 'alt': 'Kei vehicle owner affected by registration — placeholder', 'caption': 'Marcus, Chicago — registration revoked after years of legal use'},
+        {'src': 'https://picsum.photos/seed/kei2/360/240', 'alt': 'Kei owner unable to register — placeholder', 'caption': 'Sarah, Peoria — imported kei truck stuck, can’t get plates'},
+        {'src': 'https://picsum.photos/seed/kei3/360/240', 'alt': 'Affected kei owner — placeholder', 'caption': 'James, Rockford — van denied; same model registered in other states'},
+        {'src': 'https://picsum.photos/seed/kei4/360/240', 'alt': 'Illinois kei vehicle registration issue — placeholder', 'caption': 'Elena, Springfield — DMV turned away federally compliant vehicle'},
+        {'src': 'https://picsum.photos/seed/kei5/360/240', 'alt': 'Kei owner story — placeholder', 'caption': 'David, Naperville — registration renewal rejected without notice'},
+        {'src': 'https://picsum.photos/seed/kei6/360/240', 'alt': 'Vehicle registration affected owner — placeholder', 'caption': 'Rachel, Champaign — legal kei car can’t be registered in Illinois'},
+    ] %}
+    <div class="why-you-care-marquee" id="why-you-care-marquee" role="region" aria-label="Scrolling images of affected kei owners">
+        <div class="why-you-care-marquee-control-wrap">
+            <button type="button" class="why-you-care-marquee-control" id="why-you-care-marquee-pause" aria-pressed="false" aria-label="Pause scrolling images">Pause</button>
+        </div>
+        <div class="why-you-care-marquee-visual" aria-hidden="true">
+            <div class="why-you-care-marquee-track">
+            {% for strip_index in range(2) %}{# duplicate strip for seamless loop #}
+            <div class="why-you-care-marquee-strip{% if strip_index == 1 %} why-you-care-marquee-strip--dup{% endif %}">
+                {% for img in marquee_images %}
+                <figure class="why-you-care-marquee-item">
+                    <img src="{{ img.src }}" alt="{{ img.alt }}" width="360" height="240" loading="lazy" decoding="async">
+                    <figcaption class="why-you-care-marquee-caption">{{ img.caption }}</figcaption>
+                </figure>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        </div>
+        <script>
+            (function() {
+                var marquee = document.getElementById('why-you-care-marquee');
+                var btn = document.getElementById('why-you-care-marquee-pause');
+                if (!marquee || !btn) return;
+                btn.addEventListener('click', function() {
+                    var paused = marquee.classList.toggle('why-you-care-marquee--paused');
+                    btn.setAttribute('aria-pressed', paused ? 'true' : 'false');
+                    btn.setAttribute('aria-label', paused ? 'Resume scrolling images' : 'Pause scrolling images');
+                    btn.textContent = paused ? 'Resume' : 'Pause';
+                });
+            })();
+        </script>
+    </div>
+</section>
