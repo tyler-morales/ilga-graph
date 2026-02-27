@@ -690,11 +690,12 @@ user_emailed_member_ids=none, outreach_heat=none) %}
             aria-labelledby="outreach-goal-heading" data-goal-zip="{{ zip }}"
             data-goal-senator-id="{{ senator.id if senator else '' }}"
             data-goal-rep-id="{{ representative.id if representative else '' }}"
-            data-goal-broker-id="{{ broker_id|default('') }}">
+            data-goal-broker-id="{{ broker_id|default('') }}"
+            data-goal-label-broker="Contact the Power Broker">
             <div class="outreach-goal__head-row">
-                <h2 id="outreach-goal-heading" class="outreach-goal__title">Your goal</h2>
+                <h2 id="outreach-goal-heading" class="outreach-goal__title">{% if active_campaign %}This week's goal{% else %}Your goal{% endif %}</h2>
             </div>
-            <p class="outreach-goal__copy"><span id="outreach-goal-current-label">{{ current_goal_label|default('Outreach your district legislators') }}</span></p>
+            <p class="outreach-goal__copy"><span id="outreach-goal-current-label">{{ current_goal_label|default('Contact your district legislators') }}</span></p>
 
             {# Phase 1: district (bar X of 4, 4 steps, Next) #}
             <div class="outreach-goal__phase outreach-goal__phase--district">
@@ -711,7 +712,7 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                     </div>
                 </div>
                 <ol class="outreach-goal__actions outreach-goal__actions--numbered" role="list"
-                    aria-label="District outreach steps (call then email for each member; order by impact)">
+                    aria-label="District contact steps (call then email for each member; order by impact)">
                     {% for step in district_steps %}
                     <li class="outreach-goal__action{% if step.done %} outreach-goal__action--done{% endif %}">
                         <span class="outreach-goal__action-status" data-goal-member="{{ step.member_id }}"
@@ -752,7 +753,7 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                     </div>
                 </div>
                 <ol class="outreach-goal__actions outreach-goal__actions--numbered" id="outreach-goal-actions-broker" role="list"
-                    aria-label="Power Broker outreach steps (call then email)">
+                    aria-label="Power Broker contact steps (call then email)">
                     {% for step in broker_goal_steps|default([]) %}
                     <li class="outreach-goal__action{% if step.done %} outreach-goal__action--done{% endif %}">
                         <span class="outreach-goal__action-status" data-goal-member="{{ step.member_id }}"
@@ -776,7 +777,7 @@ user_emailed_member_ids=none, outreach_heat=none) %}
                 <p class="outreach-goal__next" id="outreach-goal-next-broker" hidden aria-hidden="true">Now: <span class="outreach-goal__next-placeholder"></span></p>
                 {% endif %}
                 <h3 id="outreach-goal-completed-heading" class="outreach-goal__completed-title">Completed goals</h3>
-                <p class="outreach-goal__completed-summary" aria-labelledby="outreach-goal-completed-heading">Outreach your district legislators</p>
+                <p class="outreach-goal__completed-summary" aria-labelledby="outreach-goal-completed-heading">Contact your district legislators</p>
             </div>
             {% endif %}
             {% if broker %}
@@ -787,61 +788,6 @@ user_emailed_member_ids=none, outreach_heat=none) %}
             {% endif %}
         </section>
         {% endif %}
-        <details class="how-it-works how-it-works-details">
-            <summary class="hiw-title">How we pick targets</summary>
-            <div class="hiw-body">
-                <dl>
-                    <dt>Your Senator &amp; Representative</dt>
-                    <dd>ZIP matched to IL Senate/House districts via Census.</dd>
-                    <dt>Power Broker</dt>
-                    <dd>Committee chair for your topic (default Transportation), or highest <span
-                            class="moneyball-aside-trigger" role="button" tabindex="0" aria-expanded="false"
-                            aria-controls="aside-moneyball-def" aria-label="Toggle Moneyball definition"><span
-                                class="moneyball-term">Moneyball</span><span class="moneyball-help"
-                                style="font-size:0.75em;">?</span></span> senator or rep.
-                        <div class="moneyball-definition-block" id="aside-moneyball-def" aria-hidden="true">
-                            <p class="moneyball-definition-text"><em>Moneyball</em> is a 0–100 composite score
-                                combining passage rate, bill progress, co-sponsor pull, cross-party work,
-                                network centrality, and institutional role. We use it to rank senators and reps and find
-                                high-impact targets.</p>
-                            <div class="moneyball-formula-display formula-one-line" aria-label="Moneyball formula">
-                                <span class="formula-lhs">Score <span class="formula-eq">=</span></span>
-                                <span class="formula-body"><span class="formula-coef">0.24</span><span
-                                        class="formula-times">×</span><span class="formula-var">P</span><span
-                                        class="formula-plus">+</span> <span class="formula-coef">0.16</span><span
-                                        class="formula-times">×</span><span class="formula-var">L</span><span
-                                        class="formula-plus">+</span> <span class="formula-coef">0.16</span><span
-                                        class="formula-times">×</span><span class="formula-var">C</span><span
-                                        class="formula-plus">+</span> <span class="formula-coef">0.12</span><span
-                                        class="formula-times">×</span><span class="formula-var">X</span><span
-                                        class="formula-plus">+</span> <span class="formula-coef">0.12</span><span
-                                        class="formula-times">×</span><span class="formula-var">N</span><span
-                                        class="formula-plus">+</span> <span class="formula-coef">0.20</span><span
-                                        class="formula-times">×</span><span class="formula-var">I</span></span>
-                            </div>
-                            <dl class="formula-where">
-                                <dt><span class="formula-var">P</span></dt>
-                                <dd>Passage rate: laws passed ÷ laws filed (HB/SB only).</dd>
-                                <dt><span class="formula-var">L</span></dt>
-                                <dd>Pipeline depth: how far the member’s bills go on average (0–6 scale,
-                                    normalized to 0–1).</dd>
-                                <dt><span class="formula-var">C</span></dt>
-                                <dd>Co-sponsor pull: avg co-sponsors per law, normalized vs the member with the
-                                    most.</dd>
-                                <dt><span class="formula-var">X</span></dt>
-                                <dd>Cross-party: share of bills with at least one opposite-party co-sponsor.
-                                </dd>
-                                <dt><span class="formula-var">N</span></dt>
-                                <dd>Network centrality: share of colleagues the member co-sponsors with.</dd>
-                                <dt><span class="formula-var">I</span></dt>
-                                <dd>Institutional power: bonus for leadership (President/Leader 1.0, Chair 0.5,
-                                    Whip 0.25).</dd>
-                            </dl>
-                        </div>
-                    </dd>
-                </dl>
-            </div>
-        </details>
         {% if show_my_outreach|default(false) %}
         <section class="outreach-sidebar" aria-labelledby="outreach-sidebar-heading">
             <h2 id="outreach-sidebar-heading" class="outreach-sidebar__title">My Outreach</h2>

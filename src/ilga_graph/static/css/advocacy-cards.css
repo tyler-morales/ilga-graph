@@ -148,23 +148,6 @@
   color: #333;
 }
 
-/* Aside: toggleable Moneyball definition (inline below Power Broker) */
-.moneyball-aside-trigger {
-  display: inline;
-  cursor: pointer;
-}
-
-.moneyball-definition-block {
-  display: none;
-  margin-top: 0.6em;
-  padding: 0.6em 0 0;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-.moneyball-definition-block.is-open {
-  display: block;
-}
-
 .moneyball-definition-text {
   font-style: italic;
   margin: 0 0 0.5em;
@@ -1558,78 +1541,6 @@ a.vote-bill:visited {
   }
 }
 
-/* ── How-it-works (sidebar block) ── */
-.how-it-works {
-  border: 1px solid #ccd;
-  background: #f8f9fc;
-  font-size: var(--font-size-label);
-}
-
-.how-it-works .hiw-title {
-  margin: 0;
-  padding: 8px 10px;
-  font-size: 1em;
-  font-weight: bold;
-  color: #335;
-  border-bottom: 1px solid #ccd;
-}
-
-/* Collapsible sidebar (details/summary): summary looks like title, click to toggle */
-.how-it-works-details summary.hiw-title {
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-}
-
-.how-it-works-details summary.hiw-title::-webkit-details-marker,
-.how-it-works-details summary.hiw-title::marker {
-  display: none;
-  content: none;
-}
-
-.how-it-works-details summary.hiw-title::after {
-  content: " \25bc";
-  font-size: var(--font-size-xs);
-  color: #668;
-  margin-left: 4px;
-}
-
-.how-it-works-details[open] summary.hiw-title::after {
-  content: " \25b2";
-}
-
-.how-it-works .hiw-body {
-  padding: 8px 10px 12px;
-  line-height: 1.45;
-}
-
-.how-it-works .hiw-body dt {
-  font-weight: bold;
-  margin-top: 8px;
-  font-size: var(--font-size-body);
-}
-
-.how-it-works .hiw-body dd {
-  margin: 2px 0 0 0;
-}
-
-.how-it-works {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid #e0e2e8;
-  font-size: var(--font-size-label);
-  color: #555;
-}
-
-.how-it-works .hiw-details {
-  margin-top: 8px;
-}
-
-.how-it-works .hiw-details summary {
-  cursor: pointer;
-  font-weight: bold;
-}
-
 /* ── Your goal (sidebar) ── */
 .outreach-goal {
   margin-bottom: 16px;
@@ -1848,7 +1759,7 @@ a.vote-bill:visited {
   display: none;
 }
 
-/* Single completed goal line (e.g. "Outreach your district legislators") */
+/* Single completed goal line (e.g. "Contact your district legislators") */
 .outreach-goal__completed-summary {
   margin: 0 0 0 0;
   font-size: 0.875rem;
@@ -2035,24 +1946,6 @@ a.vote-bill:visited {
   margin-right: 0;
 }
 
-.how-it-works .formula-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 4px;
-  font-size: var(--font-size-label);
-}
-
-.how-it-works .formula-table th,
-.how-it-works .formula-table td {
-  text-align: left;
-  padding: 2px 6px;
-  border-bottom: 1px solid #dde;
-}
-
-.how-it-works .formula-table th {
-  background: #eef0f5;
-}
-
 /* ── Seed mode notice ── */
 .seed-notice {
   font-size: var(--font-size-label);
@@ -2080,10 +1973,6 @@ a.vote-bill:visited {
     max-width: 100%;
     position: static;
     max-height: none;
-  }
-
-  .results-aside .how-it-works {
-    margin-bottom: 0;
   }
 
   .outreach-sidebar-card {

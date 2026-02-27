@@ -31,7 +31,11 @@ from ..member_lookup import (
     find_member_by_id,
     is_constituent_for_zip_member,
 )
-from ..routers.content import STRATEGIC_FIVE_POINTS
+from ..routers.content import (
+    HERO_CLARITY_LINE,
+    HERO_URGENCY_LINE,
+    STRATEGIC_FIVE_POINTS,
+)
 from ..routers.outreach import get_outreach_aggregate
 from ..security import (
     CSRF_COOKIE_NAME,
@@ -70,6 +74,8 @@ templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
 templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
+templates.env.globals["hero_urgency_line"] = HERO_URGENCY_LINE
+templates.env.globals["hero_clarity_line"] = HERO_CLARITY_LINE
 templates.env.globals["features"] = cfg.get_client_features()
 
 from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
@@ -335,14 +341,14 @@ async def _build_search_results_context(
 
     if in_broker_phase:
         goal_phase = "broker"
-        current_goal_label = "Outreach the Power Broker"
+        current_goal_label = "Contact the Power Broker"
         goal_steps = broker_goal_steps
         goal_done = broker_goal_done
         goal_total = broker_goal_total
         completed_goal_steps = [{**s, "done": True} for s in district_steps]
     else:
         goal_phase = "district"
-        current_goal_label = "Outreach your district legislators"
+        current_goal_label = "Contact your district legislators"
         goal_steps = district_steps
         goal_done = district_goal_done
         goal_total = district_goal_total
@@ -667,12 +673,7 @@ async def advocacy_drawer(
         )
     is_constituent = is_constituent_for_zip_member(state, zip_code, member)
     legislator_name = member.name if member else ""
-    phone = None
-    if member:
-        for office in member.offices:
-            if office.phone:
-                phone = office.phone
-                break
+    phone = ah.get_preferred_phone_for_member(member)
     effective_email, email_source, community_verification = await get_effective_email_for_member(
         state, db, member_id_stripped
     )

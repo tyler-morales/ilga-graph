@@ -13,6 +13,8 @@ from .. import config as cfg
 from ..db import get_db
 from ..routers.advocacy import DEFAULT_HERO_ZIP, _hero_context
 from ..routers.content import (
+    HERO_CLARITY_LINE,
+    HERO_URGENCY_LINE,
     STRATEGIC_FIVE_POINTS,
     STRATEGIC_MISSION,
     STRATEGIC_VISION,
@@ -37,6 +39,8 @@ templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
 templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
+templates.env.globals["hero_urgency_line"] = HERO_URGENCY_LINE
+templates.env.globals["hero_clarity_line"] = HERO_CLARITY_LINE
 templates.env.globals["features"] = cfg.get_client_features()
 
 from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402

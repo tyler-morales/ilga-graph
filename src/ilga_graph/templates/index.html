@@ -30,13 +30,13 @@
 {# ── Advocacy drawer (Call script → After-call email, or Email-first) ── #}
 <div id="advocacy-drawer-overlay" class="phone-overlay" onclick="closeAdvocacyDrawer()" aria-hidden="true"></div>
 <div id="advocacy-drawer" class="phone-panel" role="dialog" aria-modal="true" aria-hidden="true"
-    aria-label="Outreach: call script and email template" data-member-id="" data-drawer-zip=""
+    aria-label="Contact: call script and email template" data-member-id="" data-drawer-zip=""
     data-drawer-constituent="" data-drawer-photo-url="">
     <div class="phone-panel-handle" id="advocacy-drawer-handle" aria-hidden="true">
         <div class="phone-panel-handle-pill"></div>
     </div>
     <div class="phone-panel-title-row">
-        <div class="drawer-step-strip" id="drawer-step-strip" role="tablist" aria-label="Outreach steps">
+        <div class="drawer-step-strip" id="drawer-step-strip" role="tablist" aria-label="Contact steps">
             <button type="button" class="drawer-step-link" id="drawer-step-call" role="tab" aria-selected="true"
                 data-step="call">Call</button>
             <span class="drawer-step-sep" aria-hidden="true">·</span>
@@ -66,10 +66,22 @@
             <button type="button" class="drawer-done-for-member__cta" id="drawer-done-next-cta">Call your <span
                     id="drawer-done-next-label"></span></button>
         </p>
-        <p class="drawer-done-for-member__district-done" id="drawer-done-district-done" hidden>You've completed outreach
-            for your district members.</p>
+        <p class="drawer-done-for-member__district-done" id="drawer-done-district-done" hidden>You've contacted your district members.</p>
         <p class="drawer-done-for-member__broker-nudge" id="drawer-done-broker-nudge" hidden>Optional: call the Power
             Broker for extra impact.</p>
+        <div class="drawer-done-subscribe" id="drawer-done-subscribe">
+            <p class="drawer-done-subscribe-signed-in" id="drawer-done-subscribe-signed-in" hidden>You're on the list — we'll send one email when the bill moves.</p>
+            <div class="drawer-done-subscribe-form-wrap" id="drawer-done-subscribe-form-wrap">
+                <p class="drawer-done-subscribe-p">Want to know when the bill moves? We'll send one email.</p>
+                <form action="/updates/subscribe-email" method="post" class="drawer-subscribe-form"
+                    hx-post="/updates/subscribe-email" hx-target="this" hx-swap="outerHTML"
+                    aria-label="Subscribe to campaign updates">
+                    <input type="email" name="email" class="drawer-subscribe-input" placeholder="Your email"
+                        required autocomplete="email" inputmode="email" maxlength="320">
+                    <button type="submit" class="drawer-subscribe-btn">Subscribe</button>
+                </form>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -937,7 +949,7 @@
         var intro = container && container.querySelector('#drawer-script-intro');
         if (!btn || !chat || !voicemail) return;
 
-        var introCall = 'One bubble at a time: say your line, then listen.';
+        var introCall = "Call this number. Here's the script. Takes 2 min.";
         var introVoicemail = 'Leave this on their voicemail, then follow up with an email when you can.';
 
         function setVoicemailMode(isVoicemail) {
@@ -1488,8 +1500,18 @@
         var nextLabel = clone.querySelector('#drawer-done-next-label');
         var districtDone = clone.querySelector('#drawer-done-district-done');
         var brokerNudge = clone.querySelector('#drawer-done-broker-nudge');
+        var subscribeSignedIn = clone.querySelector('#drawer-done-subscribe-signed-in');
+        var subscribeFormWrap = clone.querySelector('#drawer-done-subscribe-form-wrap');
         if (msgName) msgName.textContent = currentMemberName;
         if (!didEmail && comeback) { comeback.removeAttribute('hidden'); }
+        if (subscribeSignedIn && subscribeFormWrap) {
+            if (typeof _ilgaUserEmail !== 'undefined' && _ilgaUserEmail) {
+                subscribeSignedIn.removeAttribute('hidden');
+                subscribeFormWrap.setAttribute('hidden', '');
+            } else {
+                subscribeFormWrap.removeAttribute('hidden');
+            }
+        }
         var otherAlreadyCalled = otherMemberId && typeof memberAlreadyCalled === 'function' && memberAlreadyCalled(otherMemberId, zip);
         if (otherMemberId && otherLabel && !otherAlreadyCalled) {
             if (nextLabel) nextLabel.textContent = otherLabel;
@@ -1514,6 +1536,7 @@
         }
         body.innerHTML = '';
         body.appendChild(clone);
+        if (typeof htmx !== 'undefined' && htmx.process) htmx.process(body);
         if (cta && otherMemberId) {
             requestAnimationFrame(function () { try { cta.focus(); } catch (e) { } });
         }
@@ -1739,7 +1762,10 @@
         if (done === 4 && total === 4 && brokerId) {
             block.classList.add('outreach-goal--phase-broker');
             var currentLabelEl = block.querySelector('#outreach-goal-current-label');
-            if (currentLabelEl) currentLabelEl.textContent = 'Outreach the Power Broker';
+            if (currentLabelEl) {
+                var brokerLabel = block.getAttribute('data-goal-label-broker') || 'Contact the Power Broker';
+                currentLabelEl.textContent = brokerLabel;
+            }
             var brokerStored = stored[brokerId] || {};
             var brokerDone = (brokerStored.call ? 1 : 0) + (brokerStored.email ? 1 : 0);
             var brokerTotal = 2;
@@ -2817,6 +2843,11 @@
                                 if (ctaBlock) ctaBlock.classList.add('drawer-draft-followup-cta-visible');
                             }, 500);
                         }
+                        var subscribeWrap = document.getElementById('drawer-subscribe-wrap');
+                        if (subscribeWrap) {
+                            subscribeWrap.removeAttribute('hidden');
+                            subscribeWrap.classList.add('drawer-bubble-just-in');
+                        }
                     }, 200);
                 })
                 .catch(function () {
@@ -2834,6 +2865,11 @@
                             window.setTimeout(function () {
                                 if (ctaBlock) ctaBlock.classList.add('drawer-draft-followup-cta-visible');
                             }, 500);
+                        }
+                        var subscribeWrap = document.getElementById('drawer-subscribe-wrap');
+                        if (subscribeWrap) {
+                            subscribeWrap.removeAttribute('hidden');
+                            subscribeWrap.classList.add('drawer-bubble-just-in');
                         }
                     }, 200);
                 });
