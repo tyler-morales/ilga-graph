@@ -222,6 +222,13 @@ _FEATURE_REGISTRY: list[dict[str, str | bool]] = [
         "prod_default": "0",
         "expose_to_client": True,
     },
+    {
+        "key": "images_marquee",
+        "env_var": "ILGA_FEATURE_IMAGES_MARQUEE",
+        "dev_default": "1",
+        "prod_default": "0",
+        "expose_to_client": True,
+    },
 ]
 
 

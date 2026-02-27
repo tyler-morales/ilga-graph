@@ -18,7 +18,8 @@
         {% endif %}
     </div>
 
-    {# Scrolling marquee: real Illinois kei owners affected by registration (placeholder images until real stories). Duplicated strip for seamless infinite scroll. #}
+    {# Scrolling marquee: gated by feature flag (ILGA_FEATURE_IMAGES_MARQUEE); prod default off. #}
+    {% if features.get('images_marquee') %}
     {% set marquee_images = [
         {'src': '/static/images/tyler_morales.png', 'alt': 'Tyler Morales, kei vehicle owner affected by registration', 'caption': 'Tyler Morales — kei owner affected by Illinois registration'},
         {'src': 'https://picsum.photos/seed/kei1/360/240', 'alt': 'Kei vehicle owner affected by registration — placeholder', 'caption': 'Marcus, Chicago — registration revoked after years of legal use'},
@@ -60,4 +61,5 @@
             })();
         </script>
     </div>
+    {% endif %}
 </section>
