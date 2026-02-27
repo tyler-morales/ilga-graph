@@ -10,6 +10,7 @@ from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
 
 from .. import config as cfg
+from ..session_schedule import get_all_deadlines
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
 _REPO_ROOT = Path(__file__).resolve().parents[3]  # src/ilga_graph/routers -> repo root
@@ -195,6 +196,16 @@ STRATEGIC_SUCCESS_MEASURE_ITEMS: list[str] = [
 
 # "Where we are" block on /updates. One-line phase label; campaign banner (when active) carries detail and CTA.
 CAMPAIGN_STATUS = "We're in the outreach phase."
+
+# Hero urgency and clarity (Hardball: timeline, clear ask). Switch to HERO_URGENCY_THIS_SESSION when pushing this session.
+# Used in hero and session pill (expandable). Alternatives for pill: "Building support now for the 2027 session." / "2027 session ahead. Your outreach now builds momentum."
+HERO_URGENCY_LINE = (
+    "Next session starts early 2027. We're building constituent support now so we're ready."
+)
+HERO_URGENCY_THIS_SESSION = (
+    "Spring session runs through May 31. We need your voice before key deadlines."
+)
+HERO_CLARITY_LINE = "Enter your ZIP — we'll show you who to call and what to say. Takes 2 min."
 
 # Campaign timeline: checkpoints from current phase to Keis be legal. Update achieved count as campaign advances.
 CAMPAIGN_TIMELINE_CHECKPOINTS: list[str] = [
@@ -992,6 +1003,26 @@ FAQ_ADVOCACY = {
     ],
 }
 
+# FAQ for The Issue page: session calendar and deadlines. Single source of truth: reference/session_schedule.json.
+FAQ_SESSION = {
+    "title": "FAQ — Session calendar & deadlines",
+    "intro": (
+        "We maintain the Illinois General Assembly House and Senate schedule as a single source "
+        "of truth for session dates and key deadlines. All dates and reminders on this site come from it."
+    ),
+    "items": [
+        {
+            "id": "session1",
+            "question": "Where can I find the legislative session calendar and key deadlines?",
+            "answer": (
+                "We use the official 104th General Assembly Spring 2026 schedule (House and Senate). "
+                "Key deadlines—such as bill introduction, committee deadlines, and third reading—are listed below. "
+                "Session and holiday dates are in our reference data; we update that file when the session calendar changes."
+            ),
+        },
+    ],
+}
+
 # FAQ for Legislator Brief page (legislators & staff). Same shape: title, intro, items (id, question, answer, sources).
 FAQ_LEGISLATORS = {
     "title": "FAQ — For Legislators & Staff",
@@ -1155,6 +1186,17 @@ ISSUE_SOURCES: list[dict[str, str]] = _issue_sources_from_faq(FAQ_LAW)
 FACT_SHEET_PDF_URL = "/static/advocacy/Kei_Registration_Fact_Sheet.pdf"
 
 
+def _session_deadlines_for_issue() -> list[dict]:
+    """Build list of deadline dicts (date, chamber, description) for The Issue FAQ, sorted by date."""
+    deadlines = get_all_deadlines()
+    out = [
+        {"date": ev["date"], "chamber": chamber, "description": ev["description"]}
+        for chamber, ev in deadlines
+    ]
+    out.sort(key=lambda d: (d["date"], d["chamber"]))
+    return out
+
+
 @router.get("/the-issue", include_in_schema=False)
 async def the_issue_page(request: Request):
     """Serve The Issue page: kei vehicle registration problem and how to help. Content from canonical .txt when present."""
@@ -1163,6 +1205,10 @@ async def the_issue_page(request: Request):
     }
     aamva_fix_abbrs = _brief_aamva_fix_state_abbrs()
     constituent_brief = _load_constituent_brief()
+    try:
+        session_deadlines = _session_deadlines_for_issue()
+    except (FileNotFoundError, ValueError):
+        session_deadlines = []
     return templates.TemplateResponse(
         "the_issue.html",
         {
@@ -1171,6 +1217,8 @@ async def the_issue_page(request: Request):
             "fact_sheet_pdf_url": FACT_SHEET_PDF_URL,
             "faq_law": FAQ_LAW,
             "faq_advocacy": FAQ_ADVOCACY,
+            "faq_session": FAQ_SESSION,
+            "session_deadlines": session_deadlines,
             "brief_state_status": BRIEF_STATE_STATUS,
             "brief_state_map_status_json": json.dumps(brief_state_map_status),
             "brief_aamva_fix_state_abbrs_json": json.dumps(aamva_fix_abbrs),

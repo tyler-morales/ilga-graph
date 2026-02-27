@@ -1,0 +1,17 @@
+{# Session pill: top-left on every public page. Short label + slow orange blink; click to crossfade to full line (opacity-only, like fire pill). #}
+{% if hero_urgency_line %}
+<div class="session-pill-wrap" role="region" aria-label="Session timeline">
+  <button type="button"
+    class="session-pill"
+    onclick="this.toggleAttribute('data-expanded'); this.setAttribute('aria-expanded', this.hasAttribute('data-expanded'));"
+    aria-expanded="false"
+    aria-label="Session timeline: {{ hero_urgency_line }}">
+    <span class="session-pill-dot" aria-hidden="true"></span>
+    <span class="session-pill-text-slot">
+      <span class="session-pill-text-sizer" aria-hidden="true">{{ hero_urgency_line }}</span>
+      <span class="session-pill-short">ILGA Session 2027</span>
+      <span class="session-pill-text">{{ hero_urgency_line }}</span>
+    </span>
+  </button>
+</div>
+{% endif %}
