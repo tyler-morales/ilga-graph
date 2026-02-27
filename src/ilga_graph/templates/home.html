@@ -44,4 +44,10 @@
 {% endif %}
 {% include "_mission_cta.html" %}
 {% include "_share_section.html" %}
+{# On mobile, session pill moves below share (see base.css .session-pill-mobile-wrap) #}
+{% if hero_urgency_line %}
+<div class="session-pill-mobile-wrap">
+  {% include "_session_pill.html" %}
+</div>
+{% endif %}
 {% endblock %}

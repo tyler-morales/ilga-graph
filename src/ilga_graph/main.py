@@ -20,7 +20,11 @@ from .routers.advocacy import router as _advocacy_router
 from .routers.auth import router as _auth_router
 from .routers.bills import router as _bills_router
 from .routers.campaigns import router as _campaigns_router
-from .routers.content import STRATEGIC_FIVE_POINTS
+from .routers.content import (
+    HERO_CLARITY_LINE,
+    HERO_URGENCY_LINE,
+    STRATEGIC_FIVE_POINTS,
+)
 from .routers.content import router as _content_router
 from .routers.dev import router as _dev_router
 from .routers.explore import router as _explore_router
@@ -121,6 +125,8 @@ templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
 templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
+templates.env.globals["hero_urgency_line"] = HERO_URGENCY_LINE
+templates.env.globals["hero_clarity_line"] = HERO_CLARITY_LINE
 templates.env.globals["features"] = cfg.get_client_features()
 
 
