@@ -24,18 +24,27 @@ from fastapi import (
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import advocacy_helpers as ah
 from .. import config as cfg
 from ..app_state import state
 from ..campaign_helpers import get_active_campaign
-from ..constants import CATEGORY_COMMITTEES, KEI_STATUS_OPTIONS, KEI_STATUS_SLUGS
+from ..constants import CATEGORY_COMMITTEES, KEI_STATUS_OPTIONS
 from ..db import async_session_factory, get_db
 from ..db_models import KeiPollResponse, OutreachEvent, Update, User
 from ..dependencies import get_current_user_optional, require_admin, require_user
 from ..email_utils import send_email, send_welcome_email
+from ..kei_poll_context import (
+    KEI_POLL_CHOICE_COOKIE,
+    KEI_POLL_VOTED_COOKIE,
+    KEI_POLL_VOTED_MAX_AGE,
+    _get_kei_status_results,
+    _validate_kei_status,
+    get_kei_poll_ids,
+    get_kei_poll_initial_state,
+)
 from ..member_lookup import find_member_by_district
 from ..routers.content import (
     CAMPAIGN_STATUS,
@@ -630,29 +639,6 @@ async def subscribe_post(
     return RedirectResponse("/updates", status_code=303)
 
 
-def _validate_kei_status(slug: str | None) -> str | None:
-    """Return slug if valid, else None."""
-    if not slug or (s := slug.strip()) not in KEI_STATUS_SLUGS:
-        return None
-    return s
-
-
-async def _get_kei_status_results(db: AsyncSession) -> dict[str, Any]:
-    """Aggregate kei_status counts for verified users only (last_login_at IS NOT NULL)."""
-    result = await db.execute(
-        select(User.kei_status, func.count())
-        .where(User.kei_status.isnot(None))
-        .where(User.last_login_at.isnot(None))
-        .group_by(User.kei_status)
-    )
-    by_status: dict[str, int] = {row[0]: row[1] for row in result.all()}
-    total = sum(by_status.values())
-    return {
-        "by_status": {slug: by_status.get(slug, 0) for slug in KEI_STATUS_SLUGS},
-        "total_responses": total,
-    }
-
-
 @router.get("/updates/kei-status-results", include_in_schema=False)
 async def kei_status_results(
     db: AsyncSession = Depends(get_db),
@@ -660,54 +646,6 @@ async def kei_status_results(
     """Poll results: counts by kei_status for users who have signed in at least once."""
     data = await _get_kei_status_results(db)
     return JSONResponse(data)
-
-
-SIDEBAR_KEI_POLL_ID = "sidebar-kei-poll"
-_KEI_POLL_IDS = frozenset(
-    {"footer-kei-poll", "home-kei-poll", "updates-kei-poll", SIDEBAR_KEI_POLL_ID}
-)
-KEI_POLL_VOTED_COOKIE = "kei_poll_voted"
-KEI_POLL_CHOICE_COOKIE = "kei_poll_choice"
-_KEI_POLL_VOTED_MAX_AGE = 365 * 24 * 60 * 60  # 1 year
-
-
-async def get_kei_poll_initial_state(
-    request: Request,
-    user: User | None,
-    db: AsyncSession,
-) -> dict[str, Any]:
-    """Return context to show poll form vs results on initial load. If user has voted (logged-in
-    kei_status or cookie for anonymous), show results; else show form."""
-    voted_cookie = request.cookies.get(KEI_POLL_VOTED_COOKIE) == "1"
-    logged_in_voted = user is not None and getattr(user, "kei_status", None) is not None
-    show_results = logged_in_voted or voted_cookie
-    if not show_results:
-        return {"kei_poll_done": False}
-    results = await _get_kei_status_results(db)
-    selected = user.kei_status if user else None
-    if not selected and voted_cookie:
-        choice_cookie = request.cookies.get(KEI_POLL_CHOICE_COOKIE)
-        selected = _validate_kei_status(choice_cookie) if choice_cookie else None
-    return {
-        "kei_poll_done": True,
-        "kei_status_results": results,
-        "kei_status_selected": selected,
-        "kei_poll_initial_anon": not logged_in_voted,
-    }
-
-
-async def get_kei_poll_sidebar_context(
-    request: Request,
-    user: User | None,
-    db: AsyncSession,
-) -> dict[str, Any]:
-    """Sidebar Kei poll (the-issue, legislator-brief, fact-sheet, glossary). Same poll_id."""
-    state = await get_kei_poll_initial_state(request, user, db)
-    state["poll_id"] = SIDEBAR_KEI_POLL_ID
-    if not state.get("kei_poll_done"):
-        results = await _get_kei_status_results(db)
-        state["kei_status_total"] = results["total_responses"]
-    return state
 
 
 @router.get("/updates/kei-poll-form", include_in_schema=False)
@@ -718,7 +656,7 @@ async def kei_poll_form(
     db: AsyncSession = Depends(get_db),
 ):
     """Return poll form HTML for HTMX swap (e.g. change your answer). Includes total for footer."""
-    if poll_id not in _KEI_POLL_IDS:
+    if poll_id not in get_kei_poll_ids():
         poll_id = "footer-kei-poll"
     results = await _get_kei_status_results(db)
     return templates.TemplateResponse(
@@ -740,7 +678,7 @@ async def kei_poll_results(
     user: User = Depends(require_user),
 ):
     """Logged-in poll results fragment for HTMX swap after sign-in (removes 'not counted' nudge)."""
-    if poll_id not in _KEI_POLL_IDS:
+    if poll_id not in get_kei_poll_ids():
         poll_id = "footer-kei-poll"
     results = await _get_kei_status_results(db)
     return templates.TemplateResponse(
@@ -766,7 +704,7 @@ async def kei_status_post(
     user: User | None = Depends(get_current_user_optional),
 ):
     """Set kei status. Insert kei_poll_responses; if logged-in also set User.kei_status."""
-    if poll_id not in _KEI_POLL_IDS:
+    if poll_id not in get_kei_poll_ids():
         poll_id = "footer-kei-poll"
     validated = _validate_kei_status(kei_status)
     if not validated:
@@ -808,7 +746,7 @@ async def kei_status_post(
         return RedirectResponse("/updates?prompt=kei&submitted=1", status_code=303)
     # Anonymous: set cookies for results/selection on next visit; return fragment or redirect
     results = await _get_kei_status_results(db)
-    cookie_opts = {"max_age": _KEI_POLL_VOTED_MAX_AGE, "path": "/", "samesite": "lax"}
+    cookie_opts = {"max_age": KEI_POLL_VOTED_MAX_AGE, "path": "/", "samesite": "lax"}
     cookies_to_set = [
         {"key": KEI_POLL_VOTED_COOKIE, "value": "1", **cookie_opts},
         {"key": KEI_POLL_CHOICE_COOKIE, "value": validated, **cookie_opts},

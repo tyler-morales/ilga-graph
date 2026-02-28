@@ -32,9 +32,7 @@ from .routers.explore import router as _explore_router
 from .routers.feedback import router as _feedback_router
 from .routers.home import router as _home_router
 from .routers.intelligence import router as _intelligence_router
-from .routers.legal import router as _legal_router
 from .routers.outreach import router as _outreach_router
-from .routers.site import router as _site_router
 from .routers.updates import router as _updates_router
 from .session_schedule import get_milestone_by_id, get_next_deadline_safe
 
@@ -329,7 +327,6 @@ register_middleware(app)
 
 app.include_router(graphql_app, prefix="/graphql")
 app.include_router(_home_router)
-app.include_router(_site_router)
 app.include_router(_admin_router)
 app.include_router(_campaigns_router)
 app.include_router(_dev_router, prefix="/dev")
@@ -339,7 +336,6 @@ app.include_router(_auth_router)
 app.include_router(_content_router)
 app.include_router(_updates_router)
 app.include_router(_feedback_router)
-app.include_router(_legal_router)
 app.include_router(_bills_router, prefix="/api")
 app.include_router(_explore_router)
 app.include_router(_intelligence_router, prefix="/intelligence")

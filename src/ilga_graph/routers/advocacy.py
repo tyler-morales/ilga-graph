@@ -30,6 +30,7 @@ from ..data_source import is_using_mocks
 from ..db import get_db
 from ..db_models import OutreachEvent, User
 from ..dependencies import get_current_user_optional, require_user
+from ..kei_poll_context import get_kei_poll_sidebar_context
 from ..member_lookup import (
     find_member_by_district,
     find_member_by_id,
@@ -41,7 +42,6 @@ from ..routers.content import (
     STRATEGIC_FIVE_POINTS,
 )
 from ..routers.outreach import get_outreach_aggregate
-from ..routers.updates import get_kei_poll_sidebar_context
 from ..security import (
     CSRF_COOKIE_NAME,
     validate_csrf_token,

@@ -72,6 +72,8 @@ select = ["E", "F", "I", "W", "UP"]
 "src/ilga_graph/email_utils.py" = ["E501"]
 # Content router: FAQ and copy strings kept on single lines for readability
 "src/ilga_graph/routers/content.py" = ["E501"]
+# Content constants: long copy and timeline/glossary data
+"src/ilga_graph/routers/content_constants.py" = ["E501"]
 # Scripts: path must be set before project imports
 "scripts/refresh_member_photos.py" = ["E402"]
 "scripts/seed_outreach.py" = ["E402", "E501"]
