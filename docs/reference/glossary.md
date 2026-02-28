@@ -53,7 +53,7 @@ Using the glossary when writing copy or code avoids mixing these meanings.
 | Term | Definition |
 |------|------------|
 | **Phase** | (Timeline) One of the four periods on the master timeline: Build, Intro, Committee & Floor, Governor. (Goal) “district” or “broker”—which set of outreach steps the user is on. |
-| **Master timeline** | The phased plan from now to bill signed, shown on `/timeline`. Source: `TIMELINE_PHASES`. Each phase has a date range and optional milestones. |
+| **Master timeline** | The phased plan from now to bill signed, shown on `/timeline` as a waterfall (Gantt-style) with a time axis and phase bars. Source: `TIMELINE_PHASES`. Each phase has a date range and optional milestones. |
 | **Progress checklist** | The short ordered list of stages on `/updates` (Outreach → … → Keis be legal). Achieved steps at full opacity, rest at reduced. Source: `PROGRESS_CHECKPOINTS`. Not dated; distinct from master timeline. |
 | **Milestone** | A dated checkpoint within a timeline phase (e.g. “Lock lead sponsor(s)”, “Bill introduced”). Shown on `/timeline` under each phase. *Not* session milestone (legislative deadline) or bill stage. |
 | **Goal** | The user’s outreach task list: contact district legislators (4 actions), then Power Broker (2 actions). “Your goal” / “This week’s goal” in the sidebar. *Not* the advocacy objective (statutory fix). |
