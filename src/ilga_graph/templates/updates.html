@@ -11,9 +11,9 @@
 {% block brief_main %}
 {% if prompt_kei and kei_status_options is defined and kei_status_options %}
 <section class="updates-kei-prompt" id="kei-prompt" aria-labelledby="kei-prompt-heading">
-    <h2 id="kei-prompt-heading">Help us understand our community</h2>
+    <h2 id="kei-prompt-heading">Your input helps legislators see who's affected</h2>
     {% if kei_submitted %}
-    <p class="kei-status-success" role="status">Thanks, that helps us understand our community.</p>
+    <p class="kei-status-success" role="status">Thanks — your response helps us show legislators that numbers speak louder than words.</p>
     {% elif kei_error %}
     <p class="kei-status-error" role="alert">Please choose an option{% if kei_error == 'email' %} and enter a valid email{% endif %}.</p>
     {% endif %}

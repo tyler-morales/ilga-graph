@@ -79,7 +79,7 @@ def _welcome_email_plain(site_name: str, advocacy_url: str, kei_poll_url: str) -
         f"registration in Illinois.\n\n"
         f"Next step: Enter your ZIP to see who represents you and get a 2-minute call "
         f"script and email template: {advocacy_url}\n\n"
-        f"Help us understand our community: Tell us your kei status (one quick question): "
+        f"Your input helps us explain to legislators who's affected (numbers speak louder): "
         f"{kei_poll_url}\n\n"
         f"You're receiving this because you just signed in to {site_name}.\n"
     )
@@ -95,7 +95,7 @@ def _welcome_email_html(site_name: str, advocacy_url: str, kei_poll_url: str) ->
     <h2 style="margin-top: 1em;">Welcome</h2>
     <p>Thanks for signing in. You're now part of the effort to fix kei vehicle registration in Illinois.</p>
     <p><strong>Next step:</strong> <a href="{html.escape(advocacy_url)}">Enter your ZIP</a> to see who represents you and get a 2-minute call script and email template.</p>
-    <p>Help us understand our community: <a href="{html.escape(kei_poll_url)}">Tell us your kei status</a> (one quick question).</p>
+    <p>Your input helps us explain to legislators who's affected — <a href="{html.escape(kei_poll_url)}">tell us your kei status</a> (one quick question). Numbers speak louder than words.</p>
     <hr style="border: none; border-top: 1px solid #eee; margin: 2em 0;">
     <p style="font-size: 0.85em; color: #666;">You're receiving this because you just signed in to {s}.</p>
 </body>

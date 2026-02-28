@@ -62,6 +62,7 @@
     min-width: 0;
     width: 100%;
     max-width: 360px;
+    align-self: center;
   }
 
   .why-you-care-home-grid .why-you-care-marquee--in-grid {

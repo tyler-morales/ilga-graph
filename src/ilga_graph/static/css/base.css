@@ -742,15 +742,29 @@ a:visited {
   color: #c62828;
 }
 
-/* Prominent CTA block: sign in to save poll response (hardballer-style nudge). Full-bleed under Results header, no radius. */
+/* Prominent CTA block: sign in to save poll response (hardballer-style nudge). Yellow alert style, full-bleed under Results header, no radius. */
 .kei-poll-nudge-block {
   margin: -0.5rem -1.25rem 0 -1.25rem;
   padding: 1rem 1.25rem;
-  background: #e8f0fe;
-  border: 1px solid #b3c9f0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  background: var(--color-warning-bg, #fef7e0);
+  border: 1px solid var(--color-warning-border, #e6c200);
   border-left: none;
   border-right: none;
   border-radius: 0;
+}
+
+.kei-poll-nudge-block__icon {
+  flex-shrink: 0;
+  color: #b38600;
+  margin-top: 0.1rem;
+}
+
+.kei-poll-nudge-block__content {
+  flex: 1;
+  min-width: 0;
 }
 
 .kei-poll-nudge-block__copy {
