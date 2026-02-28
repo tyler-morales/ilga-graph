@@ -23,6 +23,7 @@ dependencies = [
     "itsdangerous",
     "aiosmtplib",
     "markdown",
+    "networkx",
 ]
 
 [project.optional-dependencies]

@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import advocacy_helpers as ah
 from .. import config as cfg
 from ..app_state import state
+from ..campaign_helpers import campaign_outreach_count, get_active_campaign
 from ..constants import CATEGORY_COMMITTEES, GENERAL_COMMITTEE_CODES
 from ..db import get_db
 from ..db_models import OutreachEvent, OutreachStepEvent, Update, User
@@ -42,6 +43,10 @@ templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
 templates.env.globals["features"] = cfg.get_client_features()
+
+from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
+
+templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
 
 _ZIP_RE = re.compile(r"^\d{5}$")
 MOCK_DEV_USER_EMAIL = "funky_mama11@gmail.com"
@@ -128,6 +133,11 @@ async def admin_dashboard(
 
     subscriber_rate_pct = round(100.0 * subscribers / total_users) if total_users else 0
 
+    active_campaign = await get_active_campaign(db)
+    active_campaign_actions = (
+        await campaign_outreach_count(db, active_campaign.id) if active_campaign else 0
+    )
+
     return templates.TemplateResponse(
         "admin_dashboard.html",
         {
@@ -140,6 +150,8 @@ async def admin_dashboard(
             "total_emails_sent": total_emails_sent,
             "outreach_summary": outreach_summary,
             "subscriber_rate_pct": subscriber_rate_pct,
+            "active_campaign": active_campaign,
+            "active_campaign_actions": active_campaign_actions,
         },
     )
 

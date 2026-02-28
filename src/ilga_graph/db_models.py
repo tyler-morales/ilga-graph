@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, Index, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -45,6 +45,26 @@ class Update(Base):
     sent_count: Mapped[int] = mapped_column(Integer, default=0)
 
 
+class Campaign(Base):
+    """Targeted legislator contact period (action alert). Only one should be is_active at a time."""
+
+    __tablename__ = "campaigns"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    ask: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g. "contact your rep"
+    target_type: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="all", server_default="all"
+    )  # all | by_district
+    target_member_ids: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON list
+    target_district_ids: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON list
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    start_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    end_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
 class AuthCode(Base):
     """Short-lived 6-digit email verification codes."""
 
@@ -77,6 +97,9 @@ class OutreachEvent(Base):
     support_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # was advocate a constituent of this rep?
     constituent: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    campaign_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("campaigns.id"), nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     __table_args__ = (Index("ix_outreach_member_kind", "member_id", "kind"),)

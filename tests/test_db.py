@@ -103,6 +103,7 @@ class TestOutreachEventsSchema:
             assert "user_id" in names
             assert "user_email" in names
             assert "outcome" in names
+            assert "campaign_id" in names
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)

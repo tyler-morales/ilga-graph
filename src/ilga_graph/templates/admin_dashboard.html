@@ -54,6 +54,21 @@
       </div>
     </div>
 
+    <h3 id="admin-dashboard-campaign-heading" class="admin-dashboard-stats-subheading">Current action</h3>
+    <div class="admin-dashboard-stats-grid admin-dashboard-stats-grid--secondary" aria-labelledby="admin-dashboard-campaign-heading">
+      <div class="admin-dashboard-stat admin-dashboard-stat--secondary">
+        {% if active_campaign %}
+        <span class="admin-dashboard-stat-value">{{ active_campaign_actions }}</span>
+        <span class="admin-dashboard-stat-label">Actions for active campaign</span>
+        <span class="admin-dashboard-stat-sublabel"><a href="/admin/campaigns/{{ active_campaign.id }}">{{ active_campaign.title }}</a></span>
+        {% else %}
+        <span class="admin-dashboard-stat-value">—</span>
+        <span class="admin-dashboard-stat-label">No active campaign</span>
+        <span class="admin-dashboard-stat-sublabel"><a href="/admin/campaigns">Manage campaigns</a></span>
+        {% endif %}
+      </div>
+    </div>
+
     <h3 id="admin-dashboard-email-heading" class="admin-dashboard-stats-subheading">Email</h3>
     <div class="admin-dashboard-stats-grid admin-dashboard-stats-grid--secondary" aria-labelledby="admin-dashboard-email-heading">
       <div class="admin-dashboard-stat admin-dashboard-stat--secondary">

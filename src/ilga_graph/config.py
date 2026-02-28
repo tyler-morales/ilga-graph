@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import logging
 import os
+import subprocess
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -112,10 +113,63 @@ def _beta_banner_report_url() -> str:
 # Resolved URL passed to templates.
 BETA_BANNER_REPORT_URL: str = _beta_banner_report_url()
 
-# Human-readable date shown in footer on all pages. Update when content/legal/docs change.
-FOOTER_LAST_UPDATED: str = _env("ILGA_FOOTER_LAST_UPDATED", "February 24, 2026").strip()
-# ISO date for <time datetime=""> (accessibility and machines).
-FOOTER_LAST_UPDATED_ISO: str = _env("ILGA_FOOTER_LAST_UPDATED_ISO", "2026-02-24").strip()
+
+def _footer_last_updated_from_git() -> tuple[str, str] | None:
+    """Return (human_date, iso_date) from last git commit, or None if unavailable.
+    Used when ILGA_FOOTER_LAST_UPDATED / ILGA_FOOTER_LAST_UPDATED_ISO are not set,
+    so dev and prod (deploy does git pull) show the last-commit date automatically.
+    """
+    try:
+        cfg_dir = Path(__file__).resolve().parent
+        root = cfg_dir
+        for _ in range(10):
+            if (root / ".git").exists():
+                break
+            parent = root.parent
+            if parent == root:
+                return None
+            root = parent
+        else:
+            return None
+        out = subprocess.run(
+            ["git", "log", "-1", "--format=%cd", "--date=format:%B %d, %Y"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        if out.returncode != 0 or not out.stdout:
+            return None
+        human = out.stdout.strip()
+        out_iso = subprocess.run(
+            ["git", "log", "-1", "--format=%cd", "--date=format:%Y-%m-%d"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        iso = out_iso.stdout.strip() if out_iso.returncode == 0 and out_iso.stdout else ""
+        return (human, iso) if iso else None
+    except Exception as e:
+        LOGGER.debug("Footer date from git skipped: %s", e)
+        return None
+
+
+_FOOTER_DEFAULT_HUMAN = "February 24, 2026"
+_FOOTER_DEFAULT_ISO = "2026-02-24"
+
+_env_footer = os.getenv("ILGA_FOOTER_LAST_UPDATED")
+_env_footer_iso = os.getenv("ILGA_FOOTER_LAST_UPDATED_ISO")
+if _env_footer is None and _env_footer_iso is None:
+    _git_dates = _footer_last_updated_from_git()
+    if _git_dates:
+        FOOTER_LAST_UPDATED, FOOTER_LAST_UPDATED_ISO = _git_dates
+    else:
+        FOOTER_LAST_UPDATED = _FOOTER_DEFAULT_HUMAN
+        FOOTER_LAST_UPDATED_ISO = _FOOTER_DEFAULT_ISO
+else:
+    FOOTER_LAST_UPDATED = _env("ILGA_FOOTER_LAST_UPDATED", _FOOTER_DEFAULT_HUMAN).strip()
+    FOOTER_LAST_UPDATED_ISO = _env("ILGA_FOOTER_LAST_UPDATED_ISO", _FOOTER_DEFAULT_ISO).strip()
 # Bug report image uploads (optional). Empty = no uploads. Dir created on first report with image.
 BUG_REPORT_UPLOAD_DIR: str = _env("ILGA_BUG_REPORT_UPLOAD_DIR", "data/bug_report_uploads").strip()
 BUG_REPORT_MAX_IMAGE_BYTES: int = int(_env("ILGA_BUG_REPORT_MAX_IMAGE_MB", "5")) * 1024 * 1024
@@ -164,6 +218,13 @@ _FEATURE_REGISTRY: list[dict[str, str | bool]] = [
     {
         "key": "message_marquee",
         "env_var": "ILGA_FEATURE_MESSAGE_MARQUEE",
+        "dev_default": "1",
+        "prod_default": "0",
+        "expose_to_client": True,
+    },
+    {
+        "key": "images_marquee",
+        "env_var": "ILGA_FEATURE_IMAGES_MARQUEE",
         "dev_default": "1",
         "prod_default": "0",
         "expose_to_client": True,

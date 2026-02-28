@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import advocacy_helpers as ah
 from .. import config as cfg
 from ..app_state import state
+from ..campaign_helpers import get_active_campaign, is_campaign_visible_to_zip
 from ..community_email import get_effective_email_for_member
 from ..config import DEV_MODE
 from ..constants import CATEGORY_CHOICES, CATEGORY_COMMITTEES, GENERAL_COMMITTEE_CODES
@@ -30,7 +31,11 @@ from ..member_lookup import (
     find_member_by_id,
     is_constituent_for_zip_member,
 )
-from ..routers.content import STRATEGIC_FIVE_POINTS
+from ..routers.content import (
+    HERO_CLARITY_LINE,
+    HERO_URGENCY_LINE,
+    STRATEGIC_FIVE_POINTS,
+)
 from ..routers.outreach import get_outreach_aggregate
 from ..security import (
     CSRF_COOKIE_NAME,
@@ -69,7 +74,13 @@ templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
 templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
+templates.env.globals["hero_urgency_line"] = HERO_URGENCY_LINE
+templates.env.globals["hero_clarity_line"] = HERO_CLARITY_LINE
 templates.env.globals["features"] = cfg.get_client_features()
+
+from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
+
+templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
 
 _HERO_SUBHEAD = (
     "Illinois is treating lawfully imported kei vehicles as off-highway, so owners cannot "
@@ -78,8 +89,10 @@ _HERO_SUBHEAD = (
 )
 
 # Two-line subhead: break after "below"; second line starts with "to".
-_HERO_SUBHEAD_ADVOCACY_LINE1 = "Enter your ZIP below"
-_HERO_SUBHEAD_ADVOCACY_LINE2 = "to find your legislators and start outreach today."
+_HERO_SUBHEAD_ADVOCACY_LINE1 = "We're building constituent support and identifying a sponsor."
+_HERO_SUBHEAD_ADVOCACY_LINE2 = (
+    " No bill yet — your rep needs to hear from you now so we're ready when legislation moves."
+)
 
 
 def _hero_context() -> dict[str, Any]:
@@ -101,15 +114,15 @@ def _hero_context() -> dict[str, Any]:
 def _hero_context_advocacy() -> dict[str, Any]:
     """Advocacy-page hero: advocate-focused headline (find legislators, take action)."""
     return {
-        "hero_headline": "Find your legislators. Take action on Kei vehicle registration.",
-        "hero_headline_line1": "Find your legislators.",
+        "hero_headline": "Find your legislators. Build support for the Kei vehicle registration.",
+        "hero_headline_line1": "Contact your legislators.",
         "hero_headline_line1_prefix": "",
         "hero_headline_line1_highlight": "",
         "hero_headline_line1_suffix": "",
-        "hero_headline_line2": "Take action on Kei vehicle registration.",
+        "hero_headline_line2": "Build support for the Kei registration fix",
         "hero_headline_line2_prefix": "",
-        "hero_headline_highlight": "Take action",
-        "hero_headline_line2_suffix": " on Kei vehicle registration.",
+        "hero_headline_highlight": "Build support",
+        "hero_headline_line2_suffix": " for Kei vehicle registration.",
         "hero_subhead_line1": _HERO_SUBHEAD_ADVOCACY_LINE1,
         "hero_subhead_line2": _HERO_SUBHEAD_ADVOCACY_LINE2,
     }
@@ -328,14 +341,14 @@ async def _build_search_results_context(
 
     if in_broker_phase:
         goal_phase = "broker"
-        current_goal_label = "Outreach the Power Broker"
+        current_goal_label = "Contact the Power Broker"
         goal_steps = broker_goal_steps
         goal_done = broker_goal_done
         goal_total = broker_goal_total
         completed_goal_steps = [{**s, "done": True} for s in district_steps]
     else:
         goal_phase = "district"
-        current_goal_label = "Outreach your district legislators"
+        current_goal_label = "Contact your district legislators"
         goal_steps = district_steps
         goal_done = district_goal_done
         goal_total = district_goal_total
@@ -543,6 +556,20 @@ async def advocacy_index(
             sample = sorted(state.zip_to_district.keys())[:6]
             ctx["error"] += f" In dev mode, try ZIPs such as: {', '.join(sample)}."
         ctx["zip"] = DEFAULT_HERO_ZIP
+
+    active_campaign = await get_active_campaign(db)
+    if active_campaign:
+        if active_campaign.target_type == "all":
+            ctx["active_campaign"] = active_campaign
+        elif zip_param and is_campaign_visible_to_zip(
+            active_campaign, zip_param, state.zip_to_district
+        ):
+            ctx["active_campaign"] = active_campaign
+        else:
+            ctx["active_campaign"] = None
+    else:
+        ctx["active_campaign"] = None
+
     return templates.TemplateResponse("index.html", ctx)
 
 
@@ -646,12 +673,7 @@ async def advocacy_drawer(
         )
     is_constituent = is_constituent_for_zip_member(state, zip_code, member)
     legislator_name = member.name if member else ""
-    phone = None
-    if member:
-        for office in member.offices:
-            if office.phone:
-                phone = office.phone
-                break
+    phone = ah.get_preferred_phone_for_member(member)
     effective_email, email_source, community_verification = await get_effective_email_for_member(
         state, db, member_id_stripped
     )

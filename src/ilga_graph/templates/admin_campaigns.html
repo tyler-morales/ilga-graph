@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Campaigns — Admin — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="admin-campaigns-page">
+    <header class="admin-campaigns-header">
+        <h1 id="admin-campaigns-heading">Campaigns (action alerts)</h1>
+        {% include "_admin_nav.html" %}
+        <p><a href="/admin/campaigns/new" class="btn btn-primary">New campaign</a></p>
+    </header>
+
+    {% if flash == 'created' %}
+    <div class="admin-updates-flash admin-updates-flash--success" role="status">Campaign created.</div>
+    {% endif %}
+    {% if flash == 'not_found' %}
+    <div class="admin-updates-flash admin-updates-flash--error" role="alert">Campaign not found.</div>
+    {% endif %}
+
+    <section class="admin-campaigns-list" aria-labelledby="campaigns-list-heading">
+        <h2 id="campaigns-list-heading">All campaigns</h2>
+        {% if campaigns %}
+        <ul class="admin-campaigns-list-ul" role="list">
+            {% for c in campaigns %}
+            <li class="admin-campaigns-list-item {% if c.is_active %}admin-campaigns-list-item--active{% endif %}">
+                <span class="admin-campaigns-list-title">{{ c.title }}</span>
+                <span class="admin-campaigns-list-meta">
+                    {% if c.is_active %}<strong>Active</strong> · {% endif %}
+                    {{ c.target_type }} · {{ counts.get(c.id, 0) }} actions
+                    · {{ c.created_at.strftime('%Y-%m-%d') }}
+                </span>
+                <a href="/admin/campaigns/{{ c.id }}">Edit</a>
+                {% if c.is_active %}
+                <form method="post" action="/admin/campaigns/{{ c.id }}/deactivate" class="admin-campaigns-inline-form" style="display:inline;">
+                    <button type="submit" class="btn btn-secondary">Deactivate</button>
+                </form>
+                {% else %}
+                <form method="post" action="/admin/campaigns/{{ c.id }}/activate" class="admin-campaigns-inline-form" style="display:inline;">
+                    <button type="submit" class="btn btn-primary">Activate</button>
+                </form>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No campaigns yet. <a href="/admin/campaigns/new">Create one</a> to run a targeted contact period.</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

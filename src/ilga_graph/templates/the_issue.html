@@ -69,6 +69,10 @@
         </section>
         {% endif %}
 
+        {% set why_you_care_variant = 'full' %}
+        {% set why_you_care_heading_tag = 'h3' %}
+        {% include "_why_you_care.html" %}
+
         <section aria-labelledby="issue-other-states">
             <h3 id="issue-other-states">Where Other States Stand</h3>
             <p>Many states already allow kei vehicle registration—by passing laws or updating policy. The map and table below show where laws have passed, where bills are in progress, and where agencies have allowed registration without a new law.</p>
@@ -253,6 +257,55 @@
         </div>
     </section>
     {% endif %}
+
+    {% if faq_session %}
+    <section class="brief-faq" aria-labelledby="issue-faq-session-heading">
+        <h2 id="issue-faq-session-heading">{{ faq_session.title }}</h2>
+        {% if faq_session.intro %}<p class="brief-faq__intro">{{ faq_session.intro }}</p>{% endif %}
+        <div class="brief-faq__list">
+            {% for item in faq_session['items'] %}
+            <details class="brief-faq__item" id="issue-faq-session-{{ item.id }}">
+                <summary class="brief-faq__question">{{ item.question }}</summary>
+                <div class="brief-faq__answer">
+                    <p>{{ item.answer }}</p>
+                    {% if session_deadlines %}
+                    <p class="brief-faq__sources-label">Key deadlines (104th GA Spring 2026):</p>
+                    <table class="brief-faq__table session-deadlines-table" aria-label="Key legislative deadlines by date and chamber">
+                        <thead>
+                            <tr>
+                                <th scope="col">Date</th>
+                                <th scope="col">Chamber</th>
+                                <th scope="col">Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for d in session_deadlines %}
+                            <tr>
+                                <td>{{ d.date }}</td>
+                                <td>{{ d.chamber }}</td>
+                                <td>{{ d.description }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% endif %}
+                    {% if session_schedule_terms %}
+                    <h3 id="issue-session-terms-heading" class="session-schedule-terms__heading">Terms used in this calendar</h3>
+                    <dl class="session-schedule-terms" aria-labelledby="issue-session-terms-heading">
+                        {% for t in session_schedule_terms %}
+                        <div class="session-schedule-terms__row">
+                            <dt id="session-term-{{ t.id }}">{{ t.term }}</dt>
+                            <dd>{{ t.definition }}</dd>
+                        </div>
+                        {% endfor %}
+                    </dl>
+                    {% endif %}
+                </div>
+            </details>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
     </section>
 {% endblock %}
 {% block brief_sidebar %}
@@ -298,6 +351,20 @@
         {% with target='constituent', section_id='issue-share' %}
         {% include "_share_section_sidebar.html" %}
         {% endwith %}
+        <section class="legislator-brief-sidebar__stay-informed" id="issue-stay-informed" aria-labelledby="issue-stay-informed-heading">
+            <h2 id="issue-stay-informed-heading" class="legislator-brief-sidebar__subtitle">Stay informed</h2>
+            <p class="stay-informed-p">Get one email when the bill moves.</p>
+            <div id="issue-email-subscribe-wrap" class="stay-informed-form-wrap">
+                <form action="/updates/subscribe-email" method="post" class="stay-informed-form"
+                    hx-post="/updates/subscribe-email" hx-target="#issue-email-subscribe-wrap" hx-swap="innerHTML"
+                    aria-label="Subscribe to campaign updates by email">
+                    <label for="issue-subscribe-email-input" class="visually-hidden">Your email</label>
+                    <input type="email" id="issue-subscribe-email-input" name="email" class="stay-informed-input"
+                        placeholder="Your email" required autocomplete="email" inputmode="email" maxlength="320">
+                    <button type="submit" class="stay-informed-btn">Subscribe</button>
+                </form>
+            </div>
+        </section>
     </div>
 </aside>
 {% endblock %}

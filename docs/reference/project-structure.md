@@ -8,6 +8,7 @@ Where to find things in the repo.
 
 | Path | Purpose |
 |------|---------|
+| `reference/` | Reference data: `ilga_rules.json` (104th GA rules), `session_schedule.json` (House/Senate session dates and deadlines). |
 | `src/ilga_graph/` | Application and library code. |
 | `scripts/` | CLI scripts (scrape, ML run, refresh photos, etc.). |
 | `docs/` | MkDocs source (this doc site). |

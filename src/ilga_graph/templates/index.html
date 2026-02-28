@@ -4,11 +4,15 @@
 
 {% block content %}
 <script type="application/json" id="ilga-features-json">{{ (features or { }) | tojson }}</script>
+<script type="application/json"
+    id="ilga-active-campaign-json">{{ { "id": active_campaign.id } if active_campaign else {} | tojson }}</script>
 <script>
-(function () {
-  var el = document.getElementById('ilga-features-json');
-  window.__ILGA_FEATURES = el ? JSON.parse(el.textContent) : {};
-})();
+    (function () {
+        var el = document.getElementById('ilga-features-json');
+        window.__ILGA_FEATURES = el ? JSON.parse(el.textContent) : {};
+        var campEl = document.getElementById('ilga-active-campaign-json');
+        window.__ILGA_ACTIVE_CAMPAIGN = campEl ? JSON.parse(campEl.textContent) : {};
+    })();
 </script>
 {# ── Hero section: advocacy-centered hero only (no "what's happening" block) ── #}
 {% include "_hero_advocacy.html" %}
@@ -26,13 +30,13 @@
 {# ── Advocacy drawer (Call script → After-call email, or Email-first) ── #}
 <div id="advocacy-drawer-overlay" class="phone-overlay" onclick="closeAdvocacyDrawer()" aria-hidden="true"></div>
 <div id="advocacy-drawer" class="phone-panel" role="dialog" aria-modal="true" aria-hidden="true"
-    aria-label="Outreach: call script and email template" data-member-id="" data-drawer-zip=""
+    aria-label="Contact: call script and email template" data-member-id="" data-drawer-zip=""
     data-drawer-constituent="" data-drawer-photo-url="">
     <div class="phone-panel-handle" id="advocacy-drawer-handle" aria-hidden="true">
         <div class="phone-panel-handle-pill"></div>
     </div>
     <div class="phone-panel-title-row">
-        <div class="drawer-step-strip" id="drawer-step-strip" role="tablist" aria-label="Outreach steps">
+        <div class="drawer-step-strip" id="drawer-step-strip" role="tablist" aria-label="Contact steps">
             <button type="button" class="drawer-step-link" id="drawer-step-call" role="tab" aria-selected="true"
                 data-step="call">Call</button>
             <span class="drawer-step-sep" aria-hidden="true">·</span>
@@ -62,10 +66,22 @@
             <button type="button" class="drawer-done-for-member__cta" id="drawer-done-next-cta">Call your <span
                     id="drawer-done-next-label"></span></button>
         </p>
-        <p class="drawer-done-for-member__district-done" id="drawer-done-district-done" hidden>You've completed outreach
-            for your district members.</p>
+        <p class="drawer-done-for-member__district-done" id="drawer-done-district-done" hidden>You've contacted your district members.</p>
         <p class="drawer-done-for-member__broker-nudge" id="drawer-done-broker-nudge" hidden>Optional: call the Power
             Broker for extra impact.</p>
+        <div class="drawer-done-subscribe" id="drawer-done-subscribe">
+            <p class="drawer-done-subscribe-signed-in" id="drawer-done-subscribe-signed-in" hidden>You're on the list — we'll send one email when the bill moves.</p>
+            <div class="drawer-done-subscribe-form-wrap" id="drawer-done-subscribe-form-wrap">
+                <p class="drawer-done-subscribe-p">Want to know when the bill moves? We'll send one email.</p>
+                <form action="/updates/subscribe-email" method="post" class="drawer-subscribe-form subscribe-form"
+                    hx-post="/updates/subscribe-email" hx-target="this" hx-swap="outerHTML"
+                    aria-label="Subscribe to campaign updates">
+                    <input type="email" name="email" class="drawer-subscribe-input subscribe-input" placeholder="Your email"
+                        required autocomplete="email" inputmode="email" maxlength="320">
+                    <button type="submit" class="drawer-subscribe-btn subscribe-btn">Subscribe</button>
+                </form>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -933,7 +949,7 @@
         var intro = container && container.querySelector('#drawer-script-intro');
         if (!btn || !chat || !voicemail) return;
 
-        var introCall = 'One bubble at a time: say your line, then listen.';
+        var introCall = "Call this number. Here's the script. Takes 2 min.";
         var introVoicemail = 'Leave this on their voicemail, then follow up with an email when you can.';
 
         function setVoicemailMode(isVoicemail) {
@@ -1415,7 +1431,7 @@
             var body = new FormData();
             body.append('zip_code', newZip);
             body.append('csrf_token', getCsrfToken());
-            fetch('/advocacy/api/me/zip', { method: 'PATCH', body: body, credentials: 'same-origin' }).catch(function () {});
+            fetch('/advocacy/api/me/zip', { method: 'PATCH', body: body, credentials: 'same-origin' }).catch(function () { });
         }
         return true;
     }
@@ -1484,8 +1500,18 @@
         var nextLabel = clone.querySelector('#drawer-done-next-label');
         var districtDone = clone.querySelector('#drawer-done-district-done');
         var brokerNudge = clone.querySelector('#drawer-done-broker-nudge');
+        var subscribeSignedIn = clone.querySelector('#drawer-done-subscribe-signed-in');
+        var subscribeFormWrap = clone.querySelector('#drawer-done-subscribe-form-wrap');
         if (msgName) msgName.textContent = currentMemberName;
         if (!didEmail && comeback) { comeback.removeAttribute('hidden'); }
+        if (subscribeSignedIn && subscribeFormWrap) {
+            if (typeof _ilgaUserEmail !== 'undefined' && _ilgaUserEmail) {
+                subscribeSignedIn.removeAttribute('hidden');
+                subscribeFormWrap.setAttribute('hidden', '');
+            } else {
+                subscribeFormWrap.removeAttribute('hidden');
+            }
+        }
         var otherAlreadyCalled = otherMemberId && typeof memberAlreadyCalled === 'function' && memberAlreadyCalled(otherMemberId, zip);
         if (otherMemberId && otherLabel && !otherAlreadyCalled) {
             if (nextLabel) nextLabel.textContent = otherLabel;
@@ -1510,6 +1536,7 @@
         }
         body.innerHTML = '';
         body.appendChild(clone);
+        if (typeof htmx !== 'undefined' && htmx.process) htmx.process(body);
         if (cta && otherMemberId) {
             requestAnimationFrame(function () { try { cta.focus(); } catch (e) { } });
         }
@@ -1551,6 +1578,8 @@
         if (supportScore) body.append('support_score', String(supportScore));
         if (constituent === 'true' || constituent === 'false') body.append('constituent', constituent);
         if (legislatorEmail && typeof legislatorEmail === 'string' && legislatorEmail.trim()) body.append('legislator_email', legislatorEmail.trim());
+        var activeCampaign = typeof window !== 'undefined' && window.__ILGA_ACTIVE_CAMPAIGN && window.__ILGA_ACTIVE_CAMPAIGN.id;
+        if (activeCampaign) body.append('campaign_id', String(activeCampaign));
         body.append('csrf_token', getCsrfToken());
         return fetch('/outreach/record', { method: 'POST', body: body, credentials: 'same-origin' })
             .then(function (r) { return r.json ? r.json() : {}; })
@@ -1733,7 +1762,10 @@
         if (done === 4 && total === 4 && brokerId) {
             block.classList.add('outreach-goal--phase-broker');
             var currentLabelEl = block.querySelector('#outreach-goal-current-label');
-            if (currentLabelEl) currentLabelEl.textContent = 'Outreach the Power Broker';
+            if (currentLabelEl) {
+                var brokerLabel = block.getAttribute('data-goal-label-broker') || 'Contact the Power Broker';
+                currentLabelEl.textContent = brokerLabel;
+            }
             var brokerStored = stored[brokerId] || {};
             var brokerDone = (brokerStored.call ? 1 : 0) + (brokerStored.email ? 1 : 0);
             var brokerTotal = 2;
@@ -1952,7 +1984,7 @@
                 // #region agent log
                 if (key === 'ONE_SENTENCE_WHY') {
                     var nextPart = parts[i + 1];
-                    fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e2192d' }, body: JSON.stringify({ sessionId: 'e2192d', location: 'index.html:renderMadLibsBody', message: 'ONE_SENTENCE_WHY trailing part', data: { nextPart: nextPart, nextPartLength: nextPart ? nextPart.length : 0 }, timestamp: Date.now(), hypothesisId: 'A' }) }).catch(function () {});
+                    fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e2192d' }, body: JSON.stringify({ sessionId: 'e2192d', location: 'index.html:renderMadLibsBody', message: 'ONE_SENTENCE_WHY trailing part', data: { nextPart: nextPart, nextPartLength: nextPart ? nextPart.length : 0 }, timestamp: Date.now(), hypothesisId: 'A' }) }).catch(function () { });
                 }
                 // #endregion
             }
@@ -1962,7 +1994,7 @@
         if (whyEl) {
             var next = whyEl.nextSibling;
             var disp = whyEl.ownerDocument.defaultView.getComputedStyle(whyEl).display;
-            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e2192d' }, body: JSON.stringify({ sessionId: 'e2192d', location: 'index.html:renderMadLibsBody:after', message: 'ONE_SENTENCE_WHY DOM', data: { display: disp, nextNodeType: next ? next.nodeType : null, nextText: next && next.nodeType === 3 ? next.textContent.slice(0, 20) : null }, timestamp: Date.now(), hypothesisId: 'B' }) }).catch(function () {});
+            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e2192d' }, body: JSON.stringify({ sessionId: 'e2192d', location: 'index.html:renderMadLibsBody:after', message: 'ONE_SENTENCE_WHY DOM', data: { display: disp, nextNodeType: next ? next.nodeType : null, nextText: next && next.nodeType === 3 ? next.textContent.slice(0, 20) : null }, timestamp: Date.now(), hypothesisId: 'B' }) }).catch(function () { });
         }
         // #endregion
         /* Footer fields (name, phone, email): same default width; they still resize on input/blur/focus */
@@ -2006,7 +2038,7 @@
         text = text.trim();
         if (text.indexOf('This matters to me because .') !== -1) {
             // #region agent log
-            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e2192d' }, body: JSON.stringify({ sessionId: 'e2192d', location: 'index.html:getComposedBody', message: 'Stripping empty why period', data: { hadEmptyWhy: true }, timestamp: Date.now(), hypothesisId: 'E' }) }).catch(function () {});
+            fetch('http://127.0.0.1:7246/ingest/c07689b9-a1a5-4303-bdbb-4987cb5466eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e2192d' }, body: JSON.stringify({ sessionId: 'e2192d', location: 'index.html:getComposedBody', message: 'Stripping empty why period', data: { hadEmptyWhy: true }, timestamp: Date.now(), hypothesisId: 'E' }) }).catch(function () { });
             // #endregion
             text = text.replace(/This matters to me because \.\s*\n\n?/g, '');
         }
@@ -2811,6 +2843,11 @@
                                 if (ctaBlock) ctaBlock.classList.add('drawer-draft-followup-cta-visible');
                             }, 500);
                         }
+                        var subscribeWrap = document.getElementById('drawer-subscribe-wrap');
+                        if (subscribeWrap) {
+                            subscribeWrap.removeAttribute('hidden');
+                            subscribeWrap.classList.add('drawer-bubble-just-in');
+                        }
                     }, 200);
                 })
                 .catch(function () {
@@ -2828,6 +2865,11 @@
                             window.setTimeout(function () {
                                 if (ctaBlock) ctaBlock.classList.add('drawer-draft-followup-cta-visible');
                             }, 500);
+                        }
+                        var subscribeWrap = document.getElementById('drawer-subscribe-wrap');
+                        if (subscribeWrap) {
+                            subscribeWrap.removeAttribute('hidden');
+                            subscribeWrap.classList.add('drawer-bubble-just-in');
                         }
                     }, 200);
                 });
@@ -2945,6 +2987,18 @@
     });
 
     initReminderModal();
+
+    (function () {
+        document.querySelectorAll('[data-campaign-cta]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var zipEl = document.getElementById('zip_code');
+                if (zipEl) {
+                    zipEl.focus();
+                    zipEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+        });
+    })();
 
 </script>
 {% endblock %}

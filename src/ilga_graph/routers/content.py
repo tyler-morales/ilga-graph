@@ -10,6 +10,7 @@ from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
 
 from .. import config as cfg
+from ..session_schedule import get_all_deadlines
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
 _REPO_ROOT = Path(__file__).resolve().parents[3]  # src/ilga_graph/routers -> repo root
@@ -176,6 +177,33 @@ STRATEGIC_FIVE_POINTS: list[str] = [
 ]
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
 templates.env.globals["features"] = cfg.get_client_features()
+
+# Why should you care (Hardball Ch7: who benefits, why your voice matters). Canonical copy from constituent brief + FAQ_ADVOCACY + STRATEGIC_FIVE_POINTS.
+WHY_SHOULD_YOU_CARE_HEADING = "Why should you care?"
+WHY_SHOULD_YOU_CARE_INTRO = (
+    "Clear law protects residents. When statutory language is ambiguous, regular people absorb the consequences. "
+    "This issue is about fairness, predictability, and consistent application of Illinois law. "
+    "This affects real Illinois residents who own legal vehicles they can't register—registrations denied or revoked, "
+    "titles branded 'Not Eligible for Registration,' plates surrendered."
+)
+WHY_SHOULD_YOU_CARE_VOICE = (
+    "Legislators prioritize issues they hear about from constituents. Your contact helps put the issue on the map "
+    "and builds the case for a legislative fix."
+)
+WHY_SHOULD_YOU_CARE_TEASER_ITEMS: list[str] = [
+    "This affects real Illinois residents who own legal vehicles they can't register.",
+    "Even if you don't own one, it's about fair and consistent application of the law.",
+    "Your voice helps legislators see the issue deserves a fix.",
+]
+templates.env.globals["why_should_you_care_heading"] = WHY_SHOULD_YOU_CARE_HEADING
+templates.env.globals["why_should_you_care_intro"] = WHY_SHOULD_YOU_CARE_INTRO
+templates.env.globals["why_should_you_care_voice"] = WHY_SHOULD_YOU_CARE_VOICE
+templates.env.globals["why_should_you_care_teaser_items"] = WHY_SHOULD_YOU_CARE_TEASER_ITEMS
+
+from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
+
+templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
+
 # How we measure advocacy success (things we control). Road-legal outcome is the campaign objective.
 STRATEGIC_SUCCESS_MEASURE = (
     "We measure success by what we can control: constituent contacts, co-sponsors secured, "
@@ -188,11 +216,18 @@ STRATEGIC_SUCCESS_MEASURE_ITEMS: list[str] = [
     "A coalition ready to act when a bill moves",
 ]
 
-# "Where we are" block on /updates. Update as the campaign progresses.
-CAMPAIGN_STATUS = (
-    "We are in the outreach phase. No bill has been introduced yet. "
-    "We are building constituent contacts and identifying a sponsor."
+# "Where we are" block on /updates. One-line phase label; campaign banner (when active) carries detail and CTA.
+CAMPAIGN_STATUS = "We're in the outreach phase."
+
+# Hero urgency and clarity (Hardball: timeline, clear ask). Switch to HERO_URGENCY_THIS_SESSION when pushing this session.
+# Used in hero and session pill (expandable). Alternatives for pill: "Building support now for the 2027 session." / "2027 session ahead. Your outreach now builds momentum."
+HERO_URGENCY_LINE = (
+    "Next session starts early 2027. We're building constituent support now so we're ready."
 )
+HERO_URGENCY_THIS_SESSION = (
+    "Spring session runs through May 31. We need your voice before key deadlines."
+)
+HERO_CLARITY_LINE = "Enter your ZIP — we'll show you who to call and what to say. Takes 2 min."
 
 # Campaign timeline: checkpoints from current phase to Keis be legal. Update achieved count as campaign advances.
 CAMPAIGN_TIMELINE_CHECKPOINTS: list[str] = [
@@ -990,6 +1025,65 @@ FAQ_ADVOCACY = {
     ],
 }
 
+# FAQ for The Issue page: session calendar and deadlines. Single source of truth: reference/session_schedule.json.
+FAQ_SESSION = {
+    "title": "FAQ — Session calendar & deadlines",
+    "intro": (
+        "We maintain the Illinois General Assembly House and Senate schedule as a single source "
+        "of truth for session dates and key deadlines. All dates and reminders on this site come from it."
+    ),
+    "items": [
+        {
+            "id": "session1",
+            "question": "Where can I find the legislative session calendar and key deadlines?",
+            "answer": (
+                "We use the official 104th General Assembly Spring 2026 schedule (House and Senate). "
+                "Key deadlines—such as bill introduction, committee deadlines, and third reading—are listed below. "
+                "Session and holiday dates are in our reference data; we update that file when the session calendar changes."
+            ),
+        },
+    ],
+}
+
+# Terms used in the session calendar. Definitions grounded in reference/ilga_rules.json (104th GA rules).
+SESSION_SCHEDULE_TERMS = [
+    {
+        "id": "lrb",
+        "term": "LRB",
+        "definition": "Legislative Reference Bureau. Legislators request bill drafting from the LRB. The LRB request deadline is the last day to submit requests for the session; after that, the LRB blackout begins and no new bill requests are accepted until the next session.",
+    },
+    {
+        "id": "committee-deadline",
+        "term": "Committee deadline",
+        "definition": "Final day for standing committees to report bills out of committee. Bills not reported by this date are re-referred to the gatekeeper (Senate: Committee on Assignments; House: Rules Committee)—not killed, but delayed. Senate Rule 2-10, House Rule 9.",
+    },
+    {
+        "id": "third-reading",
+        "term": "Third Reading",
+        "definition": "Final reading of a bill before a floor vote. A bill must be read by title on three different days before passage. The Third Reading deadline is the last day the chamber may pass bills on third reading; after that, bills not passed are re-referred. Senate Rule 2-10(a)(5), House Rule 9(b)(5).",
+    },
+    {
+        "id": "perfunctory-session",
+        "term": "Perfunctory session",
+        "definition": "A short session for procedural business (e.g. reading the journal, formalities). No substantive debate or votes on bills.",
+    },
+    {
+        "id": "substantive-bills",
+        "term": "Substantive bills",
+        "definition": "Bills that change law or policy (as opposed to appropriation-only or purely procedural measures). Session deadlines often set separate dates for substantive bills vs. appropriation bills.",
+    },
+    {
+        "id": "session",
+        "term": "Session",
+        "definition": "A day the chamber meets in Springfield. The schedule lists which days the House or Senate is in session.",
+    },
+    {
+        "id": "adjournment",
+        "term": "Adjournment",
+        "definition": "End of the legislative session (sine die). After adjournment, no further action on bills until the next session.",
+    },
+]
+
 # FAQ for Legislator Brief page (legislators & staff). Same shape: title, intro, items (id, question, answer, sources).
 FAQ_LEGISLATORS = {
     "title": "FAQ — For Legislators & Staff",
@@ -1153,6 +1247,17 @@ ISSUE_SOURCES: list[dict[str, str]] = _issue_sources_from_faq(FAQ_LAW)
 FACT_SHEET_PDF_URL = "/static/advocacy/Kei_Registration_Fact_Sheet.pdf"
 
 
+def _session_deadlines_for_issue() -> list[dict]:
+    """Build list of deadline dicts (date, chamber, description) for The Issue FAQ, sorted by date."""
+    deadlines = get_all_deadlines()
+    out = [
+        {"date": ev["date"], "chamber": chamber, "description": ev["description"]}
+        for chamber, ev in deadlines
+    ]
+    out.sort(key=lambda d: (d["date"], d["chamber"]))
+    return out
+
+
 @router.get("/the-issue", include_in_schema=False)
 async def the_issue_page(request: Request):
     """Serve The Issue page: kei vehicle registration problem and how to help. Content from canonical .txt when present."""
@@ -1161,6 +1266,10 @@ async def the_issue_page(request: Request):
     }
     aamva_fix_abbrs = _brief_aamva_fix_state_abbrs()
     constituent_brief = _load_constituent_brief()
+    try:
+        session_deadlines = _session_deadlines_for_issue()
+    except (FileNotFoundError, ValueError):
+        session_deadlines = []
     return templates.TemplateResponse(
         "the_issue.html",
         {
@@ -1169,6 +1278,9 @@ async def the_issue_page(request: Request):
             "fact_sheet_pdf_url": FACT_SHEET_PDF_URL,
             "faq_law": FAQ_LAW,
             "faq_advocacy": FAQ_ADVOCACY,
+            "faq_session": FAQ_SESSION,
+            "session_deadlines": session_deadlines,
+            "session_schedule_terms": SESSION_SCHEDULE_TERMS,
             "brief_state_status": BRIEF_STATE_STATUS,
             "brief_state_map_status_json": json.dumps(brief_state_map_status),
             "brief_aamva_fix_state_abbrs_json": json.dumps(aamva_fix_abbrs),

@@ -76,7 +76,7 @@ Client-side UX toggles (e.g. ZIP search loading animation) use a **single regist
 - **Profile default** — In `dev`, flags default on where it makes sense; in `prod`, they default off so production stays conservative until you opt in.
 - **Env override** — Set `ILGA_FEATURE_<NAME>=1` or `0` in `.env` to override the profile default.
 
-The app exposes only **client-facing** flags (those with `expose_to_client: True`) to templates as `features`; the advocacy index passes them to JS as `window.__ILGA_FEATURES`. Adding a new flag = one entry in the registry (no need to wire it in each route). The truck loading animation was moved to the bug report success view (`/report-bug?submitted=1`); ZIP search now uses a direct HTMX swap with no loading UI.
+The app exposes only **client-facing** flags (those with `expose_to_client: True`) to templates as `features`; the advocacy index passes them to JS as `window.__ILGA_FEATURES`. Adding a new flag = one entry in the registry (no need to wire it in each route). The truck loading animation was moved to the bug report success view (`/report-bug?submitted=1`); ZIP search now uses a direct HTMX swap with no loading UI. **Images marquee** (Why you care scrolling image strip on home and The Issue) is gated by `ILGA_FEATURE_IMAGES_MARQUEE`; prod default off — set to `1` to show the marquee.
 
 See `config.py` for the full registry and `get_client_features()`.
 
