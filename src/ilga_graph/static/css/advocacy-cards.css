@@ -1541,6 +1541,11 @@ a.vote-bill:visited {
   }
 }
 
+/* ── Advocacy sidebar poll (Kei status) ── */
+.results-aside__poll {
+  margin-top: 1rem;
+}
+
 /* ── Your goal (sidebar) ── */
 .outreach-goal {
   margin-bottom: 16px;

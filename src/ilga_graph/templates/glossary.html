@@ -1,15 +1,19 @@
-{% extends "base.html" %}
+{% extends "_brief_skeleton.html" %}
+{% from "_macros.html" import share_buttons %}
 {% block title %}Definitions & glossary — {{ site_name }}{% endblock %}
-{% block content %}
-<div class="glossary-page">
-    <header class="glossary-header">
-        <h1 class="glossary-title">Definitions & glossary</h1>
-        <p class="glossary-intro">Terms we use on this site and key concepts about kei vehicles and the Illinois registration issue.</p>
-    </header>
+{% block body_class %}page-glossary{% endblock %}
+{% block brief_layout_class %}page-glossary{% endblock %}
 
+{% block brief_title %}Definitions & glossary{% endblock %}
+{% block brief_intro %}
+<p class="legal-page-intro">Terms we use on this site and key concepts about kei vehicles and the Illinois registration issue.</p>
+{% endblock %}
+{% block brief_main_heading %}{% endblock %}
+{% block brief_main %}
+<div class="glossary-sections">
     <section aria-labelledby="glossary-kei-heading" class="glossary-section">
         <h2 id="glossary-kei-heading" class="glossary-section-title">Kei vehicles & policy</h2>
-        <p class="glossary-section-intro">Terms related to kei vehicles, federal import rules, and the Illinois statutory fix we’re advocating for.</p>
+        <p class="glossary-section-intro">Terms related to kei vehicles, federal import rules, and the Illinois statutory fix we're advocating for.</p>
         <dl class="glossary-list">
             {% for item in kei_glossary %}
             <div class="glossary-entry">
@@ -55,4 +59,15 @@
         {% endfor %}
     </section>
 </div>
+{% endblock %}
+{% block brief_sidebar %}
+<aside class="legislator-brief-sidebar" aria-labelledby="glossary-sidebar-heading">
+    <h2 id="glossary-sidebar-heading" class="legislator-brief-sidebar__title">Community poll</h2>
+    <div class="legislator-brief-sidebar__content">
+        <section class="legislator-brief-sidebar__poll" aria-labelledby="sidebar-kei-poll-heading">
+            {% include "_sidebar_kei_poll.html" %}
+        </section>
+        {{ share_buttons('sidebar', 'glossary-share', 'constituent') }}
+    </div>
+</aside>
 {% endblock %}

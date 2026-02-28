@@ -1,25 +1,91 @@
-{# ── Why should you care: home (teaser + marquee) or full (The Issue). Content from content.py. Set why_you_care_heading_tag to "h3" on The Issue. Marquee: placeholder images until real kei-owner stories; duplicate strip for seamless loop. ── #}
-<section class="why-you-care{% if why_you_care_variant == 'full' %} why-you-care--full{% endif %}" id="why-you-care" aria-labelledby="why-you-care-heading">
+{# ── Why should you care: home (teaser + poll in two columns, or full on The Issue). Content from content.py. Set why_you_care_heading_tag to "h3" on The Issue. Marquee: placeholder images until real kei-owner stories; duplicate strip for seamless loop. ── #}
+<section class="why-you-care{% if why_you_care_variant == 'full' %} why-you-care--full{% endif %}{% if why_you_care_variant == 'home' and (kei_status_options is defined and kei_status_options) %} why-you-care--two-col{% endif %}" id="why-you-care" aria-labelledby="why-you-care-heading">
     <div class="why-you-care-header">
-        <{{ why_you_care_heading_tag|default('h2') }} class="why-you-care-title" id="why-you-care-heading">{{ why_should_you_care_heading }}</{{ why_you_care_heading_tag|default('h2') }}>
         {% if why_you_care_variant == 'home' %}
-        <ol class="why-you-care-teaser-list">
-            {% for item in why_should_you_care_teaser_items %}
-            <li class="why-you-care-teaser-item">{{ item }}</li>
-            {% endfor %}
-        </ol>
-        <p class="why-you-care-cta">
-            <a href="/the-issue" class="why-you-care-link">Learn about the issue</a> or
-            <a href="/advocacy" class="why-you-care-link">start outreach</a>.
-        </p>
+        <{{ why_you_care_heading_tag|default('h2') }} class="why-you-care-title why-you-care-title--section" id="why-you-care-heading">{{ why_should_you_care_heading }}</{{ why_you_care_heading_tag|default('h2') }}>
+        {% if kei_status_options is defined and kei_status_options %}
+        {# Mobile: title → reasons → marquee → poll. Desktop: grid keeps poll left, reasons right, marquee below. #}
+        <div class="why-you-care-home-grid">
+            <div class="why-you-care-col why-you-care-col--reasons">
+                <h3 class="why-you-care-subtitle" id="why-you-care-teaser-heading">{{ why_should_you_care_teaser_heading }}</h3>
+                <ol class="why-you-care-teaser-list" aria-labelledby="why-you-care-teaser-heading">
+                    {% for item in why_should_you_care_teaser_items %}
+                    <li class="why-you-care-teaser-item">{{ item }}</li>
+                    {% endfor %}
+                </ol>
+                <p class="why-you-care-cta">
+                    <a href="/the-issue" class="why-you-care-link">Learn about the issue</a> or
+                    <a href="/advocacy" class="why-you-care-link">start outreach</a>.
+                </p>
+            </div>
+            {% if features.get('images_marquee') and (marquee_images|default([])) %}
+            <div class="why-you-care-marquee why-you-care-marquee--in-grid" id="why-you-care-marquee" role="region" aria-label="Scrolling images of affected kei owners">
+                <div class="why-you-care-marquee-control-wrap">
+                    <button type="button" class="why-you-care-marquee-control" id="why-you-care-marquee-pause" aria-pressed="false" aria-label="Pause scrolling images">Pause</button>
+                </div>
+                <div class="why-you-care-marquee-visual" aria-hidden="true">
+                    <div class="why-you-care-marquee-track">
+                    {% for strip_index in range(2) %}{# duplicate strip for seamless loop #}
+                    <div class="why-you-care-marquee-strip{% if strip_index == 1 %} why-you-care-marquee-strip--dup{% endif %}">
+                        {% for img in (marquee_images|default([])) %}
+                        <figure class="why-you-care-marquee-item">
+                            <img src="{{ img.src }}" alt="{{ img.alt }}" width="360" height="240" loading="lazy" decoding="async">
+                            <figcaption class="why-you-care-marquee-caption"><strong>{{ img.name }}</strong> — {{ img.caption }}{% if img.location %} <span class="why-you-care-marquee-location">{{ img.location }}</span>{% endif %}</figcaption>
+                        </figure>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+                </div>
+                <script>
+                    (function() {
+                        var marquee = document.getElementById('why-you-care-marquee');
+                        var btn = document.getElementById('why-you-care-marquee-pause');
+                        if (!marquee || !btn) return;
+                        btn.addEventListener('click', function() {
+                            var paused = marquee.classList.toggle('why-you-care-marquee--paused');
+                            btn.setAttribute('aria-pressed', paused ? 'true' : 'false');
+                            btn.setAttribute('aria-label', paused ? 'Resume scrolling images' : 'Pause scrolling images');
+                            btn.textContent = paused ? 'Resume' : 'Pause';
+                        });
+                    })();
+                </script>
+            </div>
+            {% endif %}
+            <div class="why-you-care-col why-you-care-col--poll" id="why-you-care-poll-col">
+                {% if kei_poll_done %}
+                {% include "_kei_poll_initial_results.html" %}
+                {% else %}
+                {% from "_macros.html" import kei_poll %}
+                {{ kei_poll('home-kei-poll') }}
+                {% endif %}
+            </div>
+        </div>
         {% else %}
+        <div class="why-you-care-two-col-inner">
+            <div class="why-you-care-col why-you-care-col--reasons">
+                <h3 class="why-you-care-subtitle" id="why-you-care-teaser-heading">{{ why_should_you_care_teaser_heading }}</h3>
+                <ol class="why-you-care-teaser-list" aria-labelledby="why-you-care-teaser-heading">
+                    {% for item in why_should_you_care_teaser_items %}
+                    <li class="why-you-care-teaser-item">{{ item }}</li>
+                    {% endfor %}
+                </ol>
+                <p class="why-you-care-cta">
+                    <a href="/the-issue" class="why-you-care-link">Learn about the issue</a> or
+                    <a href="/advocacy" class="why-you-care-link">start outreach</a>.
+                </p>
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <{{ why_you_care_heading_tag|default('h2') }} class="why-you-care-title" id="why-you-care-heading">{{ why_should_you_care_heading }}</{{ why_you_care_heading_tag|default('h2') }}>
         <p class="why-you-care-intro">{{ why_should_you_care_intro }}</p>
         <p class="why-you-care-voice">{{ why_should_you_care_voice }}</p>
         {% endif %}
     </div>
 
-    {# Scrolling marquee: gated by feature flag (ILGA_FEATURE_IMAGES_MARQUEE); prod default off. Images from content.py MARQUEE_IMAGES. #}
-    {% if features.get('images_marquee') and (marquee_images|default([])) %}
+    {# Standalone marquee when not in home grid (e.g. home without poll, or The Issue). When home+poll, marquee is inside why-you-care-home-grid. #}
+    {% if features.get('images_marquee') and (marquee_images|default([])) and not (why_you_care_variant == 'home' and (kei_status_options is defined and kei_status_options)) %}
     <div class="why-you-care-marquee" id="why-you-care-marquee" role="region" aria-label="Scrolling images of affected kei owners">
         <div class="why-you-care-marquee-control-wrap">
             <button type="button" class="why-you-care-marquee-control" id="why-you-care-marquee-pause" aria-pressed="false" aria-label="Pause scrolling images">Pause</button>

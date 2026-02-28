@@ -1,0 +1,30 @@
+{# HTMX swap (innerHTML into poll wrap): logged-in success. No outer div — wrap is the single card. #}
+<details class="kei-poll-drawer" id="{{ poll_id }}-results-drawer" open aria-labelledby="{{ poll_id }}-heading">
+    <summary class="kei-poll__header-strip kei-poll-drawer__summary">
+        <h2 id="{{ poll_id }}-heading" class="kei-poll__heading">Results</h2>
+        <span class="kei-poll-drawer__chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="kei-poll-drawer__panel">
+    <div class="kei-poll__body">
+    <p class="kei-status-success" role="status">Thanks for sharing.</p>
+    {% if kei_status_results and kei_status_results.total_responses > 0 %}
+    <div class="kei-poll-results" aria-label="Poll results from verified users">
+        {% from "_macros.html" import kei_poll_results_chart %}
+        {{ kei_poll_results_chart(kei_status_results, kei_status_options, kei_status_selected) }}
+    </div>
+    {% else %}
+    <p class="kei-status-success" role="status">Thanks for sharing. Results will appear here once others respond.</p>
+    {% endif %}
+    <footer class="kei-poll__footer kei-poll__footer--results">
+        <span class="kei-poll__total">Total Votes: {{ kei_status_results.total_responses if kei_status_results else 0 }}</span>
+    </footer>
+    <p class="kei-poll-change-wrap">
+        <button type="button" class="kei-poll-change-btn link-style"
+            hx-get="/updates/kei-poll-form?poll_id={{ poll_id|e }}"
+            hx-target="#{{ poll_id|e }}-wrap"
+            hx-swap="outerHTML"
+            aria-label="Change your kei status answer">Need to change your answer?</button>
+    </p>
+    </div>
+    </div>
+</details>

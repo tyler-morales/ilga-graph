@@ -179,7 +179,9 @@ class TestAuthVerifyRoundtrip:
         if "kei_status" in data:
             assert data["kei_status"] is None or isinstance(data["kei_status"], str)
 
-    def test_welcome_email_sent_on_first_verify(self, client: TestClient, test_db_path: Path) -> None:
+    def test_welcome_email_sent_on_first_verify(
+        self, client: TestClient, test_db_path: Path
+    ) -> None:
         """First sign-in triggers welcome email and sets welcome_email_sent_at."""
         import asyncio
 

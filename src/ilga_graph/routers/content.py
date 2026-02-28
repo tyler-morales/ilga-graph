@@ -8,11 +8,15 @@ import re
 from datetime import date
 from pathlib import Path
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import config as cfg
 from ..constants import KEI_STATUS_OPTIONS
+from ..db import get_db
+from ..db_models import User
+from ..dependencies import get_current_user_optional
 from ..session_schedule import get_all_deadlines, session_label
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -183,6 +187,7 @@ templates.env.globals["features"] = cfg.get_client_features()
 
 # Why should you care (Hardball Ch7: who benefits, why your voice matters). Canonical copy from constituent brief + FAQ_ADVOCACY + STRATEGIC_FIVE_POINTS.
 WHY_SHOULD_YOU_CARE_HEADING = "Why should you care?"
+WHY_SHOULD_YOU_CARE_TEASER_HEADING = "Three reasons"
 WHY_SHOULD_YOU_CARE_INTRO = (
     "Clear law protects residents. When statutory language is ambiguous, regular people absorb the consequences. "
     "This issue is about fairness, predictability, and consistent application of Illinois law. "
@@ -262,6 +267,7 @@ MARQUEE_IMAGES: list[dict[str, str]] = [
 templates.env.globals["marquee_images"] = MARQUEE_IMAGES
 
 templates.env.globals["why_should_you_care_heading"] = WHY_SHOULD_YOU_CARE_HEADING
+templates.env.globals["why_should_you_care_teaser_heading"] = WHY_SHOULD_YOU_CARE_TEASER_HEADING
 templates.env.globals["why_should_you_care_intro"] = WHY_SHOULD_YOU_CARE_INTRO
 templates.env.globals["why_should_you_care_voice"] = WHY_SHOULD_YOU_CARE_VOICE
 templates.env.globals["why_should_you_care_teaser_items"] = WHY_SHOULD_YOU_CARE_TEASER_ITEMS
@@ -1835,8 +1841,14 @@ def _apply_the_issue_glossary(constituent_brief: dict) -> None:
 
 
 @router.get("/the-issue", include_in_schema=False)
-async def the_issue_page(request: Request):
+async def the_issue_page(
+    request: Request,
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
     """Serve The Issue page: kei vehicle registration problem and how to help. Content from canonical .txt when present."""
+    from ..routers.updates import get_kei_poll_sidebar_context
+
     brief_state_map_status = {
         s["state_abbr"]: _brief_map_fill_status(s) for s in BRIEF_STATE_STATUS
     }
@@ -1849,26 +1861,25 @@ async def the_issue_page(request: Request):
     except (FileNotFoundError, ValueError):
         raw_deadlines = []
     faq_session, session_deadlines = _faq_session_and_deadlines_with_tooltips(raw_deadlines)
-    return templates.TemplateResponse(
-        "the_issue.html",
-        {
-            "request": request,
-            "constituent_brief": constituent_brief,
-            "fact_sheet_pdf_url": FACT_SHEET_PDF_URL,
-            "faq_law": FAQ_LAW,
-            "faq_advocacy": FAQ_ADVOCACY,
-            "faq_session": faq_session,
-            "session_deadlines": session_deadlines,
-            "session_schedule_terms": SESSION_SCHEDULE_TERMS,
-            "brief_state_status": BRIEF_STATE_STATUS,
-            "brief_state_map_status_json": json.dumps(brief_state_map_status),
-            "brief_aamva_fix_state_abbrs_json": json.dumps(aamva_fix_abbrs),
-            "issue_sources": ISSUE_SOURCES,
-            "strategic_mission": STRATEGIC_MISSION,
-            "strategic_vision": STRATEGIC_VISION,
-            "strategic_five_points": STRATEGIC_FIVE_POINTS,
-        },
-    )
+    ctx = {
+        "request": request,
+        "constituent_brief": constituent_brief,
+        "fact_sheet_pdf_url": FACT_SHEET_PDF_URL,
+        "faq_law": FAQ_LAW,
+        "faq_advocacy": FAQ_ADVOCACY,
+        "faq_session": faq_session,
+        "session_deadlines": session_deadlines,
+        "session_schedule_terms": SESSION_SCHEDULE_TERMS,
+        "brief_state_status": BRIEF_STATE_STATUS,
+        "brief_state_map_status_json": json.dumps(brief_state_map_status),
+        "brief_aamva_fix_state_abbrs_json": json.dumps(aamva_fix_abbrs),
+        "issue_sources": ISSUE_SOURCES,
+        "strategic_mission": STRATEGIC_MISSION,
+        "strategic_vision": STRATEGIC_VISION,
+        "strategic_five_points": STRATEGIC_FIVE_POINTS,
+    }
+    ctx.update(await get_kei_poll_sidebar_context(request, user, db))
+    return templates.TemplateResponse("the_issue.html", ctx)
 
 
 def _apply_legislator_brief_glossary(legislator_brief: dict) -> None:
@@ -1901,8 +1912,14 @@ def _apply_legislator_brief_glossary(legislator_brief: dict) -> None:
 
 
 @router.get("/legislator-brief", include_in_schema=False)
-async def legislator_brief_page(request: Request):
+async def legislator_brief_page(
+    request: Request,
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
     """Serve the Legislator Brief: concise briefing for legislators and staff. Content from canonical .txt when present."""
+    from ..routers.updates import get_kei_poll_sidebar_context
+
     brief_state_map_status = {
         s["state_abbr"]: _brief_map_fill_status(s) for s in BRIEF_STATE_STATUS
     }
@@ -1910,39 +1927,43 @@ async def legislator_brief_page(request: Request):
     legislator_brief = _load_legislator_brief()
     if legislator_brief:
         _apply_legislator_brief_glossary(legislator_brief)
-    return templates.TemplateResponse(
-        "legislator_brief.html",
-        {
-            "request": request,
-            "legislator_brief": legislator_brief,
-            "strategic_five_points": STRATEGIC_FIVE_POINTS,
-            "brief_documents": BRIEF_DOCUMENTS,
-            "brief_state_status": BRIEF_STATE_STATUS,
-            "brief_state_map_status_json": json.dumps(brief_state_map_status),
-            "brief_aamva_fix_state_abbrs_json": json.dumps(aamva_fix_abbrs),
-            "brief_bills_passed": BRIEF_BILLS_PASSED,
-            "brief_bills_current": BRIEF_BILLS_CURRENT,
-            "brief_sources": BRIEF_SOURCES,
-            "faq": FAQ_LEGISLATORS,
-        },
-    )
+    ctx = {
+        "request": request,
+        "legislator_brief": legislator_brief,
+        "strategic_five_points": STRATEGIC_FIVE_POINTS,
+        "brief_documents": BRIEF_DOCUMENTS,
+        "brief_state_status": BRIEF_STATE_STATUS,
+        "brief_state_map_status_json": json.dumps(brief_state_map_status),
+        "brief_aamva_fix_state_abbrs_json": json.dumps(aamva_fix_abbrs),
+        "brief_bills_passed": BRIEF_BILLS_PASSED,
+        "brief_bills_current": BRIEF_BILLS_CURRENT,
+        "brief_sources": BRIEF_SOURCES,
+        "faq": FAQ_LEGISLATORS,
+    }
+    ctx.update(await get_kei_poll_sidebar_context(request, user, db))
+    return templates.TemplateResponse("legislator_brief.html", ctx)
 
 
 @router.get("/fact-sheet", include_in_schema=False)
-async def fact_sheet_page(request: Request):
+async def fact_sheet_page(
+    request: Request,
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
     """Serve the one-page fact sheet for volunteers (Hardball Ch7; content from focused-next-steps doc §5)."""
+    from ..routers.updates import get_kei_poll_sidebar_context
+
     fact_sheet_faq_ids = ("adv1", "adv1b", "adv2", "adv3", "adv4", "adv7")
     fact_sheet_faq_items = [i for i in FAQ_ADVOCACY["items"] if i["id"] in fact_sheet_faq_ids]
-    return templates.TemplateResponse(
-        "fact_sheet.html",
-        {
-            "request": request,
-            "strategic_five_points": STRATEGIC_FIVE_POINTS,
-            "fact_sheet_issue": FACT_SHEET_ISSUE,
-            "fact_sheet_position": FACT_SHEET_POSITION,
-            "fact_sheet_faq_items": fact_sheet_faq_items,
-        },
-    )
+    ctx = {
+        "request": request,
+        "strategic_five_points": STRATEGIC_FIVE_POINTS,
+        "fact_sheet_issue": FACT_SHEET_ISSUE,
+        "fact_sheet_position": FACT_SHEET_POSITION,
+        "fact_sheet_faq_items": fact_sheet_faq_items,
+    }
+    ctx.update(await get_kei_poll_sidebar_context(request, user, db))
+    return templates.TemplateResponse("fact_sheet.html", ctx)
 
 
 @router.get("/coalition", include_in_schema=False)
@@ -2016,14 +2037,19 @@ async def timeline_page(request: Request):
 
 
 @router.get("/glossary", include_in_schema=False)
-async def glossary_page(request: Request):
+async def glossary_page(
+    request: Request,
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
     """Serve the definitions/glossary page: domain terms and kei vehicle terms."""
-    return templates.TemplateResponse(
-        "glossary.html",
-        {
-            "request": request,
-            "domain_glossary": DOMAIN_GLOSSARY,
-            "kei_glossary": KEI_GLOSSARY,
-            "session_schedule_terms": SESSION_SCHEDULE_TERMS,
-        },
-    )
+    from ..routers.updates import get_kei_poll_sidebar_context
+
+    ctx = {
+        "request": request,
+        "domain_glossary": DOMAIN_GLOSSARY,
+        "kei_glossary": KEI_GLOSSARY,
+        "session_schedule_terms": SESSION_SCHEDULE_TERMS,
+    }
+    ctx.update(await get_kei_poll_sidebar_context(request, user, db))
+    return templates.TemplateResponse("glossary.html", ctx)

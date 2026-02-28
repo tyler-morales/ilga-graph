@@ -21,6 +21,91 @@
   margin-right: auto;
 }
 
+/* Home: two-column layout — poll (left) and 1,2,3 reasons (right). Stacks on narrow viewports. */
+.why-you-care--two-col .why-you-care-header {
+  max-width: min(900px, 95vw);
+}
+
+/* Home + poll: mobile order = reasons → marquee → poll. Desktop = grid: poll | reasons, then marquee full width. */
+.why-you-care-home-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl, 1.25rem);
+  margin-top: 3rem;
+}
+
+@media (min-width: 640px) {
+  .why-you-care-home-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 3rem;
+    align-items: start;
+    justify-items: center;
+  }
+
+  .why-you-care-home-grid .why-you-care-col {
+    padding-top: 0;
+  }
+
+  .why-you-care-home-grid .why-you-care-col--poll {
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+    max-width: 360px;
+    align-self: center;
+  }
+
+  .why-you-care-home-grid .why-you-care-col--reasons {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .why-you-care-home-grid .why-you-care-marquee--in-grid {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+.why-you-care-home-grid .why-you-care-col {
+  min-width: 0;
+  padding-top: 0;
+}
+
+.why-you-care-home-grid .why-you-care-col--poll {
+  align-self: center;
+}
+
+.why-you-care-two-col-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl, 1.25rem);
+}
+
+.why-you-care-col {
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .why-you-care-two-col-inner {
+    flex-direction: row;
+    align-items: center;
+    gap: 3rem;
+  }
+
+  .why-you-care-col--poll {
+    flex: 0 1 320px;
+  }
+
+  .why-you-care-col--reasons {
+    flex: 1 1 50%;
+    min-width: 0;
+  }
+}
+
 .why-you-care-title {
   font-size: var(--font-size-h1, 1.6rem);
   font-weight: 700;
@@ -30,14 +115,39 @@
   line-height: var(--line-height-tight, 1.25);
 }
 
+/* Home: section title at top of block, centered. */
+.why-you-care-title--section {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.page-home .why-you-care-title--section {
+  margin-bottom: 1.75rem;
+}
+
 .page-home .why-you-care-title {
   font-size: clamp(1.5rem, 4vw, 2rem);
   margin-bottom: 1.25rem;
 }
 
+/* Subheading above the three reasons (smaller than section title). */
+.why-you-care-subtitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text, #222);
+  margin: 0 0 0.75rem 0;
+  letter-spacing: -0.01em;
+  line-height: var(--line-height-tight, 1.25);
+}
+
+.page-home .why-you-care-subtitle {
+  font-size: 1.2rem;
+  margin-bottom: 0.875rem;
+}
+
 .why-you-care-teaser-list {
   margin: 0 0 1rem 0;
-  padding-left: 1.5em;
+  padding: 0 0 0 1.5em;
   font-size: var(--font-size-body, 1rem);
   color: var(--color-text-secondary, #555);
   line-height: 1.75;
@@ -126,6 +236,10 @@
   position: relative;
 }
 
+.why-you-care-marquee--in-grid {
+  margin-top: 0;
+}
+
 /* Pause on hover (mouse) and when paused via control (keyboard/screen reader). */
 .why-you-care-marquee:hover .why-you-care-marquee-track,
 .why-you-care-marquee.why-you-care-marquee--paused .why-you-care-marquee-track {
@@ -181,6 +295,7 @@
   .why-you-care-marquee-item {
     width: 320px;
   }
+
   .why-you-care-marquee-item img {
     height: 213px;
   }
@@ -190,6 +305,7 @@
   0% {
     transform: translateX(0);
   }
+
   100% {
     transform: translateX(-50%);
   }
@@ -249,16 +365,20 @@
   .why-you-care-marquee-control-wrap {
     display: none;
   }
+
   .why-you-care-marquee-track {
     animation: none;
   }
+
   .why-you-care-marquee-strip--dup {
     display: none;
   }
+
   .why-you-care-marquee {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
+
   .why-you-care-marquee-track {
     padding-right: var(--space-2xl, 24px);
   }

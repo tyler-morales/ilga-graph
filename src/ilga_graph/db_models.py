@@ -167,6 +167,20 @@ class CommunityMemberEmail(Base):
     )
 
 
+class KeiPollResponse(Base):
+    """One row per kei poll. Logged-in: user_id set; anon: user_id NULL, session_id optional."""
+
+    __tablename__ = "kei_poll_responses"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=True, index=True
+    )
+    session_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    kei_status: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
 class BugReport(Base):
     """In-app bug report from the beta banner (no GitHub/email required)."""
 

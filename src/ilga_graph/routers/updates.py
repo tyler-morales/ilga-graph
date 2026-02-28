@@ -24,7 +24,7 @@ from fastapi import (
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import advocacy_helpers as ah
@@ -33,9 +33,9 @@ from ..app_state import state
 from ..campaign_helpers import get_active_campaign
 from ..constants import CATEGORY_COMMITTEES, KEI_STATUS_OPTIONS, KEI_STATUS_SLUGS
 from ..db import async_session_factory, get_db
-from ..db_models import OutreachEvent, Update, User
+from ..db_models import KeiPollResponse, OutreachEvent, Update, User
 from ..dependencies import get_current_user_optional, require_admin, require_user
-from ..email_utils import send_email
+from ..email_utils import send_email, send_welcome_email
 from ..member_lookup import find_member_by_district
 from ..routers.content import (
     CAMPAIGN_STATUS,
@@ -43,6 +43,7 @@ from ..routers.content import (
     PROGRESS_CHECKPOINTS,
     STRATEGIC_FIVE_POINTS,
 )
+from ..security import validate_anon_session_id
 from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
 
 LOGGER = logging.getLogger(__name__)
@@ -563,6 +564,9 @@ async def updates_page(
     ctx["prompt_kei"] = q.get("prompt") == "kei"
     ctx["kei_submitted"] = q.get("submitted") == "1"
     ctx["kei_error"] = q.get("error")
+    poll_state = await get_kei_poll_initial_state(request, user, db)
+    ctx.update(poll_state)
+    ctx["poll_id"] = "updates-kei-poll"
     return templates.TemplateResponse(request, "updates.html", ctx)
 
 
@@ -601,12 +605,28 @@ async def unsubscribe_page(
 
 @router.post("/updates/subscribe", include_in_schema=False)
 async def subscribe_post(
+    request: Request,
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Turn subscription on for the current user; redirect back to /updates."""
+    """Turn subscription on for current user; send welcome if not yet. HTMX returns fragment."""
     user.wants_updates = True
     await db.commit()
+    now = datetime.now(timezone.utc)
+    if getattr(user, "welcome_email_sent_at", None) is None:
+        try:
+            sent = await send_welcome_email(user.email)
+            if sent:
+                user.welcome_email_sent_at = now
+                await db.commit()
+        except Exception:
+            LOGGER.exception("Failed to send welcome email to %s", user.email)
+    if request.headers.get("HX-Request"):
+        return HTMLResponse(
+            '<p class="subscribe-email-success poll-signup-success" '
+            'role="status" aria-live="polite">'
+            "You're on the list. We'll send one email when we move.</p>"
+        )
     return RedirectResponse("/updates", status_code=303)
 
 
@@ -617,15 +637,137 @@ def _validate_kei_status(slug: str | None) -> str | None:
     return s
 
 
+async def _get_kei_status_results(db: AsyncSession) -> dict[str, Any]:
+    """Aggregate kei_status counts for verified users only (last_login_at IS NOT NULL)."""
+    result = await db.execute(
+        select(User.kei_status, func.count())
+        .where(User.kei_status.isnot(None))
+        .where(User.last_login_at.isnot(None))
+        .group_by(User.kei_status)
+    )
+    by_status: dict[str, int] = {row[0]: row[1] for row in result.all()}
+    total = sum(by_status.values())
+    return {
+        "by_status": {slug: by_status.get(slug, 0) for slug in KEI_STATUS_SLUGS},
+        "total_responses": total,
+    }
+
+
+@router.get("/updates/kei-status-results", include_in_schema=False)
+async def kei_status_results(
+    db: AsyncSession = Depends(get_db),
+):
+    """Poll results: counts by kei_status for users who have signed in at least once."""
+    data = await _get_kei_status_results(db)
+    return JSONResponse(data)
+
+
+SIDEBAR_KEI_POLL_ID = "sidebar-kei-poll"
+_KEI_POLL_IDS = frozenset(
+    {"footer-kei-poll", "home-kei-poll", "updates-kei-poll", SIDEBAR_KEI_POLL_ID}
+)
+KEI_POLL_VOTED_COOKIE = "kei_poll_voted"
+KEI_POLL_CHOICE_COOKIE = "kei_poll_choice"
+_KEI_POLL_VOTED_MAX_AGE = 365 * 24 * 60 * 60  # 1 year
+
+
+async def get_kei_poll_initial_state(
+    request: Request,
+    user: User | None,
+    db: AsyncSession,
+) -> dict[str, Any]:
+    """Return context to show poll form vs results on initial load. If user has voted (logged-in
+    kei_status or cookie for anonymous), show results; else show form."""
+    voted_cookie = request.cookies.get(KEI_POLL_VOTED_COOKIE) == "1"
+    logged_in_voted = user is not None and getattr(user, "kei_status", None) is not None
+    show_results = logged_in_voted or voted_cookie
+    if not show_results:
+        return {"kei_poll_done": False}
+    results = await _get_kei_status_results(db)
+    selected = user.kei_status if user else None
+    if not selected and voted_cookie:
+        choice_cookie = request.cookies.get(KEI_POLL_CHOICE_COOKIE)
+        selected = _validate_kei_status(choice_cookie) if choice_cookie else None
+    return {
+        "kei_poll_done": True,
+        "kei_status_results": results,
+        "kei_status_selected": selected,
+        "kei_poll_initial_anon": not logged_in_voted,
+    }
+
+
+async def get_kei_poll_sidebar_context(
+    request: Request,
+    user: User | None,
+    db: AsyncSession,
+) -> dict[str, Any]:
+    """Sidebar Kei poll (the-issue, legislator-brief, fact-sheet, glossary). Same poll_id."""
+    state = await get_kei_poll_initial_state(request, user, db)
+    state["poll_id"] = SIDEBAR_KEI_POLL_ID
+    if not state.get("kei_poll_done"):
+        results = await _get_kei_status_results(db)
+        state["kei_status_total"] = results["total_responses"]
+    return state
+
+
+@router.get("/updates/kei-poll-form", include_in_schema=False)
+async def kei_poll_form(
+    request: Request,
+    poll_id: str = "footer-kei-poll",
+    show_email: bool = False,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return poll form HTML for HTMX swap (e.g. change your answer). Includes total for footer."""
+    if poll_id not in _KEI_POLL_IDS:
+        poll_id = "footer-kei-poll"
+    results = await _get_kei_status_results(db)
+    return templates.TemplateResponse(
+        request,
+        "_kei_poll_form_partial.html",
+        {
+            "poll_id": poll_id,
+            "show_email": show_email,
+            "kei_status_total": results["total_responses"],
+        },
+    )
+
+
+@router.get("/updates/kei-poll-results", include_in_schema=False)
+async def kei_poll_results(
+    request: Request,
+    poll_id: str = "footer-kei-poll",
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Logged-in poll results fragment for HTMX swap after sign-in (removes 'not counted' nudge)."""
+    if poll_id not in _KEI_POLL_IDS:
+        poll_id = "footer-kei-poll"
+    results = await _get_kei_status_results(db)
+    return templates.TemplateResponse(
+        request,
+        "_kei_poll_logged_in_success.html",
+        {
+            "kei_status_results": results,
+            "kei_status_options": KEI_STATUS_OPTIONS,
+            "kei_status_selected": user.kei_status,
+            "poll_id": poll_id,
+        },
+    )
+
+
 @router.post("/updates/kei-status", include_in_schema=False)
 async def kei_status_post(
     request: Request,
     kei_status: str = Form(..., max_length=32),
     email: str | None = Form(None, max_length=_EMAIL_MAX_LEN),
+    poll_id: str = Form("footer-kei-poll", max_length=64),
+    session_id: str | None = Form(None, max_length=64),
     db: AsyncSession = Depends(get_db),
     user: User | None = Depends(get_current_user_optional),
 ):
-    """Set user kei status. Auth: kei_status only. Anonymous: email + kei_status (get-or-create)."""
+    """Set kei status. Insert kei_poll_responses; if logged-in also set User.kei_status."""
+    if poll_id not in _KEI_POLL_IDS:
+        poll_id = "footer-kei-poll"
     validated = _validate_kei_status(kei_status)
     if not validated:
         if request.headers.get("HX-Request"):
@@ -634,33 +776,62 @@ async def kei_status_post(
                 status_code=400,
             )
         return RedirectResponse("/updates?prompt=kei&error=invalid", status_code=303)
+    anon_sid = validate_anon_session_id(session_id) if session_id else None
+    response_row = KeiPollResponse(
+        user_id=user.id if user else None,
+        session_id=anon_sid,
+        kei_status=validated,
+    )
+    db.add(response_row)
     if user:
         user.kei_status = validated
-        await db.commit()
-        LOGGER.info("User id=%s set kei_status=%s", user.id, validated)
-    else:
-        normalized = _normalize_and_validate_subscribe_email(email or "")
-        if not normalized:
-            if request.headers.get("HX-Request"):
-                return HTMLResponse(
-                    '<p class="kei-status-error" role="alert">Please enter a valid email.</p>',
-                    status_code=400,
-                )
-            return RedirectResponse("/updates?prompt=kei&error=email", status_code=303)
-        result = await db.execute(select(User).where(User.email == normalized))
-        existing = result.scalar_one_or_none()
-        if existing:
-            existing.kei_status = validated
-            await db.commit()
-            LOGGER.info("User id=%s set kei_status=%s (anonymous submit)", existing.id, validated)
-        else:
-            new_user = User(email=normalized, kei_status=validated)
-            db.add(new_user)
-            await db.commit()
-            LOGGER.info("New user via kei-status poll: id=%s kei_status=%s", new_user.id, validated)
+    await db.commit()
+    LOGGER.info(
+        "Kei poll response id=%s user_id=%s kei_status=%s",
+        response_row.id,
+        user.id if user else None,
+        validated,
+    )
+    if user:
+        if request.headers.get("HX-Request"):
+            results = await _get_kei_status_results(db)
+            return templates.TemplateResponse(
+                request,
+                "_kei_poll_logged_in_success.html",
+                {
+                    "kei_status_results": results,
+                    "kei_status_options": KEI_STATUS_OPTIONS,
+                    "kei_status_selected": validated,
+                    "poll_id": poll_id,
+                },
+            )
+        return RedirectResponse("/updates?prompt=kei&submitted=1", status_code=303)
+    # Anonymous: set cookies for results/selection on next visit; return fragment or redirect
+    results = await _get_kei_status_results(db)
+    cookie_opts = {"max_age": _KEI_POLL_VOTED_MAX_AGE, "path": "/", "samesite": "lax"}
+    cookies_to_set = [
+        {"key": KEI_POLL_VOTED_COOKIE, "value": "1", **cookie_opts},
+        {"key": KEI_POLL_CHOICE_COOKIE, "value": validated, **cookie_opts},
+    ]
     if request.headers.get("HX-Request"):
-        return HTMLResponse('<p class="kei-status-success" role="status">Thanks for sharing.</p>')
-    return RedirectResponse("/updates?prompt=kei&submitted=1", status_code=303)
+        resp = templates.TemplateResponse(
+            request,
+            "_kei_poll_anonymous_success.html",
+            {
+                "kei_status_results": results,
+                "kei_status_options": KEI_STATUS_OPTIONS,
+                "kei_status_selected": validated,
+                "dev_available": cfg.DEV_MODE,
+                "poll_id": poll_id,
+            },
+        )
+        for params in cookies_to_set:
+            resp.set_cookie(**params)
+        return resp
+    redir = RedirectResponse("/updates?prompt=kei&submitted=1", status_code=303)
+    for params in cookies_to_set:
+        redir.set_cookie(**params)
+    return redir
 
 
 @router.post("/updates/subscribe-email", include_in_schema=False)

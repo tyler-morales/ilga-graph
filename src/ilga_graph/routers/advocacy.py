@@ -41,6 +41,7 @@ from ..routers.content import (
     STRATEGIC_FIVE_POINTS,
 )
 from ..routers.outreach import get_outreach_aggregate
+from ..routers.updates import get_kei_poll_sidebar_context
 from ..security import (
     CSRF_COOKIE_NAME,
     validate_csrf_token,
@@ -515,6 +516,7 @@ async def advocacy_index(
     if zip_param and in_district:
         results_ctx = await _build_search_results_context(zip_param, "Transportation", db, user)
         ctx.update(results_ctx)
+        ctx.update(await get_kei_poll_sidebar_context(request, user, db))
     elif zip_param and not in_district:
         ctx["error"] = (
             f"ZIP code {zip_param!r} not found in Illinois district data. "
@@ -1062,6 +1064,7 @@ async def advocacy_search(
         return templates.TemplateResponse(tpl, ctx_error)
 
     results_ctx = await _build_search_results_context(zip_code, category, db, user)
+    poll_ctx = await get_kei_poll_sidebar_context(request, user, db)
     tpl = "_results_partial.html" if is_htmx else "results.html"
     return templates.TemplateResponse(
         tpl,
@@ -1070,5 +1073,6 @@ async def advocacy_search(
             "title": cfg.SITE_NAME,
             "categories": CATEGORY_CHOICES,
             **results_ctx,
+            **poll_ctx,
         },
     )

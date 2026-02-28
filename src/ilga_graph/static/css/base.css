@@ -465,25 +465,192 @@ a:visited {
 
 .footer-get-updates {
   margin-top: 1rem;
+  max-width: 28rem;
+  margin-inline: auto;
 }
 
-/* State of kei poll (footer and optional prompt on /updates). */
-.footer-kei-poll {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e0e0e0;
+/* State of kei poll (home "Why you care", /updates?prompt=kei). */
+
+/* Kei poll card: single container, rounded corners, shadow. No inner double padding. */
+.kei-poll-card {
+  background: #fff;
+  border: 1px solid #cacaca;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  padding: 0;
+  overflow: hidden;
 }
+
+.kei-poll__header-strip {
+  background: #1a1a1a;
+  color: #fff;
+  padding: 0.4rem 1.25rem;
+  border-radius: 8px 8px 0 0;
+}
+
 .kei-poll__heading {
+  font-size: 1rem;
+  font-weight: 600;
+  color: inherit;
+  margin: 0;
+}
+
+/* Collapsible Results drawer (details/summary) in sidebar and after submit */
+.kei-poll-drawer {
+  display: block;
+}
+
+.kei-poll-drawer__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.kei-poll-drawer__summary::-webkit-details-marker,
+.kei-poll-drawer__summary::marker {
+  display: none;
+}
+
+.kei-poll-drawer__summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.kei-poll-drawer__chevron {
+  flex-shrink: 0;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid currentColor;
+  transition: transform 0.2s ease;
+}
+
+.kei-poll-drawer[open] .kei-poll-drawer__chevron {
+  transform: rotate(180deg);
+}
+
+/* Animated panel: height transition driven by JS */
+.kei-poll-drawer__panel {
+  overflow: hidden;
+  transition: height 0.25s ease;
+}
+
+.kei-poll__body {
+  padding: 0.5rem 1.25rem;
+}
+
+.kei-poll__progress {
+  margin: 0 0 0.5rem 0;
+}
+
+.kei-poll__progress-steps {
+  display: flex;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.kei-poll__progress-step {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  border: 2px solid #cacaca;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: var(--font-size-sm);
   font-weight: 600;
-  color: #555;
-  margin-bottom: 0.5rem;
+  color: #666;
 }
+
+.kei-poll__progress-step--current {
+  border-color: #1976d2;
+  background: #1976d2;
+  color: #fff;
+}
+
+.kei-poll__progress-step-num {
+  line-height: 1;
+}
+
+.kei-poll__intro {
+  font-size: var(--font-size-sm);
+  color: #555;
+  margin: 0 0 0.5rem 0;
+}
+
 .kei-poll__form {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
+
+.kei-poll__step1 {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.kei-poll__step-legend {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 0.35rem;
+}
+
+.kei-poll__branch-btns {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.kei-poll__branch-btn {
+  font-size: var(--font-size-sm);
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+}
+
+.kei-poll__branch-btn:hover {
+  background: #f5f5f5;
+  border-color: #999;
+}
+
+.kei-poll__branch-btn:focus-visible {
+  outline: 2px solid var(--link-color, #5a2d82);
+  outline-offset: 2px;
+}
+
+.kei-poll__branch-btn[aria-pressed="true"] {
+  background: #1976d2;
+  color: #fff;
+  border-color: #1976d2;
+}
+
+.kei-poll__step2-panel {
+  margin-top: 0.5rem;
+}
+
+.kei-poll__step2-panel .kei-poll__options {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.kei-poll__step2-panel--hidden {
+  display: none;
+}
+
 .kei-poll__email {
   max-width: 20rem;
   padding: 0.4rem 0.6rem;
@@ -491,15 +658,18 @@ a:visited {
   border: 1px solid #ccc;
   border-radius: 6px;
 }
+
 .kei-poll__email:focus {
   outline: 2px solid var(--link-color, #5a2d82);
   outline-offset: 1px;
 }
+
 .kei-poll__options {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.35rem;
 }
+
 .kei-poll__option {
   font-size: var(--font-size-sm);
   cursor: pointer;
@@ -507,51 +677,353 @@ a:visited {
   align-items: center;
   gap: 0.5rem;
 }
+
 .kei-poll__option input {
   margin: 0;
   flex-shrink: 0;
 }
-.kei-poll__actions {
+
+.kei-poll__footer {
   display: flex;
-  gap: 0.5rem;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #eee;
   flex-wrap: wrap;
+  gap: 0.5rem;
 }
-.kei-poll__submit,
-.kei-poll__skip {
+
+.kei-poll__footer--results .kei-poll__total {
+  margin-right: auto;
+}
+
+.kei-poll__total {
+  font-size: var(--font-size-sm);
+  color: #555;
+}
+
+.kei-poll__submit {
   padding: 0.4rem 0.75rem;
   font-size: var(--font-size-sm);
   border-radius: 6px;
   cursor: pointer;
-}
-.kei-poll__submit {
   font-weight: 600;
   color: #fff;
-  background: var(--link-color, #5a2d82);
+  background: #1976d2;
   border: none;
 }
-.kei-poll__submit:focus-visible,
-.kei-poll__skip:focus-visible {
-  outline: 2px solid var(--link-color, #5a2d82);
+
+.kei-poll__submit:hover:not(:disabled) {
+  background: #1565c0;
+}
+
+.kei-poll__submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.kei-poll__submit:focus-visible {
+  outline: 2px solid #1976d2;
   outline-offset: 2px;
 }
-.kei-poll__skip {
-  background: transparent;
-  border: 1px solid #999;
-  color: #555;
-}
+
 .kei-status-success,
 .kei-status-error {
   font-size: var(--font-size-sm);
   margin-top: 0.5rem;
 }
+
 .kei-status-success {
   color: #2e7d32;
 }
+
 .kei-status-error {
   color: #c62828;
 }
-.home-kei-poll {
-  margin-top: 1.5rem;
+
+/* Prominent CTA block: sign in to save poll response (hardballer-style nudge). Full-bleed under Results header, no radius. */
+.kei-poll-nudge-block {
+  margin: -0.5rem -1.25rem 0 -1.25rem;
+  padding: 1rem 1.25rem;
+  background: #e8f0fe;
+  border: 1px solid #b3c9f0;
+  border-left: none;
+  border-right: none;
+  border-radius: 0;
+}
+
+.kei-poll-nudge-block__copy {
+  margin: 0 0 0.75rem;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+/* Poll sign-in: link-style blue text, hover stays blue (no filled button). */
+.kei-poll-nudge-block__signin-link {
+  font-weight: 600;
+  color: var(--link-color, #1a73e8);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.kei-poll-nudge-block__signin-link:hover {
+  color: #1a73e8;
+}
+
+.kei-poll-nudge-block__signin-link:focus-visible {
+  outline: 2px solid var(--color-focus-ring, #1a73e8);
+  outline-offset: 2px;
+}
+
+.kei-poll-results {
+  margin-top: 0.25rem;
+  font-size: var(--font-size-sm);
+}
+
+/* Kei poll results bar chart (after submit): X% Label, bar (green=highest, blue=others). Selected choice: "Verified" above percent. */
+.kei-poll-chart {
+  margin-top: 0.35rem;
+}
+
+.kei-poll-chart__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.kei-poll-chart__row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: var(--font-size-sm);
+}
+
+.kei-poll-chart__label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.kei-poll-chart__pct-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  min-width: 3em;
+  flex-shrink: 0;
+}
+
+.kei-poll-chart__verified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #059669;
+}
+
+.kei-poll-chart__verified-icon {
+  display: block;
+  flex-shrink: 0;
+  color: #059669;
+}
+
+/* Anonymous: "Your choice" dimmed until user signs in; hover swaps to "Sign in to save your choice" */
+.kei-poll-chart__verified-badge--pending {
+  opacity: 0.55;
+}
+
+.kei-poll-chart__verified-badge--pending:hover {
+  opacity: 1;
+}
+
+.kei-poll-chart__verified-badge__mask {
+  display: inline-block;
+  height: 1.5em;
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.kei-poll-chart__verified-badge__track {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.22s ease-out;
+}
+
+.kei-poll-chart__verified-badge--pending:hover .kei-poll-chart__verified-badge__track {
+  transform: translateY(-1.5em);
+}
+
+.kei-poll-chart__verified-badge__line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 1.5em;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: opacity 0.2s ease-out;
+}
+
+.kei-poll-chart__verified-badge__line:last-child {
+  opacity: 0;
+}
+
+.kei-poll-chart__verified-badge--pending:hover .kei-poll-chart__verified-badge__line:first-child {
+  opacity: 0;
+}
+
+.kei-poll-chart__verified-badge--pending:hover .kei-poll-chart__verified-badge__line:last-child {
+  opacity: 1;
+}
+
+.kei-poll-chart__pct {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: #374151;
+}
+
+.kei-poll-chart__label-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: 1.35;
+  color: #1a1a1a;
+}
+
+.kei-poll-chart__your-choice {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #1976d2;
+  margin-left: 0.35rem;
+  padding: 0.1rem 0.4rem;
+  background: #fff;
+  border: 1px solid #1976d2;
+  border-radius: 3px;
+}
+
+button.kei-poll-chart__your-choice {
+  cursor: pointer;
+  font: inherit;
+  line-height: inherit;
+}
+
+button.kei-poll-chart__your-choice:hover {
+  background: #e3f2fd;
+}
+
+button.kei-poll-chart__your-choice:focus-visible {
+  outline: 2px solid #1976d2;
+  outline-offset: 2px;
+}
+
+.kei-poll-chart__bar-wrap {
+  height: 6px;
+  min-height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.kei-poll-chart__bar {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: 3px;
+  transition: width 0.25s ease-out;
+}
+
+.kei-poll-chart__bar--highest {
+  background: #2e7d32;
+}
+
+.kei-poll-chart__bar--other {
+  background: #1976d2;
+}
+
+.kei-poll-results__empty {
+  font-size: var(--font-size-sm);
+  color: #666;
+  margin-top: 0.5rem;
+}
+
+.kei-poll-signin-wrap {
+  margin-top: 1rem;
+  container-type: inline-size;
+  container-name: signin-inline;
+}
+
+.kei-poll-signin-wrap .hero-signin-inline {
+  margin-top: 0.5rem;
+}
+
+.poll-signup-prompt {
+  margin-top: 1rem;
+}
+
+.poll-signup-prompt__copy {
+  margin: 0 0 0.5rem;
+  font-size: var(--font-size-sm);
+}
+
+.poll-signup-prompt__actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.poll-signup-notyet {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--link-color, #0066cc);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.poll-signup-notyet:hover {
+  color: #004499;
+}
+
+.poll-signup-notyet:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.kei-poll-change-wrap {
+  margin-top: 0.75rem;
+}
+
+.kei-poll-change-btn.link-style {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--link-color, #0066cc);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.kei-poll-change-btn.link-style:hover {
+  color: #004499;
+}
+
+.kei-poll-change-btn.link-style:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }
 
 /* Shared subscribe component: form, input, button (footer, sidebar, home CTA, updates, drawer). Variations in mission-statement.css (home), advocacy-drawer.css (drawer). */
@@ -1353,6 +1825,106 @@ a:visited {
   font-weight: 600;
   margin: 0.75rem 0 0.2rem;
   color: #202124;
+}
+
+.legislator-brief-sidebar__poll {
+  margin-top: 1rem;
+}
+
+.legislator-brief-sidebar__poll .kei-poll-card {
+  border-radius: 0;
+}
+
+.legislator-brief-sidebar__poll .kei-poll-card .kei-poll__header-strip {
+  border-radius: 0;
+}
+
+@supports (container-type: inline-size) {
+  .legislator-brief-sidebar__poll {
+    container-type: inline-size;
+    container-name: sidebar-poll;
+  }
+}
+
+@container sidebar-poll (max-width: 320px) {
+  .kei-poll-card .kei-poll__header-strip {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .kei-poll-card .kei-poll__heading {
+    font-size: 0.9375rem;
+  }
+
+  .kei-poll-card .kei-poll__body {
+    padding: 0.75rem;
+  }
+
+  .kei-poll-card .kei-poll-nudge-block {
+    margin: -0.75rem -0.75rem 0 -0.75rem;
+    padding: 0.75rem;
+  }
+
+  .kei-poll-card .kei-poll-nudge-block__copy {
+    margin-bottom: 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .kei-poll-card .kei-poll-chart__list {
+    gap: 0.5rem;
+  }
+
+  .kei-poll-card .kei-poll-chart__row {
+    gap: 0.2rem;
+  }
+
+  .kei-poll-card .kei-poll-chart__label {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+  }
+
+  .kei-poll-card .kei-poll-chart__pct {
+    min-width: 0;
+    font-size: 0.8125rem;
+  }
+
+  .kei-poll-card .kei-poll-chart__your-choice {
+    margin-left: 0;
+  }
+
+  .kei-poll-card .kei-poll__footer {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+  }
+
+  .kei-poll-card .kei-poll__total,
+  .kei-poll-card .kei-poll-change-wrap .kei-poll-change-btn {
+    font-size: 0.8125rem;
+  }
+}
+
+@container sidebar-poll (max-width: 240px) {
+  .kei-poll-card .kei-poll__header-strip {
+    padding: 0.4rem 0.6rem;
+  }
+
+  .kei-poll-card .kei-poll__heading {
+    font-size: 0.875rem;
+  }
+
+  .kei-poll-card .kei-poll__body {
+    padding: 0.5rem 0.6rem;
+  }
+
+  .kei-poll-card .kei-poll-nudge-block {
+    margin: -0.5rem -0.6rem 0 -0.6rem;
+    padding: 0.5rem 0.6rem;
+  }
+
+  .kei-poll-card .kei-poll-chart__bar-wrap {
+    height: 5px;
+    min-height: 5px;
+  }
 }
 
 .legislator-brief-sidebar__stay-informed {

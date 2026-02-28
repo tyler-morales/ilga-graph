@@ -10,7 +10,7 @@ This doc summarizes the DB implementation, potential issues, and how tests verif
 |-----------|------|
 | **db.py** | Async SQLite engine (`ILGA_DB_PATH`), `init_db()` (Alembic upgrade head, or fallback create_all + ALTERs), `get_db()` FastAPI dependency |
 | **alembic/** | Versioned migrations; `alembic upgrade head` creates/updates schema. Schema version stored in `alembic_version` table. |
-| **db_models.py** | `User` (id, email, **zip_code**, created_at, last_login_at), `AuthCode`, **Campaign** (title, message, ask, target_type, target_member_ids/target_district_ids, is_active, start_at/end_at), `OutreachEvent` (**campaign_id** nullable FK), **OutreachStepEvent** (funnel checkpoints; **session_id** nullable for anonymous), `CommunityMemberEmail` (community-sourced legislator emails; SQLAlchemy ORM) |
+| **db_models.py** | `User` (id, email, **zip_code**, **kei_status**, **welcome_email_sent_at**, created_at, last_login_at), `AuthCode`, **Campaign** (title, message, ask, target_type, target_member_ids/target_district_ids, is_active, start_at/end_at), `OutreachEvent` (**campaign_id** nullable FK), **OutreachStepEvent** (funnel checkpoints; **session_id** nullable for anonymous), `CommunityMemberEmail` (community-sourced legislator emails), **KeiPollResponse** (id, user_id nullable, session_id nullable, kei_status, created_at; one row per kei poll submission) — SQLAlchemy ORM |
 | **outreach_steps.py** | Canonical step slugs for call (answered + no-answer) and email flows; `is_valid_step()` for validation |
 | **routers/auth.py** | Request code, verify code (optional anon_session_id for attribution), logout, `/me` |
 | **routers/outreach.py** | Record event, **record step** (POST /outreach/step, accepts anonymous session_id), stats by member, my-history |
@@ -20,16 +20,17 @@ This doc summarizes the DB implementation, potential issues, and how tests verif
 
 ## Data flow: how the DB gets full and how it's read
 
-**Single SQLite file** per process. Path: `ILGA_DB_PATH` (profile default: dev → `data/ilga_dev.db`, prod → `data/ilga.db`). One async engine in `db.py`; all app code uses `get_db()`.
+**Single SQLite file** per process. Path: `ILGA_DB_PATH` (profile default: dev → `data/ilga_dev.db`, prod → `data/ilga.db`). One async engine in `db.py`; all app code uses `get_db()`. The **kei poll** uses this same DB: table `kei_poll_responses` is created by migration `20260228110000`. On app startup, `init_db()` runs Alembic to head (or fallback `create_all`), so the table exists in both dev and prod as long as the app has run once or migrations have been run manually (e.g. `make dev` runs `alembic upgrade head` before uvicorn).
 
 ### Write paths (how the DB gets data)
 
 | Source | Tables | When |
 |--------|--------|------|
-| **Auth** | `auth_codes`, then `users` (and `auth_codes.used`) | POST /auth/request-code → POST /auth/verify-code |
+| **Auth** | `auth_codes`, then `users` (and `auth_codes.used`); on first sign-in, welcome email sent and `users.welcome_email_sent_at` set | POST /auth/request-code → POST /auth/verify-code |
 | **Outreach (in-app)** | `outreach_events` | Logged-in user records call/email/no_answer via POST /outreach/record; optional **campaign_id** (validated against active campaign) stored for attribution |
 | **Outreach steps (funnel)** | `outreach_step_events` | Logged-in user: client POST /outreach/step (member_id, outreach_type, step_slug); server inserts with user_id. **Anonymous:** same endpoint with optional session_id; when unauthenticated and session_id valid, server inserts with user_id=NULL, session_id set. Server also inserts step when recording call/email/no_answer (call_recorded, email_recorded, no_answer_recorded). Step slugs in `outreach_steps.py`. Column `session_id` (String(64), nullable) added for anonymous funnel; attribution on sign-in backfills session_id → user_id. |
 | **Community emails** | `community_member_emails` | When recording a call (POST /outreach/record, kind=call) with optional `legislator_email`, and member has no public email, one row per (member_id, email, user_id); used to pre-fill drawer for next constituent |
+| **State of kei** | `users.kei_status` | Two-step poll: (1) “Do you have a kei vehicle?” Yes/No; (2) if Yes → registration status (registered/revoked/denied), if No → would/wouldn’t want one. POST /updates/kei-status: **every** submission inserts one row into `kei_poll_responses` (user_id if logged-in, optional session_id if anonymous). **Logged-in:** also set `users.kei_status`. **Anonymous:** no user row created/updated; response shows thanks, aggregate results (verified only), nudge + inline sign-in to “Sign in to add your vote.” **Poll results count only verified users** (last_login_at IS NOT NULL). GET /updates/kei-status-results returns counts by kei_status for verified users. Admin: GET /admin/poll shows verified and all-responses with pie chart + table toggle. Poll on footer, home, and /updates?prompt=kei. |
 | **Seed script** | `users`, `outreach_events` | `make seed-outreach` or `python scripts/seed_outreach.py` |
 
 - **Auth:** request-code inserts one `AuthCode`; verify-code finds it, marks used, and gets-or-creates `User`, updates `last_login_at`.
@@ -38,8 +39,8 @@ This doc summarizes the DB implementation, potential issues, and how tests verif
 
 ### Read paths (where DB data is used)
 
-- **Auth:** verify-code and GET /auth/me read `auth_codes` and `users`.
-- **Admin dashboard (ED / coalition view):** GET /admin is the single “status of the advocacy effort” view (Hardball-style for staff and board). It shows: list size (users, subscribers), outreach totals and mix (last 90d), **outreach trend** (last 7d and 30d calls/emails), conversion link (Stats → /admin/outreach), **last update sent** (date and title of most recent sent update), **active campaign** (title, end date, action count), and **top legislators by contact volume** (top 5 member_ids from OutreachEvent). No new public routes; reuse existing admin auth.
+- **Auth:** verify-code and GET /auth/me read `auth_codes` and `users`. GET /auth/me returns `kei_status`. On first sign-in (welcome_email_sent_at is None), a welcome email is sent and `welcome_email_sent_at` is set.
+- **Admin dashboard (ED / coalition view):** GET /admin is the single “status of the advocacy effort” view (Hardball-style for staff and board). It shows: list size (users, subscribers), outreach totals and mix (last 90d), **outreach trend** (last 7d and 30d calls/emails), conversion link (Stats → /admin/outreach), **last update sent** (date and title of most recent sent update), **active campaign** (title, end date, action count), and **top legislators by contact volume** (top 5 member_ids from OutreachEvent). **Poll results:** GET /admin/poll (nav "Poll") shows kei poll results: verified users (same as public) and all responses (from `kei_poll_responses`), each with pie chart + table toggle. No new public routes; reuse existing admin auth.
 - **Outreach:** GET /outreach/stats/{member_id}, GET /outreach/interest-poll/{member_id} (public), GET /outreach/my-stats and GET /outreach/my-history (auth required). **Funnel:** `outreach_step_events` is written by POST /outreach/step (and by record when recording call/email/no_answer). **Conversion report:** GET /admin/outreach/conversion (require_admin; available in prod) returns denominator (distinct identities who opened drawer in last 90 days), numerator (distinct users who completed at least one call/email in same window), and conversion_pct. See *Anonymous funnel and conversion* below.
 - **Community emails:** Advocacy drawer and wrap-up (GET /advocacy/drawer, POST /advocacy/call/{id}/wrapup) call `get_effective_email_for_member()` which reads `community_member_emails` to pre-fill recipient when member has no public email; best email = most submitters, then most recent.
 - **Advocacy:** When a logged-in user has a saved `User.zip_code` (valid and in district data), the advocacy page pre-fills the hero ZIP and runs the search without requiring a URL param. **User ZIP source of truth:** The hero zip input is search-only and never persists. The stored zip is set or updated **only** when the user clicks the zip under the sign-in strip (inline edit) or uses "Use location" and commits (PATCH /advocacy/api/me/zip). Visiting with `?zip=` or recording outreach does **not** overwrite `User.zip_code`. Drawer checks whether the current user has called this member (count from `outreach_events`). Results page builds `user_called_member_ids` / `user_emailed_member_ids` (for "Reached out" pill) and **outreach_heat** (count of distinct users who reached out per member) for the **fire pill** on each card. The **landing hero ticker** shows one number: **total outreach actions** (all time) = count of all call/email events. Copy: "Add your voice. X+ outreach actions already made."
@@ -75,7 +76,7 @@ The **fire pill** (🔥 N) in the corner of each advocacy member card is **data-
 
 1. **Startup log** — Run the app (e.g. `make dev`). In logs you should see: `Database ready at data/ilga_dev.db` (or your path). Confirms `init_db()` ran and path is correct.
 
-2. **Tables exist** — `sqlite3 data/ilga_dev.db` then `SELECT name FROM sqlite_master WHERE type='table';` — expect `users`, `auth_codes`, `outreach_events`, `outreach_step_events`, `community_member_emails`.
+2. **Tables exist** — `sqlite3 data/ilga_dev.db` then `SELECT name FROM sqlite_master WHERE type='table';` — expect `users`, `auth_codes`, `outreach_events`, `outreach_step_events`, `community_member_emails`, **`kei_poll_responses`**.
 
 3. **Auth write + read** — Request a code (POST /auth/request-code), then in DB: `SELECT * FROM auth_codes ORDER BY id DESC LIMIT 1;` — one new row. Verify code (POST /auth/verify-code); then `SELECT * FROM users;` — one user; that `auth_codes.used` = 1. GET /auth/me returns that email.
 
@@ -83,9 +84,11 @@ The **fire pill** (🔥 N) in the corner of each advocacy member card is **data-
 
 5. **Seed and app same DB** — Run app and seed with the same profile (e.g. both `ILGA_PROFILE=dev`). Open advocacy results for a ZIP that has seeded data; the **fire pill** (🔥 N) and "Reached out" state on cards should reflect seeded events. If you seed prod DB but run app in dev (different files), the pill won’t show seeded data.
 
-6. **Automated tests** — `pytest tests/test_db.py tests/test_auth_outreach.py -v` — temp DB, init_db, auth and outreach flows, schema.
+6. **Poll record + display** — **Dev:** `make dev` runs `alembic upgrade head` before starting (so `kei_poll_responses` exists). Submit the kei poll (home or /updates?prompt=kei); then `SELECT * FROM kei_poll_responses ORDER BY id DESC LIMIT 5;` — new row(s). Public results and GET /updates/kei-status-results show counts; admin GET /admin/poll shows verified + all-responses. **Prod:** Use the same DB as the app (`ILGA_DB_PATH`); run migrations once before first deploy (`PYTHONPATH=src ILGA_PROFILE=prod $(PYTHON) -m alembic upgrade head` from project root) or rely on app startup (`init_db()` runs Alembic when `alembic.ini` exists). Same path for dev (`data/ilga_dev.db`) and prod (`data/ilga.db`) is set by profile when `ILGA_DB_PATH` is unset.
 
-7. **Smoke test** — `make smoke-outreach` — in-process app, temp DB, sign-in, record call + email, assert GET /outreach/stats and GET /outreach/my-history.
+7. **Automated tests** — `pytest tests/test_db.py tests/test_auth_outreach.py tests/test_updates.py -v` — temp DB, init_db, auth and outreach flows, schema, kei poll record/display and admin poll.
+
+8. **Smoke test** — `make smoke-outreach` — in-process app, temp DB, sign-in, record call + email, assert GET /outreach/stats and GET /outreach/my-history.
 
 **Dev mode: advocacy ZIP codes** — In dev/seed mode the app uses `mocks/dev/zip_to_district.json`, which only contains ZIPs that map to the 40 mock members’ districts (~148 ZIPs). If you enter a ZIP that isn’t in that file (e.g. 60608), you’ll see “ZIP code not found”. The error message in dev suggests sample ZIPs to try (e.g. 60007, 60104, 60107). Use any of those or run `make snapshot-mocks` after a scrape to refresh the mock ZIP list.
 

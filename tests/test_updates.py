@@ -17,6 +17,7 @@ from fastapi.testclient import TestClient
 import ilga_graph.config as cfg_mod
 import ilga_graph.db as db_mod
 import ilga_graph.dependencies as deps_mod
+from ilga_graph.routers import admin as admin_router_mod
 from ilga_graph.routers import auth as auth_router_mod
 from ilga_graph.routers import updates as updates_router_mod
 from ilga_graph.security import (
@@ -53,6 +54,7 @@ def _make_test_app(db_path: Path) -> FastAPI:
 
     app.include_router(auth_router_mod.router)
     app.include_router(updates_router_mod.router)
+    app.include_router(admin_router_mod.router)
     return app
 
 
@@ -492,7 +494,7 @@ class TestSubscribeUnsubscribe:
         async def check():
             from sqlalchemy import select
 
-            from ilga_graph.db_models import User
+            from ilga_graph.db_models import KeiPollResponse, User
 
             async with db_mod.async_session_factory() as session:
                 r = await session.execute(select(User))
@@ -501,42 +503,105 @@ class TestSubscribeUnsubscribe:
                 u = next((x for x in users if x.email == "subscriber@example.com"), None)
                 assert u is not None
                 assert u.kei_status == "would_want"
+                pr = await session.execute(select(KeiPollResponse))
+                responses = list(pr.scalars().all())
+                assert len(responses) == 1
+                assert responses[0].kei_status == "would_want"
+                assert responses[0].user_id == u.id
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
             asyncio.run(check())
 
-    def test_kei_status_anonymous_with_email_creates_user(
+    def test_kei_status_anonymous_does_not_persist(
         self, client: TestClient, test_db_path: Path
     ) -> None:
-        """POST /updates/kei-status without auth but with email get-or-creates user with kei_status."""
+        """POST kei-status without auth: no user create/update; returns 200 with nudge."""
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
             importlib.reload(updates_router_mod)
         resp = client.post(
             "/updates/kei-status",
-            data={"kei_status": "registered", "email": "kei.poll@example.com"},
+            data={"kei_status": "registered"},
             headers={"HX-Request": "true"},
         )
         assert resp.status_code == 200
+        assert b"isn" in resp.content and (b"counted" in resp.content or b"Sign in" in resp.content)
 
         async def check():
             from sqlalchemy import select
 
-            from ilga_graph.db_models import User
+            from ilga_graph.db_models import KeiPollResponse, User
 
             async with db_mod.async_session_factory() as session:
-                r = await session.execute(
-                    select(User).where(User.email == "kei.poll@example.com")
-                )
-                u = r.scalar_one_or_none()
-                assert u is not None
-                assert u.kei_status == "registered"
+                r = await session.execute(select(User))
+                users = list(r.scalars().all())
+                assert not any(u.email == "kei.poll@example.com" for u in users)
+                pr = await session.execute(select(KeiPollResponse))
+                responses = list(pr.scalars().all())
+                assert len(responses) == 1
+                assert responses[0].kei_status == "registered"
+                assert responses[0].user_id is None
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
             asyncio.run(check())
+
+    def test_kei_status_anonymous_sets_voted_cookie(
+        self, client: TestClient, test_db_path: Path
+    ) -> None:
+        """POST kei-status without auth sets kei_poll_voted cookie; next visit shows results."""
+        from ilga_graph.routers.updates import KEI_POLL_VOTED_COOKIE
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            importlib.reload(updates_router_mod)
+        resp = client.post(
+            "/updates/kei-status",
+            data={"kei_status": "registered"},
+            headers={"HX-Request": "true"},
+        )
+        assert resp.status_code == 200
+        assert KEI_POLL_VOTED_COOKIE in resp.cookies
+        assert resp.cookies[KEI_POLL_VOTED_COOKIE] == "1"
+
+    def test_updates_page_shows_poll_results_when_cookie_set(
+        self, client: TestClient, test_db_path: Path
+    ) -> None:
+        """GET /updates?prompt=kei with kei_poll_voted cookie shows results, not form."""
+        from ilga_graph.routers.updates import KEI_POLL_VOTED_COOKIE
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            importlib.reload(updates_router_mod)
+        resp = client.get(
+            "/updates",
+            params={"prompt": "kei"},
+            cookies={KEI_POLL_VOTED_COOKIE: "1"},
+        )
+        assert resp.status_code == 200
+        html = resp.text
+        assert "Results" in html
+        assert "updates-kei-poll-wrap" in html
+        assert "Need to change your answer" in html
+
+    def test_updates_page_shows_poll_form_when_no_vote(
+        self, client: TestClient, test_db_path: Path
+    ) -> None:
+        """GET /updates?prompt=kei without cookie or user kei_status shows poll form."""
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            importlib.reload(updates_router_mod)
+        resp = client.get("/updates", params={"prompt": "kei"})
+        assert resp.status_code == 200
+        html = resp.text
+        assert "Do you have a kei vehicle" in html or "kei" in html.lower()
+        assert "Submit" in html
+        assert 'name="kei_status"' in html
 
     def test_kei_status_invalid_slug_returns_400(
         self, client: TestClient, test_db_path: Path
@@ -552,6 +617,55 @@ class TestSubscribeUnsubscribe:
             headers={"HX-Request": "true"},
         )
         assert resp.status_code == 400
+
+    def test_kei_poll_form_get_returns_form_html(
+        self, client: TestClient, test_db_path: Path
+    ) -> None:
+        """GET /updates/kei-poll-form returns poll form partial for change-answer flow."""
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            importlib.reload(updates_router_mod)
+        resp = client.get("/updates/kei-poll-form?poll_id=footer-kei-poll")
+        assert resp.status_code == 200
+        html = resp.text
+        assert "footer-kei-poll-wrap" in html
+        assert "Quick question" in html or "kei" in html.lower()
+        assert 'name="kei_status"' in html
+
+    def test_kei_status_results_only_verified_users(
+        self, client: TestClient, test_db_path: Path
+    ) -> None:
+        """GET /updates/kei-status-results counts only users with last_login_at set."""
+        from datetime import datetime, timezone
+
+        from ilga_graph.db_models import User
+
+        async def setup():
+            async with db_mod.async_session_factory() as session:
+                verified = User(
+                    email="verified@example.com",
+                    kei_status="registered",
+                    last_login_at=datetime.now(timezone.utc),
+                )
+                unverified = User(
+                    email="unverified@example.com",
+                    kei_status="would_want",
+                    last_login_at=None,
+                )
+                session.add(verified)
+                session.add(unverified)
+                await session.commit()
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(setup())
+        resp = client.get("/updates/kei-status-results")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total_responses"] == 1
+        assert data["by_status"]["registered"] == 1
+        assert data["by_status"]["would_want"] == 0
 
 
 class TestAdminGate:
@@ -569,6 +683,14 @@ class TestAdminGate:
         resp = admin_client.get("/admin/updates")
         assert resp.status_code == 200
         assert b"Compose" in resp.content or b"draft" in resp.content.lower()
+
+    def test_admin_poll_returns_200(self, admin_client: TestClient) -> None:
+        """GET /admin/poll returns 200 and shows verified/all sections."""
+        resp = admin_client.get("/admin/poll")
+        assert resp.status_code == 200
+        assert b"Kei poll" in resp.content or b"poll" in resp.content.lower()
+        assert b"Verified" in resp.content or b"verified" in resp.content
+        assert b"Pie" in resp.content or b"Table" in resp.content
 
 
 class TestAdminCreateAndSend:

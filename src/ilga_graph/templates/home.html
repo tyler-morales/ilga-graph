@@ -13,13 +13,6 @@
 {{ strategic_points(strategic_five_points, 'cards', 'strategic-points', 'strategic-points-heading') }}
 {% endif %}
 {% include "_mission_cta.html" %}
-{% if kei_status_options is defined and kei_status_options %}
-<section class="home-kei-poll" id="home-kei-poll" aria-labelledby="home-kei-poll-heading">
-    <h2 id="home-kei-poll-heading" class="visually-hidden">Quick question: Do you have a kei vehicle?</h2>
-    {% from "_macros.html" import kei_poll %}
-    {{ kei_poll('home-kei-poll', show_email=true) }}
-</section>
-{% endif %}
 {% from "_macros.html" import share_buttons %}
 {{ share_buttons('full') }}
 {# On mobile, session pill moves below share (see base.css .session-pill-mobile-wrap) #}

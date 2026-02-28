@@ -17,9 +17,14 @@ from .. import advocacy_helpers as ah
 from .. import config as cfg
 from ..app_state import state
 from ..campaign_helpers import campaign_outreach_count, get_active_campaign
-from ..constants import CATEGORY_COMMITTEES, GENERAL_COMMITTEE_CODES, KEI_STATUS_OPTIONS
+from ..constants import (
+    CATEGORY_COMMITTEES,
+    GENERAL_COMMITTEE_CODES,
+    KEI_STATUS_OPTIONS,
+    KEI_STATUS_SLUGS,
+)
 from ..db import get_db
-from ..db_models import OutreachEvent, OutreachStepEvent, Update, User
+from ..db_models import KeiPollResponse, OutreachEvent, OutreachStepEvent, Update, User
 from ..dependencies import get_current_user_optional, require_admin
 from ..member_lookup import find_member_by_district, find_member_by_id
 from ..routers.content import STRATEGIC_FIVE_POINTS
@@ -458,6 +463,57 @@ async def admin_outreach_page(
     return templates.TemplateResponse(
         "admin_outreach.html",
         {"request": request, "conversion_data": data},
+    )
+
+
+async def _get_kei_poll_results(db: AsyncSession) -> dict[str, Any]:
+    """Verified-only kei poll counts (from User). For admin display."""
+    result = await db.execute(
+        select(User.kei_status, func.count())
+        .where(User.kei_status.isnot(None))
+        .where(User.last_login_at.isnot(None))
+        .group_by(User.kei_status)
+    )
+    by_status: dict[str, int] = {row[0]: row[1] for row in result.all()}
+    total = sum(by_status.values())
+    return {
+        "by_status": {slug: by_status.get(slug, 0) for slug in KEI_STATUS_SLUGS},
+        "total_responses": total,
+    }
+
+
+async def _get_kei_poll_all_responses(db: AsyncSession) -> dict[str, Any]:
+    """All kei poll response counts (from kei_poll_responses table)."""
+    result = await db.execute(
+        select(KeiPollResponse.kei_status, func.count())
+        .where(KeiPollResponse.kei_status.isnot(None))
+        .group_by(KeiPollResponse.kei_status)
+    )
+    by_status: dict[str, int] = {row[0]: row[1] for row in result.all()}
+    total = sum(by_status.values())
+    return {
+        "by_status": {slug: by_status.get(slug, 0) for slug in KEI_STATUS_SLUGS},
+        "total_responses": total,
+    }
+
+
+@router.get("/admin/poll", include_in_schema=False)
+async def admin_poll_page(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+):
+    """Kei poll results: verified users and all responses; pie chart + table toggle."""
+    verified = await _get_kei_poll_results(db)
+    all_responses = await _get_kei_poll_all_responses(db)
+    return templates.TemplateResponse(
+        "admin_poll.html",
+        {
+            "request": request,
+            "verified": verified,
+            "all_responses": all_responses,
+            "kei_status_options": KEI_STATUS_OPTIONS,
+        },
     )
 
 

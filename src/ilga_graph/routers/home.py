@@ -12,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import config as cfg
 from ..constants import KEI_STATUS_OPTIONS
 from ..db import get_db
+from ..db_models import User
+from ..dependencies import get_current_user_optional
 from ..routers.advocacy import DEFAULT_HERO_ZIP, _hero_context
 from ..routers.content import (
     HERO_CLARITY_LINE,
@@ -27,6 +29,7 @@ from ..routers.content import (
     get_strategic_states_tooltips,
 )
 from ..routers.outreach import get_outreach_aggregate
+from ..routers.updates import get_kei_poll_initial_state
 from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -67,6 +70,7 @@ templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 async def home(
     request: Request,
     db: AsyncSession = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
 ) -> Any:
     """Render home page: home hero, links to /the-issue and /legislator-brief; form → /advocacy/."""
     try:
@@ -89,4 +93,7 @@ async def home(
         "strategic_states_tooltips": get_strategic_states_tooltips(),
         "why_you_care_variant": "home",
     }
+    poll_state = await get_kei_poll_initial_state(request, user, db)
+    ctx.update(poll_state)
+    ctx["poll_id"] = "home-kei-poll"
     return templates.TemplateResponse("home.html", ctx)

@@ -1,0 +1,95 @@
+{# Renders pie chart + table toggle for a single dataset (verified or all). Expects: data (by_status, total_responses), kei_status_options, view_id (unique id for this block). #}
+{% set total = data.total_responses %}
+<div class="admin-poll-view" id="admin-poll-view-{{ view_id }}" data-view="pie" role="group" aria-label="View as pie chart or table">
+  <div class="admin-poll-view-toggle">
+    <button type="button" class="admin-poll-view-btn admin-poll-view-btn--active" data-view="pie" aria-pressed="true" aria-controls="admin-poll-pie-{{ view_id }} admin-poll-table-{{ view_id }}">Pie</button>
+    <button type="button" class="admin-poll-view-btn" data-view="table" aria-pressed="false" aria-controls="admin-poll-pie-{{ view_id }} admin-poll-table-{{ view_id }}">Table</button>
+  </div>
+
+  <div class="admin-poll-panel admin-poll-panel--pie" id="admin-poll-pie-{{ view_id }}" role="region" aria-label="Pie chart">
+    {% if total and total > 0 %}
+    {% set segment_colors = ['#4f46e5', '#059669', '#d97706', '#dc2626', '#6b7280'] %}
+    <div class="admin-poll-pie-wrap" role="img" aria-label="Pie chart of poll results by option">
+      <div class="admin-poll-pie" style="background: conic-gradient(
+        {% set ns = namespace(cum=0) %}
+        {% for slug, label in kei_status_options %}
+          {% set count = data.by_status.get(slug, 0) %}
+          {% set pct = (count / total * 100)|round(1) if total else 0 %}
+          {{ segment_colors[loop.index0 % 5] }} {{ (ns.cum * 3.6)|round(1) }}deg {{ ((ns.cum + pct) * 3.6)|round(1) }}deg{% if not loop.last %}, {% endif %}
+          {% set ns.cum = ns.cum + pct %}
+        {% endfor %}
+      );"></div>
+    </div>
+    <ul class="admin-poll-legend" role="list" aria-label="Poll results by option">
+      {% for slug, label in kei_status_options %}
+        {% set count = data.by_status.get(slug, 0) %}
+        {% set pct = (count / total * 100)|round(1) if total else 0 %}
+        <li class="admin-poll-legend-item">
+          <span class="admin-poll-legend-swatch" style="background: {{ segment_colors[loop.index0 % segment_colors|length] }};" aria-hidden="true"></span>
+          <span class="admin-poll-legend-label">{{ label }}</span>
+          <span class="admin-poll-legend-count" aria-label="{{ count }} responses">{{ count }}</span>
+          <span class="admin-poll-legend-pct">({{ pct }}%)</span>
+        </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="admin-poll-empty">No responses yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="admin-poll-panel admin-poll-panel--table" id="admin-poll-table-{{ view_id }}" role="region" aria-label="Table view" hidden>
+    {% if total and total > 0 %}
+    <div class="admin-poll-table-wrap">
+      <table class="admin-poll-table">
+        <thead>
+          <tr>
+            <th scope="col">Option</th>
+            <th scope="col">Count</th>
+            <th scope="col">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for slug, label in kei_status_options %}
+            {% set count = data.by_status.get(slug, 0) %}
+            {% set pct = (count / total * 100)|round(1) if total else 0 %}
+          <tr>
+            <td>{{ label }}</td>
+            <td>{{ count }}</td>
+            <td>{{ pct }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="admin-poll-total">Total: <strong>{{ total }}</strong></p>
+    {% else %}
+    <p class="admin-poll-empty">No responses yet.</p>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+(function() {
+  var viewId = '{{ view_id }}';
+  var container = document.getElementById('admin-poll-view-' + viewId);
+  if (!container || window.__adminPollBound && window.__adminPollBound[viewId]) return;
+  if (!window.__adminPollBound) window.__adminPollBound = {};
+  window.__adminPollBound[viewId] = true;
+  var toggles = container.querySelectorAll('.admin-poll-view-btn');
+  var piePanel = document.getElementById('admin-poll-pie-' + viewId);
+  var tablePanel = document.getElementById('admin-poll-table-' + viewId);
+  toggles.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var view = btn.getAttribute('data-view');
+      container.setAttribute('data-view', view);
+      toggles.forEach(function(b) {
+        var active = b.getAttribute('data-view') === view;
+        b.setAttribute('aria-pressed', active ? 'true' : 'false');
+        b.classList.toggle('admin-poll-view-btn--active', active);
+      });
+      if (piePanel) piePanel.hidden = view !== 'pie';
+      if (tablePanel) tablePanel.hidden = view !== 'table';
+    });
+  });
+})();
+</script>

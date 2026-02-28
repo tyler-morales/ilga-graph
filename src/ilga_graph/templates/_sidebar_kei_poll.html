@@ -1,0 +1,7 @@
+{# Sidebar Kei poll: same poll_id (sidebar-kei-poll) on all pages so state matches. Renders form or results. #}
+{% if kei_poll_done %}
+{% include "_kei_poll_initial_results.html" %}
+{% else %}
+{% from "_macros.html" import kei_poll %}
+{{ kei_poll('sidebar-kei-poll', show_email=false, kei_status_total=kei_status_total|default(none)) }}
+{% endif %}

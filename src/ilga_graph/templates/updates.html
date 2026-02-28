@@ -17,8 +17,12 @@
     {% elif kei_error %}
     <p class="kei-status-error" role="alert">Please choose an option{% if kei_error == 'email' %} and enter a valid email{% endif %}.</p>
     {% endif %}
+    {% if kei_poll_done %}
+    {% include "_kei_poll_initial_results.html" %}
+    {% else %}
     {% from "_macros.html" import kei_poll %}
-    {{ kei_poll('updates-kei-poll', show_email=(not user)) }}
+    {{ kei_poll('updates-kei-poll') }}
+    {% endif %}
 </section>
 {% endif %}
 {% if active_campaign %}

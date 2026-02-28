@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Kei poll results — Admin — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="admin-poll-page">
+  <header class="admin-poll-header">
+    <h1 id="admin-poll-heading">Kei poll results</h1>
+    {% include "_admin_nav.html" %}
+  </header>
+
+  <section class="admin-poll-section" aria-labelledby="admin-poll-verified-heading">
+    <h2 id="admin-poll-verified-heading" class="admin-poll-section-heading">Verified users</h2>
+    <p class="admin-poll-section-note">Users who have signed in at least once. This is what the public results show.</p>
+    {% set data = verified %}
+    {% set view_id = 'verified' %}
+    {% include "_admin_poll_chart_and_table.html" %}
+  </section>
+
+  <section class="admin-poll-section" aria-labelledby="admin-poll-all-heading">
+    <h2 id="admin-poll-all-heading" class="admin-poll-section-heading">All responses</h2>
+    <p class="admin-poll-section-note">Every submission (including anonymous). For internal insight only.</p>
+    {% set data = all_responses %}
+    {% set view_id = 'all' %}
+    {% include "_admin_poll_chart_and_table.html" %}
+  </section>
+</div>
+{% endblock %}

@@ -156,6 +156,9 @@
             {% endfor %}
         </ul>
         {% endif %}
+        <section class="legislator-brief-sidebar__poll" aria-labelledby="sidebar-kei-poll-heading">
+            {% include "_sidebar_kei_poll.html" %}
+        </section>
         {{ share_buttons('sidebar', 'issue-share', 'constituent') }}
         <section class="legislator-brief-sidebar__stay-informed" id="issue-stay-informed" aria-labelledby="issue-stay-informed-heading">
             <h2 id="issue-stay-informed-heading" class="legislator-brief-sidebar__subtitle">Stay informed</h2>

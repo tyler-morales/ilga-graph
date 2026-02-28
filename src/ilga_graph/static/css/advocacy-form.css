@@ -497,10 +497,16 @@
   margin: 0;
 }
 
-.auth-strip {
+.auth-strip,
+#auth-strip {
   font-size: var(--font-size-sm);
   color: #555;
   margin-top: 8px;
+}
+
+#auth-strip {
+  container-type: inline-size;
+  container-name: signin-inline;
 }
 
 .auth-strip-signed-in {
@@ -765,30 +771,94 @@
   color: #333;
 }
 
-/* ── Desktop: code step stacked so error/actions don't sit inline with Confirm ── */
-@media (min-width: 769px) {
-  #hero-signin-state-code {
+/* ── Inline sign-in: container query for wide layout (hero or poll card) ── */
+@container signin-inline (min-width: 400px) {
+  .hero-signin-inline [id$="-signin-state-code"] {
     flex-direction: column;
     align-items: center;
     gap: 10px;
   }
 
-  #hero-signin-state-code .hero-signin-code-hint {
+  .hero-signin-inline [id$="-signin-state-code"] .hero-signin-code-hint {
     text-align: center;
   }
 
-  #hero-signin-state-code .hero-signin-error {
+  .hero-signin-inline [id$="-signin-state-code"] .hero-signin-error {
     margin-top: 2px;
     text-align: left;
     max-width: 320px;
   }
 
-  #hero-signin-state-code .hero-signin-resend {
+  .hero-signin-inline [id$="-signin-state-code"] .hero-signin-resend {
     text-align: center;
   }
 
   .hero-signin-inline .hero-signin-cancel {
     margin-top: 12px;
+  }
+}
+
+/* ── Inline sign-in: narrow container (e.g. poll card) — stacked, full-width ── */
+@container signin-inline (max-width: 399px) {
+  .hero-signin-inline {
+    align-items: stretch;
+    text-align: left;
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .hero-signin-inline .hero-signin-state {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .hero-signin-inline .hero-signin-code-hint,
+  .hero-signin-inline .hero-signin-error {
+    text-align: left;
+  }
+
+  .hero-signin-inline .hero-signin-resend {
+    text-align: left;
+  }
+
+  .hero-signin-inline .hero-signin-cancel {
+    margin-top: 8px;
+    text-align: left;
+  }
+
+  .hero-signin-inline .hero-signin-state.hero-signin-state-visible {
+    align-items: stretch;
+  }
+
+  .hero-signin-inline .hero-signin-input {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .hero-signin-inline .hero-signin-state .hero-signin-btn {
+    width: 100%;
+  }
+
+  .hero-signin-inline .hero-signin-code-row {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .hero-signin-inline .hero-signin-code-row .hero-signin-code-input {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .hero-signin-inline .hero-signin-code-row .hero-signin-btn {
+    width: 100%;
   }
 }
 
@@ -1092,68 +1162,6 @@
     margin-top: 6px;
     padding-top: 6px;
     border-top: 1px solid #eee;
-  }
-
-  /* Hero sign-in flow: full-width inputs/buttons, left-aligned text, tighter spacing on mobile */
-  .hero-signin-inline {
-    align-items: stretch;
-    text-align: left;
-    width: 100%;
-    margin-top: 10px;
-  }
-
-  .hero-signin-inline .hero-signin-state {
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-    width: 100%;
-    gap: 8px;
-  }
-
-  .hero-signin-inline .hero-signin-code-hint,
-  .hero-signin-inline .hero-signin-error {
-    text-align: left;
-  }
-
-  .hero-signin-inline .hero-signin-resend {
-    text-align: left;
-  }
-
-  .hero-signin-inline .hero-signin-cancel {
-    margin-top: 8px;
-    text-align: left;
-  }
-
-  .hero-signin-inline .hero-signin-state.hero-signin-state-visible {
-    align-items: stretch;
-  }
-
-  .hero-signin-inline .hero-signin-input {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-  }
-
-  .hero-signin-inline .hero-signin-state .hero-signin-btn {
-    width: 100%;
-  }
-
-  .hero-signin-inline .hero-signin-code-row {
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-    width: 100%;
-    gap: 8px;
-  }
-
-  .hero-signin-inline .hero-signin-code-row .hero-signin-code-input {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-  }
-
-  .hero-signin-inline .hero-signin-code-row .hero-signin-btn {
-    width: 100%;
   }
 
   .outreach-btn {
