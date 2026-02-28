@@ -1,0 +1,258 @@
+/**
+ * Why should you care — home (teaser + image marquee) and The Issue (full intro + voice).
+ * Marquee: scrolling images of affected kei owners (placeholder until real stories); seamless loop, respects reduced motion.
+ */
+
+.why-you-care {
+  margin-top: 0;
+  padding: 1.5rem 0;
+  border-top: 1px solid var(--color-border-light, #e5e5e5);
+}
+
+.page-home .why-you-care {
+  padding-top: var(--home-section-padding-block, 2rem);
+  padding-bottom: var(--home-section-padding-block, 2rem);
+}
+
+/* Header: clear hierarchy, readable line length. Narrower measure to avoid orphans. */
+.why-you-care-header {
+  max-width: min(var(--max-width-hero, 680px), 52ch);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.why-you-care-title {
+  font-size: var(--font-size-h1, 1.6rem);
+  font-weight: 700;
+  color: var(--color-text, #222);
+  margin: 0 0 1rem 0;
+  letter-spacing: -0.02em;
+  line-height: var(--line-height-tight, 1.25);
+}
+
+.page-home .why-you-care-title {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  margin-bottom: 1.25rem;
+}
+
+.why-you-care-teaser-list {
+  margin: 0 0 1rem 0;
+  padding-left: 1.5em;
+  font-size: var(--font-size-body, 1rem);
+  color: var(--color-text-secondary, #555);
+  line-height: 1.75;
+}
+
+.why-you-care-teaser-item {
+  margin-bottom: 0.5em;
+}
+
+.why-you-care-teaser-item:last-child {
+  margin-bottom: 0;
+}
+
+.why-you-care-intro,
+.why-you-care-voice {
+  font-size: var(--font-size-body, 1rem);
+  color: var(--color-text-secondary, #555);
+  line-height: 1.75;
+  margin: 0 0 1rem 0;
+}
+
+/* Home: larger teaser list and CTA so they read at a glance */
+.page-home .why-you-care-teaser-list {
+  font-size: 1.2rem;
+  line-height: 1.7;
+  margin-bottom: 1.25rem;
+}
+
+.page-home .why-you-care-teaser-item {
+  margin-bottom: 0.6em;
+}
+
+.page-home .why-you-care-cta {
+  margin: 1.5rem 0 0 0;
+  font-size: 1.2rem;
+  line-height: 1.7;
+}
+
+.why-you-care-voice {
+  margin-bottom: 0;
+}
+
+.why-you-care-cta {
+  margin: 1.5rem 0 0 0;
+  font-size: var(--font-size-body, 1rem);
+  line-height: 1.7;
+}
+
+.why-you-care-link {
+  color: var(--color-link, #0645ad);
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+.page-home .why-you-care-link {
+  font-size: inherit;
+}
+
+.why-you-care-link:hover {
+  text-decoration: none;
+}
+
+.why-you-care-link:focus {
+  outline: 2px solid var(--color-border-focus, #333);
+  outline-offset: 2px;
+}
+
+/* The Issue: subsection styling when inside brief_main */
+.why-you-care--full .why-you-care-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.why-you-care--full .why-you-care-intro,
+.why-you-care--full .why-you-care-voice {
+  margin-bottom: 0.5rem;
+}
+
+/* ── Marquee: scrolling strip of images (affected kei owners). Duplicate strip = seamless loop. ── */
+.why-you-care-marquee {
+  margin-top: var(--space-2xl, 1.5rem);
+  overflow: hidden;
+  width: 100%;
+  padding: var(--space-md, 12px) 0;
+  position: relative;
+}
+
+/* Pause on hover (mouse) and when paused via control (keyboard/screen reader). */
+.why-you-care-marquee:hover .why-you-care-marquee-track,
+.why-you-care-marquee.why-you-care-marquee--paused .why-you-care-marquee-track {
+  animation-play-state: paused;
+}
+
+.why-you-care-marquee-track {
+  display: flex;
+  width: max-content;
+  gap: 0;
+  animation: why-you-care-marquee-scroll 50s linear infinite;
+}
+
+.why-you-care-marquee-strip {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-lg, 16px);
+  padding: 0 var(--space-lg, 16px);
+  flex-shrink: 0;
+}
+
+.why-you-care-marquee-item {
+  flex-shrink: 0;
+  margin: 0;
+  width: 280px;
+  overflow: hidden;
+}
+
+.why-you-care-marquee-item img {
+  display: block;
+  width: 100%;
+  height: 187px;
+  object-fit: cover;
+  vertical-align: middle;
+}
+
+.why-you-care-marquee-caption {
+  margin: 0;
+  padding: var(--space-sm, 8px) var(--space-md, 12px) var(--space-md, 12px);
+  font-size: var(--font-size-xs, 0.8125rem);
+  line-height: 1.35;
+  color: var(--color-text-secondary, #555);
+}
+
+@media (min-width: 640px) {
+  .why-you-care-marquee-item {
+    width: 320px;
+  }
+  .why-you-care-marquee-item img {
+    height: 213px;
+  }
+}
+
+@keyframes why-you-care-marquee-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* Pause control: visually hidden until keyboard focus (tabbing); hidden when motion is already reduced */
+.why-you-care-marquee-control-wrap {
+  position: absolute;
+  top: var(--space-md, 12px);
+  right: var(--space-md, 12px);
+  z-index: 1;
+}
+
+/* Visually hidden until keyboard focus; then shows as a normal pause/resume button. */
+.why-you-care-marquee-control {
+  padding: var(--space-sm, 8px) var(--space-md, 12px);
+  font-size: var(--font-size-xs, 0.8125rem);
+  font-weight: 500;
+  color: var(--color-text-secondary, #555);
+  background: var(--color-bg-card, #fff);
+  border: 1px solid var(--color-border-light, #e5e5e5);
+  border-radius: 6px;
+  cursor: pointer;
+  position: absolute;
+  /* Visually hide but keep in tab order; clip-path works where clip is deprecated. */
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.why-you-care-marquee-control:hover {
+  color: var(--color-text, #222);
+  border-color: var(--color-border, #ccc);
+}
+
+/* When tabbed to: show as a normal play/pause button with visible focus ring. */
+.why-you-care-marquee-control:focus-visible {
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: var(--space-sm, 8px) var(--space-md, 12px);
+  overflow: visible;
+  clip-path: none;
+  white-space: normal;
+  border-width: 1px;
+  outline: 2px solid var(--color-border-focus, #333);
+  outline-offset: 2px;
+}
+
+/* Respect reduced motion: no auto-scroll; show first strip only, allow manual horizontal scroll; hide pause control */
+@media (prefers-reduced-motion: reduce) {
+  .why-you-care-marquee-control-wrap {
+    display: none;
+  }
+  .why-you-care-marquee-track {
+    animation: none;
+  }
+  .why-you-care-marquee-strip--dup {
+    display: none;
+  }
+  .why-you-care-marquee {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .why-you-care-marquee-track {
+    padding-right: var(--space-2xl, 24px);
+  }
+}

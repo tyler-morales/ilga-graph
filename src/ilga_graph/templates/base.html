@@ -32,9 +32,10 @@
     <link rel="stylesheet" href="/static/css/advocacy-email.css">
     <link rel="stylesheet" href="/static/css/advocacy-cards.css">
     <link rel="stylesheet" href="/static/css/magnify-lens.css">
-    <link rel="stylesheet" href="/static/css/whats-happening.css">
+    <link rel="stylesheet" href="/static/css/why-you-care.css">
     <link rel="stylesheet" href="/static/css/mission-statement.css">
     <link rel="stylesheet" href="/static/css/strategic-points.css">
+    <link rel="stylesheet" href="/static/css/timeline.css">
     {% if features.get('message_marquee') %}
     <link rel="stylesheet" href="/static/css/message-marquee.css">
     {% endif %}
@@ -52,20 +53,24 @@
     <script src="https://unpkg.com/htmx.org@2.0.4"
         integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
         crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.0.0/dist/iconify-icon.min.js" async crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.0.0/dist/iconify-icon.min.js" async
+        crossorigin="anonymous"></script>
 </head>
 
 <body class="{% block body_class %}{% endblock %}">
     {% if show_beta_banner %}
     <div class="beta-banner" id="beta-banner" role="region" aria-label="Beta notice">
-        <button type="button" class="beta-banner-emoji" id="beta-banner-emoji-btn" aria-label="Celebrate with confetti">🎉</button>
-        <span class="beta-banner-pill" aria-hidden="true">Beta</span>
+        <button type="button" class="beta-banner-emoji" id="beta-banner-emoji-btn"
+            aria-label="Celebrate with confetti">🎉</button>
+        <span class="beta-banner-pill" aria-hidden="true">BETA</span>
         <span class="beta-banner-text">You're early — we're in beta. Thanks for being here.</span>
-        <button type="button" class="beta-banner-dismiss" id="beta-banner-dismiss" aria-label="Dismiss beta notice">&times;</button>
+        <button type="button" class="beta-banner-dismiss" id="beta-banner-dismiss"
+            aria-label="Dismiss beta notice">&times;</button>
     </div>
     <script>
-        (function() {
+        (function () {
             var key = 'ilga_beta_banner_dismissed';
             var el = document.getElementById('beta-banner');
             if (!el) return;
@@ -73,17 +78,17 @@
                 el.classList.add('beta-banner--dismissed');
                 return;
             }
-            document.getElementById('beta-banner-dismiss').addEventListener('click', function() {
+            document.getElementById('beta-banner-dismiss').addEventListener('click', function () {
                 sessionStorage.setItem(key, '1');
                 el.classList.add('beta-banner--dismissed');
             });
             var emojiBtn = document.getElementById('beta-banner-emoji-btn');
             if (emojiBtn && typeof confetti === 'function') {
-                emojiBtn.addEventListener('click', function() {
+                emojiBtn.addEventListener('click', function () {
                     var rect = emojiBtn.getBoundingClientRect();
                     var origin = { x: (rect.left + rect.width / 2) / window.innerWidth, y: (rect.top + rect.height / 2) / window.innerHeight };
                     confetti({ origin: origin, spread: 100, startVelocity: 28, particleCount: 80, colors: ['#f59e0b', '#fcd34d', '#fde68a', '#fef3c7', '#b45309', '#92400e'] });
-                    setTimeout(function() {
+                    setTimeout(function () {
                         confetti({ origin: origin, spread: 70, startVelocity: 25, particleCount: 50, scalar: 1.1, colors: ['#f59e0b', '#fcd34d', '#b45309'] });
                     }, 150);
                 });
@@ -91,6 +96,37 @@
         })();
     </script>
     {% endif %}
+    {% set active_campaign = active_campaign if active_campaign is defined else (get_current_action_campaign(request) if
+    request is defined else none) %}
+    {% block current_action_banner %}
+    {% include "_current_action_banner.html" %}
+    {% endblock %}
+    <script>
+        (function () {
+            function initActionBannerDismiss() {
+                document.querySelectorAll('.current-action-banner').forEach(function (banner) {
+                    var key = banner.getAttribute('data-dismiss-key');
+                    if (!key) return;
+                    if (sessionStorage.getItem(key) === '1') {
+                        banner.classList.add('current-action-banner--dismissed');
+                        return;
+                    }
+                    var dismiss = banner.querySelector('.current-action-banner-dismiss');
+                    if (dismiss) {
+                        dismiss.addEventListener('click', function () {
+                            sessionStorage.setItem(key, '1');
+                            banner.classList.add('current-action-banner--dismissed');
+                        });
+                    }
+                });
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initActionBannerDismiss);
+            } else {
+                initActionBannerDismiss();
+            }
+        })();
+    </script>
     {% if features.get('message_marquee') and strategic_five_points %}
     <div class="message-marquee" role="region" aria-label="Our message in 5 points">
         <div class="message-marquee__track">
@@ -100,11 +136,14 @@
         </div>
     </div>
     {% endif %}
-    <div id="connection-error-banner" class="connection-error-banner" role="alert" aria-live="polite" aria-hidden="true" hidden>
+    <div id="connection-error-banner" class="connection-error-banner" role="alert" aria-live="polite" aria-hidden="true"
+        hidden>
         <span class="connection-error-banner-text">We're having trouble. Check your connection and try again.</span>
-        <button type="button" class="connection-error-banner-dismiss" id="connection-error-banner-dismiss" aria-label="Dismiss">×</button>
+        <button type="button" class="connection-error-banner-dismiss" id="connection-error-banner-dismiss"
+            aria-label="Dismiss">×</button>
     </div>
-    <div id="offline-indicator" class="connection-error-banner offline-indicator" role="status" aria-live="polite" aria-hidden="true" hidden>
+    <div id="offline-indicator" class="connection-error-banner offline-indicator" role="status" aria-live="polite"
+        aria-hidden="true" hidden>
         <span class="connection-error-banner-text">You're offline.</span>
     </div>
     <script>
@@ -151,13 +190,15 @@
         })();
     </script>
     <div class="container">
+        {% include "_session_pill.html" %}
         <main id="main-content" role="main">
             {% block content %}{% endblock %}
         </main>
         <footer class="footer" role="contentinfo">
             <p class="footer-brand">{{ site_name }}</p>
             <p class="footer-facebook">
-                <a href="https://www.facebook.com/groups/690646129984408" target="_blank" rel="noopener noreferrer">Join the Facebook group</a>
+                <a href="https://www.facebook.com/groups/690646129984408" target="_blank" rel="noopener noreferrer">Join
+                    the Facebook group</a>
             </p>
             <nav class="footer-nav footer-nav-primary" aria-label="Main">
                 <a href="/">Home</a>
@@ -170,7 +211,11 @@
                 <span class="footer-nav-sep" aria-hidden="true"> · </span>
                 <a href="/fact-sheet">Fact sheet</a>
                 <span class="footer-nav-sep" aria-hidden="true"> · </span>
+                <a href="/glossary">Glossary</a>
+                <span class="footer-nav-sep" aria-hidden="true"> · </span>
                 <a href="/updates">Updates</a>
+                <span class="footer-nav-sep" aria-hidden="true"> · </span>
+                <a href="/timeline">Timeline</a>
             </nav>
             <nav class="footer-nav footer-nav-secondary" aria-label="Legal and support">
                 {% if show_beta_banner %}
@@ -179,10 +224,25 @@
                 {% endif %}
                 <a href="/terms">Terms</a>
             </nav>
-            <p class="footer-disclaimer">Not affiliated with the Illinois General Assembly. Information here is for advocacy and educational purposes only.</p>
-            <p class="footer-usage-notice">We use minimal usage data to improve the service. <a href="/privacy">Privacy policy</a>.</p>
+            <div class="footer-get-updates" id="footer-email-subscribe-wrap"
+                aria-labelledby="footer-get-updates-heading">
+                <h2 id="footer-get-updates-heading" class="visually-hidden">Get updates</h2>
+                <form action="/updates/subscribe-email" method="post" class="footer-subscribe-form"
+                    hx-post="/updates/subscribe-email" hx-target="#footer-email-subscribe-wrap" hx-swap="innerHTML"
+                    aria-label="Subscribe to campaign updates by email">
+                    <label for="footer-subscribe-email-input" class="visually-hidden">Your email</label>
+                    <input type="email" id="footer-subscribe-email-input" name="email" class="footer-subscribe-input"
+                        placeholder="Your email" required autocomplete="email" inputmode="email" maxlength="320">
+                    <button type="submit" class="footer-subscribe-btn">Subscribe</button>
+                </form>
+            </div>
+            <p class="footer-disclaimer">Not affiliated with the Illinois General Assembly. Information here is for
+                advocacy and educational purposes only.</p>
+            <p class="footer-usage-notice">We use minimal usage data to improve the service. <a href="/privacy">Privacy
+                    policy</a>.</p>
             {% if footer_last_updated %}
-            <p class="footer-last-updated">Last updated: <time datetime="{{ footer_last_updated_iso }}">{{ footer_last_updated }}</time></p>
+            <p class="footer-last-updated">Last updated: <time datetime="{{ footer_last_updated_iso }}">{{
+                    footer_last_updated }}</time></p>
             {% endif %}
         </footer>
     </div>
@@ -502,6 +562,50 @@
         })();
     </script>
     {% endif %}
+    <script>
+        (function () {
+            function getGlossaryContent(wrap) {
+                var contentEl = wrap && wrap.querySelector('.tooltip-content.glossary-inline-def');
+                if (!contentEl) return document.createElement('span');
+                var clone = contentEl.cloneNode(true);
+                clone.removeAttribute('hidden');
+                return clone;
+            }
+            function initGlossaryInlineTerms() {
+                var terms = document.querySelectorAll('.glossary-inline-term');
+                if (!terms.length || typeof tippy === 'undefined') return;
+                var common = {
+                    theme: 'glossary',
+                    placement: 'top',
+                    appendTo: document.body,
+                    content: function (reference) {
+                        var wrap = reference.closest('.tooltip-wrap');
+                        return getGlossaryContent(wrap);
+                    },
+                    trigger: 'click focus',
+                    interactive: true,
+                    hideOnClick: true,
+                    onShow: function (inst) {
+                        var r = inst.reference;
+                        if (r && r.setAttribute) r.setAttribute('aria-expanded', 'true');
+                    },
+                    onHide: function (inst) {
+                        var r = inst.reference;
+                        if (r && r.setAttribute) r.setAttribute('aria-expanded', 'false');
+                    }
+                };
+                var instances = tippy(terms, common);
+                if (typeof tippy.createSingleton === 'function') {
+                    tippy.createSingleton(instances, { moveTransition: 'transform 0.2s ease-out', overrides: ['content', 'placement'] });
+                }
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initGlossaryInlineTerms);
+            } else {
+                initGlossaryInlineTerms();
+            }
+        })();
+    </script>
     <script src="/static/js/hero-auth-strip.js"></script>
     {% block extra_scripts %}{% endblock %}
 </body>

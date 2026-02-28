@@ -2,17 +2,21 @@
 {% block title %}Updates — {{ site_name }}{% endblock %}
 {% block brief_layout_class %}updates-page{% endblock %}
 {% block brief_title %}Updates{% endblock %}
+{% block current_action_banner %}{% endblock %}
 {% block brief_intro %}
 <p class="legal-page-intro">Where we are in the campaign and what we&rsquo;ve shared.</p>
 {% endblock %}
 
 {% block brief_main_heading %}Where we are{% endblock %}
 {% block brief_main %}
+{% if active_campaign %}
+{% include "_priority_callout.html" %}
+{% endif %}
 <p class="updates-campaign-status" id="where-we-are">{{ campaign_status }}</p>
 
-<ol class="campaign-timeline" role="list" aria-label="Campaign milestones from current phase to Keis be legal">
-    {% for step in campaign_timeline %}
-    <li class="campaign-timeline__item campaign-timeline__item--{{ 'achieved' if step.achieved else 'pending' }}"><span class="campaign-timeline__num" aria-hidden="true">{{ loop.index }}.</span> {{ step.label }}</li>
+<ol class="progress-checklist" role="list" aria-label="Progress toward Keis be legal">
+    {% for step in progress_checklist %}
+    <li class="progress-checklist__item progress-checklist__item--{{ 'achieved' if step.achieved else 'pending' }}"><span class="progress-checklist__num" aria-hidden="true">{{ loop.index }}.</span> {{ step.label }}</li>
     {% endfor %}
 </ol>
 
@@ -23,14 +27,24 @@
         <p>You&rsquo;re subscribed to campaign updates at <strong>{{ user.email }}</strong>.</p>
         <p>To stop receiving emails, use the unsubscribe link at the bottom of any update email.</p>
         {% else %}
-        <p>You&rsquo;re not subscribed. Get campaign updates by email:</p>
+        <p>Get one update when we move. No spam—only when it matters.</p>
         <form method="post" action="/updates/subscribe" class="updates-subscribe-form">
             <button type="submit" class="btn btn-primary">Re-subscribe</button>
         </form>
         {% endif %}
     {% else %}
-    <p>Get campaign updates by email when we post news and calls to action.</p>
-    <p><a href="/advocacy">Sign in</a> with your email to subscribe, or check back here for past updates.</p>
+    <p>Get one update when we move. No spam—only when it matters.</p>
+    <div id="updates-email-subscribe-wrap" class="updates-subscribe-email-wrap">
+        <form action="/updates/subscribe-email" method="post" class="updates-subscribe-email-form subscribe-form"
+            hx-post="/updates/subscribe-email" hx-target="#updates-email-subscribe-wrap" hx-swap="innerHTML"
+            aria-label="Subscribe to campaign updates by email">
+            <label for="updates-subscribe-email-input" class="visually-hidden">Your email</label>
+            <input type="email" id="updates-subscribe-email-input" name="email" class="updates-subscribe-email-input subscribe-input"
+                placeholder="Your email" required autocomplete="email" inputmode="email" maxlength="320">
+            <button type="submit" class="updates-subscribe-email-btn subscribe-btn">Subscribe</button>
+        </form>
+    </div>
+    <p class="updates-subscribe-note">No spam. One email when we move. <a href="/advocacy">Sign in</a> to track your outreach.</p>
     {% endif %}
 </section>
 

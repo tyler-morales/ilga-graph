@@ -1,0 +1,29 @@
+{% if active_campaign %}
+{% set _milestone = get_milestone_by_id(active_campaign.session_milestone_id) if active_campaign.session_milestone_id else none %}
+<div class="priority-callout" role="region" aria-label="This week's priority">
+  <p class="priority-callout__eyebrow">
+    <span class="priority-callout__pill" aria-hidden="true">PRIORITY</span>
+    This week&rsquo;s priority
+  </p>
+  <h2 class="priority-callout__title">{{ active_campaign.title }}</h2>
+  {% if _milestone %}
+  <p class="priority-callout__milestone">Contact before {{ _milestone.label }} ({{ _milestone.date }})</p>
+  {% endif %}
+  <p class="priority-callout__message">
+    {% if priority_card_status and priority_card_status.status_message %}
+      {{ priority_card_status.status_message }}
+    {% else %}
+      {{ active_campaign.message }}
+    {% endif %}
+  </p>
+  <a href="{{ priority_card_status.cta_href if priority_card_status else '/advocacy#zip_code' }}"
+    class="priority-callout__cta" data-campaign-cta
+    aria-label="{% if priority_card_status and not priority_card_status.goal_complete %}Next: {% endif %}{{ priority_card_status.cta_text if priority_card_status else active_campaign.ask }}">
+    {% if priority_card_status and not priority_card_status.goal_complete %}
+      Next: {{ priority_card_status.cta_text }}
+    {% else %}
+      {{ priority_card_status.cta_text if priority_card_status else active_campaign.ask }}
+    {% endif %}
+  </a>
+</div>
+{% endif %}

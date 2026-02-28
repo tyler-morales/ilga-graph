@@ -1,0 +1,11 @@
+{% if active_campaign %}
+<div class="campaign-banner" role="region" aria-label="Current action alert">
+  <p class="campaign-banner__eyebrow">This week&rsquo;s priority</p>
+  <h2 class="campaign-banner__title">{{ active_campaign.title }}</h2>
+  <p class="campaign-banner__message">{{ active_campaign.message }}</p>
+  <a href="/advocacy#zip_code" class="campaign-banner__cta btn btn-primary" data-campaign-cta
+    aria-label="{{ active_campaign.ask }}">
+    {{ active_campaign.ask }}
+  </a>
+</div>
+{% endif %}

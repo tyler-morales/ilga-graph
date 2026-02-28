@@ -1,0 +1,295 @@
+/**
+ * Campaign timeline page — horizontal scrollable timeline (scroll left/right).
+ * Visual: horizontal line + nodes + phase cards in a row; no JS.
+ */
+
+.timeline-page {
+  max-width: var(--max-width-container, 720px);
+  margin: 0 auto;
+  padding: var(--space-2xl, 24px) var(--space-lg, 16px);
+}
+
+.timeline-page__header {
+  margin-bottom: var(--space-3xl, 32px);
+}
+
+.timeline-page__header h1 {
+  font-size: var(--font-size-h1, 1.6rem);
+  font-weight: 700;
+  color: var(--color-text, #222);
+  margin: 0 0 var(--space-md, 12px) 0;
+  line-height: var(--line-height-tight, 1.25);
+}
+
+.timeline-page__intro {
+  font-size: var(--font-size-body, 0.9375rem);
+  line-height: var(--line-height-body, 1.5);
+  color: var(--color-text-muted, #444);
+  margin: 0;
+}
+
+.timeline-page__scroll-hint {
+  display: block;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-quiet, #777);
+  margin-top: var(--space-sm, 8px);
+}
+
+/* Key session deadlines (same source as The Issue) */
+.timeline-page__deadlines {
+  margin-top: var(--space-3xl, 32px);
+  padding-top: var(--space-2xl, 24px);
+  border-top: 1px solid var(--color-border-light, #ddd);
+}
+
+.timeline-page__deadlines-title {
+  font-size: var(--font-size-h2, 1.2rem);
+  font-weight: 700;
+  color: var(--color-text, #222);
+  margin: 0 0 var(--space-sm, 8px) 0;
+}
+
+.timeline-page__deadlines-intro {
+  font-size: var(--font-size-body, 0.9375rem);
+  line-height: var(--line-height-body, 1.5);
+  color: var(--color-text-muted, #444);
+  margin: 0 0 var(--space-lg, 16px) 0;
+}
+
+.timeline-page__deadlines-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm, 0.875rem);
+}
+
+.timeline-page__deadlines-table th,
+.timeline-page__deadlines-table td {
+  padding: var(--space-sm, 8px) var(--space-md, 12px);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border-light, #eee);
+}
+
+.timeline-page__deadlines-table th {
+  font-weight: 600;
+  color: var(--color-text, #222);
+}
+
+.timeline-page__deadlines-table td {
+  color: var(--color-text-muted, #444);
+}
+
+.timeline-page__footer {
+  margin-top: var(--space-3xl, 32px);
+  padding-top: var(--space-2xl, 24px);
+  border-top: 1px solid var(--color-border-light, #ddd);
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-muted, #444);
+}
+
+.timeline-page__footer p {
+  margin: 0 0 var(--space-md, 12px) 0;
+}
+
+.timeline-page__footer p:last-child {
+  margin-bottom: 0;
+}
+
+.timeline-page__footer a {
+  color: var(--color-link, #0645ad);
+}
+
+/* Horizontal scroll container */
+.campaign-timeline {
+  margin: 0 calc(-1 * var(--space-lg, 16px));
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--space-md, 12px) var(--space-lg, 16px);
+  scroll-padding-inline: var(--space-lg, 16px);
+}
+
+.campaign-timeline:focus-visible {
+  outline: 2px solid var(--color-border-focus, #333);
+  outline-offset: 2px;
+}
+
+/* Track: row of phases; full width so horizontal line spans all cards */
+.campaign-timeline__track {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  min-width: min-content;
+}
+
+/* Each phase: fixed width column, node on line then card */
+.campaign-timeline__phase {
+  flex: 0 0 280px;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding-top: 32px;
+  padding-inline: var(--space-sm, 8px);
+  scroll-margin-inline: var(--space-lg, 16px);
+}
+
+.campaign-timeline__phase:first-child {
+  padding-inline-start: var(--space-lg, 16px);
+}
+
+.campaign-timeline__phase:last-child {
+  padding-inline-end: var(--space-lg, 16px);
+}
+
+/* Horizontal line: spans full track above the cards */
+.campaign-timeline__track::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 15px;
+  height: 2px;
+  background: var(--color-cta-primary, #0f766e);
+  border-radius: 1px;
+  z-index: 0;
+}
+
+/* Node (circle) on the line */
+.campaign-timeline__node {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 24px;
+  height: 24px;
+  margin-left: -12px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-cta-primary, #0f766e) 45%, var(--color-bg-page, #f4f4f0));
+  border: 3px solid var(--color-bg-page, #f4f4f0);
+  box-sizing: border-box;
+  z-index: 1;
+  box-shadow: 0 0 0 1px var(--color-border-light, #ddd);
+}
+
+@supports not (color-mix(in srgb, red, blue)) {
+  .campaign-timeline__node {
+    background: #8fc9c7;
+  }
+}
+
+.campaign-timeline__phase--current .campaign-timeline__node {
+  background: var(--color-cta-primary, #0f766e);
+}
+
+/* Card */
+.campaign-timeline__card {
+  position: relative;
+  z-index: 1;
+  background: var(--color-bg-card, #fff);
+  border: 1px solid var(--color-border-light, #ddd);
+  border-radius: 8px;
+  padding: var(--space-xl, 20px) var(--space-lg, 16px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  margin-top: var(--space-md, 12px);
+  min-height: 0;
+}
+
+.campaign-timeline__phase-title {
+  font-size: var(--font-size-h2, 1.2rem);
+  font-weight: 700;
+  color: var(--color-text, #222);
+  margin: 0 0 var(--space-sm, 8px) 0;
+  line-height: var(--line-height-tight, 1.25);
+}
+
+.campaign-timeline__date-range {
+  font-size: var(--font-size-sm, 0.875rem);
+  font-weight: 600;
+  color: var(--color-cta-primary, #0f766e);
+  margin: 0 0 var(--space-md, 12px) 0;
+}
+
+.campaign-timeline__summary {
+  font-size: var(--font-size-body, 0.9375rem);
+  line-height: var(--line-height-body, 1.5);
+  color: var(--color-text-muted, #444);
+  margin: 0 0 var(--space-lg, 16px) 0;
+}
+
+.campaign-timeline__milestones {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--color-border-light, #eee);
+  padding-top: var(--space-md, 12px);
+}
+
+.campaign-timeline__milestone {
+  font-size: var(--font-size-body, 0.9375rem);
+  line-height: var(--line-height-body, 1.5);
+  margin-bottom: var(--space-md, 12px);
+  padding-left: 0;
+}
+
+.campaign-timeline__milestone:last-child {
+  margin-bottom: 0;
+}
+
+.campaign-timeline__milestone-date {
+  display: inline-block;
+  font-size: var(--font-size-xs, 0.8125rem);
+  color: var(--color-text-quiet, #777);
+  margin-right: var(--space-sm, 8px);
+  min-width: 7em;
+}
+
+.campaign-timeline__milestone-title {
+  display: block;
+  font-weight: 600;
+  color: var(--color-text, #222);
+  margin-top: 2px;
+}
+
+.campaign-timeline__milestone-desc {
+  display: block;
+  color: var(--color-text-muted, #444);
+  margin-top: 2px;
+}
+
+.campaign-timeline__phase:focus-within .campaign-timeline__card {
+  outline: 2px solid var(--color-border-focus, #333);
+  outline-offset: 2px;
+}
+
+/* Wider cards on larger screens; still horizontal scroll if many phases */
+@media (min-width: 600px) {
+  .campaign-timeline__phase {
+    flex: 0 0 320px;
+    width: 320px;
+    padding-top: 36px;
+  }
+
+  .campaign-timeline__track::before {
+    top: 17px;
+    height: 3px;
+    border-radius: 2px;
+  }
+
+  .campaign-timeline__node {
+    width: 28px;
+    height: 28px;
+    margin-left: -14px;
+    border-width: 4px;
+  }
+
+  .campaign-timeline__card {
+    padding: var(--space-2xl, 24px);
+  }
+
+  .campaign-timeline__milestone-date {
+    min-width: 9em;
+  }
+}

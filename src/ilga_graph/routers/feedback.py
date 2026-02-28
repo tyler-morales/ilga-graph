@@ -22,6 +22,7 @@ from ..db import get_db
 from ..db_models import BugReport
 from ..email_utils import send_message
 from ..routers.content import STRATEGIC_FIVE_POINTS
+from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
 from ..security import (
     CSRF_COOKIE_NAME,
     rate_limit_bug_report,
@@ -84,6 +85,12 @@ templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
 templates.env.globals["features"] = cfg.get_client_features()
+
+from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
+
+templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
+templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
+templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 
 
 def _mime_type_for_filename(filename: str) -> tuple[str, str]:

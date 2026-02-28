@@ -68,6 +68,11 @@
   --color-hero-cta: #ed7a0a;
   --color-hero-cta-hover: #c96608;
   --color-hero-cta-focus-ring: #333;
+
+  /* Primary CTA (mission CTA, Start outreach) and subscribe */
+  --color-cta-primary: #0f766e;
+  --color-cta-primary-hover: #0d5d56;
+  --link-color: #5a2d82;
 }
 
 /* Mobile: larger base and headings for readable touch-first typography (16px → 18px base, prominent h1/h2) */

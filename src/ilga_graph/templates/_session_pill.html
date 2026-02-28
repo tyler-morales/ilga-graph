@@ -1,0 +1,18 @@
+{# Session pill: top-left on every public page. Short label + slow orange blink; click to crossfade to full line (opacity-only, like fire pill). Optional next deadline from session_schedule. #}
+{% if hero_urgency_line %}
+{% set next_deadline = get_next_deadline() %}
+<div class="session-pill-wrap" role="region" aria-label="Session timeline">
+  <button type="button"
+    class="session-pill"
+    onclick="this.toggleAttribute('data-expanded'); this.setAttribute('aria-expanded', this.hasAttribute('data-expanded'));"
+    aria-expanded="false"
+    aria-label="Session timeline: {{ hero_urgency_line }}{% if next_deadline %} — Next deadline {{ next_deadline.date }}: {{ next_deadline.description }}{% endif %}">
+    <span class="session-pill-dot" aria-hidden="true"></span>
+    <span class="session-pill-text-slot">
+      <span class="session-pill-text-sizer" aria-hidden="true">{{ hero_urgency_line }}{% if next_deadline %} — Next: {{ next_deadline.date }} {{ next_deadline.description }}{% endif %}</span>
+      <span class="session-pill-short">ILGA Session 2027</span>
+      <span class="session-pill-text">{{ hero_urgency_line }}{% if next_deadline %}<br><span class="session-pill-next-deadline">Next deadline: {{ next_deadline.date }} — {{ next_deadline.description }}</span>{% endif %}</span>
+    </span>
+  </button>
+</div>
+{% endif %}

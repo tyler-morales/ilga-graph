@@ -15,6 +15,9 @@
     </p>
     <p style="font-size: 0.85em;">
         <a href="{{ unsub_url }}">Unsubscribe</a>
+        {% if updates_url %}
+        &middot; <a href="mailto:?subject={{ title|urlencode }}&body={{ ('Read this update: ' ~ updates_url)|urlencode }}">Forward to a friend</a>
+        {% endif %}
     </p>
 </body>
 </html>

@@ -41,6 +41,21 @@ def party_abbr_for_member(member: Member | None) -> str:
     return (member.party or "")[:1]
 
 
+def get_preferred_phone_for_member(member: Member | None) -> str | None:
+    """Prefer district office phone; fallback to first office with phone (e.g. Springfield)."""
+    if not member:
+        return None
+    district_phone: str | None = None
+    any_phone: str | None = None
+    for office in member.offices:
+        if not office.phone:
+            continue
+        any_phone = office.phone
+        if "district" in office.name.lower():
+            district_phone = office.phone
+    return district_phone or any_phone
+
+
 # ── State-taking helpers ──────────────────────────────────────────────────────
 
 
@@ -183,11 +198,7 @@ def member_to_card(
     script_hint and script_sections are left empty; callers set them via
     build_script_hint_* and build_script_sections_*.
     """
-    phone = None
-    for office in member.offices:
-        if office.phone:
-            phone = office.phone
-            break
+    phone = get_preferred_phone_for_member(member)
 
     mb = None
     if state.moneyball:

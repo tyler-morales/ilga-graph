@@ -914,6 +914,65 @@
     color: #6d6d72;
 }
 
+/* Stay informed: email capture after call/done (no auth code) */
+.drawer-subscribe-wrap {
+    margin-top: 16px;
+}
+
+.drawer-subscribe-p {
+    margin: 0 0 10px 0;
+    font-size: var(--font-size-sm);
+    color: #1a1a1a;
+}
+
+/* Drawer subscribe: base from base.css .subscribe-*; variations below (green accent, 8px radius). */
+.drawer-subscribe-form {
+    gap: 8px;
+}
+
+.drawer-subscribe-input {
+    padding: 10px 12px;
+    font-size: 0.9375rem;
+    border-radius: 8px;
+}
+
+.drawer-subscribe-input:focus {
+    outline: none;
+    border-color: #2db84e;
+    box-shadow: 0 0 0 2px rgba(45, 184, 78, 0.25);
+}
+
+.drawer-subscribe-btn {
+    padding: 10px 18px;
+    font-size: 0.9375rem;
+    background: #2db84e;
+    border-radius: 8px;
+}
+
+.drawer-subscribe-btn:hover {
+    opacity: 1;
+    background: #28a745;
+}
+
+.drawer-subscribe-btn:focus-visible {
+    outline: 2px solid #2db84e;
+    outline-offset: 2px;
+}
+
+.subscribe-email-success,
+.subscribe-email-error {
+    margin: 8px 0 0;
+    font-size: var(--font-size-sm);
+}
+
+.subscribe-email-success {
+    color: #16a34a;
+}
+
+.subscribe-email-error {
+    color: #b91c1c;
+}
+
 /* ── Done for this member (transition state before next district member) ── */
 .drawer-done-for-member {
     padding: 24px 16px;
@@ -960,6 +1019,23 @@
 .drawer-done-for-member__cta:focus-visible {
     outline: 2px solid #34c759;
     outline-offset: 2px;
+}
+
+.drawer-done-subscribe {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.drawer-done-subscribe-signed-in,
+.drawer-done-subscribe-p {
+    margin: 0 0 10px 0;
+    font-size: var(--font-size-sm);
+    color: #374151;
+}
+
+.drawer-done-subscribe-form-wrap[hidden] {
+    display: none;
 }
 
 .drawer-done-for-member__district-done,

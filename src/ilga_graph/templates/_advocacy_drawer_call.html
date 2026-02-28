@@ -20,7 +20,7 @@
             </p>
             {% endif %}
         </div>
-        <p class="drawer-script-intro" id="drawer-script-intro">One bubble at a time: say your line, then listen.</p>
+        <p class="drawer-script-intro" id="drawer-script-intro">Call this number. Here's the script. Takes 2 min.</p>
     </header>
 
     <div class="drawer-no-answer-hint" role="status" aria-live="polite">
@@ -214,6 +214,20 @@
                 </div>
                 <p class="drawer-draft-followup-recorded-msg" id="drawer-draft-followup-recorded-msg" hidden
                     aria-live="polite">Call recorded. You can draft an email anytime from this card.</p>
+            </div>
+            {# Stay informed: email capture after call completion (no auth code). #}
+            <div class="drawer-subscribe-wrap drawer-bubble-delayed" id="drawer-subscribe-wrap" {% if not call_completed %}hidden{% endif %}{% if call_completed %} class="drawer-bubble-just-in"{% endif %}>
+                <div class="chat-bubble chat-them">
+                    <span class="chat-label">Stay informed</span>
+                    <p class="drawer-subscribe-p">Want to know when the bill moves? We'll send one email.</p>
+                    <form action="/updates/subscribe-email" method="post" class="drawer-subscribe-form subscribe-form"
+                        hx-post="/updates/subscribe-email" hx-target="this" hx-swap="outerHTML"
+                        aria-label="Subscribe to campaign updates">
+                        <input type="email" name="email" class="drawer-subscribe-input subscribe-input" placeholder="Your email"
+                            required autocomplete="email" inputmode="email" maxlength="320">
+                        <button type="submit" class="drawer-subscribe-btn subscribe-btn">Subscribe</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>

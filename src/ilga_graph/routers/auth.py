@@ -78,6 +78,18 @@ async def _send_code_email(email: str, code: str) -> None:
         )
         print(banner, file=sys.stderr, flush=True)
         LOGGER.warning("Auth code for %s (no SMTP): %s", email, code)
+    elif cfg.DEV_MODE and not cfg.SMTP_HOST:
+        # Dev with no SMTP: send_email returns True (mock); show code in terminal.
+        banner = (
+            "\n"
+            "╔══════════════════════════════════════════════════════════╗\n"
+            "║  AUTH CODE (no SMTP — check this terminal for sign-in)  ║\n"
+            f"║  Email: {email[:44]:<44} ║\n"
+            f"║  Code:  {code:<44} ║\n"
+            "╚══════════════════════════════════════════════════════════╝\n"
+        )
+        print(banner, file=sys.stderr, flush=True)
+        LOGGER.warning("Auth code for %s (dev, no SMTP): %s", email, code)
 
 
 def _client_ip(request: Request) -> str:

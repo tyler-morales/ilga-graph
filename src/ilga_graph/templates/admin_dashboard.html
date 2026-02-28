@@ -54,6 +54,34 @@
       </div>
     </div>
 
+    <h3 id="admin-dashboard-trend-heading" class="admin-dashboard-stats-subheading">Outreach trend</h3>
+    <div class="admin-dashboard-trend" aria-labelledby="admin-dashboard-trend-heading">
+      <div class="admin-dashboard-trend-row">
+        <span class="admin-dashboard-trend-label">Last 7 days</span>
+        <span class="admin-dashboard-trend-value">{{ outreach_trend_7d.total_calls }} calls · {{ outreach_trend_7d.total_emails }} emails</span>
+      </div>
+      <div class="admin-dashboard-trend-row">
+        <span class="admin-dashboard-trend-label">Last 30 days</span>
+        <span class="admin-dashboard-trend-value">{{ outreach_trend_30d.total_calls }} calls · {{ outreach_trend_30d.total_emails }} emails</span>
+      </div>
+    </div>
+
+    <h3 id="admin-dashboard-campaign-heading" class="admin-dashboard-stats-subheading">Current action</h3>
+    <div class="admin-dashboard-stats-grid admin-dashboard-stats-grid--secondary" aria-labelledby="admin-dashboard-campaign-heading">
+      <div class="admin-dashboard-stat admin-dashboard-stat--secondary">
+        {% if active_campaign %}
+        <span class="admin-dashboard-stat-value">{{ active_campaign_actions }}</span>
+        <span class="admin-dashboard-stat-label">Actions for active campaign</span>
+        <span class="admin-dashboard-stat-sublabel"><a href="/admin/campaigns/{{ active_campaign.id }}">{{ active_campaign.title }}</a></span>
+        <span class="admin-dashboard-stat-sublabel">{% if active_campaign.end_at %}Ends <time datetime="{{ active_campaign.end_at.isoformat() }}">{{ active_campaign.end_at.strftime('%Y-%m-%d') }}</time>{% else %}No end date{% endif %}</span>
+        {% else %}
+        <span class="admin-dashboard-stat-value">—</span>
+        <span class="admin-dashboard-stat-label">No active campaign</span>
+        <span class="admin-dashboard-stat-sublabel"><a href="/admin/campaigns">Manage campaigns</a></span>
+        {% endif %}
+      </div>
+    </div>
+
     <h3 id="admin-dashboard-email-heading" class="admin-dashboard-stats-subheading">Email</h3>
     <div class="admin-dashboard-stats-grid admin-dashboard-stats-grid--secondary" aria-labelledby="admin-dashboard-email-heading">
       <div class="admin-dashboard-stat admin-dashboard-stat--secondary">
@@ -69,6 +97,13 @@
         <span class="admin-dashboard-stat-label">Drafts</span>
       </div>
     </div>
+    <p class="admin-dashboard-email-last-sent">
+      {% if last_update_sent_at %}
+      Last update sent: <time datetime="{{ last_update_sent_at.isoformat() }}">{{ last_update_sent_at.strftime('%B %d, %Y') }}</time>{% if last_update_title %} — {{ last_update_title }}{% endif %}
+      {% else %}
+      No updates sent yet.
+      {% endif %}
+    </p>
 
     <h3 id="admin-dashboard-growth-heading" class="admin-dashboard-stats-subheading">Growth & funnel</h3>
     <div class="admin-dashboard-stats-grid admin-dashboard-stats-grid--supporting" aria-labelledby="admin-dashboard-growth-heading">
@@ -82,6 +117,27 @@
         <span class="admin-dashboard-stat-sublabel">last {{ os.window_days }}d</span>
       </div>
     </div>
+
+    <h3 id="admin-dashboard-top-members-heading" class="admin-dashboard-stats-subheading">Top legislators by contact volume</h3>
+    <figure class="admin-dashboard-top-members" aria-labelledby="admin-dashboard-top-members-heading">
+      {% if top_members_by_contacts %}
+      {% set counts = top_members_by_contacts|map(attribute='count')|list %}
+      {% set max_count = (counts|max) if counts else 1 %}
+      <ul class="admin-dashboard-contact-chart" role="list">
+        {% for item in top_members_by_contacts %}
+        <li class="admin-dashboard-contact-chart__row">
+          <span class="admin-dashboard-contact-chart__name" id="admin-chart-name-{{ loop.index }}">{{ item.name or item.member_id }}</span>
+          <div class="admin-dashboard-contact-chart__bar-wrap" role="img" aria-labelledby="admin-chart-name-{{ loop.index }}" aria-label="{{ item.name or item.member_id }}: {{ item.count }} contacts">
+            <div class="admin-dashboard-contact-chart__bar" style="--contact-pct: {{ (100 * item.count / max_count)|round(1) }}%;"></div>
+          </div>
+          <span class="admin-dashboard-contact-chart__count" aria-hidden="true">{{ item.count }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="admin-dashboard-top-members-empty">No outreach recorded yet.</p>
+      {% endif %}
+    </figure>
   </section>
 </div>
 {% endblock %}

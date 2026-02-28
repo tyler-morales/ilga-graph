@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import html as html_module
 import json
 import re
+from datetime import date
 from pathlib import Path
 
 from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
 
 from .. import config as cfg
+from ..session_schedule import get_all_deadlines, session_label
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
 _REPO_ROOT = Path(__file__).resolve().parents[3]  # src/ilga_graph/routers -> repo root
@@ -176,6 +179,33 @@ STRATEGIC_FIVE_POINTS: list[str] = [
 ]
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
 templates.env.globals["features"] = cfg.get_client_features()
+
+# Why should you care (Hardball Ch7: who benefits, why your voice matters). Canonical copy from constituent brief + FAQ_ADVOCACY + STRATEGIC_FIVE_POINTS.
+WHY_SHOULD_YOU_CARE_HEADING = "Why should you care?"
+WHY_SHOULD_YOU_CARE_INTRO = (
+    "Clear law protects residents. When statutory language is ambiguous, regular people absorb the consequences. "
+    "This issue is about fairness, predictability, and consistent application of Illinois law. "
+    "This affects real Illinois residents who own legal vehicles they can't register—registrations denied or revoked, "
+    "titles branded 'Not Eligible for Registration,' plates surrendered."
+)
+WHY_SHOULD_YOU_CARE_VOICE = (
+    "Legislators prioritize issues they hear about from constituents. Your contact helps put the issue on the map "
+    "and builds the case for a legislative fix."
+)
+WHY_SHOULD_YOU_CARE_TEASER_ITEMS: list[str] = [
+    "This affects real Illinois residents who own legal vehicles they can't register and those receiving titles branded 'Not Eligible for Registration.'",
+    "Even if you don't own one, it's about fair and consistent application of the law.",
+    "Your voice helps legislators see the issue deserves a fix.",
+]
+templates.env.globals["why_should_you_care_heading"] = WHY_SHOULD_YOU_CARE_HEADING
+templates.env.globals["why_should_you_care_intro"] = WHY_SHOULD_YOU_CARE_INTRO
+templates.env.globals["why_should_you_care_voice"] = WHY_SHOULD_YOU_CARE_VOICE
+templates.env.globals["why_should_you_care_teaser_items"] = WHY_SHOULD_YOU_CARE_TEASER_ITEMS
+
+from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
+
+templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
+
 # How we measure advocacy success (things we control). Road-legal outcome is the campaign objective.
 STRATEGIC_SUCCESS_MEASURE = (
     "We measure success by what we can control: constituent contacts, co-sponsors secured, "
@@ -188,14 +218,21 @@ STRATEGIC_SUCCESS_MEASURE_ITEMS: list[str] = [
     "A coalition ready to act when a bill moves",
 ]
 
-# "Where we are" block on /updates. Update as the campaign progresses.
-CAMPAIGN_STATUS = (
-    "We are in the outreach phase. No bill has been introduced yet. "
-    "We are building constituent contacts and identifying a sponsor."
-)
+# "Where we are" block on /updates. One-line phase label; campaign banner (when active) carries detail and CTA.
+CAMPAIGN_STATUS = "We're in the outreach phase."
 
-# Campaign timeline: checkpoints from current phase to Keis be legal. Update achieved count as campaign advances.
-CAMPAIGN_TIMELINE_CHECKPOINTS: list[str] = [
+# Hero urgency and clarity (Hardball: timeline, clear ask). Switch to HERO_URGENCY_THIS_SESSION when pushing this session.
+# Used in hero and session pill (expandable). Alternatives for pill: "Building support now for the 2027 session." / "2027 session ahead. Your outreach now builds momentum."
+HERO_URGENCY_LINE = (
+    "Next session starts early 2027. We're building constituent support now so we're ready."
+)
+HERO_URGENCY_THIS_SESSION = (
+    "Spring session runs through May 31. We need your voice before key deadlines."
+)
+HERO_CLARITY_LINE = "Enter your ZIP — we'll show you who to call and what to say. Takes 2 min."
+
+# Progress checklist: checkpoints from current phase to Keis be legal. Update achieved count as campaign advances.
+PROGRESS_CHECKPOINTS: list[str] = [
     "Outreach & building contacts",
     "Sponsor identified",
     "Bill introduced",
@@ -204,7 +241,7 @@ CAMPAIGN_TIMELINE_CHECKPOINTS: list[str] = [
     "Governor signature",
     "Keis be legal",
 ]
-CAMPAIGN_TIMELINE_ACHIEVED_COUNT: int = 1  # Steps 1..N at full opacity; rest at reduced opacity.
+PROGRESS_ACHIEVED_COUNT: int = 1  # Steps 1..N at full opacity; rest at reduced opacity.
 
 # Fact sheet for the base (Hardball Ch7; content matches docs/advocacy/focused-next-steps-1-2-4-5-6.md §5).
 FACT_SHEET_ISSUE = (
@@ -218,11 +255,6 @@ FACT_SHEET_POSITION = (
     "federal law may be titled and registered in Illinois under normal requirements "
     "(insurance, equipment, traffic laws). No weakening of safety or enforcement."
 )
-FACT_SHEET_SUPPORTERS_PLACEHOLDER = (
-    "Add names or groups when you have them (e.g. Land of Kei Illinois advocacy group, "
-    'local clubs, businesses). Leave blank or "Coalition forming" until you have a list.'
-)
-
 # Documents listed in the legislator brief sidebar (title, url, file_type for icon).
 # Optional: available=False and note="..." for placeholders (disabled style, note under title).
 BRIEF_DOCUMENTS = [
@@ -990,6 +1022,162 @@ FAQ_ADVOCACY = {
     ],
 }
 
+# FAQ for The Issue page: session calendar and deadlines. Single source of truth: reference/session_schedule.json.
+FAQ_SESSION = {
+    "title": "FAQ — Session calendar & deadlines",
+    "intro": (
+        "We maintain the Illinois General Assembly House and Senate schedule as a single source "
+        "of truth for session dates and key deadlines. All dates and reminders on this site come from it."
+    ),
+    "items": [
+        {
+            "id": "session1",
+            "question": "Where can I find the legislative session calendar and key deadlines?",
+            "answer": (
+                "We use the official 104th General Assembly Spring 2026 schedule (House and Senate). "
+                "Key deadlines—such as bill introduction, committee deadlines, and third reading—are listed below. "
+                "Session and holiday dates are in our reference data; we update that file when the session calendar changes."
+            ),
+        },
+    ],
+}
+
+# Terms used in the session calendar. Definitions grounded in reference/ilga_rules.json (104th GA rules).
+SESSION_SCHEDULE_TERMS = [
+    {
+        "id": "lrb",
+        "term": "LRB",
+        "definition": "Legislative Reference Bureau. Legislators request bill drafting from the LRB. The LRB request deadline is the last day to submit requests for the session; after that, the LRB blackout begins and no new bill requests are accepted until the next session.",
+    },
+    {
+        "id": "committee-deadline",
+        "term": "Committee deadline",
+        "definition": "Final day for standing committees to report bills out of committee. Bills not reported by this date are re-referred to the gatekeeper (Senate: Committee on Assignments; House: Rules Committee)—not killed, but delayed. Senate Rule 2-10, House Rule 9.",
+    },
+    {
+        "id": "third-reading",
+        "term": "Third Reading",
+        "definition": "Final reading of a bill before a floor vote. A bill must be read by title on three different days before passage. The Third Reading deadline is the last day the chamber may pass bills on third reading; after that, bills not passed are re-referred. Senate Rule 2-10(a)(5), House Rule 9(b)(5).",
+    },
+    {
+        "id": "perfunctory-session",
+        "term": "Perfunctory session",
+        "definition": "A short session for procedural business (e.g. reading the journal, formalities). No substantive debate or votes on bills.",
+    },
+    {
+        "id": "substantive-bills",
+        "term": "Substantive bills",
+        "definition": "Bills that change law or policy (as opposed to appropriation-only or purely procedural measures). Session deadlines often set separate dates for substantive bills vs. appropriation bills.",
+    },
+    {
+        "id": "session",
+        "term": "Session",
+        "definition": "A day the chamber meets in Springfield. The schedule lists which days the House or Senate is in session.",
+    },
+    {
+        "id": "adjournment",
+        "term": "Adjournment",
+        "definition": "End of the legislative session (sine die). After adjournment, no further action on bills until the next session.",
+    },
+]
+
+# Domain glossary: app/organizational terms. Single source for docs/reference/glossary.md and public /glossary page.
+DOMAIN_GLOSSARY: list[dict] = [
+    {"id": "campaign", "term": "Campaign", "definition": "A single, time-bound action alert. At most one campaign is active at a time. Has title, message, ask, optional start/end dates; outreach recorded while active is attributed to it. Not the overall multi-year advocacy initiative (see Advocacy effort).", "category": "advocacy"},
+    {"id": "advocacy-effort", "term": "Advocacy effort", "definition": "The overall multi-year initiative toward the legislative objective (e.g. kei vehicle registration fix). Not a DB object; encompasses all campaigns, updates, and organizing.", "category": "advocacy"},
+    {"id": "ask", "term": "Ask", "definition": "The specific request to a legislator or constituent (noun). E.g. “Contact your rep” or “Support HB 1234.” Stored in Campaign.ask as CTA button text.", "category": "advocacy"},
+    {"id": "coalition-advocacy", "term": "Coalition (advocacy)", "definition": "Organizations aligned on the issue; building coalition = recruiting orgs and stakeholders. Not ML voting coalition (legislators who vote together).", "category": "advocacy"},
+    {"id": "advocate", "term": "Advocate", "definition": "A user who takes outreach action (call, email). May or may not be a constituent of the legislator contacted.", "category": "advocacy"},
+    {"id": "constituent", "term": "Constituent", "definition": "An advocate who lives in a legislator’s district. Stored as a boolean on outreach events; “Constituent Brief” is the canonical document for the public.", "category": "advocacy"},
+    {"id": "outreach", "term": "Outreach", "definition": "A call, email, or no-answer recorded against a legislator. One OutreachEvent per action.", "category": "advocacy"},
+    {"id": "contact", "term": "Contact", "definition": "(Verb) To reach a legislator’s office (call or email). (Noun) The person at the office who answered the call (OutreachEvent.contact_name). “Contact period” = campaign duration.", "category": "advocacy"},
+    {"id": "update", "term": "Update", "definition": "An email announcement sent to subscribers. Has title, body, type (Major/Minor/Other), optional image. DB: Update model.", "category": "advocacy"},
+    {"id": "brief", "term": "Brief", "definition": "A canonical document: legislator brief (for offices) or constituent brief (for the public). The one-pager PDF is the print version of the legislator brief.", "category": "advocacy"},
+    {"id": "session", "term": "Session", "definition": "A day the chamber meets in Springfield, or the full session period (e.g. 104th GA Spring 2026). Session schedule lists session days and deadlines.", "category": "legislative"},
+    {"id": "session-milestone", "term": "Session milestone", "definition": "A legislative deadline with a date (e.g. committee deadline, third reading deadline). Used to set campaign end dates in admin; Campaign.session_milestone_id.", "category": "legislative"},
+    {"id": "bill-stage", "term": "Bill stage", "definition": "Where a bill sits in the process: introduced, committee, floor, passed one chamber, passed both, signed. P(Advance) predicts chance of reaching a positive stage.", "category": "legislative"},
+    {"id": "bill-action", "term": "Bill action", "definition": "A single procedural event on a bill (e.g. “Referred to Assignments”, “Do Pass”). Shown in bill action history.", "category": "legislative"},
+    {"id": "voting-coalition", "term": "Voting coalition", "definition": "ML-discovered cluster of legislators who vote together. Used in Intelligence. Not an advocacy coalition (organizations aligned on the issue).", "category": "legislative"},
+    {"id": "phase", "term": "Phase", "definition": "(Timeline) One of the four periods on the master timeline: Build, Intro, Committee & Floor, Governor. (Goal) “district” or “broker”—which set of outreach steps the user is on.", "category": "product"},
+    {"id": "master-timeline", "term": "Master timeline", "definition": "The phased plan from now to bill signed, shown on /timeline. Source: TIMELINE_PHASES. Each phase has a date range and optional milestones.", "category": "product"},
+    {"id": "progress-checklist", "term": "Progress checklist", "definition": "The short ordered list of stages on /updates (Outreach → … → Keis be legal). Achieved steps at full opacity, rest at reduced. Source: PROGRESS_CHECKPOINTS. Not dated; distinct from master timeline.", "category": "product"},
+    {"id": "milestone", "term": "Milestone", "definition": "A dated checkpoint within a timeline phase (e.g. “Lock lead sponsor(s)”, “Bill introduced”). Shown on /timeline under each phase. Not session milestone (legislative deadline) or bill stage.", "category": "product"},
+    {"id": "goal", "term": "Goal", "definition": "The user’s outreach task list: contact district legislators (4 actions), then Power Broker (2 actions). “Your goal” / “This week’s goal” in the sidebar. Not the advocacy objective (statutory fix).", "category": "product"},
+    {"id": "drawer", "term": "Drawer", "definition": "The slide-out panel for call scripts and email templates. Opens from “Reach out” on a legislator card.", "category": "product"},
+    {"id": "funnel", "term": "Funnel", "definition": "The user journey from page visit to completed outreach. Measured for conversion (e.g. % who opened drawer and completed at least one call/email).", "category": "product"},
+]
+
+# Kei vehicle and policy terms for the public glossary. Wording from canonical content (STRATEGIC_*, FAQ_*, briefs); no invented stats.
+KEI_GLOSSARY: list[dict] = [
+    {"id": "kei-vehicle", "term": "Kei vehicle", "definition": "A small vehicle built to Japan’s kei (軽) class regulations—dimensions and engine size limits set by the Japanese government. Kei trucks, vans, and cars are federally legal to import into the US under the 25-year rule when they meet the age requirement.", "category": "kei"},
+    {"id": "kei-class", "term": "Kei class", "definition": "Japanese vehicle category with strict size and engine limits (e.g. 660cc engine, maximum length/width/height). Vehicles in this class are built for highway use in Japan and are engineered for expressway travel.", "category": "kei"},
+    {"id": "25-year-rule", "term": "25-year rule", "definition": "Federal rule that allows import into the US of vehicles that are at least 25 years old, without having to meet current US safety/emissions standards. Kei vehicles that meet this age requirement are federally legal to import.", "category": "kei"},
+    {"id": "highway-built", "term": "Highway-built", "definition": "Originally manufactured for on-road use in any jurisdiction (e.g. Japan). The Illinois statutory fix we seek applies to highway-built, federally lawful imports—not off-road-only vehicles.", "category": "kei"},
+    {"id": "625-ilcs-3-401", "term": "625 ILCS 5/3-401(c-1)", "definition": "Illinois statute that governs which vehicles are eligible for title and registration. The current language has an ambiguity about whether highway-built, federally lawful kei vehicles qualify. Our advocacy seeks a narrow clarifying amendment.", "category": "kei", "source": "625 ILCS 5/3-401 (ILGA)", "source_url": "https://www.ilga.gov/legislation/ilcs/fulltext.asp?DocName=062500050K3-401"},
+    {"id": "shaken", "term": "Shaken", "definition": "Japan’s mandatory vehicle inspection program (every two years for most vehicles). Older kei vehicles imported under the 25-year rule have typically passed Shaken, so they arrive in the US well maintained.", "category": "kei"},
+    {"id": "one-pager", "term": "One-pager", "definition": "The legislator brief: a single-page document for offices that summarizes the issue, the ask, and key points. Available as a PDF from the Legislator brief page.", "category": "kei"},
+]
+
+
+def _inline_glossary_terms(include_domain: bool = False) -> list[dict]:
+    """Merge KEI + SESSION terms (and optionally DOMAIN) for inline tooltips. Sorted by term length descending for correct match order."""
+    terms = list(KEI_GLOSSARY) + list(SESSION_SCHEDULE_TERMS)
+    if include_domain:
+        terms = terms + list(DOMAIN_GLOSSARY)
+    return sorted(terms, key=lambda d: len(d["term"]), reverse=True)
+
+
+def apply_inline_glossary(blocks: list[str], terms: list[dict]) -> list[str]:
+    """Replace first occurrence of each term in blocks (document order) with a button+popover snippet. Returns HTML strings."""
+    used_ids: set[str] = set()
+    result: list[str] = []
+    replacement_counter = 0
+
+    for block in blocks:
+        if not block or not block.strip():
+            result.append(block)
+            continue
+        text = block
+        changed = True
+        while changed:
+            changed = False
+            best_pos = -1
+            best_term: dict | None = None
+            best_original_slice = ""
+
+            for t in terms:
+                if t["id"] in used_ids:
+                    continue
+                term = t["term"]
+                pos = text.lower().find(term.lower())
+                if pos < 0:
+                    continue
+                if best_pos < 0 or pos < best_pos:
+                    best_pos = pos
+                    best_term = t
+                    best_original_slice = text[pos : pos + len(term)]
+
+            if best_term is None or best_pos < 0:
+                break
+            replacement_counter += 1
+            uid = f"{best_term['id']}-{replacement_counter}"
+            def_escaped = html_module.escape(best_term["definition"])
+            snippet = (
+                f'<span class="tooltip-wrap tooltip-click">'
+                f'<button type="button" class="glossary-inline-term" aria-expanded="false" aria-controls="glossary-def-{uid}" id="glossary-trigger-{uid}">'
+                f"{html_module.escape(best_original_slice)}</button>"
+                f'<span class="tooltip-content glossary-inline-def" role="tooltip" id="glossary-def-{uid}" hidden>'
+                f"{def_escaped} <a href=\"/glossary#glossary-{best_term['id']}\">Full glossary</a></span></span>"
+            )
+            text = text[:best_pos] + snippet + text[best_pos + len(best_original_slice) :]
+            used_ids.add(best_term["id"])
+            changed = True
+
+        result.append(text)
+
+    return result
+
+
 # FAQ for Legislator Brief page (legislators & staff). Same shape: title, intro, items (id, question, answer, sources).
 FAQ_LEGISLATORS = {
     "title": "FAQ — For Legislators & Staff",
@@ -1152,6 +1340,158 @@ ISSUE_SOURCES: list[dict[str, str]] = _issue_sources_from_faq(FAQ_LAW)
 # Fact sheet document (PDF) linked from The Issue sidebar. Place the PDF at this path (e.g. print /fact-sheet to PDF).
 FACT_SHEET_PDF_URL = "/static/advocacy/Kei_Registration_Fact_Sheet.pdf"
 
+# 2027 campaign master timeline: Feb 2026 → bill signed. Single source for /timeline page; update when session dates are known.
+# start_date/end_date (YYYY-MM-DD) used to compute current phase for timeline node opacity.
+TIMELINE_PHASES: list[dict] = [
+    {
+        "id": "build",
+        "label": "Build",
+        "date_range": "Feb 2026 – Dec 2026",
+        "start_date": "2026-02-01",
+        "end_date": "2026-12-31",
+        "summary": "Lock sponsor(s), draft bill, grow list, and build coalition so we're ready for the 2027 session.",
+        "milestones": [
+            {"date": "Mar – May 2026", "title": "Lock lead sponsor(s)", "description": "Secure sponsor in the chamber you want to start in. Share draft concept so they're ready to file in January."},
+            {"date": "Jun – Aug 2026", "title": "Bill draft with LRB", "description": "Work with Legislative Reference Bureau or sponsor's staff. Nail down one-sentence ask and one-pager."},
+            {"date": "Sep – Nov 2026", "title": "Co-sponsors and coalition", "description": "Co-sponsor asks; recruit orgs; brief stakeholders. Plan pre-session pushes."},
+            {"date": "Dec 2026", "title": "Finalize intro plan", "description": "Bill number and intro plan with sponsor. Prep first-session campaign."},
+        ],
+    },
+    {
+        "id": "intro",
+        "label": "Session convenes & intro",
+        "date_range": "Jan – Feb 2027",
+        "start_date": "2027-01-01",
+        "end_date": "2027-02-28",
+        "summary": "105th GA convenes; bill introduced by the introduction deadline.",
+        "milestones": [
+            {"date": "Early Jan 2027", "title": "Session convenes", "description": "105th GA perfunctory/session days. LRB request deadline ~Jan 16."},
+            {"date": "Jan – early Feb 2027", "title": "Bill introduced", "description": "File as soon as practical. Once filed, you have a bill number for \"Support HB/SB XXXX\" campaigns."},
+            {"date": "~Feb 6, 2027", "title": "Introduction deadline", "description": "House and Senate bill introduction deadline. Bill must be introduced by this date."},
+        ],
+    },
+    {
+        "id": "committee-floor",
+        "label": "Committee & floor",
+        "date_range": "Feb – May 2027",
+        "start_date": "2027-02-01",
+        "end_date": "2027-05-31",
+        "summary": "Hearings, committee votes, third reading in each chamber. Session adjourns late May.",
+        "milestones": [
+            {"date": "Feb 2027", "title": "Committee assignments", "description": "First hearings possible. Push witness slips and constituent contacts to committee members."},
+            {"date": "~Mar 13 / Mar 27, 2027", "title": "Committee deadlines", "description": "SB committee deadline ~Mar 13; HB committee deadline ~Mar 27 (substantive bills out of committee)."},
+            {"date": "~Apr 17, 2027", "title": "Third reading (first chamber)", "description": "HB 3rd reading deadline (House); SB 3rd reading deadline (Senate)."},
+            {"date": "~May 8 / May 22, 2027", "title": "Crossover and second chamber", "description": "House bills in Senate: committee ~May 8, 3rd reading ~May 22. Senate bills in House: same pattern."},
+            {"date": "~May 31, 2027", "title": "Session adjournment", "description": "If the bill passed both chambers, it goes to the governor."},
+        ],
+    },
+    {
+        "id": "governor",
+        "label": "Governor",
+        "date_range": "Jun – Aug 2027",
+        "start_date": "2027-06-01",
+        "end_date": "2027-08-31",
+        "summary": "Governor has 60 days from passage to sign or veto. Bill signed into law.",
+        "milestones": [
+            {"date": "Jun – Jul 2027", "title": "Governor review", "description": "60 days from passage to sign or veto. Signing often within a few weeks."},
+            {"date": "Jun – Aug 2027", "title": "Bill signed into law", "description": "Effective date is usually upon signing or Jan 1 of the next year, per the bill."},
+        ],
+    },
+]
+
+
+def _current_timeline_phase_id(today: date | None = None) -> str:
+    """Return the timeline phase id that contains *today* (default: today). Before first phase → first; after last → last."""
+    d = today or date.today()
+    for phase in TIMELINE_PHASES:
+        start = phase.get("start_date")
+        end = phase.get("end_date")
+        if start and end:
+            if start <= d.isoformat() <= end:
+                return phase["id"]
+    if TIMELINE_PHASES:
+        first_start = TIMELINE_PHASES[0].get("start_date")
+        last_end = TIMELINE_PHASES[-1].get("end_date")
+        if first_start and d.isoformat() < first_start:
+            return TIMELINE_PHASES[0]["id"]
+        if last_end and d.isoformat() > last_end:
+            return TIMELINE_PHASES[-1]["id"]
+    return TIMELINE_PHASES[0]["id"] if TIMELINE_PHASES else "build"
+
+
+def _session_deadlines_for_issue() -> list[dict]:
+    """Build list of deadline dicts (date, chamber, description) for The Issue FAQ, sorted by date."""
+    deadlines = get_all_deadlines()
+    out = [
+        {"date": ev["date"], "chamber": chamber, "description": ev["description"]}
+        for chamber, ev in deadlines
+    ]
+    out.sort(key=lambda d: (d["date"], d["chamber"]))
+    return out
+
+
+def _the_issue_blocks_for_glossary(constituent_brief: dict) -> tuple[list[str], list[tuple[str, int, int]]]:
+    """Build flat list of text blocks for The Issue (intro, points, section paragraphs/bullets) and mapping for result indices.
+    Returns (blocks, mapping) where mapping is list of ('intro'|'point'|'para'|'bullet', section_ix, sub_ix)."""
+    blocks: list[str] = []
+    mapping: list[tuple[str, int, int]] = []
+    sections = constituent_brief.get("sections") or []
+    if not sections:
+        return blocks, mapping
+    first_paras = sections[0].get("paragraphs") or []
+    if not first_paras:
+        return blocks, mapping
+    intro = first_paras[0]
+    blocks.append(intro)
+    mapping.append(("intro", 0, 0))
+    points = STRATEGIC_FIVE_POINTS or []
+    for i, pt in enumerate(points):
+        blocks.append(pt)
+        mapping.append(("point", -1, i))
+    for sec_ix, sec in enumerate(sections):
+        paras = sec.get("paragraphs") or []
+        for p_ix, p in enumerate(paras):
+            if sec_ix == 0 and p_ix == 0:
+                continue
+            blocks.append(p)
+            mapping.append(("para", sec_ix, p_ix))
+        for b_ix, b in enumerate(sec.get("bullets") or []):
+            blocks.append(b)
+            mapping.append(("bullet", sec_ix, b_ix))
+    return blocks, mapping
+
+
+def _apply_the_issue_glossary(constituent_brief: dict) -> None:
+    """Mutate constituent_brief: add intro_html, strategic_five_points_html, and per-section paragraphs_html, bullets_html."""
+    blocks, mapping = _the_issue_blocks_for_glossary(constituent_brief)
+    if not blocks:
+        return
+    terms = _inline_glossary_terms(include_domain=False)
+    result = apply_inline_glossary(blocks, terms)
+    sections = constituent_brief.get("sections") or []
+    for sec in sections:
+        sec["paragraphs_html"] = list(sec.get("paragraphs") or [])
+        sec["bullets_html"] = list(sec.get("bullets") or [])
+    intro_html = None
+    points_html: list[str] = []
+    for i, (kind, sec_ix, sub_ix) in enumerate(mapping):
+        if i >= len(result):
+            break
+        if kind == "intro":
+            intro_html = result[i]
+        elif kind == "point":
+            points_html.append(result[i])
+        elif kind == "para" and sec_ix < len(sections) and sub_ix < len(sections[sec_ix]["paragraphs_html"]):
+            sections[sec_ix]["paragraphs_html"][sub_ix] = result[i]
+        elif kind == "bullet" and sec_ix < len(sections) and sub_ix < len(sections[sec_ix]["bullets_html"]):
+            sections[sec_ix]["bullets_html"][sub_ix] = result[i]
+    if intro_html is not None:
+        constituent_brief["intro_html"] = intro_html
+        if sections and sections[0]["paragraphs_html"]:
+            sections[0]["paragraphs_html"][0] = intro_html
+    if points_html:
+        constituent_brief["strategic_five_points_html"] = points_html
+
 
 @router.get("/the-issue", include_in_schema=False)
 async def the_issue_page(request: Request):
@@ -1161,6 +1501,12 @@ async def the_issue_page(request: Request):
     }
     aamva_fix_abbrs = _brief_aamva_fix_state_abbrs()
     constituent_brief = _load_constituent_brief()
+    if constituent_brief:
+        _apply_the_issue_glossary(constituent_brief)
+    try:
+        session_deadlines = _session_deadlines_for_issue()
+    except (FileNotFoundError, ValueError):
+        session_deadlines = []
     return templates.TemplateResponse(
         "the_issue.html",
         {
@@ -1169,6 +1515,9 @@ async def the_issue_page(request: Request):
             "fact_sheet_pdf_url": FACT_SHEET_PDF_URL,
             "faq_law": FAQ_LAW,
             "faq_advocacy": FAQ_ADVOCACY,
+            "faq_session": FAQ_SESSION,
+            "session_deadlines": session_deadlines,
+            "session_schedule_terms": SESSION_SCHEDULE_TERMS,
             "brief_state_status": BRIEF_STATE_STATUS,
             "brief_state_map_status_json": json.dumps(brief_state_map_status),
             "brief_aamva_fix_state_abbrs_json": json.dumps(aamva_fix_abbrs),
@@ -1180,6 +1529,35 @@ async def the_issue_page(request: Request):
     )
 
 
+def _apply_legislator_brief_glossary(legislator_brief: dict) -> None:
+    """Mutate legislator_brief: add issue_one_sentence_html, core_ambiguity_html, and per-section paragraphs_html."""
+    blocks: list[str] = []
+    blocks.append(legislator_brief.get("issue_one_sentence", ""))
+    blocks.append(legislator_brief.get("core_ambiguity", ""))
+    for sec in legislator_brief.get("sections") or []:
+        blocks.extend(sec.get("paragraphs") or [])
+    if not blocks:
+        return
+    terms = _inline_glossary_terms(include_domain=False)
+    result = apply_inline_glossary(blocks, terms)
+    idx = 0
+    if idx < len(result):
+        legislator_brief["issue_one_sentence_html"] = result[idx]
+        idx += 1
+    if idx < len(result):
+        legislator_brief["core_ambiguity_html"] = result[idx]
+        idx += 1
+    for sec in legislator_brief.get("sections") or []:
+        paras = sec.get("paragraphs") or []
+        sec["paragraphs_html"] = []
+        for _ in paras:
+            if idx < len(result):
+                sec["paragraphs_html"].append(result[idx])
+                idx += 1
+            else:
+                break
+
+
 @router.get("/legislator-brief", include_in_schema=False)
 async def legislator_brief_page(request: Request):
     """Serve the Legislator Brief: concise briefing for legislators and staff. Content from canonical .txt when present."""
@@ -1188,6 +1566,8 @@ async def legislator_brief_page(request: Request):
     }
     aamva_fix_abbrs = _brief_aamva_fix_state_abbrs()
     legislator_brief = _load_legislator_brief()
+    if legislator_brief:
+        _apply_legislator_brief_glossary(legislator_brief)
     return templates.TemplateResponse(
         "legislator_brief.html",
         {
@@ -1218,7 +1598,6 @@ async def fact_sheet_page(request: Request):
             "strategic_five_points": STRATEGIC_FIVE_POINTS,
             "fact_sheet_issue": FACT_SHEET_ISSUE,
             "fact_sheet_position": FACT_SHEET_POSITION,
-            "fact_sheet_supporters_placeholder": FACT_SHEET_SUPPORTERS_PLACEHOLDER,
             "fact_sheet_faq_items": fact_sheet_faq_items,
         },
     )
@@ -1230,4 +1609,75 @@ async def coalition_page(request: Request):
     return templates.TemplateResponse(
         "coalition.html",
         {"request": request},
+    )
+
+
+def _timeline_phases_with_inline_glossary() -> list[dict]:
+    """Return a copy of TIMELINE_PHASES with summary_html and milestone title_html/description_html from inline glossary."""
+    blocks: list[str] = []
+    mapping: list[tuple[str, int, int]] = []  # ('label'|'summary'|'title'|'desc', phase_ix, milestone_ix or -1)
+    for ph_ix, phase in enumerate(TIMELINE_PHASES):
+        blocks.append(phase.get("label", ""))
+        mapping.append(("label", ph_ix, -1))
+        blocks.append(phase.get("summary", ""))
+        mapping.append(("summary", ph_ix, -1))
+        for m_ix, m in enumerate(phase.get("milestones") or []):
+            blocks.append(m.get("title", ""))
+            mapping.append(("title", ph_ix, m_ix))
+            blocks.append(m.get("description", ""))
+            mapping.append(("desc", ph_ix, m_ix))
+    terms = _inline_glossary_terms(include_domain=True)
+    result = apply_inline_glossary(blocks, terms)
+    out: list[dict] = []
+    for ph_ix, phase in enumerate(TIMELINE_PHASES):
+        ph_copy = dict(phase)
+        ph_copy["milestones"] = [dict(m) for m in phase.get("milestones") or []]
+        out.append(ph_copy)
+    for idx, (kind, ph_ix, m_ix) in enumerate(mapping):
+        if idx >= len(result):
+            break
+        if ph_ix >= len(out):
+            continue
+        if kind == "label":
+            out[ph_ix]["label_html"] = result[idx]
+        elif kind == "summary":
+            out[ph_ix]["summary_html"] = result[idx]
+        elif kind == "title" and m_ix >= 0 and m_ix < len(out[ph_ix]["milestones"]):
+            out[ph_ix]["milestones"][m_ix]["title_html"] = result[idx]
+        elif kind == "desc" and m_ix >= 0 and m_ix < len(out[ph_ix]["milestones"]):
+            out[ph_ix]["milestones"][m_ix]["description_html"] = result[idx]
+    return out
+
+
+@router.get("/timeline", include_in_schema=False)
+async def timeline_page(request: Request):
+    """Serve the 2027 campaign master timeline: Feb 2026 through bill signed."""
+    try:
+        session_deadlines = _session_deadlines_for_issue()
+    except (FileNotFoundError, ValueError):
+        session_deadlines = []
+    timeline_phases = _timeline_phases_with_inline_glossary()
+    return templates.TemplateResponse(
+        "timeline.html",
+        {
+            "request": request,
+            "timeline_phases": timeline_phases,
+            "current_phase_id": _current_timeline_phase_id(),
+            "session_deadlines": session_deadlines,
+            "session_label": session_label(),
+        },
+    )
+
+
+@router.get("/glossary", include_in_schema=False)
+async def glossary_page(request: Request):
+    """Serve the definitions/glossary page: domain terms and kei vehicle terms."""
+    return templates.TemplateResponse(
+        "glossary.html",
+        {
+            "request": request,
+            "domain_glossary": DOMAIN_GLOSSARY,
+            "kei_glossary": KEI_GLOSSARY,
+            "session_schedule_terms": SESSION_SCHEDULE_TERMS,
+        },
     )

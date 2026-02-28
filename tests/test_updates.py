@@ -146,13 +146,13 @@ class TestUpdatesPage:
         assert resp.status_code == 200
         assert b"Where we are" in resp.content or b"Updates" in resp.content
 
-    def test_updates_page_shows_campaign_timeline(self, client: TestClient) -> None:
-        """Where we are section includes campaign timeline with achieved and pending steps."""
+    def test_updates_page_shows_progress_checklist(self, client: TestClient) -> None:
+        """Where we are section includes progress checklist with achieved and pending steps."""
         resp = client.get("/updates")
         assert resp.status_code == 200
-        assert b"campaign-timeline" in resp.content
-        assert b"campaign-timeline__item--achieved" in resp.content
-        assert b"campaign-timeline__item--pending" in resp.content
+        assert b"progress-checklist" in resp.content
+        assert b"progress-checklist__item--achieved" in resp.content
+        assert b"progress-checklist__item--pending" in resp.content
 
     def test_updates_page_lists_sent_updates(self, client: TestClient, test_db_path: Path) -> None:
         from datetime import datetime, timezone
@@ -424,6 +424,54 @@ class TestSubscribeUnsubscribe:
         resp = client.get("/updates/unsubscribe?token=invalid")
         assert resp.status_code == 200
         assert b"Invalid" in resp.content or b"expired" in resp.content.lower()
+
+    def test_subscribe_email_creates_user_and_redirects(
+        self, client: TestClient, test_db_path: Path
+    ) -> None:
+        """subscribe-email (no auth) creates user with wants_updates=True and redirects."""
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            importlib.reload(deps_mod)
+            importlib.reload(updates_router_mod)
+        resp = client.post(
+            "/updates/subscribe-email",
+            data={"email": "  NewSub@Example.com  "},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        assert resp.headers.get("location") == "/updates?subscribed=1"
+
+        async def check():
+            from sqlalchemy import select
+
+            from ilga_graph.db_models import User
+
+            async with db_mod.async_session_factory() as session:
+                r = await session.execute(select(User).where(User.email == "newsub@example.com"))
+                u = r.scalar_one_or_none()
+                assert u is not None
+                assert u.wants_updates is True
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(check())
+
+    def test_subscribe_email_invalid_returns_400_with_htmx(
+        self, client: TestClient, test_db_path: Path
+    ) -> None:
+        """POST /updates/subscribe-email invalid email returns 400 and HTML fragment for HTMX."""
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            importlib.reload(updates_router_mod)
+        resp = client.post(
+            "/updates/subscribe-email",
+            data={"email": "not-an-email"},
+            headers={"HX-Request": "true"},
+        )
+        assert resp.status_code == 400
+        assert b"valid" in resp.content.lower() or b"email" in resp.content.lower()
 
 
 class TestAdminGate:

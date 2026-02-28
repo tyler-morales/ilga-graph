@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Campaign timeline — {{ site_name }}{% endblock %}
+{% block body_class %}page-timeline{% endblock %}
+{% block content %}
+<article class="timeline-page" aria-labelledby="timeline-heading">
+    <header class="timeline-page__header">
+        <h1 id="timeline-heading">2027 campaign timeline</h1>
+        <p class="timeline-page__intro">From now through when a bill could get signed into law. Key phases and milestones for the Illinois kei vehicle registration fix. <span class="timeline-page__scroll-hint">Scroll or swipe left and right to see all phases.</span></p>
+    </header>
+
+    <div class="campaign-timeline" tabindex="0" role="region" aria-label="Campaign phases timeline — scroll horizontally to see all phases">
+        <div class="campaign-timeline__track" role="list">
+        {% for phase in timeline_phases %}
+        <section class="campaign-timeline__phase{% if phase.id == current_phase_id %} campaign-timeline__phase--current{% endif %}" id="phase-{{ phase.id }}" role="listitem" aria-labelledby="phase-{{ phase.id }}-heading">
+            <div class="campaign-timeline__node" aria-hidden="true"></div>
+            <div class="campaign-timeline__card">
+                <h2 id="phase-{{ phase.id }}-heading" class="campaign-timeline__phase-title">{% if phase.get('label_html') %}{{ phase.label_html|safe }}{% else %}{{ phase.label }}{% endif %}</h2>
+                <p class="campaign-timeline__date-range">{{ phase.date_range }}</p>
+                <p class="campaign-timeline__summary">{% if phase.get('summary_html') %}{{ phase.summary_html|safe }}{% else %}{{ phase.summary }}{% endif %}</p>
+                {% if phase.milestones %}
+                <ul class="campaign-timeline__milestones" role="list">
+                    {% for m in phase.milestones %}
+                    <li class="campaign-timeline__milestone">
+                        <span class="campaign-timeline__milestone-date">{{ m.date }}</span>
+                        <strong class="campaign-timeline__milestone-title">{% if m.get('title_html') %}{{ m.title_html|safe }}{% else %}{{ m.title }}{% endif %}</strong>
+                        <span class="campaign-timeline__milestone-desc">{% if m.get('description_html') %}{{ m.description_html|safe }}{% else %}{{ m.description }}{% endif %}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+        </section>
+        {% endfor %}
+        </div>
+    </div>
+
+    {% if session_deadlines %}
+    <section class="timeline-page__deadlines" aria-labelledby="timeline-deadlines-heading">
+        <h2 id="timeline-deadlines-heading" class="timeline-page__deadlines-title">Key session deadlines</h2>
+        <p class="timeline-page__deadlines-intro">Key dates from the same source as <a href="/the-issue#issue-faq-session-session1">The Issue session calendar</a> ({{ session_label or "current session" }}).</p>
+        <table class="timeline-page__deadlines-table" aria-label="Key legislative deadlines by date and chamber">
+            <thead>
+                <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Chamber</th>
+                    <th scope="col">Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in session_deadlines %}
+                <tr>
+                    <td>{{ d.date }}</td>
+                    <td>{{ d.chamber }}</td>
+                    <td>{{ d.description }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+    {% endif %}
+
+    <footer class="timeline-page__footer">
+        <p>Dates for the 2027 session are approximate and follow the typical Illinois General Assembly calendar. When the 105th GA schedule is published, key dates will be updated. Key deadlines above come from <code>reference/session_schedule.json</code>.</p>
+        <p><a href="/the-issue">The Issue</a> · <a href="/advocacy">Take action</a></p>
+    </footer>
+</article>
+{% endblock %}

@@ -2,11 +2,38 @@
 {% block title %}Something went wrong — {{ site_name }}{% endblock %}
 {% block content %}
 <div class="error-page">
-    <h1 class="error-page-title">Something went wrong</h1>
-    <p class="error-page-body">We’re sorry. An error occurred and we’ve been notified. Please try again later.</p>
+    <h1 class="error-page-title">500 Error: Something went wrong</h1>
+    <p class="error-page-body">We’re sorry. An error occurred on our side and we’ve been notified. Please try again in a moment, or use the links below to get back on track.</p>
+    <div class="error-page-fact" aria-live="polite">
+        {% if kei_fact.image %}
+        <figure class="error-page-fact-figure">
+            <img src="{{ kei_fact.image }}" alt="{{ kei_fact.image_alt or 'Kei vehicle' }}" class="error-page-fact-img" width="320" height="240" loading="lazy" decoding="async">
+            {% if kei_fact.image_credit %}
+            <figcaption class="error-page-fact-credit">{{ kei_fact.image_credit }}</figcaption>
+            {% endif %}
+        </figure>
+        {% endif %}
+        <p class="error-page-fact-text"><strong>Fun fact:</strong> {{ kei_fact.text }}</p>
+    </div>
+    <p class="error-page-hint">
+        <button type="button" class="error-page-hint-btn" id="error-page-refresh-btn" aria-label="Refresh the page to see another fun fact about Kei vehicles.">
+            <span class="error-page-hint-refresh" aria-hidden="true"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></span> Refresh the page to see another fun fact about Kei vehicles.
+        </button>
+    </p>
     <nav class="error-page-links" aria-label="Navigation to get back on site">
         <a href="/">Home</a>
         <a href="/advocacy">Advocacy</a>
     </nav>
 </div>
+<script>
+(function() {
+    var btn = document.getElementById('error-page-refresh-btn');
+    var icon = btn && btn.querySelector('.error-page-hint-refresh');
+    if (!btn || !icon) return;
+    btn.addEventListener('click', function() {
+        icon.classList.add('error-page-hint-refresh--spinning');
+        setTimeout(function() { window.location.reload(); }, 500);
+    });
+})();
+</script>
 {% endblock %}

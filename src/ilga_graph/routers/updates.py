@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import logging
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,19 +27,40 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from .. import advocacy_helpers as ah
 from .. import config as cfg
+from ..app_state import state
+from ..campaign_helpers import get_active_campaign
+from ..constants import CATEGORY_COMMITTEES
 from ..db import async_session_factory, get_db
-from ..db_models import Update, User
+from ..db_models import OutreachEvent, Update, User
 from ..dependencies import get_current_user_optional, require_admin, require_user
 from ..email_utils import send_email
+from ..member_lookup import find_member_by_district
 from ..routers.content import (
     CAMPAIGN_STATUS,
-    CAMPAIGN_TIMELINE_ACHIEVED_COUNT,
-    CAMPAIGN_TIMELINE_CHECKPOINTS,
+    PROGRESS_ACHIEVED_COUNT,
+    PROGRESS_CHECKPOINTS,
     STRATEGIC_FIVE_POINTS,
 )
+from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
 
 LOGGER = logging.getLogger(__name__)
+
+# Email validation for public subscribe (no auth code). Max length matches User.email.
+_EMAIL_MAX_LEN = 320
+_EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", re.IGNORECASE)
+
+
+def _normalize_and_validate_subscribe_email(raw: str) -> str | None:
+    """Return normalized email if valid; else None."""
+    s = (raw or "").strip().lower()
+    if not s or len(s) > _EMAIL_MAX_LEN:
+        return None
+    if not _EMAIL_RE.match(s):
+        return None
+    return s
+
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
 router = APIRouter()
@@ -57,6 +79,12 @@ templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 templates.env.globals["features"] = cfg.get_client_features()
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
+
+from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
+
+templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
+templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
+templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 
 # Email update types: slug -> display label. Default for new drafts is "other".
 UPDATE_TYPES = [("major", "Major"), ("minor", "Minor"), ("other", "Other")]
@@ -158,6 +186,7 @@ def _render_update_email_html(
 ) -> str:
     """Render the update email HTML (header, optional image, body, footer with unsubscribe)."""
     site = cfg.SITE_NAME or "The Land of Kei"
+    updates_url = (cfg.APP_BASE_URL or "").rstrip("/") + "/updates"
     tmpl = templates.env.get_template("_update_email.html")
     return tmpl.render(
         site_name=site,
@@ -165,6 +194,7 @@ def _render_update_email_html(
         body_html=body_html,
         unsub_url=unsub_url,
         image_url=image_url,
+        updates_url=updates_url,
     )
 
 
@@ -295,6 +325,196 @@ async def run_send_loop(
         job["done"] = True
 
 
+# ─── Priority card status (logged-in user outreach) ────────────────────────────
+
+
+def _priority_card_cta_href(zip_code: str | None) -> str:
+    """Link to advocacy; include zip so user lands on their results."""
+    if zip_code:
+        return f"/advocacy?zip={zip_code}"
+    return "/advocacy#zip_code"
+
+
+async def _get_priority_card_status(
+    user: User,
+    active_campaign: object,
+    db: AsyncSession,
+) -> dict[str, Any] | None:
+    """Build status message and CTA for the priority callout from advocacy next-step logic.
+
+    Uses user.zip_code + district to compute the same goal steps as the advocacy page (district
+    call/email, then Power Broker when district is complete). CTA shows the actual next step
+    (e.g. "Call your Senator", "Email your Rep") instead of generic "Contact your rep".
+    """
+    campaign_id = getattr(active_campaign, "id", None)
+    if not campaign_id:
+        return None
+
+    zip_code = (user.zip_code or "").strip() or None
+    senator = None
+    rep = None
+    senate_district = None
+    house_district = None
+    if zip_code and getattr(state, "zip_to_district", None) and zip_code in state.zip_to_district:
+        district_info = state.zip_to_district[zip_code]
+        senate_district = district_info.il_senate if district_info else None
+        house_district = district_info.il_house if district_info else None
+        senator = (
+            find_member_by_district(state, "senate", senate_district) if senate_district else None
+        )
+        rep = find_member_by_district(state, "house", house_district) if house_district else None
+
+    member_ids: list[str] = []
+    if senator:
+        member_ids.append(str(senator.id))
+    if rep:
+        member_ids.append(str(rep.id))
+
+    if not member_ids:
+        # No district: fallback if user has any outreach
+        any_result = await db.execute(
+            select(OutreachEvent.id)
+            .where(OutreachEvent.user_id == user.id)
+            .where(OutreachEvent.kind.in_(["call", "email"]))
+            .limit(1)
+        )
+        if any_result.scalar() is not None:
+            return {
+                "status_message": (
+                    "You've recorded outreach. Enter your ZIP on the advocacy page "
+                    "to see your full progress."
+                ),
+                "goal_complete": False,
+                "cta_text": "Go to advocacy",
+                "cta_href": "/advocacy",
+            }
+        return None
+
+    # Same outreach lookup as advocacy: call/email per member
+    outreach_result = await db.execute(
+        select(OutreachEvent.member_id, OutreachEvent.kind)
+        .where(OutreachEvent.user_id == user.id)
+        .where(OutreachEvent.member_id.in_(member_ids))
+        .where(OutreachEvent.kind.in_(["call", "email"]))
+    )
+    called: set[str] = set()
+    emailed: set[str] = set()
+    for mid, kind in outreach_result.all():
+        mid_str = str(mid)
+        if kind == "call":
+            called.add(mid_str)
+        elif kind == "email":
+            emailed.add(mid_str)
+
+    # District steps: same order as advocacy (call then email per member; senator then rep)
+    role_by_id: dict[str, str] = {}
+    if senator:
+        role_by_id[str(senator.id)] = "Senator"
+    if rep:
+        role_by_id[str(rep.id)] = "Rep"
+    district_steps: list[dict[str, Any]] = []
+    for mid in member_ids:
+        role = role_by_id.get(mid, "Rep")
+        district_steps.append(
+            {"member_id": mid, "role_label": role, "action": "call", "done": mid in called}
+        )
+        district_steps.append(
+            {"member_id": mid, "role_label": role, "action": "email", "done": mid in emailed}
+        )
+
+    district_done = sum(1 for s in district_steps if s["done"])
+    district_total = len(district_steps)
+    district_complete = district_done == district_total and district_total > 0
+
+    # Next step: first undone district step, or broker step if district complete
+    goal_next_step: dict[str, Any] | None = None
+    for s in district_steps:
+        if not s["done"]:
+            goal_next_step = {
+                "action": s["action"],
+                "member_id": s["member_id"],
+                "role_label": s["role_label"],
+            }
+            break
+
+    broker_called = False
+    broker_emailed = False
+    broker_id: str | None = None
+    if district_complete and senate_district is not None and house_district is not None:
+        committee_codes = CATEGORY_COMMITTEES.get("Transportation", [])
+        broker_member, _ = ah.find_power_broker(
+            state,
+            exclude_senate_district=senate_district or "",
+            exclude_house_district=house_district or "",
+            committee_codes=committee_codes or None,
+            category_name="Transportation",
+        )
+        if broker_member:
+            broker_id = str(broker_member.id)
+            # User outreach for broker (reuse same events; we need to query for broker_id too)
+            broker_result = await db.execute(
+                select(OutreachEvent.kind)
+                .where(OutreachEvent.user_id == user.id)
+                .where(OutreachEvent.member_id == broker_id)
+                .where(OutreachEvent.kind.in_(["call", "email"]))
+            )
+            for (kind,) in broker_result.all():
+                if kind == "call":
+                    broker_called = True
+                elif kind == "email":
+                    broker_emailed = True
+            broker_steps: list[dict[str, Any]] = [
+                {
+                    "member_id": broker_id,
+                    "role_label": "Power Broker",
+                    "action": "call",
+                    "done": broker_called,
+                },
+                {
+                    "member_id": broker_id,
+                    "role_label": "Power Broker",
+                    "action": "email",
+                    "done": broker_emailed,
+                },
+            ]
+            if goal_next_step is None:
+                for s in broker_steps:
+                    if not s["done"]:
+                        goal_next_step = {
+                            "action": s["action"],
+                            "member_id": s["member_id"],
+                            "role_label": s["role_label"],
+                        }
+                        break
+
+    # "What you did" message
+    if district_complete and goal_next_step is None:
+        status_message = "You've contacted your rep — thank you!"
+        cta_text = "See your progress"
+        goal_complete = True
+    elif district_complete and goal_next_step is not None:
+        status_message = "You've contacted your district legislators."
+        cta_text = f"{goal_next_step['action'].capitalize()} your {goal_next_step['role_label']}"
+        goal_complete = False
+    elif district_done > 0:
+        status_message = f"You've completed {district_done} of {district_total} steps."
+        cta_text = (
+            f"{goal_next_step['action'].capitalize()} your {goal_next_step['role_label']}"
+            if goal_next_step
+            else getattr(active_campaign, "ask", "Contact your rep")
+        )
+        goal_complete = False
+    else:
+        return None
+
+    return {
+        "status_message": status_message,
+        "goal_complete": goal_complete,
+        "cta_text": cta_text,
+        "cta_href": _priority_card_cta_href(zip_code),
+    }
+
+
 # ─── Public routes ────────────────────────────────────────────────────────────
 
 
@@ -304,14 +524,14 @@ def _updates_page_ctx(
     user: User | None,
 ) -> dict[str, Any]:
     """Build template context for updates page (all updates on one page, sidebar TOC)."""
-    campaign_timeline = [
-        {"label": label, "achieved": i < CAMPAIGN_TIMELINE_ACHIEVED_COUNT}
-        for i, label in enumerate(CAMPAIGN_TIMELINE_CHECKPOINTS)
+    progress_checklist = [
+        {"label": label, "achieved": i < PROGRESS_ACHIEVED_COUNT}
+        for i, label in enumerate(PROGRESS_CHECKPOINTS)
     ]
     return {
         "request": request,
         "campaign_status": CAMPAIGN_STATUS,
-        "campaign_timeline": campaign_timeline,
+        "progress_checklist": progress_checklist,
         "updates": sent_updates,
         "user": user,
         "wants_updates": user.wants_updates if user else None,
@@ -332,6 +552,12 @@ async def updates_page(
     )
     sent_updates = list(result.scalars().all())
     ctx = _updates_page_ctx(request, sent_updates, user)
+    active_campaign = await get_active_campaign(db)
+    ctx["active_campaign"] = active_campaign
+    if user and active_campaign:
+        ctx["priority_card_status"] = await _get_priority_card_status(user, active_campaign, db)
+    else:
+        ctx["priority_card_status"] = None
     return templates.TemplateResponse(request, "updates.html", ctx)
 
 
@@ -377,6 +603,42 @@ async def subscribe_post(
     user.wants_updates = True
     await db.commit()
     return RedirectResponse("/updates", status_code=303)
+
+
+@router.post("/updates/subscribe-email", include_in_schema=False)
+async def subscribe_email_post(
+    request: Request,
+    email: str = Form(..., max_length=_EMAIL_MAX_LEN),
+    db: AsyncSession = Depends(get_db),
+):
+    """Public email-only subscription: create/update user wants_updates=True. No auth code."""
+    normalized = _normalize_and_validate_subscribe_email(email)
+    if not normalized:
+        if request.headers.get("HX-Request"):
+            return HTMLResponse(
+                '<p class="subscribe-email-error" role="alert">'
+                "Please enter a valid email address.</p>",
+                status_code=400,
+            )
+        return RedirectResponse("/updates?subscribe=invalid", status_code=303)
+    result = await db.execute(select(User).where(User.email == normalized))
+    user = result.scalar_one_or_none()
+    if user:
+        user.wants_updates = True
+        await db.commit()
+        LOGGER.info("User id=%s re-subscribed to updates (email-only)", user.id)
+    else:
+        user = User(email=normalized, wants_updates=True)
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+        LOGGER.info("New subscriber via email-only signup: id=%s", user.id)
+    if request.headers.get("HX-Request"):
+        return HTMLResponse(
+            '<p class="subscribe-email-success" role="status">'
+            "You're subscribed. We'll send one email when the bill moves.</p>"
+        )
+    return RedirectResponse("/updates?subscribed=1", status_code=303)
 
 
 @router.get("/updates/{update_id:int}", include_in_schema=False)

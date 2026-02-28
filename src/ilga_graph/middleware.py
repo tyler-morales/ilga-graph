@@ -11,6 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 
 from . import config as cfg
+from .campaign_helpers import get_active_campaign
+from .db import async_session_factory
 from .security import (
     CSRF_COOKIE_NAME,
     CSRF_MAX_AGE_SECONDS,
@@ -53,6 +55,19 @@ def register_middleware(app: FastAPI) -> None:
     )
 
     @app.middleware("http")
+    async def current_action_campaign_middleware(request: Request, call_next) -> Response:
+        """Set request.state.current_action_campaign for HTML requests (base template top bar)."""
+        accept = request.headers.get("accept") or ""
+        if "text/html" in accept and not request.url.path.startswith("/static"):
+            try:
+                async with async_session_factory() as db:
+                    campaign = await get_active_campaign(db)
+                    request.state.current_action_campaign = campaign  # type: ignore[attr-defined]
+            except Exception:
+                request.state.current_action_campaign = None  # type: ignore[attr-defined]
+        return await call_next(request)
+
+    @app.middleware("http")
     async def api_key_middleware(request: Request, call_next) -> Response:
         if cfg.API_KEY:
             exempt = {
@@ -74,6 +89,7 @@ def register_middleware(app: FastAPI) -> None:
             if (
                 not browser_get
                 and path not in exempt
+                and not path.startswith("/admin")
                 and not path.startswith("/advocacy")
                 and not path.startswith("/auth")
                 and not path.startswith("/outreach")

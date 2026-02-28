@@ -22,19 +22,19 @@
                 <p class="hero-subhead">{{ hero_subhead }}</p>
                 <p class="hero-ticker" aria-live="polite">
                     {% if calls_total|default(0) > 0 %}
-                    Add your voice. <strong aria-hidden="true">{{ calls_total }}</strong>+ outreach actions already
-                    made.
+                    Illinois constituents have done <strong aria-hidden="true">{{ calls_total }}</strong> outreach
+                    actions.
                     {% else %}
-                    Add your voice — enter your ZIP to start.
+                    Join others. Enter your ZIP to start.
                     {% endif %}
                 </p>
                 <div class="hero-form">
                     <form action="/advocacy" method="get" id="advocacy-form"
                         aria-label="Look up legislators by any Illinois ZIP code">
                         <input type="hidden" name="category" value="Transportation">
+                        <label for="zip_code" class="hero-form-label">Enter your ZIP — we'll handle the rest</label>
                         <div class="hero-form-row">
                             <div class="hero-field">
-                                <label for="zip_code">Enter your ZIP</label>
                                 <input type="text" id="zip_code" name="zip" inputmode="numeric" pattern="[0-9]{5}"
                                     placeholder="Enter any Illinois ZIP" maxlength="5" required autocomplete="off"
                                     value="{{ zip or '' }}">
@@ -73,8 +73,7 @@
         <div class="hero-meta" id="auth-strip" aria-live="polite">
             <div class="hero-meta-line">
                 <span id="auth-strip-signed-out" class="hero-meta-auth">
-                    <button type="button" class="auth-strip-signin-btn" id="auth-strip-signin-btn">Pick up where you
-                        left off or start tracking your outreach</button>
+                    <button type="button" class="auth-strip-signin-btn" id="auth-strip-signin-btn">Get notified when the bill moves</button>
                 </span>
                 <span id="auth-strip-signed-in" class="hero-meta-auth auth-strip-signed-in" hidden><span
                         class="hero-verified-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24"

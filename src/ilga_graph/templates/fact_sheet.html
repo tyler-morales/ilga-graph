@@ -21,22 +21,17 @@
             <p>{{ fact_sheet_position }}</p>
         </section>
 
-        <section class="fact-sheet-section" aria-labelledby="fact-points-heading">
+        <section class="strategic-points strategic-points--banner fact-sheet-section" id="fact-key-points" aria-labelledby="fact-points-heading">
             <h2 id="fact-points-heading">Five points to remember (stay on message)</h2>
-            <ol class="fact-sheet-points-list" role="list">
+            <ul class="strategic-points-list" role="list">
                 {% for point in strategic_five_points %}
-                <li class="fact-sheet-points-item">{{ point }}</li>
+                <li class="strategic-points-item">{{ point }}</li>
                 {% endfor %}
-            </ol>
-        </section>
-
-        <section class="fact-sheet-section" aria-labelledby="fact-supporters-heading">
-            <h2 id="fact-supporters-heading">Supporters</h2>
-            <p class="fact-sheet-placeholder">{{ fact_sheet_supporters_placeholder }}</p>
+            </ul>
         </section>
 
         <section class="fact-sheet-section fact-sheet-faq" aria-labelledby="fact-faq-heading">
-            <h2 id="fact-faq-heading">Five FAQs for volunteers</h2>
+            <h2 id="fact-faq-heading">Key FAQs for volunteers</h2>
             <dl class="fact-sheet-faq-list">
                 {% for item in fact_sheet_faq_items %}
                 <div class="fact-sheet-faq-item">

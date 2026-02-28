@@ -221,6 +221,102 @@
   color: var(--color-text-quiet, #777);
 }
 
+/* Outreach trend (7d / 30d) */
+.admin-dashboard-trend {
+  margin-top: var(--space-sm, 0.5rem);
+  margin-bottom: var(--space-md, 0.75rem);
+  max-width: 24em;
+}
+
+.admin-dashboard-trend-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: var(--font-size-sm, 0.875rem);
+  padding: 0.25rem 0;
+}
+
+.admin-dashboard-trend-label {
+  color: var(--color-text-muted, #555);
+}
+
+.admin-dashboard-trend-value {
+  color: var(--color-text, #222);
+}
+
+/* Last update sent (Email section) */
+.admin-dashboard-email-last-sent {
+  margin-top: var(--space-sm, 0.5rem);
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-quiet, #777);
+}
+
+.admin-dashboard-email-last-sent time {
+  font-weight: 600;
+}
+
+/* Top legislators by contact volume — horizontal bar chart */
+.admin-dashboard-top-members {
+  margin-top: var(--space-md, 0.75rem);
+  margin-bottom: var(--space-lg, 1rem);
+  max-width: 32em;
+}
+
+.admin-dashboard-contact-chart {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-sm, 0.875rem);
+}
+
+.admin-dashboard-contact-chart__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(4rem, 8rem) 2.5em;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.admin-dashboard-contact-chart__row:last-child {
+  margin-bottom: 0;
+}
+
+.admin-dashboard-contact-chart__name {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: var(--color-text, #222);
+  min-width: 0;
+}
+
+.admin-dashboard-contact-chart__bar-wrap {
+  height: 1.25rem;
+  background: var(--color-bg-muted, #eee);
+  border-radius: 2px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.admin-dashboard-contact-chart__bar {
+  height: 100%;
+  width: var(--contact-pct, 0%);
+  max-width: 100%;
+  background: var(--color-primary, #1e88e5);
+  border-radius: 2px;
+  transition: width 0.2s ease-out;
+}
+
+.admin-dashboard-contact-chart__count {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted, #555);
+  font-weight: 500;
+}
+
+.admin-dashboard-top-members-empty {
+  margin: 0;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-quiet, #777);
+}
+
 @media (max-width: 380px) {
   .admin-dashboard-stats-grid {
     grid-template-columns: repeat(2, 1fr);
