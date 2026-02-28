@@ -360,17 +360,6 @@
                     var inline = wrap.querySelector('.hero-signin-inline');
                     if (inline && !wrap.querySelector('.auth-strip-signin-btn') && !document.getElementById('poll-signin-btn')) inline.hidden = false;
                     window.initInlineSignin(wrap);
-                    var card = wrap.closest('.kei-poll-card');
-                    if (card) {
-                        card.querySelectorAll('.kei-poll-trigger-signin').forEach(function (btn) {
-                            if (btn.dataset.bound) return;
-                            btn.dataset.bound = '1';
-                            btn.addEventListener('click', function () {
-                                var main = document.getElementById('poll-signin-btn');
-                                if (main) main.click();
-                            });
-                        });
-                    }
                 }
             }
             if (document.readyState === 'loading') {

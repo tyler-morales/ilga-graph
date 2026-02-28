@@ -273,7 +273,8 @@
 {% endmacro %}
 
 {% macro kei_poll_results_chart(kei_status_results, kei_status_options, selected_slug=none, offer_save_choice=false) %}
-{# Horizontal bar chart: X% Label, bar (green=highest, blue=others). Selected: "Verified" (signed in) or "Your choice" dimmed (anonymous until sign-in). #}
+{# Horizontal bar chart: X% Label, bar (green=highest, blue=others). Selected: "Verified" (signed in) or "Your choice"
+dimmed (anonymous until sign-in). #}
 {% set _counts = kei_status_results.by_status.values()|list %}
 {% set _max_count = _counts|max if _counts else 0 %}
 <div class="kei-poll-chart" aria-label="Poll results by option">
@@ -284,25 +285,37 @@
         else 0 %}
         {% set is_highest = (kei_status_results.total_responses and count == _max_count) %}
         {% set is_selected = selected_slug == slug %}
-        <li class="kei-poll-chart__row"{% if is_selected %} aria-current="true"{% endif %}>
+        <li class="kei-poll-chart__row" {% if is_selected %} aria-current="true" {% endif %}>
             <div class="kei-poll-chart__label" role="presentation">
                 <span class="kei-poll-chart__pct-wrap">
                     {% if is_selected %}
                     {% if offer_save_choice %}
-                    <span class="kei-poll-chart__verified-badge kei-poll-chart__verified-badge--pending" aria-label="Your choice (sign in to verify)">
+                    <span class="kei-poll-chart__verified-badge kei-poll-chart__verified-badge--pending"
+                        aria-label="Your choice (sign in to verify)">
                         <span class="kei-poll-chart__verified-badge__mask" aria-hidden="true">
                             <span class="kei-poll-chart__verified-badge__track">
                                 <span class="kei-poll-chart__verified-badge__line">
-                                    <svg class="kei-poll-chart__verified-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                    <svg class="kei-poll-chart__verified-icon" width="12" height="12"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                        <polyline points="22 4 12 14.01 9 11.01" />
+                                    </svg>
                                     Your choice
                                 </span>
+                                {# hover line uses same text style via .kei-poll-chart__verified-badge__line #}
                                 <span class="kei-poll-chart__verified-badge__line">Sign in to save your choice</span>
                             </span>
                         </span>
                     </span>
                     {% else %}
                     <span class="kei-poll-chart__verified-badge" aria-label="Your verified choice">
-                        <svg class="kei-poll-chart__verified-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        <svg class="kei-poll-chart__verified-icon" width="12" height="12" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                            stroke-linejoin="round" aria-hidden="true">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                            <polyline points="22 4 12 14.01 9 11.01" />
+                        </svg>
                         Verified
                     </span>
                     {% endif %}
@@ -310,10 +323,6 @@
                     <span class="kei-poll-chart__pct" aria-hidden="true">{{ pct }}%</span>
                 </span>
                 <span class="kei-poll-chart__label-text">{{ label }}</span>
-                {% if is_selected and offer_save_choice %}
-                <button type="button" class="kei-poll-chart__your-choice kei-poll-trigger-signin"
-                    data-poll-signin-trigger aria-label="Save your choice (sign in)">Save your choice</button>
-                {% endif %}
             </div>
             <div class="kei-poll-chart__bar-wrap" aria-hidden="true" role="presentation">
                 <span class="kei-poll-chart__bar kei-poll-chart__bar--{{ 'highest' if is_highest else 'other' }}"

@@ -803,10 +803,12 @@ a:visited {
   font-size: var(--font-size-sm);
 }
 
+/* Single column: badge (if any) and percent, then option label below — never two columns */
 .kei-poll-chart__label {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
   min-width: 0;
 }
 
@@ -815,8 +817,7 @@ a:visited {
   flex-direction: column;
   align-items: flex-start;
   gap: 0.15rem;
-  min-width: 3em;
-  flex-shrink: 0;
+  min-width: 0;
 }
 
 .kei-poll-chart__verified-badge {
@@ -891,37 +892,10 @@ a:visited {
 }
 
 .kei-poll-chart__label-text {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
   line-height: 1.35;
   color: #1a1a1a;
-}
-
-.kei-poll-chart__your-choice {
-  flex-shrink: 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #1976d2;
-  margin-left: 0.35rem;
-  padding: 0.1rem 0.4rem;
-  background: #fff;
-  border: 1px solid #1976d2;
-  border-radius: 3px;
-}
-
-button.kei-poll-chart__your-choice {
-  cursor: pointer;
-  font: inherit;
-  line-height: inherit;
-}
-
-button.kei-poll-chart__your-choice:hover {
-  background: #e3f2fd;
-}
-
-button.kei-poll-chart__your-choice:focus-visible {
-  outline: 2px solid #1976d2;
-  outline-offset: 2px;
 }
 
 .kei-poll-chart__bar-wrap {
@@ -1877,19 +1851,9 @@ button.kei-poll-chart__your-choice:focus-visible {
     gap: 0.2rem;
   }
 
-  .kei-poll-card .kei-poll-chart__label {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.15rem;
-  }
-
   .kei-poll-card .kei-poll-chart__pct {
     min-width: 0;
     font-size: 0.8125rem;
-  }
-
-  .kei-poll-card .kei-poll-chart__your-choice {
-    margin-left: 0;
   }
 
   .kei-poll-card .kei-poll__footer {
