@@ -12,6 +12,7 @@ from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
 
 from .. import config as cfg
+from ..constants import KEI_STATUS_OPTIONS
 from ..session_schedule import get_all_deadlines, session_label
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -197,6 +198,69 @@ WHY_SHOULD_YOU_CARE_TEASER_ITEMS: list[str] = [
     "Even if you don't own one, it's about fair and consistent application of the law.",
     "Your voice helps legislators see the issue deserves a fix.",
 ]
+
+# Why-you-care marquee: list of {"src", "alt", "name", "caption", "location"}.
+# name = person's name (bold in blurb); caption = description; location = city only.
+MARQUEE_IMAGES: list[dict[str, str]] = [
+    {
+        "src": "/static/images/tyler_morales.png",
+        "alt": "Tyler Morales, kei vehicle owner affected by registration",
+        "name": "Tyler Morales",
+        "caption": "Followed all proper import rules; the DMV and Secretary of State keep denying his registration.",
+        "location": "Chicago",
+    },
+    {
+        "src": "/static/images/christian-eduardo-huerta.jpg",
+        "alt": "Christian Eduardo Huerta, kei vehicle owner affected by registration",
+        "name": "Christian Eduardo Huerta",
+        "caption": "\"We use our Sambar for our mobile detailing. It's an amazing marketing tool and a gas saver.\" In Illinois, whether you get registration is inconsistent; he's one of the lucky ones who got plates.",
+        "location": "Chicago",
+    },
+    {
+        "src": "https://picsum.photos/seed/kei1/360/240",
+        "alt": "Kei vehicle owner affected by registration — placeholder",
+        "name": "Marcus",
+        "caption": "Registration revoked after years of legal use",
+        "location": "Chicago",
+    },
+    {
+        "src": "https://picsum.photos/seed/kei2/360/240",
+        "alt": "Kei owner unable to register — placeholder",
+        "name": "Sarah",
+        "caption": "Imported kei truck stuck, can't get plates",
+        "location": "Peoria",
+    },
+    {
+        "src": "https://picsum.photos/seed/kei3/360/240",
+        "alt": "Affected kei owner — placeholder",
+        "name": "James",
+        "caption": "Van denied; same model registered in other states",
+        "location": "Rockford",
+    },
+    {
+        "src": "https://picsum.photos/seed/kei4/360/240",
+        "alt": "Illinois kei vehicle registration issue — placeholder",
+        "name": "Elena",
+        "caption": "DMV turned away federally compliant vehicle",
+        "location": "Springfield",
+    },
+    {
+        "src": "https://picsum.photos/seed/kei5/360/240",
+        "alt": "Kei owner story — placeholder",
+        "name": "David",
+        "caption": "Registration renewal rejected without notice",
+        "location": "Naperville",
+    },
+    {
+        "src": "https://picsum.photos/seed/kei6/360/240",
+        "alt": "Vehicle registration affected owner — placeholder",
+        "name": "Rachel",
+        "caption": "Legal kei car can't be registered in Illinois",
+        "location": "Champaign",
+    },
+]
+templates.env.globals["marquee_images"] = MARQUEE_IMAGES
+
 templates.env.globals["why_should_you_care_heading"] = WHY_SHOULD_YOU_CARE_HEADING
 templates.env.globals["why_should_you_care_intro"] = WHY_SHOULD_YOU_CARE_INTRO
 templates.env.globals["why_should_you_care_voice"] = WHY_SHOULD_YOU_CARE_VOICE
@@ -205,6 +269,7 @@ templates.env.globals["why_should_you_care_teaser_items"] = WHY_SHOULD_YOU_CARE_
 from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
 
 templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
+templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 
 # How we measure advocacy success (things we control). Road-legal outcome is the campaign objective.
 STRATEGIC_SUCCESS_MEASURE = (
@@ -1083,39 +1148,186 @@ SESSION_SCHEDULE_TERMS = [
 
 # Domain glossary: app/organizational terms. Single source for docs/reference/glossary.md and public /glossary page.
 DOMAIN_GLOSSARY: list[dict] = [
-    {"id": "campaign", "term": "Campaign", "definition": "A single, time-bound action alert. At most one campaign is active at a time. Has title, message, ask, optional start/end dates; outreach recorded while active is attributed to it. Not the overall multi-year advocacy initiative (see Advocacy effort).", "category": "advocacy"},
-    {"id": "advocacy-effort", "term": "Advocacy effort", "definition": "The overall multi-year initiative toward the legislative objective (e.g. kei vehicle registration fix). Not a DB object; encompasses all campaigns, updates, and organizing.", "category": "advocacy"},
-    {"id": "ask", "term": "Ask", "definition": "The specific request to a legislator or constituent (noun). E.g. “Contact your rep” or “Support HB 1234.” Stored in Campaign.ask as CTA button text.", "category": "advocacy"},
-    {"id": "coalition-advocacy", "term": "Coalition (advocacy)", "definition": "Organizations aligned on the issue; building coalition = recruiting orgs and stakeholders. Not ML voting coalition (legislators who vote together).", "category": "advocacy"},
-    {"id": "advocate", "term": "Advocate", "definition": "A user who takes outreach action (call, email). May or may not be a constituent of the legislator contacted.", "category": "advocacy"},
-    {"id": "constituent", "term": "Constituent", "definition": "An advocate who lives in a legislator’s district. Stored as a boolean on outreach events; “Constituent Brief” is the canonical document for the public.", "category": "advocacy"},
-    {"id": "outreach", "term": "Outreach", "definition": "A call, email, or no-answer recorded against a legislator. One OutreachEvent per action.", "category": "advocacy"},
-    {"id": "contact", "term": "Contact", "definition": "(Verb) To reach a legislator’s office (call or email). (Noun) The person at the office who answered the call (OutreachEvent.contact_name). “Contact period” = campaign duration.", "category": "advocacy"},
-    {"id": "update", "term": "Update", "definition": "An email announcement sent to subscribers. Has title, body, type (Major/Minor/Other), optional image. DB: Update model.", "category": "advocacy"},
-    {"id": "brief", "term": "Brief", "definition": "A canonical document: legislator brief (for offices) or constituent brief (for the public). The one-pager PDF is the print version of the legislator brief.", "category": "advocacy"},
-    {"id": "session", "term": "Session", "definition": "A day the chamber meets in Springfield, or the full session period (e.g. 104th GA Spring 2026). Session schedule lists session days and deadlines.", "category": "legislative"},
-    {"id": "session-milestone", "term": "Session milestone", "definition": "A legislative deadline with a date (e.g. committee deadline, third reading deadline). Used to set campaign end dates in admin; Campaign.session_milestone_id.", "category": "legislative"},
-    {"id": "bill-stage", "term": "Bill stage", "definition": "Where a bill sits in the process: introduced, committee, floor, passed one chamber, passed both, signed. P(Advance) predicts chance of reaching a positive stage.", "category": "legislative"},
-    {"id": "bill-action", "term": "Bill action", "definition": "A single procedural event on a bill (e.g. “Referred to Assignments”, “Do Pass”). Shown in bill action history.", "category": "legislative"},
-    {"id": "voting-coalition", "term": "Voting coalition", "definition": "ML-discovered cluster of legislators who vote together. Used in Intelligence. Not an advocacy coalition (organizations aligned on the issue).", "category": "legislative"},
-    {"id": "phase", "term": "Phase", "definition": "(Timeline) One of the four periods on the master timeline: Build, Intro, Committee & Floor, Governor. (Goal) “district” or “broker”—which set of outreach steps the user is on.", "category": "product"},
-    {"id": "master-timeline", "term": "Master timeline", "definition": "The phased plan from now to bill signed, shown on /timeline. Source: TIMELINE_PHASES. Each phase has a date range and optional milestones.", "category": "product"},
-    {"id": "progress-checklist", "term": "Progress checklist", "definition": "The short ordered list of stages on /updates (Outreach → … → Keis be legal). Achieved steps at full opacity, rest at reduced. Source: PROGRESS_CHECKPOINTS. Not dated; distinct from master timeline.", "category": "product"},
-    {"id": "milestone", "term": "Milestone", "definition": "A dated checkpoint within a timeline phase (e.g. “Lock lead sponsor(s)”, “Bill introduced”). Shown on /timeline under each phase. Not session milestone (legislative deadline) or bill stage.", "category": "product"},
-    {"id": "goal", "term": "Goal", "definition": "The user’s outreach task list: contact district legislators (4 actions), then Power Broker (2 actions). “Your goal” / “This week’s goal” in the sidebar. Not the advocacy objective (statutory fix).", "category": "product"},
-    {"id": "drawer", "term": "Drawer", "definition": "The slide-out panel for call scripts and email templates. Opens from “Reach out” on a legislator card.", "category": "product"},
-    {"id": "funnel", "term": "Funnel", "definition": "The user journey from page visit to completed outreach. Measured for conversion (e.g. % who opened drawer and completed at least one call/email).", "category": "product"},
+    {
+        "id": "campaign",
+        "term": "Campaign",
+        "definition": "A single, time-bound action alert. At most one campaign is active at a time. Has title, message, ask, optional start/end dates; outreach recorded while active is attributed to it. Not the overall multi-year advocacy initiative (see Advocacy effort).",
+        "category": "advocacy",
+    },
+    {
+        "id": "advocacy-effort",
+        "term": "Advocacy effort",
+        "definition": "The overall multi-year initiative toward the legislative objective (e.g. kei vehicle registration fix). Not a DB object; encompasses all campaigns, updates, and organizing.",
+        "category": "advocacy",
+    },
+    {
+        "id": "ask",
+        "term": "Ask",
+        "definition": "The specific request to a legislator or constituent (noun). E.g. “Contact your rep” or “Support HB 1234.” Stored in Campaign.ask as CTA button text.",
+        "category": "advocacy",
+    },
+    {
+        "id": "coalition-advocacy",
+        "term": "Coalition (advocacy)",
+        "definition": "Organizations aligned on the issue; building coalition = recruiting orgs and stakeholders. Not ML voting coalition (legislators who vote together).",
+        "category": "advocacy",
+    },
+    {
+        "id": "advocate",
+        "term": "Advocate",
+        "definition": "A user who takes outreach action (call, email). May or may not be a constituent of the legislator contacted.",
+        "category": "advocacy",
+    },
+    {
+        "id": "constituent",
+        "term": "Constituent",
+        "definition": "An advocate who lives in a legislator’s district. Stored as a boolean on outreach events; “Constituent Brief” is the canonical document for the public.",
+        "category": "advocacy",
+    },
+    {
+        "id": "outreach",
+        "term": "Outreach",
+        "definition": "A call, email, or no-answer recorded against a legislator. One OutreachEvent per action.",
+        "category": "advocacy",
+    },
+    {
+        "id": "contact",
+        "term": "Contact",
+        "definition": "(Verb) To reach a legislator’s office (call or email). (Noun) The person at the office who answered the call (OutreachEvent.contact_name). “Contact period” = campaign duration.",
+        "category": "advocacy",
+    },
+    {
+        "id": "update",
+        "term": "Update",
+        "definition": "An email announcement sent to subscribers. Has title, body, type (Major/Minor/Other), optional image. DB: Update model.",
+        "category": "advocacy",
+    },
+    {
+        "id": "brief",
+        "term": "Brief",
+        "definition": "A canonical document: legislator brief (for offices) or constituent brief (for the public). The one-pager PDF is the print version of the legislator brief.",
+        "category": "advocacy",
+    },
+    {
+        "id": "session",
+        "term": "Session",
+        "definition": "A day the chamber meets in Springfield, or the full session period (e.g. 104th GA Spring 2026). Session schedule lists session days and deadlines.",
+        "category": "legislative",
+    },
+    {
+        "id": "session-milestone",
+        "term": "Session milestone",
+        "definition": "A legislative deadline with a date (e.g. committee deadline, third reading deadline). Used to set campaign end dates in admin; Campaign.session_milestone_id.",
+        "category": "legislative",
+    },
+    {
+        "id": "bill-stage",
+        "term": "Bill stage",
+        "definition": "Where a bill sits in the process: introduced, committee, floor, passed one chamber, passed both, signed. P(Advance) predicts chance of reaching a positive stage.",
+        "category": "legislative",
+    },
+    {
+        "id": "bill-action",
+        "term": "Bill action",
+        "definition": "A single procedural event on a bill (e.g. “Referred to Assignments”, “Do Pass”). Shown in bill action history.",
+        "category": "legislative",
+    },
+    {
+        "id": "voting-coalition",
+        "term": "Voting coalition",
+        "definition": "ML-discovered cluster of legislators who vote together. Used in Intelligence. Not an advocacy coalition (organizations aligned on the issue).",
+        "category": "legislative",
+    },
+    {
+        "id": "phase",
+        "term": "Phase",
+        "definition": "(Timeline) One of the four periods on the master timeline: Build, Intro, Committee & Floor, Governor. (Goal) “district” or “broker”—which set of outreach steps the user is on.",
+        "category": "product",
+    },
+    {
+        "id": "master-timeline",
+        "term": "Master timeline",
+        "definition": "The phased plan from now to bill signed, shown on /timeline. Source: TIMELINE_PHASES. Each phase has a date range and optional milestones.",
+        "category": "product",
+    },
+    {
+        "id": "progress-checklist",
+        "term": "Progress checklist",
+        "definition": "The short ordered list of stages on /updates (Outreach → … → Keis be legal). Achieved steps at full opacity, rest at reduced. Source: PROGRESS_CHECKPOINTS. Not dated; distinct from master timeline.",
+        "category": "product",
+    },
+    {
+        "id": "milestone",
+        "term": "Milestone",
+        "definition": "A dated checkpoint within a timeline phase (e.g. “Lock lead sponsor(s)”, “Bill introduced”). Shown on /timeline under each phase. Not session milestone (legislative deadline) or bill stage.",
+        "category": "product",
+    },
+    {
+        "id": "goal",
+        "term": "Goal",
+        "definition": "The user’s outreach task list: contact district legislators (4 actions), then Power Broker (2 actions). “Your goal” / “This week’s goal” in the sidebar. Not the advocacy objective (statutory fix).",
+        "category": "product",
+    },
+    {
+        "id": "drawer",
+        "term": "Drawer",
+        "definition": "The slide-out panel for call scripts and email templates. Opens from “Reach out” on a legislator card.",
+        "category": "product",
+    },
+    {
+        "id": "funnel",
+        "term": "Funnel",
+        "definition": "The user journey from page visit to completed outreach. Measured for conversion (e.g. % who opened drawer and completed at least one call/email).",
+        "category": "product",
+    },
 ]
 
 # Kei vehicle and policy terms for the public glossary. Wording from canonical content (STRATEGIC_*, FAQ_*, briefs); no invented stats.
 KEI_GLOSSARY: list[dict] = [
-    {"id": "kei-vehicle", "term": "Kei vehicle", "definition": "A small vehicle built to Japan’s kei (軽) class regulations—dimensions and engine size limits set by the Japanese government. Kei trucks, vans, and cars are federally legal to import into the US under the 25-year rule when they meet the age requirement.", "category": "kei"},
-    {"id": "kei-class", "term": "Kei class", "definition": "Japanese vehicle category with strict size and engine limits (e.g. 660cc engine, maximum length/width/height). Vehicles in this class are built for highway use in Japan and are engineered for expressway travel.", "category": "kei"},
-    {"id": "25-year-rule", "term": "25-year rule", "definition": "Federal rule that allows import into the US of vehicles that are at least 25 years old, without having to meet current US safety/emissions standards. Kei vehicles that meet this age requirement are federally legal to import.", "category": "kei"},
-    {"id": "highway-built", "term": "Highway-built", "definition": "Originally manufactured for on-road use in any jurisdiction (e.g. Japan). The Illinois statutory fix we seek applies to highway-built, federally lawful imports—not off-road-only vehicles.", "category": "kei"},
-    {"id": "625-ilcs-3-401", "term": "625 ILCS 5/3-401(c-1)", "definition": "Illinois statute that governs which vehicles are eligible for title and registration. The current language has an ambiguity about whether highway-built, federally lawful kei vehicles qualify. Our advocacy seeks a narrow clarifying amendment.", "category": "kei", "source": "625 ILCS 5/3-401 (ILGA)", "source_url": "https://www.ilga.gov/legislation/ilcs/fulltext.asp?DocName=062500050K3-401"},
-    {"id": "shaken", "term": "Shaken", "definition": "Japan’s mandatory vehicle inspection program (every two years for most vehicles). Older kei vehicles imported under the 25-year rule have typically passed Shaken, so they arrive in the US well maintained.", "category": "kei"},
-    {"id": "one-pager", "term": "One-pager", "definition": "The legislator brief: a single-page document for offices that summarizes the issue, the ask, and key points. Available as a PDF from the Legislator brief page.", "category": "kei"},
+    {
+        "id": "kei-vehicle",
+        "term": "Kei vehicle",
+        "definition": "A small vehicle built to Japan’s kei (軽) class regulations—dimensions and engine size limits set by the Japanese government. Kei trucks, vans, and cars are federally legal to import into the US under the 25-year rule when they meet the age requirement.",
+        "category": "kei",
+    },
+    {
+        "id": "kei-class",
+        "term": "Kei class",
+        "definition": "Japanese vehicle category with strict size and engine limits (e.g. 660cc engine, maximum length/width/height). Vehicles in this class are built for highway use in Japan and are engineered for expressway travel.",
+        "category": "kei",
+    },
+    {
+        "id": "25-year-rule",
+        "term": "25-year rule",
+        "definition": "Federal rule that allows import into the US of vehicles that are at least 25 years old, without having to meet current US safety/emissions standards. Kei vehicles that meet this age requirement are federally legal to import.",
+        "category": "kei",
+    },
+    {
+        "id": "highway-built",
+        "term": "Highway-built",
+        "definition": "Originally manufactured for on-road use in any jurisdiction (e.g. Japan). The Illinois statutory fix we seek applies to highway-built, federally lawful imports—not off-road-only vehicles.",
+        "category": "kei",
+    },
+    {
+        "id": "625-ilcs-3-401",
+        "term": "625 ILCS 5/3-401(c-1)",
+        "definition": "Illinois statute that governs which vehicles are eligible for title and registration. The current language has an ambiguity about whether highway-built, federally lawful kei vehicles qualify. Our advocacy seeks a narrow clarifying amendment.",
+        "category": "kei",
+        "source": "625 ILCS 5/3-401 (ILGA)",
+        "source_url": "https://www.ilga.gov/legislation/ilcs/fulltext.asp?DocName=062500050K3-401",
+    },
+    {
+        "id": "shaken",
+        "term": "Shaken",
+        "definition": "Japan’s mandatory vehicle inspection program (every two years for most vehicles). Older kei vehicles imported under the 25-year rule have typically passed Shaken, so they arrive in the US well maintained.",
+        "category": "kei",
+    },
+    {
+        "id": "one-pager",
+        "term": "One-pager",
+        "definition": "The legislator brief: a single-page document for offices that summarizes the issue, the ask, and key points. Available as a PDF from the Legislator brief page.",
+        "category": "kei",
+    },
 ]
 
 
@@ -1167,7 +1379,7 @@ def apply_inline_glossary(blocks: list[str], terms: list[dict]) -> list[str]:
                 f'<button type="button" class="glossary-inline-term" aria-expanded="false" aria-controls="glossary-def-{uid}" id="glossary-trigger-{uid}">'
                 f"{html_module.escape(best_original_slice)}</button>"
                 f'<span class="tooltip-content glossary-inline-def" role="tooltip" id="glossary-def-{uid}" hidden>'
-                f"{def_escaped} <a href=\"/glossary#glossary-{best_term['id']}\">Full glossary</a></span></span>"
+                f'{def_escaped} <a href="/glossary#glossary-{best_term["id"]}">Full glossary</a></span></span>'
             )
             text = text[:best_pos] + snippet + text[best_pos + len(best_original_slice) :]
             used_ids.add(best_term["id"])
@@ -1351,10 +1563,26 @@ TIMELINE_PHASES: list[dict] = [
         "end_date": "2026-12-31",
         "summary": "Lock sponsor(s), draft bill, grow list, and build coalition so we're ready for the 2027 session.",
         "milestones": [
-            {"date": "Mar – May 2026", "title": "Lock lead sponsor(s)", "description": "Secure sponsor in the chamber you want to start in. Share draft concept so they're ready to file in January."},
-            {"date": "Jun – Aug 2026", "title": "Bill draft with LRB", "description": "Work with Legislative Reference Bureau or sponsor's staff. Nail down one-sentence ask and one-pager."},
-            {"date": "Sep – Nov 2026", "title": "Co-sponsors and coalition", "description": "Co-sponsor asks; recruit orgs; brief stakeholders. Plan pre-session pushes."},
-            {"date": "Dec 2026", "title": "Finalize intro plan", "description": "Bill number and intro plan with sponsor. Prep first-session campaign."},
+            {
+                "date": "Mar – May 2026",
+                "title": "Lock lead sponsor(s)",
+                "description": "Secure sponsor in the chamber you want to start in. Share draft concept so they're ready to file in January.",
+            },
+            {
+                "date": "Jun – Aug 2026",
+                "title": "Bill draft with LRB",
+                "description": "Work with Legislative Reference Bureau or sponsor's staff. Nail down one-sentence ask and one-pager.",
+            },
+            {
+                "date": "Sep – Nov 2026",
+                "title": "Co-sponsors and coalition",
+                "description": "Co-sponsor asks; recruit orgs; brief stakeholders. Plan pre-session pushes.",
+            },
+            {
+                "date": "Dec 2026",
+                "title": "Finalize intro plan",
+                "description": "Bill number and intro plan with sponsor. Prep first-session campaign.",
+            },
         ],
     },
     {
@@ -1365,9 +1593,21 @@ TIMELINE_PHASES: list[dict] = [
         "end_date": "2027-02-28",
         "summary": "105th GA convenes; bill introduced by the introduction deadline.",
         "milestones": [
-            {"date": "Early Jan 2027", "title": "Session convenes", "description": "105th GA perfunctory/session days. LRB request deadline ~Jan 16."},
-            {"date": "Jan – early Feb 2027", "title": "Bill introduced", "description": "File as soon as practical. Once filed, you have a bill number for \"Support HB/SB XXXX\" campaigns."},
-            {"date": "~Feb 6, 2027", "title": "Introduction deadline", "description": "House and Senate bill introduction deadline. Bill must be introduced by this date."},
+            {
+                "date": "Early Jan 2027",
+                "title": "Session convenes",
+                "description": "105th GA perfunctory/session days. LRB request deadline ~Jan 16.",
+            },
+            {
+                "date": "Jan – early Feb 2027",
+                "title": "Bill introduced",
+                "description": 'File as soon as practical. Once filed, you have a bill number for "Support HB/SB XXXX" campaigns.',
+            },
+            {
+                "date": "~Feb 6, 2027",
+                "title": "Introduction deadline",
+                "description": "House and Senate bill introduction deadline. Bill must be introduced by this date.",
+            },
         ],
     },
     {
@@ -1378,11 +1618,31 @@ TIMELINE_PHASES: list[dict] = [
         "end_date": "2027-05-31",
         "summary": "Hearings, committee votes, third reading in each chamber. Session adjourns late May.",
         "milestones": [
-            {"date": "Feb 2027", "title": "Committee assignments", "description": "First hearings possible. Push witness slips and constituent contacts to committee members."},
-            {"date": "~Mar 13 / Mar 27, 2027", "title": "Committee deadlines", "description": "SB committee deadline ~Mar 13; HB committee deadline ~Mar 27 (substantive bills out of committee)."},
-            {"date": "~Apr 17, 2027", "title": "Third reading (first chamber)", "description": "HB 3rd reading deadline (House); SB 3rd reading deadline (Senate)."},
-            {"date": "~May 8 / May 22, 2027", "title": "Crossover and second chamber", "description": "House bills in Senate: committee ~May 8, 3rd reading ~May 22. Senate bills in House: same pattern."},
-            {"date": "~May 31, 2027", "title": "Session adjournment", "description": "If the bill passed both chambers, it goes to the governor."},
+            {
+                "date": "Feb 2027",
+                "title": "Committee assignments",
+                "description": "First hearings possible. Push witness slips and constituent contacts to committee members.",
+            },
+            {
+                "date": "~Mar 13 / Mar 27, 2027",
+                "title": "Committee deadlines",
+                "description": "SB committee deadline ~Mar 13; HB committee deadline ~Mar 27 (substantive bills out of committee).",
+            },
+            {
+                "date": "~Apr 17, 2027",
+                "title": "Third reading (first chamber)",
+                "description": "HB 3rd reading deadline (House); SB 3rd reading deadline (Senate).",
+            },
+            {
+                "date": "~May 8 / May 22, 2027",
+                "title": "Crossover and second chamber",
+                "description": "House bills in Senate: committee ~May 8, 3rd reading ~May 22. Senate bills in House: same pattern.",
+            },
+            {
+                "date": "~May 31, 2027",
+                "title": "Session adjournment",
+                "description": "If the bill passed both chambers, it goes to the governor.",
+            },
         ],
     },
     {
@@ -1393,8 +1653,16 @@ TIMELINE_PHASES: list[dict] = [
         "end_date": "2027-08-31",
         "summary": "Governor has 60 days from passage to sign or veto. Bill signed into law.",
         "milestones": [
-            {"date": "Jun – Jul 2027", "title": "Governor review", "description": "60 days from passage to sign or veto. Signing often within a few weeks."},
-            {"date": "Jun – Aug 2027", "title": "Bill signed into law", "description": "Effective date is usually upon signing or Jan 1 of the next year, per the bill."},
+            {
+                "date": "Jun – Jul 2027",
+                "title": "Governor review",
+                "description": "60 days from passage to sign or veto. Signing often within a few weeks.",
+            },
+            {
+                "date": "Jun – Aug 2027",
+                "title": "Bill signed into law",
+                "description": "Effective date is usually upon signing or Jan 1 of the next year, per the bill.",
+            },
         ],
     },
 ]
@@ -1419,6 +1687,45 @@ def _current_timeline_phase_id(today: date | None = None) -> str:
     return TIMELINE_PHASES[0]["id"] if TIMELINE_PHASES else "build"
 
 
+def _timeline_waterfall_data(timeline_phases: list[dict]) -> dict:
+    """Build months list and per-phase start_col/end_col for waterfall table. Returns enriched phase copies."""
+    if not timeline_phases:
+        return {"months": [], "phases": []}
+    starts = [p.get("start_date") for p in timeline_phases if p.get("start_date")]
+    ends = [p.get("end_date") for p in timeline_phases if p.get("end_date")]
+    if not starts or not ends:
+        return {"months": [], "phases": []}
+    first_ym = min(s[:7] for s in starts)
+    last_ym = max(e[:7] for e in ends)
+    y, m = int(first_ym[:4]), int(first_ym[5:7])
+    ey, em = int(last_ym[:4]), int(last_ym[5:7])
+    months: list[dict] = []
+    while (y, m) <= (ey, em):
+        months.append({"key": f"{y}-{m:02d}", "label": date(y, m, 1).strftime("%b %Y")})
+        m += 1
+        if m > 12:
+            m, y = 1, y + 1
+    month_keys = [mo["key"] for mo in months]
+
+    def col_for(ym: str) -> int:
+        if ym in month_keys:
+            return month_keys.index(ym)
+        return 0 if ym < month_keys[0] else len(month_keys) - 1
+
+    phases_out: list[dict] = []
+    for p in timeline_phases:
+        pc = dict(p)
+        s, e = p.get("start_date"), p.get("end_date")
+        if s and e:
+            pc["start_col"] = col_for(s[:7])
+            pc["end_col"] = col_for(e[:7])
+        else:
+            pc["start_col"] = 0
+            pc["end_col"] = len(month_keys) - 1
+        phases_out.append(pc)
+    return {"months": months, "phases": phases_out}
+
+
 def _session_deadlines_for_issue() -> list[dict]:
     """Build list of deadline dicts (date, chamber, description) for The Issue FAQ, sorted by date."""
     deadlines = get_all_deadlines()
@@ -1430,7 +1737,33 @@ def _session_deadlines_for_issue() -> list[dict]:
     return out
 
 
-def _the_issue_blocks_for_glossary(constituent_brief: dict) -> tuple[list[str], list[tuple[str, int, int]]]:
+def _faq_session_and_deadlines_with_tooltips(
+    session_deadlines: list[dict],
+) -> tuple[dict, list[dict]]:
+    """Build FAQ session block and deadlines with inline glossary tooltips (SESSION_SCHEDULE_TERMS + KEI).
+    Returns (faq_session, deadlines) where faq_session items have answer_html and deadlines have description_html."""
+    terms = _inline_glossary_terms(include_domain=False)
+    faq_session = {
+        "title": FAQ_SESSION["title"],
+        "intro": FAQ_SESSION.get("intro"),
+        "items": [],
+    }
+    for item in FAQ_SESSION.get("items") or []:
+        answer = item.get("answer") or ""
+        blocks = [answer]
+        result = apply_inline_glossary(blocks, terms)
+        faq_session["items"].append({**item, "answer_html": result[0] if result else answer})
+    deadlines_out = []
+    for d in session_deadlines:
+        desc = d.get("description") or ""
+        result = apply_inline_glossary([desc], terms)
+        deadlines_out.append({**d, "description_html": result[0] if result else desc})
+    return faq_session, deadlines_out
+
+
+def _the_issue_blocks_for_glossary(
+    constituent_brief: dict,
+) -> tuple[list[str], list[tuple[str, int, int]]]:
     """Build flat list of text blocks for The Issue (intro, points, section paragraphs/bullets) and mapping for result indices.
     Returns (blocks, mapping) where mapping is list of ('intro'|'point'|'para'|'bullet', section_ix, sub_ix)."""
     blocks: list[str] = []
@@ -1481,9 +1814,17 @@ def _apply_the_issue_glossary(constituent_brief: dict) -> None:
             intro_html = result[i]
         elif kind == "point":
             points_html.append(result[i])
-        elif kind == "para" and sec_ix < len(sections) and sub_ix < len(sections[sec_ix]["paragraphs_html"]):
+        elif (
+            kind == "para"
+            and sec_ix < len(sections)
+            and sub_ix < len(sections[sec_ix]["paragraphs_html"])
+        ):
             sections[sec_ix]["paragraphs_html"][sub_ix] = result[i]
-        elif kind == "bullet" and sec_ix < len(sections) and sub_ix < len(sections[sec_ix]["bullets_html"]):
+        elif (
+            kind == "bullet"
+            and sec_ix < len(sections)
+            and sub_ix < len(sections[sec_ix]["bullets_html"])
+        ):
             sections[sec_ix]["bullets_html"][sub_ix] = result[i]
     if intro_html is not None:
         constituent_brief["intro_html"] = intro_html
@@ -1504,9 +1845,10 @@ async def the_issue_page(request: Request):
     if constituent_brief:
         _apply_the_issue_glossary(constituent_brief)
     try:
-        session_deadlines = _session_deadlines_for_issue()
+        raw_deadlines = _session_deadlines_for_issue()
     except (FileNotFoundError, ValueError):
-        session_deadlines = []
+        raw_deadlines = []
+    faq_session, session_deadlines = _faq_session_and_deadlines_with_tooltips(raw_deadlines)
     return templates.TemplateResponse(
         "the_issue.html",
         {
@@ -1515,7 +1857,7 @@ async def the_issue_page(request: Request):
             "fact_sheet_pdf_url": FACT_SHEET_PDF_URL,
             "faq_law": FAQ_LAW,
             "faq_advocacy": FAQ_ADVOCACY,
-            "faq_session": FAQ_SESSION,
+            "faq_session": faq_session,
             "session_deadlines": session_deadlines,
             "session_schedule_terms": SESSION_SCHEDULE_TERMS,
             "brief_state_status": BRIEF_STATE_STATUS,
@@ -1615,7 +1957,9 @@ async def coalition_page(request: Request):
 def _timeline_phases_with_inline_glossary() -> list[dict]:
     """Return a copy of TIMELINE_PHASES with summary_html and milestone title_html/description_html from inline glossary."""
     blocks: list[str] = []
-    mapping: list[tuple[str, int, int]] = []  # ('label'|'summary'|'title'|'desc', phase_ix, milestone_ix or -1)
+    mapping: list[
+        tuple[str, int, int]
+    ] = []  # ('label'|'summary'|'title'|'desc', phase_ix, milestone_ix or -1)
     for ph_ix, phase in enumerate(TIMELINE_PHASES):
         blocks.append(phase.get("label", ""))
         mapping.append(("label", ph_ix, -1))
@@ -1651,17 +1995,19 @@ def _timeline_phases_with_inline_glossary() -> list[dict]:
 
 @router.get("/timeline", include_in_schema=False)
 async def timeline_page(request: Request):
-    """Serve the 2027 campaign master timeline: Feb 2026 through bill signed."""
+    """Serve the 2027 campaign master timeline: Feb 2026 through bill signed (waterfall/Gantt)."""
     try:
         session_deadlines = _session_deadlines_for_issue()
     except (FileNotFoundError, ValueError):
         session_deadlines = []
     timeline_phases = _timeline_phases_with_inline_glossary()
+    waterfall = _timeline_waterfall_data(timeline_phases)
     return templates.TemplateResponse(
         "timeline.html",
         {
             "request": request,
-            "timeline_phases": timeline_phases,
+            "timeline_months": waterfall["months"],
+            "timeline_phases": waterfall["phases"],
             "current_phase_id": _current_timeline_phase_id(),
             "session_deadlines": session_deadlines,
             "session_label": session_label(),

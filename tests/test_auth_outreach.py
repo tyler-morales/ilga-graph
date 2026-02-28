@@ -173,7 +173,11 @@ class TestAuthVerifyRoundtrip:
 
         resp2 = client.get("/auth/me")
         assert resp2.status_code == 200
-        assert resp2.json() == {"authenticated": True, "email": email}
+        data = resp2.json()
+        assert data["authenticated"] is True and data["email"] == email
+        # kei_status present when auth /me returns it (sprint-3)
+        if "kei_status" in data:
+            assert data["kei_status"] is None or isinstance(data["kei_status"], str)
 
 
 class TestOutreachRecord:

@@ -24,6 +24,24 @@ CATEGORY_COMMITTEES: dict[str, list[str]] = {
     "State Government": ["SGOA", "SHEE", "SEXC"],
 }
 
+# State of kei: user self-report (has kei / does not have kei with sub-options).
+KEI_STATUS_SLUGS: frozenset[str] = frozenset(
+    {
+        "registered",
+        "revoked",
+        "denied",
+        "would_want",
+        "would_not_want",
+    }
+)
+KEI_STATUS_OPTIONS: list[tuple[str, str]] = [
+    ("registered", "I have a kei (registered)"),
+    ("revoked", "I had a kei; registration was revoked"),
+    ("denied", "I was denied registration"),
+    ("would_want", "I don't have a kei but would want one"),
+    ("would_not_want", "I don't have a kei and wouldn't want one"),
+]
+
 CATEGORY_CHOICES: list[tuple[str, str]] = [
     ("", "All categories"),
     ("Transportation", "Transportation"),
