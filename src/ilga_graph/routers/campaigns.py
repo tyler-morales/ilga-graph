@@ -16,11 +16,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import config as cfg
 from ..app_state import state
 from ..campaign_helpers import campaign_outreach_count, deactivate_other_campaigns
+from ..constants import KEI_STATUS_OPTIONS
 from ..db import get_db
 from ..db_models import Campaign, OutreachEvent
 from ..dependencies import require_admin
 from ..routers.content import STRATEGIC_FIVE_POINTS
-from ..session_schedule import get_deadlines_for_campaigns, get_milestone_by_id, get_next_deadline_safe
+from ..session_schedule import (
+    get_deadlines_for_campaigns,
+    get_milestone_by_id,
+    get_next_deadline_safe,
+)
 
 router = APIRouter()
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -45,6 +50,7 @@ from ..campaign_helpers import get_current_action_campaign_for_template  # noqa:
 templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
 templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
+templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 
 
 def _district_options_from_zip_crosswalk() -> list[tuple[str, str]]:

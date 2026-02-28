@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import random
 import sys
-from datetime import date
 
 import strawberry
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -15,6 +14,7 @@ from strawberry.fastapi import GraphQLRouter
 
 from . import config as cfg
 from .app_state import state
+from .constants import KEI_STATUS_OPTIONS
 from .middleware import register_middleware
 from .routers.admin import router as _admin_router
 from .routers.advocacy import router as _advocacy_router
@@ -36,7 +36,7 @@ from .routers.legal import router as _legal_router
 from .routers.outreach import router as _outreach_router
 from .routers.site import router as _site_router
 from .routers.updates import router as _updates_router
-from .session_schedule import get_milestone_by_id, get_next_deadline_safe, next_deadline_on_or_after
+from .session_schedule import get_milestone_by_id, get_next_deadline_safe
 
 # ── Configure logging ────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -109,6 +109,7 @@ templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
 templates.env.globals["hero_urgency_line"] = HERO_URGENCY_LINE
 templates.env.globals["hero_clarity_line"] = HERO_CLARITY_LINE
 templates.env.globals["features"] = cfg.get_client_features()
+templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 
 
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe

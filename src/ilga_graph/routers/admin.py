@@ -17,15 +17,15 @@ from .. import advocacy_helpers as ah
 from .. import config as cfg
 from ..app_state import state
 from ..campaign_helpers import campaign_outreach_count, get_active_campaign
-from ..constants import CATEGORY_COMMITTEES, GENERAL_COMMITTEE_CODES
+from ..constants import CATEGORY_COMMITTEES, GENERAL_COMMITTEE_CODES, KEI_STATUS_OPTIONS
 from ..db import get_db
 from ..db_models import OutreachEvent, OutreachStepEvent, Update, User
 from ..dependencies import get_current_user_optional, require_admin
-from ..member_lookup import find_member_by_id, find_member_by_district
+from ..member_lookup import find_member_by_district, find_member_by_id
 from ..routers.content import STRATEGIC_FIVE_POINTS
 from ..run_log import get_log_path, load_recent_runs
-from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
 from ..security import validate_photo_url_for_drawer
+from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
 
 router = APIRouter()
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -50,6 +50,7 @@ from ..campaign_helpers import get_current_action_campaign_for_template  # noqa:
 templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
 templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
+templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 
 _ZIP_RE = re.compile(r"^\d{5}$")
 MOCK_DEV_USER_EMAIL = "funky_mama11@gmail.com"
@@ -99,12 +100,7 @@ async def _outreach_volume_for_window(
 
 async def _latest_sent_update(db: AsyncSession) -> Update | None:
     """Return the most recently sent update, or None."""
-    q = (
-        select(Update)
-        .where(Update.sent_at.isnot(None))
-        .order_by(Update.sent_at.desc())
-        .limit(1)
-    )
+    q = select(Update).where(Update.sent_at.isnot(None)).order_by(Update.sent_at.desc()).limit(1)
     r = await db.execute(q)
     return r.scalar_one_or_none()
 
@@ -158,7 +154,8 @@ async def admin_dashboard(
     admin_user: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    """Admin dashboard: status of the advocacy effort (Hardball-style). List size, outreach totals and 7d/30d trend, conversion (Stats), last update sent, active campaign, top legislators by contact volume."""
+    """Admin dashboard: advocacy effort status. Outreach totals, 7d/30d trend,
+    conversion, last update sent, active campaign, top legislators."""
     now = datetime.now(timezone.utc)
     window_7d = now - timedelta(days=7)
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import re
 from pathlib import Path
 from typing import Any
@@ -21,7 +20,12 @@ from ..app_state import state
 from ..campaign_helpers import get_active_campaign, is_campaign_visible_to_zip
 from ..community_email import get_effective_email_for_member
 from ..config import DEV_MODE
-from ..constants import CATEGORY_CHOICES, CATEGORY_COMMITTEES, GENERAL_COMMITTEE_CODES
+from ..constants import (
+    CATEGORY_CHOICES,
+    CATEGORY_COMMITTEES,
+    GENERAL_COMMITTEE_CODES,
+    KEI_STATUS_OPTIONS,
+)
 from ..data_source import is_using_mocks
 from ..db import get_db
 from ..db_models import OutreachEvent, User
@@ -37,12 +41,12 @@ from ..routers.content import (
     STRATEGIC_FIVE_POINTS,
 )
 from ..routers.outreach import get_outreach_aggregate
-from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
 from ..security import (
     CSRF_COOKIE_NAME,
     validate_csrf_token,
     validate_photo_url_for_drawer,
 )
+from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
 
 _ZIP_RE = re.compile(r"^\d{5}$")
 # Pre-fill hero ZIP in dev/mocks; must exist in state.zip_to_district.
@@ -84,6 +88,7 @@ from ..campaign_helpers import get_current_action_campaign_for_template  # noqa:
 templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
 templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
+templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 
 _HERO_SUBHEAD = (
     "Illinois is treating lawfully imported kei vehicles as off-highway, so owners cannot "

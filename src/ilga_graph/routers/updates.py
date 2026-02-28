@@ -31,7 +31,7 @@ from .. import advocacy_helpers as ah
 from .. import config as cfg
 from ..app_state import state
 from ..campaign_helpers import get_active_campaign
-from ..constants import CATEGORY_COMMITTEES
+from ..constants import CATEGORY_COMMITTEES, KEI_STATUS_OPTIONS, KEI_STATUS_SLUGS
 from ..db import async_session_factory, get_db
 from ..db_models import OutreachEvent, Update, User
 from ..dependencies import get_current_user_optional, require_admin, require_user
@@ -85,6 +85,7 @@ from ..campaign_helpers import get_current_action_campaign_for_template  # noqa:
 templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
 templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
+templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 
 # Email update types: slug -> display label. Default for new drafts is "other".
 UPDATE_TYPES = [("major", "Major"), ("minor", "Minor"), ("other", "Other")]
@@ -558,6 +559,10 @@ async def updates_page(
         ctx["priority_card_status"] = await _get_priority_card_status(user, active_campaign, db)
     else:
         ctx["priority_card_status"] = None
+    q = request.query_params
+    ctx["prompt_kei"] = q.get("prompt") == "kei"
+    ctx["kei_submitted"] = q.get("submitted") == "1"
+    ctx["kei_error"] = q.get("error")
     return templates.TemplateResponse(request, "updates.html", ctx)
 
 
@@ -603,6 +608,59 @@ async def subscribe_post(
     user.wants_updates = True
     await db.commit()
     return RedirectResponse("/updates", status_code=303)
+
+
+def _validate_kei_status(slug: str | None) -> str | None:
+    """Return slug if valid, else None."""
+    if not slug or (s := slug.strip()) not in KEI_STATUS_SLUGS:
+        return None
+    return s
+
+
+@router.post("/updates/kei-status", include_in_schema=False)
+async def kei_status_post(
+    request: Request,
+    kei_status: str = Form(..., max_length=32),
+    email: str | None = Form(None, max_length=_EMAIL_MAX_LEN),
+    db: AsyncSession = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+):
+    """Set user kei status. Auth: kei_status only. Anonymous: email + kei_status (get-or-create)."""
+    validated = _validate_kei_status(kei_status)
+    if not validated:
+        if request.headers.get("HX-Request"):
+            return HTMLResponse(
+                '<p class="kei-status-error" role="alert">Please choose an option.</p>',
+                status_code=400,
+            )
+        return RedirectResponse("/updates?prompt=kei&error=invalid", status_code=303)
+    if user:
+        user.kei_status = validated
+        await db.commit()
+        LOGGER.info("User id=%s set kei_status=%s", user.id, validated)
+    else:
+        normalized = _normalize_and_validate_subscribe_email(email or "")
+        if not normalized:
+            if request.headers.get("HX-Request"):
+                return HTMLResponse(
+                    '<p class="kei-status-error" role="alert">Please enter a valid email.</p>',
+                    status_code=400,
+                )
+            return RedirectResponse("/updates?prompt=kei&error=email", status_code=303)
+        result = await db.execute(select(User).where(User.email == normalized))
+        existing = result.scalar_one_or_none()
+        if existing:
+            existing.kei_status = validated
+            await db.commit()
+            LOGGER.info("User id=%s set kei_status=%s (anonymous submit)", existing.id, validated)
+        else:
+            new_user = User(email=normalized, kei_status=validated)
+            db.add(new_user)
+            await db.commit()
+            LOGGER.info("New user via kei-status poll: id=%s kei_status=%s", new_user.id, validated)
+    if request.headers.get("HX-Request"):
+        return HTMLResponse('<p class="kei-status-success" role="status">Thanks for sharing.</p>')
+    return RedirectResponse("/updates?prompt=kei&submitted=1", status_code=303)
 
 
 @router.post("/updates/subscribe-email", include_in_schema=False)

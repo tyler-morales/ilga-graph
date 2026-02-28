@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from .. import config as cfg
+from ..constants import KEI_STATUS_OPTIONS
 from ..dev_playground_scenes import get_scene, get_scene_context, get_scenes
 from ..routers.content import STRATEGIC_FIVE_POINTS
 from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
@@ -36,6 +37,7 @@ from ..campaign_helpers import get_current_action_campaign_for_template  # noqa:
 templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
 templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
+templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 
 
 def _playground_context(request: Request, scene_id: str | None):
