@@ -170,6 +170,13 @@
   color: var(--color-text-secondary, #555);
 }
 
+.why-you-care-marquee-location {
+  display: block;
+  margin-top: 0.5em;
+  font-size: 0.9em;
+  color: var(--color-text-muted, #777);
+}
+
 @media (min-width: 640px) {
   .why-you-care-marquee-item {
     width: 320px;

@@ -139,6 +139,23 @@
   max-width: 28rem;
 }
 
+/* Mobile: single-column stack; cards full width for consistent, pleasant layout. */
+@media (max-width: 899px) {
+  .strategic-points--home .strategic-points-rows {
+    width: 100%;
+  }
+
+  .strategic-points--home .strategic-points-row {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .strategic-points--home .strategic-points-row .strategic-points-card {
+    width: 100%;
+    max-width: none;
+  }
+}
+
 .strategic-points--home .strategic-points-card {
   display: flex;
   flex-direction: column;
@@ -267,11 +284,27 @@
   }
 }
 
-/* Narrow: single-column stack. */
+/* Narrow: single-column stack; cards full width. */
 @supports (container-type: inline-size) {
   .strategic-points--home {
     container-type: inline-size;
     container-name: strategic-points;
+  }
+
+  @container strategic-points (max-width: 899px) {
+    .strategic-points--home .strategic-points-rows {
+      width: 100%;
+    }
+
+    .strategic-points--home .strategic-points-row {
+      align-items: stretch;
+      width: 100%;
+    }
+
+    .strategic-points--home .strategic-points-row .strategic-points-card {
+      width: 100%;
+      max-width: none;
+    }
   }
 
   @container strategic-points (min-width: 900px) {

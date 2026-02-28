@@ -1,4 +1,5 @@
 {# Bill Predictions tab partial -- v5 with lifecycle status, corrected predictions, sortable table #}
+{% from "_macros.html" import score_bar %}
 {% if not predictions %}
 <div class="intel-empty">No bill predictions available.</div>
 {% else %}
@@ -79,53 +80,27 @@
             <td class="desc-cell" title="{{ p.description }}">{{ p.description[:70] }}{% if p.description|length > 70 %}&hellip;{% endif %}</td>
             <td>{{ p.sponsor }}</td>
             <td data-sort-value="{{ p.prob_advance }}">
+                <div class="score-bar-container">
                 {% if p.lifecycle_status in ('PASSED', 'VETOED') %}
-                {# Terminal — show actual outcome, not model prediction #}
-                <div class="score-bar-container">
-                    {% if p.lifecycle_status == 'PASSED' %}
-                    <div class="score-bar score-high" style="width: 100%"></div>
-                    <span class="score-text">Passed</span>
-                    {% else %}
-                    <div class="score-bar score-low" style="width: 100%"></div>
-                    <span class="score-text">Failed</span>
-                    {% endif %}
-                </div>
+                {{ score_bar(100 if p.lifecycle_status == 'PASSED' else 0, 'Passed' if p.lifecycle_status == 'PASSED' else 'Failed', 100, 'md', 'score-high' if p.lifecycle_status == 'PASSED' else 'score-low') }}
                 {% else %}
-                <div class="score-bar-container">
-                    <div class="score-bar {% if p.prob_advance >= 0.7 %}score-high{% elif p.prob_advance >= 0.4 %}score-mid{% else %}score-low{% endif %}"
-                         style="width: {{ (p.prob_advance * 100)|int }}%">
-                    </div>
-                    <span class="score-text">{{ "%.1f"|format(p.prob_advance * 100) }}%</span>
-                </div>
+                {{ score_bar((p.prob_advance * 100)|int, "%.1f"|format(p.prob_advance * 100) ~ '%', 100, 'md', 'score-high' if p.prob_advance >= 0.7 else 'score-mid' if p.prob_advance >= 0.4 else 'score-low') }}
                 {% endif %}
+                </div>
             </td>
             <td data-sort-value="{{ p.prob_law }}">
+                <div class="score-bar-container">
                 {% if p.lifecycle_status in ('PASSED', 'VETOED') %}
-                <div class="score-bar-container">
-                    {% if p.lifecycle_status == 'PASSED' %}
-                    <div class="score-bar score-high" style="width: 100%"></div>
-                    <span class="score-text">Law</span>
-                    {% else %}
-                    <div class="score-bar score-low" style="width: 100%"></div>
-                    <span class="score-text">Vetoed</span>
-                    {% endif %}
-                </div>
+                {{ score_bar(100 if p.lifecycle_status == 'PASSED' else 0, 'Law' if p.lifecycle_status == 'PASSED' else 'Vetoed', 100, 'md', 'score-high' if p.lifecycle_status == 'PASSED' else 'score-low') }}
                 {% else %}
-                <div class="score-bar-container">
-                    <div class="score-bar {% if p.prob_law >= 0.5 %}score-high{% elif p.prob_law >= 0.2 %}score-mid{% else %}score-low{% endif %}"
-                         style="width: {{ (p.prob_law * 100)|int }}%">
-                    </div>
-                    <span class="score-text">{{ "%.1f"|format(p.prob_law * 100) }}%</span>
-                </div>
+                {{ score_bar((p.prob_law * 100)|int, "%.1f"|format(p.prob_law * 100) ~ '%', 100, 'md', 'score-high' if p.prob_law >= 0.5 else 'score-mid' if p.prob_law >= 0.2 else 'score-low') }}
                 {% endif %}
+                </div>
             </td>
             <td data-sort-value="{{ p.forecast_score }}" title="Forecast P(Law) — based on bill content and sponsor only; ignores current delay.">
                 {% if p.forecast_score > 0 %}
                 <div class="score-bar-container">
-                    <div class="score-bar {% if p.forecast_score >= 0.5 %}score-high{% elif p.forecast_score >= 0.2 %}score-mid{% else %}score-low{% endif %}"
-                         style="width: {{ (p.forecast_score * 100)|int }}%">
-                    </div>
-                    <span class="score-text">{{ "%.1f"|format(p.forecast_score * 100) }}%</span>
+                    {{ score_bar((p.forecast_score * 100)|int, "%.1f"|format(p.forecast_score * 100) ~ '%', 100, 'md', 'score-high' if p.forecast_score >= 0.5 else 'score-mid' if p.forecast_score >= 0.2 else 'score-low') }}
                 </div>
                 {% if p.forecast_confidence %}
                 <small class="forecast-conf forecast-{{ p.forecast_confidence|lower }}">{{ p.forecast_confidence }}</small>

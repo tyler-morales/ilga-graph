@@ -18,17 +18,8 @@
         {% endif %}
     </div>
 
-    {# Scrolling marquee: gated by feature flag (ILGA_FEATURE_IMAGES_MARQUEE); prod default off. #}
-    {% if features.get('images_marquee') %}
-    {% set marquee_images = [
-        {'src': '/static/images/tyler_morales.png', 'alt': 'Tyler Morales, kei vehicle owner affected by registration', 'caption': 'Tyler Morales — kei owner affected by Illinois registration'},
-        {'src': 'https://picsum.photos/seed/kei1/360/240', 'alt': 'Kei vehicle owner affected by registration — placeholder', 'caption': 'Marcus, Chicago — registration revoked after years of legal use'},
-        {'src': 'https://picsum.photos/seed/kei2/360/240', 'alt': 'Kei owner unable to register — placeholder', 'caption': 'Sarah, Peoria — imported kei truck stuck, can’t get plates'},
-        {'src': 'https://picsum.photos/seed/kei3/360/240', 'alt': 'Affected kei owner — placeholder', 'caption': 'James, Rockford — van denied; same model registered in other states'},
-        {'src': 'https://picsum.photos/seed/kei4/360/240', 'alt': 'Illinois kei vehicle registration issue — placeholder', 'caption': 'Elena, Springfield — DMV turned away federally compliant vehicle'},
-        {'src': 'https://picsum.photos/seed/kei5/360/240', 'alt': 'Kei owner story — placeholder', 'caption': 'David, Naperville — registration renewal rejected without notice'},
-        {'src': 'https://picsum.photos/seed/kei6/360/240', 'alt': 'Vehicle registration affected owner — placeholder', 'caption': 'Rachel, Champaign — legal kei car can’t be registered in Illinois'},
-    ] %}
+    {# Scrolling marquee: gated by feature flag (ILGA_FEATURE_IMAGES_MARQUEE); prod default off. Images from content.py MARQUEE_IMAGES. #}
+    {% if features.get('images_marquee') and (marquee_images|default([])) %}
     <div class="why-you-care-marquee" id="why-you-care-marquee" role="region" aria-label="Scrolling images of affected kei owners">
         <div class="why-you-care-marquee-control-wrap">
             <button type="button" class="why-you-care-marquee-control" id="why-you-care-marquee-pause" aria-pressed="false" aria-label="Pause scrolling images">Pause</button>
@@ -37,10 +28,10 @@
             <div class="why-you-care-marquee-track">
             {% for strip_index in range(2) %}{# duplicate strip for seamless loop #}
             <div class="why-you-care-marquee-strip{% if strip_index == 1 %} why-you-care-marquee-strip--dup{% endif %}">
-                {% for img in marquee_images %}
+                {% for img in (marquee_images|default([])) %}
                 <figure class="why-you-care-marquee-item">
                     <img src="{{ img.src }}" alt="{{ img.alt }}" width="360" height="240" loading="lazy" decoding="async">
-                    <figcaption class="why-you-care-marquee-caption">{{ img.caption }}</figcaption>
+                    <figcaption class="why-you-care-marquee-caption"><strong>{{ img.name }}</strong> — {{ img.caption }}{% if img.location %} <span class="why-you-care-marquee-location">{{ img.location }}</span>{% endif %}</figcaption>
                 </figure>
                 {% endfor %}
             </div>

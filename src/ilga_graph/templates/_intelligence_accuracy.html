@@ -147,11 +147,9 @@
             <td style="text-align:right">{{ r.total_testable }}</td>
             <td style="text-align:right">{{ r.correct }}</td>
             <td>
+                {% from "_macros.html" import score_bar %}
                 <div class="score-bar-container" style="width:80px">
-                    <div class="score-bar {% if r.accuracy >= 0.8 %}score-high{% elif r.accuracy >= 0.6 %}score-mid{% else %}score-low{% endif %}"
-                         style="width: {{ (r.accuracy * 100)|int }}%">
-                    </div>
-                    <span class="score-text">{{ "%.1f"|format(r.accuracy * 100) }}%</span>
+                    {{ score_bar((r.accuracy * 100)|int, "%.1f"|format(r.accuracy * 100) ~ '%', 100, 'md', 'score-high' if r.accuracy >= 0.8 else 'score-mid' if r.accuracy >= 0.6 else 'score-low') }}
                 </div>
             </td>
             <td>{{ "%.1f"|format(r.precision_advance * 100) }}%</td>

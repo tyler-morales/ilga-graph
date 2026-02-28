@@ -26,6 +26,7 @@
     <script defer src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>
     {% endif %}
     <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/components.css">
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/advocacy-form.css">
     <link rel="stylesheet" href="/static/css/advocacy-drawer.css">
@@ -227,15 +228,15 @@
             <div class="footer-get-updates" id="footer-email-subscribe-wrap"
                 aria-labelledby="footer-get-updates-heading">
                 <h2 id="footer-get-updates-heading" class="visually-hidden">Get updates</h2>
-                <form action="/updates/subscribe-email" method="post" class="footer-subscribe-form"
-                    hx-post="/updates/subscribe-email" hx-target="#footer-email-subscribe-wrap" hx-swap="innerHTML"
-                    aria-label="Subscribe to campaign updates by email">
-                    <label for="footer-subscribe-email-input" class="visually-hidden">Your email</label>
-                    <input type="email" id="footer-subscribe-email-input" name="email" class="footer-subscribe-input"
-                        placeholder="Your email" required autocomplete="email" inputmode="email" maxlength="320">
-                    <button type="submit" class="footer-subscribe-btn">Subscribe</button>
-                </form>
+                {% from "_macros.html" import subscribe_form %}
+                {{ subscribe_form('footer-email-subscribe', '/updates/subscribe-email', 'inline') }}
             </div>
+            {% if kei_status_options is defined and kei_status_options %}
+            <div class="footer-kei-poll" id="footer-kei-poll-section">
+                {% from "_macros.html" import kei_poll %}
+                {{ kei_poll('footer-kei-poll', show_email=true) }}
+            </div>
+            {% endif %}
             <p class="footer-disclaimer">Not affiliated with the Illinois General Assembly. Information here is for
                 advocacy and educational purposes only.</p>
             <p class="footer-usage-notice">We use minimal usage data to improve the service. <a href="/privacy">Privacy
@@ -283,6 +284,26 @@
                 document.addEventListener('DOMContentLoaded', initStrategicStatesIcon);
             } else {
                 initStrategicStatesIcon();
+            }
+        })();
+    </script>
+    {# Kei poll: Skip button hides the poll for this session. #}
+    <script>
+        (function () {
+            document.body.addEventListener('click', function (e) {
+                var skip = e.target && e.target.getAttribute && e.target.getAttribute('data-skip-poll');
+                if (!skip) return;
+                var wrap = document.getElementById(skip);
+                if (wrap) {
+                    wrap.closest('.footer-kei-poll').style.display = 'none';
+                    try { sessionStorage.setItem('ilga_kei_poll_skipped', '1'); } catch (_) {}
+                }
+            });
+            var skipped = false;
+            try { skipped = sessionStorage.getItem('ilga_kei_poll_skipped') === '1'; } catch (_) {}
+            if (skipped) {
+                var section = document.getElementById('footer-kei-poll-section');
+                if (section) section.style.display = 'none';
             }
         })();
     </script>

@@ -21,12 +21,13 @@ font-style: italic;
 padding: 20px;
 }
 .intel-empty {
-padding: 24px;
-background: #fafafa;
-border: 1px solid #ddd;
-text-align: center;
-margin: 20px 0;
-color: #666;
+  padding: var(--space-2xl);
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  text-align: center;
+  margin: 20px 0;
+  color: var(--color-text-tertiary);
 }
 .intel-empty h2 {
 color: #444;
@@ -45,10 +46,11 @@ gap: 12px;
 margin: 16px 0 24px;
 }
 .intel-summary-card {
-border: 1px solid #ccc;
-padding: 12px 14px;
-background: #fafafa;
-text-align: center;
+  border: 1px solid var(--color-border);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--color-bg-muted);
+  border-radius: var(--radius-md);
+  text-align: center;
 }
 
 @supports (container-type: inline-size) {

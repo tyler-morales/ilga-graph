@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import faq_section, strategic_points %}
 {% block title %}Fact sheet — {{ site_name }}{% endblock %}
 {% block body_class %}page-fact-sheet{% endblock %}
 {% block meta_description %}One-page fact sheet for volunteers: kei vehicle registration in Illinois, our position, five points to remember, and FAQs.{% endblock %}
@@ -21,25 +22,12 @@
             <p>{{ fact_sheet_position }}</p>
         </section>
 
-        <section class="strategic-points strategic-points--banner fact-sheet-section" id="fact-key-points" aria-labelledby="fact-points-heading">
-            <h2 id="fact-points-heading">Five points to remember (stay on message)</h2>
-            <ul class="strategic-points-list" role="list">
-                {% for point in strategic_five_points %}
-                <li class="strategic-points-item">{{ point }}</li>
-                {% endfor %}
-            </ul>
+        <section class="fact-sheet-section">
+            {{ strategic_points(strategic_five_points, 'banner', 'fact-key-points', 'fact-points-heading', 'Five points to remember (stay on message)') }}
         </section>
 
-        <section class="fact-sheet-section fact-sheet-faq" aria-labelledby="fact-faq-heading">
-            <h2 id="fact-faq-heading">Key FAQs for volunteers</h2>
-            <dl class="fact-sheet-faq-list">
-                {% for item in fact_sheet_faq_items %}
-                <div class="fact-sheet-faq-item">
-                    <dt id="faq-{{ item.id }}"><strong>{{ item.question }}</strong></dt>
-                    <dd aria-labelledby="faq-{{ item.id }}">{{ item.answer }}</dd>
-                </div>
-                {% endfor %}
-            </dl>
+        <section class="fact-sheet-section">
+            {{ faq_section(fact_sheet_faq_items, 'Key FAQs for volunteers', 'fact-faq') }}
         </section>
 
         <section class="fact-sheet-section" aria-labelledby="fact-links-heading">

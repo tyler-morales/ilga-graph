@@ -37,12 +37,10 @@
             <td class="desc-cell" title="{{ a.description }}">{{ a.description[:60] }}{% if a.description|length > 60 %}&hellip;{% endif %}</td>
             <td style="text-align:right">{{ a.total_slips }}</td>
             <td>
+                {% from "_macros.html" import score_bar %}
+                {% set score_pct = [((a.anomaly_score + 0.5) * 100)|int, 100]|min %}
                 <div class="score-bar-container">
-                    {% set score_pct = [((a.anomaly_score + 0.5) * 100)|int, 100]|min %}
-                    <div class="score-bar {% if a.is_anomaly %}score-anomaly{% else %}score-normal{% endif %}"
-                         style="width: {{ score_pct }}%">
-                    </div>
-                    <span class="score-text">{{ "%.3f"|format(a.anomaly_score) }}</span>
+                    {{ score_bar(score_pct, "%.3f"|format(a.anomaly_score), 100, 'md', 'score-anomaly' if a.is_anomaly else 'score-normal') }}
                 </div>
             </td>
             <td>

@@ -73,6 +73,17 @@
   --color-cta-primary: #0f766e;
   --color-cta-primary-hover: #0d5d56;
   --link-color: #5a2d82;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 2px 12px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 4px 24px rgba(0, 0, 0, 0.15);
+
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 999px;
 }
 
 /* Mobile: larger base and headings for readable touch-first typography (16px → 18px base, prominent h1/h2) */

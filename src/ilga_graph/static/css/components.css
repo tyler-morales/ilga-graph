@@ -1,0 +1,161 @@
+/**
+ * Shared UI component base classes.
+ * Use these as foundations; layer page-specific styles on top.
+ * Design tokens from variables.css.
+ */
+
+/* Card base */
+.card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+}
+.card--elevated {
+  box-shadow: var(--shadow-md);
+}
+.card--flush {
+  padding: 0;
+}
+
+/* Badge base */
+.badge {
+  display: inline-block;
+  font-size: var(--font-size-xs);
+  font-weight: bold;
+  text-transform: uppercase;
+  padding: 2px var(--space-sm);
+  border-radius: var(--radius-sm);
+}
+.badge--success {
+  background: var(--color-success);
+  color: #fff;
+}
+.badge--warning {
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-text);
+}
+.badge--info {
+  background: var(--color-link-action);
+  color: #fff;
+}
+.badge--neutral {
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+/* Button base */
+.btn {
+  display: inline-block;
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.btn--primary {
+  background: var(--color-cta-primary);
+  border: 1px solid var(--color-cta-primary);
+  color: #fff;
+}
+.btn--primary:hover {
+  background: var(--color-cta-primary-hover);
+  border-color: var(--color-cta-primary-hover);
+}
+.btn--secondary {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+.btn--secondary:hover {
+  background: var(--color-bg-muted);
+  border-color: var(--color-border-light);
+}
+.btn--ghost {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--color-link-action);
+}
+.btn--ghost:hover {
+  background: var(--color-bg-muted);
+}
+
+/* Input base */
+.input {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-bg-input);
+  font-size: var(--font-size-body);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
+}
+
+/* Score bar (intelligence) */
+.score-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.score-bar__fill {
+  flex: 1;
+  height: 0.5em;
+  background: var(--color-bg-muted);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+.score-bar__fill-inner {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width 0.3s ease;
+}
+.score-bar__label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  min-width: 2.5em;
+}
+.score-bar--sm .score-bar__fill {
+  height: 0.35em;
+}
+.score-bar--lg .score-bar__fill {
+  height: 0.65em;
+}
+/* Color modifiers for intelligence (match base.css .score-high etc.) */
+.score-bar__fill-inner.score-high,
+.score-bar__fill-inner.score-bar-high {
+  background: #2d8659;
+}
+.score-bar__fill-inner.score-mid,
+.score-bar__fill-inner.score-bar-moderate {
+  background: #c09020;
+}
+.score-bar__fill-inner.score-low,
+.score-bar__fill-inner.score-bar-low {
+  background: #b04040;
+}
+.score-bar__fill-inner.score-anomaly {
+  background: #b04040;
+}
+.score-bar__fill-inner.score-normal {
+  background: #2d8659;
+}
+.score-bar__fill-inner.score-feature {
+  background: #1a6fb5;
+}
+
+/* When our .score-bar is inside legacy .score-bar-container, keep flex layout */
+.score-bar-container .score-bar {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+/* Sidebar base (sticky) */
+.sidebar {
+  position: sticky;
+  top: var(--space-lg);
+}

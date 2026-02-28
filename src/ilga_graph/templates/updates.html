@@ -9,6 +9,18 @@
 
 {% block brief_main_heading %}Where we are{% endblock %}
 {% block brief_main %}
+{% if prompt_kei and kei_status_options is defined and kei_status_options %}
+<section class="updates-kei-prompt" id="kei-prompt" aria-labelledby="kei-prompt-heading">
+    <h2 id="kei-prompt-heading">Help us understand our community</h2>
+    {% if kei_submitted %}
+    <p class="kei-status-success" role="status">Thanks, that helps us understand our community.</p>
+    {% elif kei_error %}
+    <p class="kei-status-error" role="alert">Please choose an option{% if kei_error == 'email' %} and enter a valid email{% endif %}.</p>
+    {% endif %}
+    {% from "_macros.html" import kei_poll %}
+    {{ kei_poll('updates-kei-poll', show_email=(not user)) }}
+</section>
+{% endif %}
 {% if active_campaign %}
 {% include "_priority_callout.html" %}
 {% endif %}
@@ -35,14 +47,8 @@
     {% else %}
     <p>Get one update when we move. No spam—only when it matters.</p>
     <div id="updates-email-subscribe-wrap" class="updates-subscribe-email-wrap">
-        <form action="/updates/subscribe-email" method="post" class="updates-subscribe-email-form subscribe-form"
-            hx-post="/updates/subscribe-email" hx-target="#updates-email-subscribe-wrap" hx-swap="innerHTML"
-            aria-label="Subscribe to campaign updates by email">
-            <label for="updates-subscribe-email-input" class="visually-hidden">Your email</label>
-            <input type="email" id="updates-subscribe-email-input" name="email" class="updates-subscribe-email-input subscribe-input"
-                placeholder="Your email" required autocomplete="email" inputmode="email" maxlength="320">
-            <button type="submit" class="updates-subscribe-email-btn subscribe-btn">Subscribe</button>
-        </form>
+        {% from "_macros.html" import subscribe_form %}
+        {{ subscribe_form('updates-email-subscribe', '/updates/subscribe-email', 'inline') }}
     </div>
     <p class="updates-subscribe-note">No spam. One email when we move. <a href="/advocacy">Sign in</a> to track your outreach.</p>
     {% endif %}
