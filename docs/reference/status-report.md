@@ -63,6 +63,7 @@ Snapshot of what’s broken, buggy, missing, and what to do before deployment.
 - **Health:** `/health` returns counts and `ready`; exempt from API key.
 - **Auth/outreach:** `/auth`, `/outreach` exempt; DB created via `init_db()` on startup.
 - **SSR pages:** `/advocacy`, `/explore`, `/intelligence` exempt when `ILGA_API_KEY` is set.
+- **Admin:** `/admin` exempt (browser form POSTs work); protected by session auth.
 - **Legal:** `/privacy`, `/terms` and **SEO:** `/sitemap.xml`, `/robots.txt` exempt from API key.
 - **GraphQL:** `/graphql` correctly requires `X-API-Key` when `ILGA_API_KEY` is set.
 
