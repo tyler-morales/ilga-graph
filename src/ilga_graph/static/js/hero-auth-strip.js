@@ -1,7 +1,7 @@
 /**
- * Hero auth strip and inline sign-in: shared by home and advocacy pages.
+ * Hero auth strip and inline sign-in: shared by home, advocacy, and poll fragment.
  * Provides getCsrfToken, window._ilgaUserEmail, window._pendingAuthEmail, updateAuthStrip,
- * refreshAuthStripProgress, and wires #auth-strip-signin-btn and sign-out.
+ * refreshAuthStripProgress, initInlineSignin(container), and wires sign-out.
  */
 (function () {
     function getCsrfToken() {
@@ -111,22 +111,29 @@
             .catch(function () { });
     })();
 
-    (function initHeroInlineSignin() {
-        var stripSignedOut = document.getElementById('auth-strip-signed-out');
-        var inlineBlock = document.getElementById('auth-strip-inline-signin');
-        var signinBtn = document.getElementById('auth-strip-signin-btn');
-        var stateEmail = document.getElementById('hero-signin-state-email');
-        var stateCode = document.getElementById('hero-signin-state-code');
-        var emailInput = document.getElementById('hero-signin-email');
-        var requestBtn = document.getElementById('hero-signin-request-btn');
-        var codeHint = document.getElementById('hero-signin-code-hint');
-        var codeInput = document.getElementById('hero-signin-code-input');
-        var verifyBtn = document.getElementById('hero-signin-verify-btn');
-        var codeError = document.getElementById('hero-signin-error');
-        var resendBtn = document.getElementById('hero-signin-resend');
-        var cancelBtn = document.getElementById('hero-signin-cancel');
+    /**
+     * Wire inline sign-in (email → code → verify) inside container.
+     * Container may be #auth-strip (hero: has .auth-strip-signin-btn and .hero-signin-inline)
+     * or #poll-signin-wrap (poll fragment: only .hero-signin-inline).
+     */
+    function initInlineSignin(container) {
+        if (!container) return;
+        var inlineBlock = container.querySelector('.hero-signin-inline') || (container.classList && container.classList.contains('hero-signin-inline') ? container : null);
+        if (!inlineBlock) return;
 
-        if (!signinBtn) return;
+        var signinBtn = container.querySelector('.auth-strip-signin-btn') || (container.id === 'poll-signin-wrap' ? document.getElementById('poll-signin-btn') : null);
+        var stripSignedOut = container.querySelector('#auth-strip-signed-out');
+        var states = container.querySelectorAll('.hero-signin-state');
+        var stateEmail = states[0];
+        var stateCode = states[1];
+        var emailInput = stateEmail && stateEmail.querySelector('.hero-signin-input');
+        var requestBtn = stateEmail && stateEmail.querySelector('.hero-signin-btn');
+        var codeHint = stateCode && stateCode.querySelector('.hero-signin-code-hint');
+        var codeInput = stateCode && stateCode.querySelector('.hero-signin-code-input');
+        var verifyBtn = stateCode && stateCode.querySelectorAll('.hero-signin-btn')[0];
+        var codeError = stateCode && stateCode.querySelector('.hero-signin-error');
+        var resendBtn = stateCode && stateCode.querySelector('.hero-signin-resend');
+        var cancelBtn = container.querySelector('.hero-signin-cancel');
 
         var _inlineCloseTimer = null;
 
@@ -151,7 +158,7 @@
             }
         }
 
-        function showHeroState(which) {
+        function showState(which) {
             if (stateEmail) {
                 stateEmail.hidden = (which !== 'email');
                 stateEmail.classList.toggle('hero-signin-state-visible', which === 'email');
@@ -175,23 +182,29 @@
                 inlineBlock.classList.remove('hero-signin-inline--open');
             }
             if (stripSignedOut) stripSignedOut.hidden = false;
-            showHeroState('email');
+            showState('email');
             if (emailInput) emailInput.value = '';
             if (codeInput) codeInput.value = '';
             if (codeError) { codeError.textContent = ''; codeError.hidden = true; }
         }
 
-        signinBtn.onclick = function () {
-            if (stripSignedOut) stripSignedOut.hidden = true;
+        if (signinBtn) {
+            signinBtn.onclick = function () {
+                if (stripSignedOut) stripSignedOut.hidden = true;
+                showInline(true);
+                showState('email');
+                requestAnimationFrame(function () {
+                    if (stateEmail) stateEmail.classList.add('hero-signin-state-visible');
+                });
+                if (emailInput) { emailInput.value = ''; emailInput.focus(); }
+                if (requestBtn) requestBtn.disabled = true;
+                if (codeError) { codeError.hidden = true; codeError.textContent = ''; }
+            };
+        } else {
             showInline(true);
-            showHeroState('email');
-            requestAnimationFrame(function () {
-                if (stateEmail) stateEmail.classList.add('hero-signin-state-visible');
-            });
-            if (emailInput) { emailInput.value = ''; emailInput.focus(); }
-            if (requestBtn) requestBtn.disabled = true;
-            if (codeError) { codeError.hidden = true; codeError.textContent = ''; }
-        };
+            showState('email');
+            if (stateEmail) stateEmail.classList.add('hero-signin-state-visible');
+        }
 
         function isEmailLike(val) {
             var s = (val || '').trim();
@@ -238,7 +251,7 @@
                             }
                             if (codeInput) { codeInput.value = ''; codeInput.focus(); }
                             if (codeError) codeError.hidden = true;
-                            showHeroState('code');
+                            showState('code');
                         } else {
                             if (codeError) { codeError.textContent = data.error || 'Couldn\'t send code'; codeError.hidden = false; }
                         }
@@ -252,11 +265,54 @@
             };
         }
 
-        function doHeroVerify() {
+        var isPollContext = container.getAttribute && container.getAttribute('data-poll-signin-init');
+
+        if (isPollContext) {
+            container.addEventListener('click', function (e) {
+                var target = e.target;
+                if (target.closest && target.closest('.poll-signup-notyet')) {
+                    var prompt = container.querySelector('.poll-signup-prompt');
+                    if (prompt) {
+                        prompt.hidden = true;
+                        prompt.setAttribute('aria-hidden', 'true');
+                    }
+                    e.preventDefault();
+                    return;
+                }
+                if (target.closest && target.closest('.poll-signup-yes')) {
+                    var prompt = container.querySelector('.poll-signup-prompt');
+                    if (!prompt) return;
+                    var yesBtn = prompt.querySelector('.poll-signup-yes');
+                    if (yesBtn) {
+                        yesBtn.disabled = true;
+                        yesBtn.textContent = 'Adding…';
+                    }
+                    fetch('/updates/subscribe', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 'HX-Request': 'true' },
+                    })
+                        .then(function (r) { return r.text(); })
+                        .then(function (html) {
+                            prompt.innerHTML = html;
+                            prompt.hidden = false;
+                            prompt.setAttribute('aria-hidden', 'false');
+                        })
+                        .catch(function () {
+                            if (yesBtn) {
+                                yesBtn.disabled = false;
+                                yesBtn.textContent = 'Yes';
+                            }
+                        });
+                    e.preventDefault();
+                }
+            });
+        }
+
+        function doVerify() {
             var code = (codeInput && codeInput.value || '').trim();
             if (!code || code.length < 6) return;
-            verifyBtn.disabled = true;
-            verifyBtn.textContent = 'Verifying\u2026';
+            if (verifyBtn) { verifyBtn.disabled = true; verifyBtn.textContent = 'Verifying\u2026'; }
             if (codeError) codeError.hidden = true;
             var body = new FormData();
             body.append('email', window._pendingAuthEmail);
@@ -264,11 +320,11 @@
             body.append('csrf_token', getCsrfToken());
             var anonSid = getAnonSessionId();
             if (anonSid) body.append('anon_session_id', anonSid);
+            if (isPollContext) body.append('from_poll', '1');
             fetch('/auth/verify-code', { method: 'POST', body: body, credentials: 'same-origin' })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
-                    verifyBtn.disabled = false;
-                    verifyBtn.textContent = 'Confirm';
+                    if (verifyBtn) { verifyBtn.disabled = false; verifyBtn.textContent = 'Confirm'; }
                     if (data.ok && data.email) {
                         window._ilgaUserEmail = data.email;
                         try { sessionStorage.removeItem('ilga_anon_sid'); } catch (e) {}
@@ -277,7 +333,7 @@
                             inlineBlock.hidden = true;
                             inlineBlock.classList.remove('hero-signin-inline--open');
                         }
-                        showHeroState('email');
+                        showState('email');
                         if (emailInput) emailInput.value = '';
                         if (codeInput) codeInput.value = '';
                         if (codeError) { codeError.textContent = ''; codeError.hidden = true; }
@@ -285,24 +341,39 @@
                         if (document.dispatchEvent) {
                             document.dispatchEvent(new CustomEvent('ilga:auth-change', { detail: { signedIn: true } }));
                         }
+                        if (isPollContext) {
+                            var wrap = container.closest('.kei-poll-card');
+                            if (wrap && wrap.id) {
+                                var pollId = wrap.id.replace(/-wrap$/, '') || 'footer-kei-poll';
+                                fetch('/updates/kei-poll-results?poll_id=' + encodeURIComponent(pollId), {
+                                    credentials: 'same-origin',
+                                    headers: { 'HX-Request': 'true' }
+                                })
+                                    .then(function (r) { return r.ok ? r.text() : Promise.reject(new Error('Not authenticated')); })
+                                    .then(function (html) {
+                                        wrap.innerHTML = html;
+                                        if (window.htmx) window.htmx.process(wrap);
+                                    })
+                                    .catch(function () { });
+                            }
+                        }
                     } else {
                         if (codeError) { codeError.textContent = data.error || 'That code didn\'t work — try again or resend.'; codeError.hidden = false; }
                         if (codeInput) { codeInput.value = ''; codeInput.focus(); }
                     }
                 })
                 .catch(function () {
-                    verifyBtn.disabled = false;
-                    verifyBtn.textContent = 'Confirm';
+                    if (verifyBtn) { verifyBtn.disabled = false; verifyBtn.textContent = 'Confirm'; }
                     if (codeError) { codeError.textContent = 'Network error \u2014 try again'; codeError.hidden = false; }
                 });
         }
 
-        if (verifyBtn) verifyBtn.onclick = doHeroVerify;
+        if (verifyBtn) verifyBtn.onclick = doVerify;
 
         if (codeInput) {
             codeInput.addEventListener('input', function () {
                 this.value = this.value.replace(/\D/g, '').slice(0, 6);
-                if (this.value.length === 6) doHeroVerify();
+                if (this.value.length === 6) doVerify();
             });
         }
 
@@ -333,5 +404,11 @@
                     });
             };
         }
+    }
+    window.initInlineSignin = initInlineSignin;
+
+    (function initHeroInlineSignin() {
+        var authStrip = document.getElementById('auth-strip');
+        if (authStrip) initInlineSignin(authStrip);
     })();
 })();

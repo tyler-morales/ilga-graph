@@ -1,0 +1,422 @@
+/**
+ * Campaign timeline page — waterfall (Gantt-style) table.
+ * Time axis = months; one row per phase with a bar spanning start–end; horizontal scroll; sticky phase column.
+ */
+
+.timeline-page {
+  max-width: var(--max-width-container, 720px);
+  margin: 0 auto;
+  padding: var(--space-2xl, 24px) var(--space-lg, 16px);
+}
+
+.timeline-page__header {
+  margin-bottom: var(--space-3xl, 32px);
+}
+
+.timeline-page__header h1 {
+  font-size: var(--font-size-h1, 1.6rem);
+  font-weight: 700;
+  color: var(--color-text, #222);
+  margin: 0 0 var(--space-md, 12px) 0;
+  line-height: var(--line-height-tight, 1.25);
+}
+
+.timeline-page__intro {
+  font-size: var(--font-size-body, 0.9375rem);
+  line-height: var(--line-height-body, 1.5);
+  color: var(--color-text-muted, #444);
+  margin: 0;
+}
+
+.timeline-page__scroll-hint {
+  display: block;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-quiet, #777);
+  margin-top: var(--space-sm, 8px);
+}
+
+/* Key session dates (same source as The Issue): reuses brief-faq details/summary (+/−), tight spacing */
+.timeline-page__deadlines {
+  margin-top: var(--space-3xl, 32px);
+  padding-top: var(--space-2xl, 24px);
+  border-top: 1px solid var(--color-border-light, #ddd);
+}
+
+.timeline-page__deadlines-title {
+  font-size: var(--font-size-h2, 1.2rem);
+  font-weight: 700;
+  color: var(--color-text, #222);
+  margin: 0 0 var(--space-sm, 8px) 0;
+}
+
+.timeline-page__deadlines .brief-faq__item {
+  margin-top: var(--space-sm, 8px);
+}
+
+.timeline-page__deadlines-answer.brief-faq__answer {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.timeline-page__deadlines .session-deadlines-table {
+  margin-top: 0;
+}
+
+.timeline-page__footer {
+  margin-top: var(--space-3xl, 32px);
+  padding-top: var(--space-2xl, 24px);
+  border-top: 1px solid var(--color-border-light, #ddd);
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-muted, #444);
+}
+
+.timeline-page__footer p {
+  margin: 0 0 var(--space-md, 12px) 0;
+}
+
+.timeline-page__footer p:last-child {
+  margin-bottom: 0;
+}
+
+.timeline-page__footer a {
+  color: var(--color-link, #0645ad);
+}
+
+/* Waterfall: horizontal scroll container */
+.timeline-waterfall {
+  margin: 0 calc(-1 * var(--space-lg, 16px));
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--space-md, 12px) var(--space-lg, 16px);
+  scroll-padding-inline: var(--space-lg, 16px);
+}
+
+.timeline-waterfall:focus-visible {
+  outline: 2px solid var(--color-border-focus, #333);
+  outline-offset: 2px;
+}
+
+.timeline-waterfall__table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm, 0.875rem);
+}
+
+.timeline-waterfall__table th,
+.timeline-waterfall__table td {
+  padding: var(--space-sm, 8px) var(--space-md, 12px);
+  border: 1px solid var(--color-border-light, #ddd);
+  vertical-align: middle;
+}
+
+.timeline-waterfall__table th.timeline-waterfall__label-cell,
+.timeline-waterfall__table .timeline-waterfall__label-cell {
+  text-align: left;
+}
+
+.timeline-waterfall__table .timeline-waterfall__empty-cell,
+.timeline-waterfall__table .timeline-waterfall__bar-cell {
+  text-align: center;
+}
+
+/* Sticky header row (stays visible when page scrolls vertically) */
+.timeline-waterfall__header-cell {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--color-bg-page, #f4f4f0);
+  box-shadow: 0 1px 0 0 var(--color-border-light, #ddd);
+}
+
+/* Sticky first column (stays visible when scrolling horizontally); corner cell sticks both ways */
+.timeline-waterfall__label-cell {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--color-bg-page, #f4f4f0);
+  font-weight: 600;
+  color: var(--color-text, #222);
+  min-width: 10rem;
+  max-width: 14rem;
+}
+
+.timeline-waterfall__table thead .timeline-waterfall__label-cell {
+  z-index: 3;
+  background: var(--color-bg-page, #f4f4f0);
+  border-right: 2px solid var(--color-border-light, #ddd);
+}
+
+.timeline-waterfall__table tbody .timeline-waterfall__label-cell {
+  z-index: 2;
+  background: var(--color-bg-page, #f4f4f0);
+  border-right: 2px solid var(--color-border-light, #ddd);
+}
+
+.timeline-waterfall__table thead .timeline-waterfall__month-cell {
+  background: var(--color-bg-page, #f4f4f0);
+}
+
+/* Month header: clickable to open the phase that spans that month */
+.timeline-waterfall__month-trigger {
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-text-muted, #444);
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.timeline-waterfall__month-trigger:hover {
+  text-decoration: underline;
+  color: var(--color-text, #222);
+}
+
+.timeline-waterfall__month-trigger:focus-visible {
+  outline: 2px solid var(--color-border-focus, #333);
+  outline-offset: 2px;
+}
+
+/* Expand button in phase label — click to show/hide details */
+.timeline-waterfall__expand-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.timeline-waterfall__expand-btn:hover {
+  text-decoration: underline;
+}
+
+.timeline-waterfall__expand-btn:focus-visible {
+  outline: 2px solid var(--color-border-focus, #333);
+  outline-offset: 2px;
+}
+
+.timeline-waterfall__expand-btn[aria-expanded="true"] .timeline-waterfall__expand-icon {
+  transform: rotate(180deg);
+}
+
+.timeline-waterfall__expand-icon {
+  display: inline-block;
+  margin-left: var(--space-xs, 4px);
+  width: 0.5em;
+  height: 0.5em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  vertical-align: 0.2em;
+}
+
+.timeline-waterfall__phase-title {
+  display: block;
+  font-size: var(--font-size-body, 0.9375rem);
+  line-height: var(--line-height-tight, 1.25);
+}
+
+.timeline-waterfall__date-range {
+  display: block;
+  font-size: var(--font-size-xs, 0.8125rem);
+  font-weight: 600;
+  color: var(--color-cta-primary, #0f766e);
+  margin-top: 2px;
+}
+
+/* Invisible trigger over bar cell — click bar to show details */
+.timeline-waterfall__bar-cell {
+  position: relative;
+}
+
+.timeline-waterfall__bar-trigger {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.timeline-waterfall__bar-trigger:focus-visible {
+  outline: 2px solid var(--color-border-focus, #333);
+  outline-offset: -2px;
+}
+
+/* Month header cells — centered over time axis */
+.timeline-waterfall__month-cell {
+  min-width: 2.5rem;
+  font-weight: 600;
+  color: var(--color-text-muted, #444);
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* Empty cells (no bar) */
+.timeline-waterfall__empty-cell {
+  background: var(--color-bg-page, #f4f4f0);
+  min-width: 2.5rem;
+}
+
+/* Bar cell: block-y fill for phase duration; compact row for waterfall stack */
+.timeline-waterfall__phase-row .timeline-waterfall__label-cell {
+  vertical-align: top;
+}
+
+.timeline-waterfall__phase-row .timeline-waterfall__label-cell,
+.timeline-waterfall__phase-row .timeline-waterfall__empty-cell,
+.timeline-waterfall__phase-row .timeline-waterfall__bar-cell {
+  padding-top: var(--space-xs, 6px);
+  padding-bottom: var(--space-xs, 6px);
+}
+
+.timeline-waterfall__bar-cell {
+  background: color-mix(in srgb, var(--color-cta-primary, #0f766e) 35%, var(--color-bg-page, #f4f4f0));
+  border-left: 1px solid var(--color-border-light, #ddd);
+  border-right: 1px solid var(--color-border-light, #ddd);
+  min-width: 2.5rem;
+}
+
+.timeline-waterfall__bar-cell .timeline-waterfall__bar-trigger {
+  display: block;
+}
+
+@supports not (color-mix(in srgb, red, blue)) {
+  .timeline-waterfall__bar-cell {
+    background: #b8ddd9;
+  }
+}
+
+.timeline-waterfall__phase-row--current .timeline-waterfall__bar-cell {
+  background: var(--color-cta-primary, #0f766e);
+  color: var(--color-bg-page, #f4f4f0);
+}
+
+/* Expandable details row inside table — hidden by default */
+.timeline-waterfall__details-row {
+  background: var(--color-bg-card, #fff);
+}
+
+.timeline-waterfall__details-row--collapsed,
+.timeline-waterfall__details-row[hidden] {
+  display: none;
+}
+
+.timeline-waterfall__details-row:not(.timeline-waterfall__details-row--collapsed):not([hidden]) {
+  display: table-row;
+}
+
+.timeline-waterfall__details-cell {
+  padding: var(--space-md, 12px) var(--space-lg, 16px);
+  border-left: 1px solid var(--color-border-light, #ddd);
+  background: var(--color-bg-card, #fff);
+  vertical-align: top;
+}
+
+.timeline-waterfall__details-inner {
+  max-width: 65ch;
+}
+
+/* When opened from a month click: stick at that column so content stays visible when scrolling */
+.timeline-waterfall__details-inner--sticky {
+  position: sticky;
+  z-index: 2;
+  background: var(--color-bg-card, #fff);
+}
+
+.timeline-waterfall__details-context {
+  font-size: var(--font-size-xs, 0.8125rem);
+  font-weight: 600;
+  color: var(--color-cta-primary, #0f766e);
+  margin: 0 0 var(--space-sm, 8px) 0;
+}
+
+.timeline-waterfall__details-context[aria-hidden="true"] {
+  display: none;
+}
+
+/* Phase definition: plain text under phase name, matches milestone/body style */
+.timeline-waterfall__phase-definition {
+  margin: 0;
+}
+
+.timeline-waterfall__phase-definition-text {
+  font-size: var(--font-size-sm, 0.875rem);
+  line-height: var(--line-height-body, 1.5);
+  color: var(--color-text-muted, #444);
+  margin: 0;
+}
+
+/* Details row first cell: label column so phase definition sits under phase name (same row as milestones) */
+.timeline-waterfall__details-row .timeline-waterfall__details-label-cell {
+  vertical-align: top;
+  background: var(--color-bg-card, #fff);
+  border-left: 1px solid var(--color-border-light, #ddd);
+  border-bottom: 1px solid var(--color-border-light, #ddd);
+}
+
+.timeline-waterfall__milestones {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.timeline-waterfall__milestone {
+  font-size: var(--font-size-sm, 0.875rem);
+  line-height: var(--line-height-body, 1.5);
+  margin-bottom: var(--space-sm, 8px);
+}
+
+.timeline-waterfall__milestone:last-child {
+  margin-bottom: 0;
+}
+
+.timeline-waterfall__milestone-date {
+  display: inline-block;
+  color: var(--color-text-quiet, #777);
+  margin-right: var(--space-sm, 8px);
+  min-width: 7em;
+}
+
+.timeline-waterfall__milestone-title {
+  display: block;
+  font-weight: 600;
+  color: var(--color-text, #222);
+}
+
+.timeline-waterfall__milestone-desc {
+  display: block;
+  color: var(--color-text-muted, #444);
+}
+
+/* Responsive: slightly smaller month labels on narrow viewports */
+@media (max-width: 480px) {
+  .timeline-waterfall__month-cell {
+    min-width: 2rem;
+    font-size: var(--font-size-xs, 0.8125rem);
+  }
+
+  .timeline-waterfall__empty-cell,
+  .timeline-waterfall__bar-cell {
+    min-width: 2rem;
+  }
+
+  .timeline-waterfall__label-cell {
+    min-width: 8rem;
+    max-width: 11rem;
+  }
+}

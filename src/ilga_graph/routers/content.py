@@ -2,23 +2,101 @@
 
 from __future__ import annotations
 
+import html as html_module
 import json
 import re
+from datetime import date
 from pathlib import Path
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import config as cfg
-from ..session_schedule import get_all_deadlines
+from ..constants import KEI_STATUS_OPTIONS
+from ..db import get_db
+from ..db_models import User
+from ..dependencies import get_current_user_optional
+from ..session_schedule import get_all_deadlines, session_label
+from .content_constants import (
+    BRIEF_BILLS_CURRENT,
+    BRIEF_BILLS_PASSED,
+    BRIEF_DOCUMENTS,
+    BRIEF_SOURCES,
+    BRIEF_STATE_STATUS,
+    CAMPAIGN_STATUS,
+    CONSTITUENT_BRIEF_PATH,
+    DOMAIN_GLOSSARY,
+    FACT_SHEET_ISSUE,
+    FACT_SHEET_PDF_URL,
+    FACT_SHEET_POSITION,
+    FAQ_ADVOCACY,
+    FAQ_LAW,
+    FAQ_LEGISLATORS,
+    FAQ_SESSION,
+    HERO_CLARITY_LINE,
+    HERO_URGENCY_LINE,
+    HERO_URGENCY_THIS_SESSION,
+    ISSUE_SOURCES,
+    KEI_GLOSSARY,
+    LEGISLATOR_BRIEF_PATH,
+    MARQUEE_IMAGES,
+    PROGRESS_ACHIEVED_COUNT,
+    PROGRESS_CHECKPOINTS,
+    SESSION_SCHEDULE_TERMS,
+    STRATEGIC_FIVE_POINTS,
+    STRATEGIC_MISSION,
+    STRATEGIC_STATES_ICON_ABBR,
+    STRATEGIC_VISION,
+    TIMELINE_PHASES,
+    WHY_SHOULD_YOU_CARE_HEADING,
+    WHY_SHOULD_YOU_CARE_INTRO,
+    WHY_SHOULD_YOU_CARE_TEASER_HEADING,
+    WHY_SHOULD_YOU_CARE_TEASER_ITEMS,
+    WHY_SHOULD_YOU_CARE_VOICE,
+)
+
+# Re-exports for advocacy, home, updates, etc.
+__all__ = [
+    "BRIEF_BILLS_CURRENT",
+    "BRIEF_BILLS_PASSED",
+    "BRIEF_DOCUMENTS",
+    "BRIEF_SOURCES",
+    "BRIEF_STATE_STATUS",
+    "CAMPAIGN_STATUS",
+    "CONSTITUENT_BRIEF_PATH",
+    "DOMAIN_GLOSSARY",
+    "FACT_SHEET_ISSUE",
+    "FACT_SHEET_PDF_URL",
+    "FACT_SHEET_POSITION",
+    "FAQ_ADVOCACY",
+    "FAQ_LAW",
+    "FAQ_LEGISLATORS",
+    "FAQ_SESSION",
+    "HERO_CLARITY_LINE",
+    "HERO_URGENCY_LINE",
+    "HERO_URGENCY_THIS_SESSION",
+    "ISSUE_SOURCES",
+    "KEI_GLOSSARY",
+    "LEGISLATOR_BRIEF_PATH",
+    "MARQUEE_IMAGES",
+    "PROGRESS_ACHIEVED_COUNT",
+    "PROGRESS_CHECKPOINTS",
+    "SESSION_SCHEDULE_TERMS",
+    "STRATEGIC_FIVE_POINTS",
+    "STRATEGIC_MISSION",
+    "STRATEGIC_STATES_ICON_ABBR",
+    "STRATEGIC_VISION",
+    "TIMELINE_PHASES",
+    "WHY_SHOULD_YOU_CARE_HEADING",
+    "WHY_SHOULD_YOU_CARE_INTRO",
+    "WHY_SHOULD_YOU_CARE_TEASER_HEADING",
+    "WHY_SHOULD_YOU_CARE_TEASER_ITEMS",
+    "WHY_SHOULD_YOU_CARE_VOICE",
+]
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
-_REPO_ROOT = Path(__file__).resolve().parents[3]  # src/ilga_graph/routers -> repo root
 router = APIRouter()
-
-# Canonical brief text files (repo root). Web pages source content from these.
-CONSTITUENT_BRIEF_PATH = _REPO_ROOT / "Illinois_Kei_Vehicle_Registration_Constituent_Brief.txt"
-LEGISLATOR_BRIEF_PATH = _REPO_ROOT / "IL_Kei_Vehicle_Registration_Fix_Brief 1.txt"
 
 
 def _load_constituent_brief() -> dict | None:
@@ -161,41 +239,11 @@ templates.env.globals["show_beta_banner"] = cfg.BETA_BANNER
 templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
 templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
-
-# Strategic plan (Hardball Ch 5): single source of truth for mission, vision, 5-point message.
-STRATEGIC_MISSION = "Fix the statutory gap that prevents road-legal kei vehicles in Illinois."
-STRATEGIC_VISION = (
-    "A narrow statutory clarification to 625 ILCS 5/3-401(c-1) so highway-built, federally lawful "
-    "kei vehicles can be titled and registered in Illinois, consistent with 21+ other states."
-)
-STRATEGIC_FIVE_POINTS: list[str] = [
-    "Kei vehicles are federally legal to import (25-year rule).",
-    "21+ states already allow registration—Illinois is the outlier.",
-    "The current Illinois statute has an ambiguity, not a prohibition.",
-    "The fix is a narrow clarifying amendment—no new regulatory framework.",
-    "This affects real Illinois residents who own legal vehicles they can't register.",
-]
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
 templates.env.globals["features"] = cfg.get_client_features()
-
-# Why should you care (Hardball Ch7: who benefits, why your voice matters). Canonical copy from constituent brief + FAQ_ADVOCACY + STRATEGIC_FIVE_POINTS.
-WHY_SHOULD_YOU_CARE_HEADING = "Why should you care?"
-WHY_SHOULD_YOU_CARE_INTRO = (
-    "Clear law protects residents. When statutory language is ambiguous, regular people absorb the consequences. "
-    "This issue is about fairness, predictability, and consistent application of Illinois law. "
-    "This affects real Illinois residents who own legal vehicles they can't register—registrations denied or revoked, "
-    "titles branded 'Not Eligible for Registration,' plates surrendered."
-)
-WHY_SHOULD_YOU_CARE_VOICE = (
-    "Legislators prioritize issues they hear about from constituents. Your contact helps put the issue on the map "
-    "and builds the case for a legislative fix."
-)
-WHY_SHOULD_YOU_CARE_TEASER_ITEMS: list[str] = [
-    "This affects real Illinois residents who own legal vehicles they can't register.",
-    "Even if you don't own one, it's about fair and consistent application of the law.",
-    "Your voice helps legislators see the issue deserves a fix.",
-]
+templates.env.globals["marquee_images"] = MARQUEE_IMAGES
 templates.env.globals["why_should_you_care_heading"] = WHY_SHOULD_YOU_CARE_HEADING
+templates.env.globals["why_should_you_care_teaser_heading"] = WHY_SHOULD_YOU_CARE_TEASER_HEADING
 templates.env.globals["why_should_you_care_intro"] = WHY_SHOULD_YOU_CARE_INTRO
 templates.env.globals["why_should_you_care_voice"] = WHY_SHOULD_YOU_CARE_VOICE
 templates.env.globals["why_should_you_care_teaser_items"] = WHY_SHOULD_YOU_CARE_TEASER_ITEMS
@@ -203,995 +251,16 @@ templates.env.globals["why_should_you_care_teaser_items"] = WHY_SHOULD_YOU_CARE_
 from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
 
 templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
-
-# How we measure advocacy success (things we control). Road-legal outcome is the campaign objective.
-STRATEGIC_SUCCESS_MEASURE = (
-    "We measure success by what we can control: constituent contacts, co-sponsors secured, "
-    "witness slips filed, and a coalition ready to act when a bill moves."
-)
-STRATEGIC_SUCCESS_MEASURE_ITEMS: list[str] = [
-    "Constituent contacts",
-    "Co-sponsors secured",
-    "Witness slips filed",
-    "A coalition ready to act when a bill moves",
-]
-
-# "Where we are" block on /updates. One-line phase label; campaign banner (when active) carries detail and CTA.
-CAMPAIGN_STATUS = "We're in the outreach phase."
-
-# Hero urgency and clarity (Hardball: timeline, clear ask). Switch to HERO_URGENCY_THIS_SESSION when pushing this session.
-# Used in hero and session pill (expandable). Alternatives for pill: "Building support now for the 2027 session." / "2027 session ahead. Your outreach now builds momentum."
-HERO_URGENCY_LINE = (
-    "Next session starts early 2027. We're building constituent support now so we're ready."
-)
-HERO_URGENCY_THIS_SESSION = (
-    "Spring session runs through May 31. We need your voice before key deadlines."
-)
-HERO_CLARITY_LINE = "Enter your ZIP — we'll show you who to call and what to say. Takes 2 min."
-
-# Campaign timeline: checkpoints from current phase to Keis be legal. Update achieved count as campaign advances.
-CAMPAIGN_TIMELINE_CHECKPOINTS: list[str] = [
-    "Outreach & building contacts",
-    "Sponsor identified",
-    "Bill introduced",
-    "Committee hearing",
-    "Passes legislature",
-    "Governor signature",
-    "Keis be legal",
-]
-CAMPAIGN_TIMELINE_ACHIEVED_COUNT: int = 1  # Steps 1..N at full opacity; rest at reduced opacity.
-
-# Fact sheet for the base (Hardball Ch7; content matches docs/advocacy/focused-next-steps-1-2-4-5-6.md §5).
-FACT_SHEET_ISSUE = (
-    "Illinois is treating lawfully imported kei vehicles as off-highway, so owners cannot "
-    "register them for normal road use. This is based on how Illinois interprets "
-    "625 ILCS 5/3-401(c-1), not on federal law or missing paperwork."
-)
-FACT_SHEET_POSITION = (
-    "We are asking for a narrow statutory clarification so that vehicles originally "
-    "manufactured for highway use (in any jurisdiction) and lawfully importable under "
-    "federal law may be titled and registered in Illinois under normal requirements "
-    "(insurance, equipment, traffic laws). No weakening of safety or enforcement."
-)
-FACT_SHEET_SUPPORTERS_PLACEHOLDER = (
-    "Add names or groups when you have them (e.g. Land of Kei Illinois advocacy group, "
-    'local clubs, businesses). Leave blank or "Coalition forming" until you have a list.'
-)
-
-# Documents listed in the legislator brief sidebar (title, url, file_type for icon).
-# Optional: available=False and note="..." for placeholders (disabled style, note under title).
-BRIEF_DOCUMENTS = [
-    {
-        "title": "IL Kei Vehicle Registration Fix Brief",
-        "url": "/static/advocacy/IL_Kei_Vehicle_Registration_Fix_Brief.pdf",
-        "file_type": "pdf",
-    },
-    {
-        "title": "IL Kei Vehicle Registration Fix Internal Summary",
-        "url": "/static/IL_Kei_Vehicle_Registration_Fix_Internal_Summary.pdf",
-        "file_type": "pdf",
-    },
-    {
-        "title": "1 pager sample bill",
-        "url": "#",
-        "file_type": "pdf",
-        "available": False,
-        "note": "Being developed.",
-    },
-]
-
-# Single source of truth for state table and map. bill_status: "passed" | "pending" | "none".
-# state_abbr is two-letter lowercase for SVG map class matching.
-# speed_limited: True if roads are restricted (e.g. 55 mph max or no Interstates).
-# speed: Optional short text for Speed column (e.g. "55 mph or less", "45 mph max", "No Interstates"). If absent, column shows "Limited" when speed_limited else "—".
-# aamva_fix: True if state had a ban (often AAMVA-driven) and reversed it via law/policy (post-2020).
-# explicit_kei_law: True if state passed a new law explicitly naming kei/mini vehicles (not dependent on AAMVA interpretation).
-# how: Optional. The law or policy that made Keis registrable (e.g. statute, bill number, "DMV policy"). If none, leave "".
-# effective: Optional. The date the change or law came into effect (e.g. "Sep 2025"). If no date, leave "".
-BRIEF_STATE_STATUS: list[dict] = [
-    {
-        "state": "Arizona",
-        "state_abbr": "az",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Primary On-Road Use decal; legal on all roads including Interstates.",
-        "status": "A.R.S. Title 28, Article 16",
-        "how": "A.R.S. Title 28, Article 16",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": False,
-    },
-    {
-        "state": "Arkansas",
-        "state_abbr": "ar",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Allowed on roads 55 mph or less; prohibited on Interstates.",
-        "status": "Ark. Code § 27-14-726",
-        "how": "Ark. Code § 27-14-726",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": True,
-        "speed": "55 mph or less",
-    },
-    {
-        "state": "Colorado",
-        "state_abbr": "co",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "HB 25-1281 — kei road-legal framework.",
-        "status": "Jul 2027",
-        "how": "Colorado HB 25-1281",
-        "effective": "Jul 2027",
-        "notes": "",
-        "bill_url": "https://leg.colorado.gov/bills/hb25-1281",
-        "bill_title": "Colorado HB 25-1281",
-        "speed_limited": True,
-        "speed": "55 mph",
-        "aamva_fix": True,
-        "explicit_kei_law": True,
-    },
-    {
-        "state": "Delaware",
-        "state_abbr": "de",
-        "bill_status": "none",
-        "policy": True,
-        "mechanism": "Standard registration possible; subject to strict safety inspection.",
-        "status": "DMV Registration Policy",
-        "how": "DMV Registration Policy",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": False,
-    },
-    {
-        "state": "Idaho",
-        "state_abbr": "id",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Treated as standard motor vehicle if >25 years old.",
-        "status": "Idaho Code § 49-402",
-        "how": "Idaho Code § 49-402",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": False,
-    },
-    {
-        "state": "Indiana",
-        "state_abbr": "in",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Mini-Truck Title Application & police inspection; no Interstates.",
-        "status": "Ind. Code § 9-13-2-103",
-        "how": "Ind. Code § 9-13-2-103",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": True,
-        "speed": "No Interstates",
-    },
-    {
-        "state": "Louisiana",
-        "state_abbr": "la",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Allowed on roads 55 mph or less.",
-        "status": "La. R.S. 32:299",
-        "how": "La. R.S. 32:299",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": True,
-        "speed": "55 mph or less",
-    },
-    {
-        "state": "Maine",
-        "state_abbr": "me",
-        "bill_status": "pending",
-        "policy": False,
-        "mechanism": "H.4053 — title/registration and working group (in committee)",
-        "status": "In committee",
-        "how": "Maine H.4053",
-        "effective": "",
-        "notes": "",
-        "bill_url": "https://legislature.maine.gov/legis/bills/display_ps.asp?ld=4053&num=H",
-        "bill_title": "Maine H.4053",
-        "speed_limited": False,
-        "aamva_fix": True,
-    },
-    {
-        "state": "Maryland",
-        "state_abbr": "md",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Registered as Historic (20+ years); occasional use restrictions apply.",
-        "status": "Md. Transp. Code § 13-936",
-        "how": "Md. Transp. Code § 13-936",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": False,
-    },
-    {
-        "state": "Massachusetts",
-        "state_abbr": "ma",
-        "bill_status": "pending",
-        "policy": True,
-        "mechanism": "Ban reversed Sept 2024; now registrable as standard auto.",
-        "status": "Sep 2024",
-        "how": "RMV policy reversal",
-        "effective": "Sep 2024",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": False,
-        "aamva_fix": True,
-    },
-    {
-        "state": "Michigan",
-        "state_abbr": "mi",
-        "bill_status": "none",
-        "policy": True,
-        "mechanism": "Ban reversed Nov 2024; registrable as Pickup/Station Wagon.",
-        "status": "Nov 2024",
-        "how": "SOS policy reversal",
-        "effective": "Nov 2024",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": False,
-        "aamva_fix": True,
-    },
-    {
-        "state": "Mississippi",
-        "state_abbr": "ms",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Standard registration if federal import docs (Form 7501) provided.",
-        "status": "Miss. Code § 27-19",
-        "how": "Miss. Code § 27-19",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": False,
-    },
-    {
-        "state": "Montana",
-        "state_abbr": "mt",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Permanent registration available for vehicles 11+ years old.",
-        "status": "Mont. Code § 61-3-321",
-        "how": "Mont. Code § 61-3-321",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": False,
-    },
-    {
-        "state": "Nebraska",
-        "state_abbr": "ne",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Legal on all public roads except Interstates/Expressways.",
-        "status": "Neb. Rev. Stat. § 60-339",
-        "how": "Neb. Rev. Stat. § 60-339",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": True,
-        "speed": "No Interstates/Expressways",
-    },
-    {
-        "state": "North Carolina",
-        "state_abbr": "nc",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Allowed on roads with posted speed limits of 55 mph or less.",
-        "status": "N.C. Gen. Stat. § 20-4.01",
-        "how": "N.C. Gen. Stat. § 20-4.01",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": True,
-        "speed": "55 mph or less",
-    },
-    {
-        "state": "North Dakota",
-        "state_abbr": "nd",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Allowed on roads with posted speed limits of 55 mph or less.",
-        "status": "N.D. Cent. Code § 39-29",
-        "how": "N.D. Cent. Code § 39-29",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": True,
-        "speed": "55 mph or less",
-    },
-    {
-        "state": "Oklahoma",
-        "state_abbr": "ok",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Legal on state roads; prohibited on Interstates.",
-        "status": "Okla. Stat. tit. 47 § 1151.3",
-        "how": "Okla. Stat. tit. 47 § 1151.3",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": True,
-        "speed": "No Interstates",
-    },
-    {
-        "state": "Oregon",
-        "state_abbr": "or",
-        "bill_status": "pending",
-        "policy": False,
-        "mechanism": "SB 1213 — title/registration and operating rules (Transportation committee)",
-        "status": "In committee",
-        "how": "Oregon SB 1213",
-        "effective": "",
-        "notes": "",
-        "bill_url": "https://olis.oregonlegislature.gov/liz/2025R1/Measures/Overview/SB1213",
-        "bill_title": "Oregon SB 1213",
-        "speed_limited": False,
-        "aamva_fix": True,
-    },
-    {
-        "state": "South Carolina",
-        "state_abbr": "sc",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Antique plates available for vehicles 25+ years old.",
-        "status": "S.C. Code § 56-3",
-        "how": "S.C. Code § 56-3",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": False,
-    },
-    {
-        "state": "Tennessee",
-        "state_abbr": "tn",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Registered as Antique (Class C); general road use allowed.",
-        "status": "Tenn. Code § 55-4-111",
-        "how": "Tenn. Code § 55-4-111",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": False,
-    },
-    {
-        "state": "Texas",
-        "state_abbr": "tx",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "SB 1816 — miniature vehicle statute; titling, registration, highway rules",
-        "status": "Sep 2025",
-        "how": "Texas SB 1816",
-        "effective": "Sep 2025",
-        "notes": "",
-        "bill_url": "https://capitol.texas.gov/BillLookup/History.aspx?LegSess=89R&Bill=SB1816",
-        "bill_title": "Texas SB 1816",
-        "speed_limited": False,
-        "aamva_fix": True,
-        "explicit_kei_law": True,
-    },
-    {
-        "state": "Washington",
-        "state_abbr": "wa",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Road legal if safety equipment (lights/mirrors) is retrofitted.",
-        "status": "RCW 46.16A.080",
-        "how": "RCW 46.16A.080",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": False,
-    },
-    {
-        "state": "West Virginia",
-        "state_abbr": "wv",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Registered as Street-Legal SPV; max 20-mile range often waived.",
-        "status": "W. Va. Code § 17A-13-1",
-        "how": "W. Va. Code § 17A-13-1",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": False,
-    },
-    {
-        "state": "Wyoming",
-        "state_abbr": "wy",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Registered as MPV; prohibited on Interstates.",
-        "status": "Wyo. Stat. § 31-2-232",
-        "how": "Wyo. Stat. § 31-2-232",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": True,
-        "speed": "No Interstates",
-    },
-    # Restricted (antique/collector/speed or radius caps only).
-    {
-        "state": "Connecticut",
-        "state_abbr": "ct",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Antique plates only; must be 20+ years old; limited use.",
-        "status": "C.G.S. § 14-20",
-        "how": "C.G.S. § 14-20",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": True,
-        "restricted": True,
-    },
-    {
-        "state": "Missouri",
-        "state_abbr": "mo",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Speed cap; requires local ordinance.",
-        "status": "Mo. Rev. Stat. § 304.032",
-        "how": "Mo. Rev. Stat. § 304.032",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": True,
-        "speed": "45 mph max",
-        "restricted": True,
-    },
-    {
-        "state": "New Hampshire",
-        "state_abbr": "nh",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Radius cap: max 25 miles from home.",
-        "status": "RSA 261:41-a",
-        "how": "RSA 261:41-a",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": True,
-        "speed": "35 mph",
-        "restricted": True,
-    },
-    {
-        "state": "Pennsylvania",
-        "state_abbr": "pa",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Antique plates only; stock condition required; no daily use.",
-        "status": "PennDOT Fact Sheet",
-        "how": "PennDOT policy",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": True,
-        "restricted": True,
-    },
-    {
-        "state": "Utah",
-        "state_abbr": "ut",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Speed cap; banned on Interstates.",
-        "status": "Utah Code § 41-6a-1505",
-        "how": "Utah Code § 41-6a-1505",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": True,
-        "speed": "50 mph max",
-        "restricted": True,
-    },
-    {
-        "state": "Virginia",
-        "state_abbr": "va",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Antique/farm only; strict driving limits (e.g. car shows only).",
-        "status": "Va. Code § 46.2-730",
-        "how": "Va. Code § 46.2-730",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": True,
-        "restricted": True,
-    },
-    {
-        "state": "Wisconsin",
-        "state_abbr": "wi",
-        "bill_status": "passed",
-        "policy": False,
-        "mechanism": "Collector plates only; owner must prove another daily driver.",
-        "status": "Wis. Stat. § 341.266",
-        "how": "Wis. Stat. § 341.266",
-        "effective": "",
-        "notes": "",
-        "bill_url": "",
-        "bill_title": "",
-        "speed_limited": True,
-        "restricted": True,
-    },
-]
+templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 
 
-# Derived for sidebar: passed and current bills (title, url).
-def _brief_bills_passed() -> list[dict[str, str]]:
-    return [
-        {"title": s["bill_title"], "url": s["bill_url"]}
+def get_strategic_states_tooltips() -> dict[str, dict[str, str]]:
+    """Tooltip data for states in the strategic states icon: state name and law/policy (from BRIEF_STATE_STATUS)."""
+    return {
+        s["state_abbr"]: {"state": s["state"], "how": s.get("how") or "Allows registration"}
         for s in BRIEF_STATE_STATUS
-        if s["bill_status"] == "passed" and s.get("bill_url")
-    ]
-
-
-def _brief_bills_current() -> list[dict[str, str]]:
-    return [
-        {"title": s["bill_title"], "url": s["bill_url"]}
-        for s in BRIEF_STATE_STATUS
-        if s["bill_status"] == "pending" and s.get("bill_url")
-    ]
-
-
-BRIEF_BILLS_PASSED: list[dict[str, str]] = _brief_bills_passed()
-BRIEF_BILLS_CURRENT: list[dict[str, str]] = _brief_bills_current()
-
-# Sources for the brief: title, url. From table primary sources + Illinois statute.
-BRIEF_SOURCES: list[dict[str, str]] = [
-    {
-        "title": "625 ILCS 5/3-401(c-1)",
-        "url": "https://www.ilga.gov/legislation/ilcs/ilcs3.asp?ActID=2205&ChapterID=62",
-    },
-    {
-        "title": "Texas SB 1816",
-        "url": "https://capitol.texas.gov/BillLookup/History.aspx?LegSess=89R&Bill=SB1816",
-    },
-    {"title": "Colorado HB 25-1281", "url": "https://leg.colorado.gov/bills/hb25-1281"},
-    {
-        "title": "Massachusetts RMV",
-        "url": "https://www.mass.gov/orgs/massachusetts-registry-of-motor-vehicles",
-    },
-    {"title": "Michigan SOS", "url": "https://www.michigan.gov/sos"},
-    {
-        "title": "Oregon SB 1213",
-        "url": "https://olis.oregonlegislature.gov/liz/2025R1/Measures/Overview/SB1213",
-    },
-    {
-        "title": "Maine H.4053",
-        "url": "https://legislature.maine.gov/legis/bills/display_ps.asp?ld=4053&num=H",
-    },
-]
-
-# FAQ for The Issue page (law/registration). Each item: id, question, answer, sources (list of {label, url}).
-FAQ_LAW = {
-    "title": "FAQ — Law & registration",
-    "intro": (
-        "Quick answers for Illinois residents taking action. "
-        "Links go to primary sources (government or official statute text)."
-    ),
-    "items": [
-        {
-            "id": "a1",
-            "question": "Are kei vehicles legal to import into the United States?",
-            "answer": (
-                "Often, yes. Under federal rules, many vehicles that are 25 years old or older can be "
-                "lawfully imported without needing to meet current Federal Motor Vehicle Safety Standards "
-                "(FMVSS). That does not automatically guarantee state registration—states control "
-                "titling/registration eligibility."
-            ),
-            "sources": [
-                {
-                    "label": "NHTSA — Importing a Vehicle (overview)",
-                    "url": "https://www.nhtsa.gov/importing-vehicle",
-                },
-                {
-                    "label": "NHTSA — Importation & Certification FAQs",
-                    "url": "https://www.nhtsa.gov/importing-vehicle/importation-and-certification-faqs",
-                },
-            ],
-        },
-        {
-            "id": "a2",
-            "question": "If it's legal to import, why won't Illinois register it?",
-            "answer": (
-                "Import legality and state registration are separate. Illinois registration decisions "
-                "are being made under the Illinois Vehicle Code. The current barrier is the Secretary of "
-                "State's interpretation of 625 ILCS 5/3-401(c-1) about whether a vehicle was "
-                '"originally manufactured for operation on highways."'
-            ),
-            "sources": [
-                {
-                    "label": "Illinois Vehicle Code — 625 ILCS 5/3-401 (ILGA)",
-                    "url": "https://www.ilga.gov/legislation/ilcs/documents/062500050K3-401.htm",
-                },
-            ],
-        },
-        {
-            "id": "a3",
-            "question": "Is this about people trying to register off-road vehicles?",
-            "answer": (
-                "No. The advocacy ask is about kei vehicles that were built for highway use in their "
-                "home jurisdiction and are lawfully imported. The goal is to stop treating them as "
-                "off-highway/non-highway solely due to how Illinois reads 3-401(c-1). Illinois safety, "
-                "insurance, equipment, and traffic enforcement would still apply."
-            ),
-            "sources": [
-                {
-                    "label": "Illinois Vehicle Code — 625 ILCS 5/3-401 (ILGA)",
-                    "url": "https://www.ilga.gov/legislation/ilcs/documents/062500050K3-401.htm",
-                },
-            ],
-        },
-        {
-            "id": "a4",
-            "question": "Are we asking for special treatment or exemptions from safety rules?",
-            "answer": (
-                "No. The request is for normal registration eligibility, while keeping normal Illinois "
-                "requirements in place (titling documentation, insurance, equipment compliance, and "
-                "traffic enforcement). This is a narrow statutory clarification request—not a blanket "
-                "exemption."
-            ),
-            "sources": [
-                {
-                    "label": "Illinois Vehicle Code — 625 ILCS 5/3-401 (ILGA)",
-                    "url": "https://www.ilga.gov/legislation/ilcs/documents/062500050K3-401.htm",
-                },
-            ],
-        },
-        {
-            "id": "a5",
-            "question": "Does Illinois have to follow AAMVA guidance?",
-            "answer": (
-                "No. AAMVA is not a lawmaking body for Illinois. Illinois agencies and the General "
-                "Assembly set Illinois policy through the Vehicle Code and formal agency policies. "
-                "Your outreach is about how Illinois chooses to clarify its own statute and "
-                "registration rules."
-            ),
-            "sources": [
-                {
-                    "label": "Illinois Vehicle Code — 625 ILCS 5/3-401 (ILGA)",
-                    "url": "https://www.ilga.gov/legislation/ilcs/documents/062500050K3-401.htm",
-                },
-            ],
-        },
-        {
-            "id": "a6",
-            "question": 'What should I say if someone claims "states can do whatever they want"?',
-            "answer": (
-                "States control registration, yes—but states must also apply their statutes consistently. "
-                "The point here is that Illinois can fix this cleanly by clarifying how 3-401(c-1) "
-                "applies to highway-built, federally lawful imports. That creates clarity for residents "
-                "and reduces administrative conflict."
-            ),
-            "sources": [
-                {
-                    "label": "Illinois Vehicle Code — 625 ILCS 5/3-401 (ILGA)",
-                    "url": "https://www.ilga.gov/legislation/ilcs/documents/062500050K3-401.htm",
-                },
-            ],
-        },
-        {
-            "id": "a7",
-            "question": (
-                "Can you show an example that state registration rules vary even for imports?"
-            ),
-            "answer": (
-                "Yes. States publish their own eligibility rules. Many state DMVs publish guidance on "
-                'how "foreign" or imported vehicles are handled and how FMVSS labeling/standards can '
-                "affect title/registration eligibility. Illinois can clarify its own approach within "
-                "that framework."
-            ),
-            "sources": [
-                {
-                    "label": "NHTSA — Importing a Vehicle",
-                    "url": "https://www.nhtsa.gov/importing-vehicle",
-                },
-            ],
-        },
-    ],
-}
-
-# FAQ for The Issue page (advocacy process). Same shape: title, intro, items (id, question, answer, optional sources).
-FAQ_ADVOCACY = {
-    "title": "FAQ — Advocacy & how we work",
-    "intro": (
-        "How the advocacy effort is organized and how your outreach helps drive "
-        "legal registration of kei vehicles in Illinois."
-    ),
-    "items": [
-        {
-            "id": "adv1",
-            "question": "What is the goal of this advocacy?",
-            "answer": (
-                "To get kei vehicles legally registered for normal road use in Illinois via a narrow "
-                "clarification to 625 ILCS 5/3-401(c-1). We focus on what we can control: constituent "
-                "contacts, co-sponsors, witness slips, coalition readiness."
-            ),
-        },
-        {
-            "id": "adv1b",
-            "question": "What does success look like for this advocacy?",
-            "answer": (
-                "Success is what we can control: constituent contacts, co-sponsors secured, witness "
-                "slips filed, and a coalition ready to act when a bill moves. Road-legal status is the "
-                "outcome we're working toward, but we measure success by these actions so we can see "
-                "progress and stay motivated even when the legislature hasn't yet passed a fix."
-            ),
-        },
-        {
-            "id": "success-measures",
-            "question": "How we measure success?",
-            "answer": STRATEGIC_SUCCESS_MEASURE,
-            "answer_list": STRATEGIC_SUCCESS_MEASURE_ITEMS,
-        },
-        {
-            "id": "adv2",
-            "question": "How does the advocacy group intend to achieve that goal?",
-            "answer": (
-                "By building awareness and constituent pressure—Illinois residents contact their "
-                "legislators so they hear this is a real issue in their districts. When a bill "
-                "exists, we support it (sponsor, committee, votes). Right now we are in the outreach "
-                "stage: the more people who reach out by district or ZIP, the more clearly "
-                "legislators see that constituents care and that the issue deserves a fix."
-            ),
-        },
-        {
-            "id": "adv3",
-            "question": "Why is it important to voice my concerns?",
-            "answer": (
-                "Legislators prioritize issues they hear about from constituents. Your contact helps "
-                "put the issue on the map and builds the case for a legislative fix."
-            ),
-        },
-        {
-            "id": "adv4",
-            "question": "Where are we in the process?",
-            "answer": (
-                "No bill yet. We are in the outreach stage: constituents contact legislators and "
-                "make it clear that kei registration is something Illinois residents care about. As "
-                "momentum builds, we coordinate contact by district or ZIP to show where support exists."
-            ),
-        },
-        {
-            "id": "adv5",
-            "question": "What are the steps or checkpoints in the process?",
-            "answer": (
-                "Right now we are at the no-bill stage. Step 1: Outreach to your legislators—get "
-                "aware of the issue and make sure your senator and representative hear from you. "
-                "Step 2: As momentum builds, we coordinate contact by district or ZIP so legislators "
-                "see that this is a real issue in their district and that constituents want a fix. "
-                "Later stages (when a bill exists) will include supporting the bill, committee "
-                "contact, and votes. For now, your outreach is the main checkpoint."
-            ),
-        },
-        {
-            "id": "adv6",
-            "question": "How do I find my legislators?",
-            "answer": (
-                "Use the advocacy tool on this site: enter your Illinois ZIP code at the Advocacy "
-                "page to see your State Senator, your State Representative, and a recommended "
-                "target (Power Broker). You can then call or email each one using the scripts and "
-                "templates we provide."
-            ),
-        },
-        {
-            "id": "adv7",
-            "question": "What should I say when I call or email?",
-            "answer": (
-                "Use the advocacy tool's script or email template: ask for support for a narrow "
-                "statutory clarification to 625 ILCS 5/3-401(c-1) so kei vehicles that were built "
-                "for highway use and are lawfully imported can be registered in Illinois. Key "
-                "message: constituents care and want a fix."
-            ),
-        },
-    ],
-}
-
-# FAQ for The Issue page: session calendar and deadlines. Single source of truth: reference/session_schedule.json.
-FAQ_SESSION = {
-    "title": "FAQ — Session calendar & deadlines",
-    "intro": (
-        "We maintain the Illinois General Assembly House and Senate schedule as a single source "
-        "of truth for session dates and key deadlines. All dates and reminders on this site come from it."
-    ),
-    "items": [
-        {
-            "id": "session1",
-            "question": "Where can I find the legislative session calendar and key deadlines?",
-            "answer": (
-                "We use the official 104th General Assembly Spring 2026 schedule (House and Senate). "
-                "Key deadlines—such as bill introduction, committee deadlines, and third reading—are listed below. "
-                "Session and holiday dates are in our reference data; we update that file when the session calendar changes."
-            ),
-        },
-    ],
-}
-
-# Terms used in the session calendar. Definitions grounded in reference/ilga_rules.json (104th GA rules).
-SESSION_SCHEDULE_TERMS = [
-    {
-        "id": "lrb",
-        "term": "LRB",
-        "definition": "Legislative Reference Bureau. Legislators request bill drafting from the LRB. The LRB request deadline is the last day to submit requests for the session; after that, the LRB blackout begins and no new bill requests are accepted until the next session.",
-    },
-    {
-        "id": "committee-deadline",
-        "term": "Committee deadline",
-        "definition": "Final day for standing committees to report bills out of committee. Bills not reported by this date are re-referred to the gatekeeper (Senate: Committee on Assignments; House: Rules Committee)—not killed, but delayed. Senate Rule 2-10, House Rule 9.",
-    },
-    {
-        "id": "third-reading",
-        "term": "Third Reading",
-        "definition": "Final reading of a bill before a floor vote. A bill must be read by title on three different days before passage. The Third Reading deadline is the last day the chamber may pass bills on third reading; after that, bills not passed are re-referred. Senate Rule 2-10(a)(5), House Rule 9(b)(5).",
-    },
-    {
-        "id": "perfunctory-session",
-        "term": "Perfunctory session",
-        "definition": "A short session for procedural business (e.g. reading the journal, formalities). No substantive debate or votes on bills.",
-    },
-    {
-        "id": "substantive-bills",
-        "term": "Substantive bills",
-        "definition": "Bills that change law or policy (as opposed to appropriation-only or purely procedural measures). Session deadlines often set separate dates for substantive bills vs. appropriation bills.",
-    },
-    {
-        "id": "session",
-        "term": "Session",
-        "definition": "A day the chamber meets in Springfield. The schedule lists which days the House or Senate is in session.",
-    },
-    {
-        "id": "adjournment",
-        "term": "Adjournment",
-        "definition": "End of the legislative session (sine die). After adjournment, no further action on bills until the next session.",
-    },
-]
-
-# FAQ for Legislator Brief page (legislators & staff). Same shape: title, intro, items (id, question, answer, sources).
-FAQ_LEGISLATORS = {
-    "title": "FAQ — For Legislators & Staff",
-    "intro": (
-        "Short, risk-aware answers for offices evaluating whether to sponsor or support "
-        "a narrow statutory clarification."
-    ),
-    "items": [
-        {
-            "id": "l1",
-            "question": "What exactly is being requested from the General Assembly?",
-            "answer": (
-                "A narrow clarification to 625 ILCS 5/3-401(c-1) (or a related definitional section) "
-                "so that highway-built vehicles manufactured for on-road use in any jurisdiction—when "
-                "lawfully importable under federal rules—can be titled/registered under normal Illinois "
-                "requirements (insurance, equipment, traffic enforcement, documentation)."
-            ),
-            "sources": [
-                {
-                    "label": "Illinois Vehicle Code — 625 ILCS 5/3-401 (ILGA)",
-                    "url": "https://www.ilga.gov/legislation/ilcs/documents/062500050K3-401.htm",
-                },
-            ],
-        },
-        {
-            "id": "l2",
-            "question": "Is this an administrative dispute or a statutory issue?",
-            "answer": (
-                "It's statutory. The cited barrier is 625 ILCS 5/3-401(c-1). Under the SOS posture, "
-                'eligibility turns on how "originally manufactured for operation on highways" is applied. '
-                "If the statute is interpreted to exclude these vehicles, legislative clarification is "
-                "the direct remedy."
-            ),
-            "sources": [
-                {
-                    "label": "Illinois Vehicle Code — 625 ILCS 5/3-401 (ILGA)",
-                    "url": "https://www.ilga.gov/legislation/ilcs/documents/062500050K3-401.htm",
-                },
-            ],
-        },
-        {
-            "id": "l3",
-            "question": "Does this weaken safety enforcement or create broad exemptions?",
-            "answer": (
-                "No. The concept preserves existing Illinois enforcement: insurance, equipment "
-                "compliance, and traffic laws. The proposal is an eligibility clarification for normal "
-                "registration—without rewriting enforcement authorities or creating a blanket carve-out."
-            ),
-            "sources": [
-                {
-                    "label": "Illinois Vehicle Code — 625 ILCS 5/3-401 (ILGA)",
-                    "url": "https://www.ilga.gov/legislation/ilcs/documents/062500050K3-401.htm",
-                },
-            ],
-        },
-        {
-            "id": "l4",
-            "question": "How does federal import legality relate to Illinois registration?",
-            "answer": (
-                "Federal law governs import eligibility; states govern title/registration. NHTSA "
-                "provides the import framework (including exemptions commonly used for older vehicles). "
-                "Illinois can keep its normal registration standards intact while clarifying how its "
-                "statute applies to federally lawful imports."
-            ),
-            "sources": [
-                {
-                    "label": "NHTSA — Importing a Vehicle (overview)",
-                    "url": "https://www.nhtsa.gov/importing-vehicle",
-                },
-                {
-                    "label": "NHTSA — Importation & Certification FAQs",
-                    "url": "https://www.nhtsa.gov/importing-vehicle/importation-and-certification-faqs",
-                },
-            ],
-        },
-        {
-            "id": "l5",
-            "question": "Does clarifying this open the door to other nonconforming vehicles?",
-            "answer": (
-                "Not if drafted narrowly. The concept can be limited to vehicles originally "
-                "manufactured for highway use (in any jurisdiction) and lawfully importable under "
-                "federal rules, while excluding off-road-only vehicles and preserving Illinois "
-                "conditions for road use."
-            ),
-            "sources": [
-                {
-                    "label": "Illinois Vehicle Code — 625 ILCS 5/3-401 (ILGA)",
-                    "url": "https://www.ilga.gov/legislation/ilcs/documents/062500050K3-401.htm",
-                },
-            ],
-        },
-        {
-            "id": "l6",
-            "question": "What's the lowest-risk next step before a bill is filed?",
-            "answer": (
-                "A staff-level meeting with SOS legal/policy to confirm what statutory language would "
-                "satisfy their interpretation of 3-401(c-1), followed by identifying the best sponsor "
-                "path through the relevant transportation/vehicle code process."
-            ),
-            "sources": [
-                {
-                    "label": "Illinois Vehicle Code — 625 ILCS 5/3-401 (ILGA)",
-                    "url": "https://www.ilga.gov/legislation/ilcs/documents/062500050K3-401.htm",
-                },
-            ],
-        },
-    ],
-}
+        if s["state_abbr"] in STRATEGIC_STATES_ICON_ABBR
+    }
 
 
 def _brief_map_fill_status(s: dict) -> str:
@@ -1210,41 +279,121 @@ def _brief_aamva_fix_state_abbrs() -> list[str]:
     return [s["state_abbr"] for s in BRIEF_STATE_STATUS if s.get("aamva_fix")]
 
 
-# State abbrs shown in the home-page strategic states icon (order: back row CO, MI; front TX).
-STRATEGIC_STATES_ICON_ABBR = ("co", "mi", "tx")
+def _inline_glossary_terms(include_domain: bool = False) -> list[dict]:
+    """Merge KEI + SESSION terms (and optionally DOMAIN) for inline tooltips. Sorted by term length descending for correct match order."""
+    terms = list(KEI_GLOSSARY) + list(SESSION_SCHEDULE_TERMS)
+    if include_domain:
+        terms = terms + list(DOMAIN_GLOSSARY)
+    return sorted(terms, key=lambda d: len(d["term"]), reverse=True)
 
 
-def get_strategic_states_tooltips() -> dict[str, dict[str, str]]:
-    """Tooltip data for states in the strategic states icon: state name and law/policy (from BRIEF_STATE_STATUS)."""
-    return {
-        s["state_abbr"]: {"state": s["state"], "how": s.get("how") or "Allows registration"}
-        for s in BRIEF_STATE_STATUS
-        if s["state_abbr"] in STRATEGIC_STATES_ICON_ABBR
-    }
+def apply_inline_glossary(blocks: list[str], terms: list[dict]) -> list[str]:
+    """Replace first occurrence of each term in blocks (document order) with a button+popover snippet. Returns HTML strings."""
+    used_ids: set[str] = set()
+    result: list[str] = []
+    replacement_counter = 0
+
+    for block in blocks:
+        if not block or not block.strip():
+            result.append(block)
+            continue
+        text = block
+        changed = True
+        while changed:
+            changed = False
+            best_pos = -1
+            best_term: dict | None = None
+            best_original_slice = ""
+
+            for t in terms:
+                if t["id"] in used_ids:
+                    continue
+                term = t["term"]
+                pos = text.lower().find(term.lower())
+                if pos < 0:
+                    continue
+                if best_pos < 0 or pos < best_pos:
+                    best_pos = pos
+                    best_term = t
+                    best_original_slice = text[pos : pos + len(term)]
+
+            if best_term is None or best_pos < 0:
+                break
+            replacement_counter += 1
+            uid = f"{best_term['id']}-{replacement_counter}"
+            def_escaped = html_module.escape(best_term["definition"])
+            snippet = (
+                f'<span class="tooltip-wrap tooltip-click">'
+                f'<button type="button" class="glossary-inline-term" aria-expanded="false" aria-controls="glossary-def-{uid}" id="glossary-trigger-{uid}">'
+                f"{html_module.escape(best_original_slice)}</button>"
+                f'<span class="tooltip-content glossary-inline-def" role="tooltip" id="glossary-def-{uid}" hidden>'
+                f'{def_escaped} <a href="/glossary#glossary-{best_term["id"]}">Full glossary</a></span></span>'
+            )
+            text = text[:best_pos] + snippet + text[best_pos + len(best_original_slice) :]
+            used_ids.add(best_term["id"])
+            changed = True
+
+        result.append(text)
+
+    return result
 
 
-def _issue_sources_from_faq(faq: dict) -> list[dict[str, str]]:
-    """Build deduplicated list of Issue page sources: statute first, then FAQ source links (by url)."""
-    seen: set[str] = set()
-    out: list[dict[str, str]] = []
-    statute_url = "https://www.ilga.gov/legislation/ilcs/documents/062500050K3-401.htm"
-    statute_title = "625 ILCS 5/3-401(c-1)"
-    out.append({"title": statute_title, "url": statute_url})
-    seen.add(statute_url)
-    for item in faq.get("items") or []:
-        for src in item.get("sources") or []:
-            url = src.get("url") or ""
-            if not url or url in seen:
-                continue
-            seen.add(url)
-            out.append({"title": src.get("label") or url, "url": url})
-    return out
+def _current_timeline_phase_id(today: date | None = None) -> str:
+    """Return the timeline phase id that contains *today* (default: today). Before first phase → first; after last → last."""
+    d = today or date.today()
+    for phase in TIMELINE_PHASES:
+        start = phase.get("start_date")
+        end = phase.get("end_date")
+        if start and end:
+            if start <= d.isoformat() <= end:
+                return phase["id"]
+    if TIMELINE_PHASES:
+        first_start = TIMELINE_PHASES[0].get("start_date")
+        last_end = TIMELINE_PHASES[-1].get("end_date")
+        if first_start and d.isoformat() < first_start:
+            return TIMELINE_PHASES[0]["id"]
+        if last_end and d.isoformat() > last_end:
+            return TIMELINE_PHASES[-1]["id"]
+    return TIMELINE_PHASES[0]["id"] if TIMELINE_PHASES else "build"
 
 
-ISSUE_SOURCES: list[dict[str, str]] = _issue_sources_from_faq(FAQ_LAW)
+def _timeline_waterfall_data(timeline_phases: list[dict]) -> dict:
+    """Build months list and per-phase start_col/end_col for waterfall table. Returns enriched phase copies."""
+    if not timeline_phases:
+        return {"months": [], "phases": []}
+    starts = [p.get("start_date") for p in timeline_phases if p.get("start_date")]
+    ends = [p.get("end_date") for p in timeline_phases if p.get("end_date")]
+    if not starts or not ends:
+        return {"months": [], "phases": []}
+    first_ym = min(s[:7] for s in starts)
+    last_ym = max(e[:7] for e in ends)
+    y, m = int(first_ym[:4]), int(first_ym[5:7])
+    ey, em = int(last_ym[:4]), int(last_ym[5:7])
+    months: list[dict] = []
+    while (y, m) <= (ey, em):
+        months.append({"key": f"{y}-{m:02d}", "label": date(y, m, 1).strftime("%b %Y")})
+        m += 1
+        if m > 12:
+            m, y = 1, y + 1
+    month_keys = [mo["key"] for mo in months]
 
-# Fact sheet document (PDF) linked from The Issue sidebar. Place the PDF at this path (e.g. print /fact-sheet to PDF).
-FACT_SHEET_PDF_URL = "/static/advocacy/Kei_Registration_Fact_Sheet.pdf"
+    def col_for(ym: str) -> int:
+        if ym in month_keys:
+            return month_keys.index(ym)
+        return 0 if ym < month_keys[0] else len(month_keys) - 1
+
+    phases_out: list[dict] = []
+    for p in timeline_phases:
+        pc = dict(p)
+        s, e = p.get("start_date"), p.get("end_date")
+        if s and e:
+            pc["start_col"] = col_for(s[:7])
+            pc["end_col"] = col_for(e[:7])
+        else:
+            pc["start_col"] = 0
+            pc["end_col"] = len(month_keys) - 1
+        phases_out.append(pc)
+    return {"months": months, "phases": phases_out}
 
 
 def _session_deadlines_for_issue() -> list[dict]:
@@ -1258,82 +407,227 @@ def _session_deadlines_for_issue() -> list[dict]:
     return out
 
 
+def _faq_session_and_deadlines_with_tooltips(
+    session_deadlines: list[dict],
+) -> tuple[dict, list[dict]]:
+    """Build FAQ session block and deadlines with inline glossary tooltips (SESSION_SCHEDULE_TERMS + KEI).
+    Returns (faq_session, deadlines) where faq_session items have answer_html and deadlines have description_html."""
+    terms = _inline_glossary_terms(include_domain=False)
+    faq_session = {
+        "title": FAQ_SESSION["title"],
+        "intro": FAQ_SESSION.get("intro"),
+        "items": [],
+    }
+    for item in FAQ_SESSION.get("items") or []:
+        answer = item.get("answer") or ""
+        blocks = [answer]
+        result = apply_inline_glossary(blocks, terms)
+        faq_session["items"].append({**item, "answer_html": result[0] if result else answer})
+    deadlines_out = []
+    for d in session_deadlines:
+        desc = d.get("description") or ""
+        result = apply_inline_glossary([desc], terms)
+        deadlines_out.append({**d, "description_html": result[0] if result else desc})
+    return faq_session, deadlines_out
+
+
+def _the_issue_blocks_for_glossary(
+    constituent_brief: dict,
+) -> tuple[list[str], list[tuple[str, int, int]]]:
+    """Build flat list of text blocks for The Issue (intro, points, section paragraphs/bullets) and mapping for result indices.
+    Returns (blocks, mapping) where mapping is list of ('intro'|'point'|'para'|'bullet', section_ix, sub_ix)."""
+    blocks: list[str] = []
+    mapping: list[tuple[str, int, int]] = []
+    sections = constituent_brief.get("sections") or []
+    if not sections:
+        return blocks, mapping
+    first_paras = sections[0].get("paragraphs") or []
+    if not first_paras:
+        return blocks, mapping
+    intro = first_paras[0]
+    blocks.append(intro)
+    mapping.append(("intro", 0, 0))
+    points = STRATEGIC_FIVE_POINTS or []
+    for i, pt in enumerate(points):
+        blocks.append(pt)
+        mapping.append(("point", -1, i))
+    for sec_ix, sec in enumerate(sections):
+        paras = sec.get("paragraphs") or []
+        for p_ix, p in enumerate(paras):
+            if sec_ix == 0 and p_ix == 0:
+                continue
+            blocks.append(p)
+            mapping.append(("para", sec_ix, p_ix))
+        for b_ix, b in enumerate(sec.get("bullets") or []):
+            blocks.append(b)
+            mapping.append(("bullet", sec_ix, b_ix))
+    return blocks, mapping
+
+
+def _apply_the_issue_glossary(constituent_brief: dict) -> None:
+    """Mutate constituent_brief: add intro_html, strategic_five_points_html, and per-section paragraphs_html, bullets_html."""
+    blocks, mapping = _the_issue_blocks_for_glossary(constituent_brief)
+    if not blocks:
+        return
+    terms = _inline_glossary_terms(include_domain=False)
+    result = apply_inline_glossary(blocks, terms)
+    sections = constituent_brief.get("sections") or []
+    for sec in sections:
+        sec["paragraphs_html"] = list(sec.get("paragraphs") or [])
+        sec["bullets_html"] = list(sec.get("bullets") or [])
+    intro_html = None
+    points_html: list[str] = []
+    for i, (kind, sec_ix, sub_ix) in enumerate(mapping):
+        if i >= len(result):
+            break
+        if kind == "intro":
+            intro_html = result[i]
+        elif kind == "point":
+            points_html.append(result[i])
+        elif (
+            kind == "para"
+            and sec_ix < len(sections)
+            and sub_ix < len(sections[sec_ix]["paragraphs_html"])
+        ):
+            sections[sec_ix]["paragraphs_html"][sub_ix] = result[i]
+        elif (
+            kind == "bullet"
+            and sec_ix < len(sections)
+            and sub_ix < len(sections[sec_ix]["bullets_html"])
+        ):
+            sections[sec_ix]["bullets_html"][sub_ix] = result[i]
+    if intro_html is not None:
+        constituent_brief["intro_html"] = intro_html
+        if sections and sections[0]["paragraphs_html"]:
+            sections[0]["paragraphs_html"][0] = intro_html
+    if points_html:
+        constituent_brief["strategic_five_points_html"] = points_html
+
+
 @router.get("/the-issue", include_in_schema=False)
-async def the_issue_page(request: Request):
+async def the_issue_page(
+    request: Request,
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
     """Serve The Issue page: kei vehicle registration problem and how to help. Content from canonical .txt when present."""
+    from ..kei_poll_context import get_kei_poll_sidebar_context
+
     brief_state_map_status = {
         s["state_abbr"]: _brief_map_fill_status(s) for s in BRIEF_STATE_STATUS
     }
     aamva_fix_abbrs = _brief_aamva_fix_state_abbrs()
     constituent_brief = _load_constituent_brief()
+    if constituent_brief:
+        _apply_the_issue_glossary(constituent_brief)
     try:
-        session_deadlines = _session_deadlines_for_issue()
+        raw_deadlines = _session_deadlines_for_issue()
     except (FileNotFoundError, ValueError):
-        session_deadlines = []
-    return templates.TemplateResponse(
-        "the_issue.html",
-        {
-            "request": request,
-            "constituent_brief": constituent_brief,
-            "fact_sheet_pdf_url": FACT_SHEET_PDF_URL,
-            "faq_law": FAQ_LAW,
-            "faq_advocacy": FAQ_ADVOCACY,
-            "faq_session": FAQ_SESSION,
-            "session_deadlines": session_deadlines,
-            "session_schedule_terms": SESSION_SCHEDULE_TERMS,
-            "brief_state_status": BRIEF_STATE_STATUS,
-            "brief_state_map_status_json": json.dumps(brief_state_map_status),
-            "brief_aamva_fix_state_abbrs_json": json.dumps(aamva_fix_abbrs),
-            "issue_sources": ISSUE_SOURCES,
-            "strategic_mission": STRATEGIC_MISSION,
-            "strategic_vision": STRATEGIC_VISION,
-            "strategic_five_points": STRATEGIC_FIVE_POINTS,
-        },
-    )
+        raw_deadlines = []
+    faq_session, session_deadlines = _faq_session_and_deadlines_with_tooltips(raw_deadlines)
+    ctx = {
+        "request": request,
+        "constituent_brief": constituent_brief,
+        "fact_sheet_pdf_url": FACT_SHEET_PDF_URL,
+        "faq_law": FAQ_LAW,
+        "faq_advocacy": FAQ_ADVOCACY,
+        "faq_session": faq_session,
+        "session_deadlines": session_deadlines,
+        "session_schedule_terms": SESSION_SCHEDULE_TERMS,
+        "brief_state_status": BRIEF_STATE_STATUS,
+        "brief_state_map_status_json": json.dumps(brief_state_map_status),
+        "brief_aamva_fix_state_abbrs_json": json.dumps(aamva_fix_abbrs),
+        "issue_sources": ISSUE_SOURCES,
+        "strategic_mission": STRATEGIC_MISSION,
+        "strategic_vision": STRATEGIC_VISION,
+        "strategic_five_points": STRATEGIC_FIVE_POINTS,
+    }
+    ctx.update(await get_kei_poll_sidebar_context(request, user, db))
+    return templates.TemplateResponse("the_issue.html", ctx)
+
+
+def _apply_legislator_brief_glossary(legislator_brief: dict) -> None:
+    """Mutate legislator_brief: add issue_one_sentence_html, core_ambiguity_html, and per-section paragraphs_html."""
+    blocks: list[str] = []
+    blocks.append(legislator_brief.get("issue_one_sentence", ""))
+    blocks.append(legislator_brief.get("core_ambiguity", ""))
+    for sec in legislator_brief.get("sections") or []:
+        blocks.extend(sec.get("paragraphs") or [])
+    if not blocks:
+        return
+    terms = _inline_glossary_terms(include_domain=False)
+    result = apply_inline_glossary(blocks, terms)
+    idx = 0
+    if idx < len(result):
+        legislator_brief["issue_one_sentence_html"] = result[idx]
+        idx += 1
+    if idx < len(result):
+        legislator_brief["core_ambiguity_html"] = result[idx]
+        idx += 1
+    for sec in legislator_brief.get("sections") or []:
+        paras = sec.get("paragraphs") or []
+        sec["paragraphs_html"] = []
+        for _ in paras:
+            if idx < len(result):
+                sec["paragraphs_html"].append(result[idx])
+                idx += 1
+            else:
+                break
 
 
 @router.get("/legislator-brief", include_in_schema=False)
-async def legislator_brief_page(request: Request):
+async def legislator_brief_page(
+    request: Request,
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
     """Serve the Legislator Brief: concise briefing for legislators and staff. Content from canonical .txt when present."""
+    from ..kei_poll_context import get_kei_poll_sidebar_context
+
     brief_state_map_status = {
         s["state_abbr"]: _brief_map_fill_status(s) for s in BRIEF_STATE_STATUS
     }
     aamva_fix_abbrs = _brief_aamva_fix_state_abbrs()
     legislator_brief = _load_legislator_brief()
-    return templates.TemplateResponse(
-        "legislator_brief.html",
-        {
-            "request": request,
-            "legislator_brief": legislator_brief,
-            "strategic_five_points": STRATEGIC_FIVE_POINTS,
-            "brief_documents": BRIEF_DOCUMENTS,
-            "brief_state_status": BRIEF_STATE_STATUS,
-            "brief_state_map_status_json": json.dumps(brief_state_map_status),
-            "brief_aamva_fix_state_abbrs_json": json.dumps(aamva_fix_abbrs),
-            "brief_bills_passed": BRIEF_BILLS_PASSED,
-            "brief_bills_current": BRIEF_BILLS_CURRENT,
-            "brief_sources": BRIEF_SOURCES,
-            "faq": FAQ_LEGISLATORS,
-        },
-    )
+    if legislator_brief:
+        _apply_legislator_brief_glossary(legislator_brief)
+    ctx = {
+        "request": request,
+        "legislator_brief": legislator_brief,
+        "strategic_five_points": STRATEGIC_FIVE_POINTS,
+        "brief_documents": BRIEF_DOCUMENTS,
+        "brief_state_status": BRIEF_STATE_STATUS,
+        "brief_state_map_status_json": json.dumps(brief_state_map_status),
+        "brief_aamva_fix_state_abbrs_json": json.dumps(aamva_fix_abbrs),
+        "brief_bills_passed": BRIEF_BILLS_PASSED,
+        "brief_bills_current": BRIEF_BILLS_CURRENT,
+        "brief_sources": BRIEF_SOURCES,
+        "faq": FAQ_LEGISLATORS,
+    }
+    ctx.update(await get_kei_poll_sidebar_context(request, user, db))
+    return templates.TemplateResponse("legislator_brief.html", ctx)
 
 
 @router.get("/fact-sheet", include_in_schema=False)
-async def fact_sheet_page(request: Request):
+async def fact_sheet_page(
+    request: Request,
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
     """Serve the one-page fact sheet for volunteers (Hardball Ch7; content from focused-next-steps doc §5)."""
+    from ..kei_poll_context import get_kei_poll_sidebar_context
+
     fact_sheet_faq_ids = ("adv1", "adv1b", "adv2", "adv3", "adv4", "adv7")
     fact_sheet_faq_items = [i for i in FAQ_ADVOCACY["items"] if i["id"] in fact_sheet_faq_ids]
-    return templates.TemplateResponse(
-        "fact_sheet.html",
-        {
-            "request": request,
-            "strategic_five_points": STRATEGIC_FIVE_POINTS,
-            "fact_sheet_issue": FACT_SHEET_ISSUE,
-            "fact_sheet_position": FACT_SHEET_POSITION,
-            "fact_sheet_supporters_placeholder": FACT_SHEET_SUPPORTERS_PLACEHOLDER,
-            "fact_sheet_faq_items": fact_sheet_faq_items,
-        },
-    )
+    ctx = {
+        "request": request,
+        "strategic_five_points": STRATEGIC_FIVE_POINTS,
+        "fact_sheet_issue": FACT_SHEET_ISSUE,
+        "fact_sheet_position": FACT_SHEET_POSITION,
+        "fact_sheet_faq_items": fact_sheet_faq_items,
+    }
+    ctx.update(await get_kei_poll_sidebar_context(request, user, db))
+    return templates.TemplateResponse("fact_sheet.html", ctx)
 
 
 @router.get("/coalition", include_in_schema=False)
@@ -1343,3 +637,95 @@ async def coalition_page(request: Request):
         "coalition.html",
         {"request": request},
     )
+
+
+def _timeline_phases_with_inline_glossary() -> list[dict]:
+    """Return a copy of TIMELINE_PHASES with summary_html and milestone title_html/description_html from inline glossary."""
+    blocks: list[str] = []
+    mapping: list[
+        tuple[str, int, int]
+    ] = []  # ('label'|'summary'|'title'|'desc', phase_ix, milestone_ix or -1)
+    for ph_ix, phase in enumerate(TIMELINE_PHASES):
+        blocks.append(phase.get("label", ""))
+        mapping.append(("label", ph_ix, -1))
+        blocks.append(phase.get("summary", ""))
+        mapping.append(("summary", ph_ix, -1))
+        for m_ix, m in enumerate(phase.get("milestones") or []):
+            blocks.append(m.get("title", ""))
+            mapping.append(("title", ph_ix, m_ix))
+            blocks.append(m.get("description", ""))
+            mapping.append(("desc", ph_ix, m_ix))
+    terms = _inline_glossary_terms(include_domain=True)
+    result = apply_inline_glossary(blocks, terms)
+    out: list[dict] = []
+    for ph_ix, phase in enumerate(TIMELINE_PHASES):
+        ph_copy = dict(phase)
+        ph_copy["milestones"] = [dict(m) for m in phase.get("milestones") or []]
+        out.append(ph_copy)
+    for idx, (kind, ph_ix, m_ix) in enumerate(mapping):
+        if idx >= len(result):
+            break
+        if ph_ix >= len(out):
+            continue
+        if kind == "label":
+            out[ph_ix]["label_html"] = result[idx]
+        elif kind == "summary":
+            out[ph_ix]["summary_html"] = result[idx]
+        elif kind == "title" and m_ix >= 0 and m_ix < len(out[ph_ix]["milestones"]):
+            out[ph_ix]["milestones"][m_ix]["title_html"] = result[idx]
+        elif kind == "desc" and m_ix >= 0 and m_ix < len(out[ph_ix]["milestones"]):
+            out[ph_ix]["milestones"][m_ix]["description_html"] = result[idx]
+    return out
+
+
+@router.get("/timeline", include_in_schema=False)
+async def timeline_page(request: Request):
+    """Serve the 2027 campaign master timeline: Feb 2026 through bill signed (waterfall/Gantt)."""
+    try:
+        session_deadlines = _session_deadlines_for_issue()
+    except (FileNotFoundError, ValueError):
+        session_deadlines = []
+    timeline_phases = _timeline_phases_with_inline_glossary()
+    waterfall = _timeline_waterfall_data(timeline_phases)
+    return templates.TemplateResponse(
+        "timeline.html",
+        {
+            "request": request,
+            "timeline_months": waterfall["months"],
+            "timeline_phases": waterfall["phases"],
+            "current_phase_id": _current_timeline_phase_id(),
+            "session_deadlines": session_deadlines,
+            "session_label": session_label(),
+        },
+    )
+
+
+@router.get("/glossary", include_in_schema=False)
+async def glossary_page(
+    request: Request,
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
+    """Serve the definitions/glossary page: domain terms and kei vehicle terms."""
+    from ..kei_poll_context import get_kei_poll_sidebar_context
+
+    ctx = {
+        "request": request,
+        "domain_glossary": DOMAIN_GLOSSARY,
+        "kei_glossary": KEI_GLOSSARY,
+        "session_schedule_terms": SESSION_SCHEDULE_TERMS,
+    }
+    ctx.update(await get_kei_poll_sidebar_context(request, user, db))
+    return templates.TemplateResponse("glossary.html", ctx)
+
+
+@router.get("/privacy", include_in_schema=False)
+async def privacy_page(request: Request):
+    """Serve the Privacy policy page."""
+    return templates.TemplateResponse("privacy.html", {"request": request})
+
+
+@router.get("/terms", include_in_schema=False)
+async def terms_page(request: Request):
+    """Serve the Terms of use page."""
+    return templates.TemplateResponse("terms.html", {"request": request})

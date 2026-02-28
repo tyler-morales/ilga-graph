@@ -1,60 +1,53 @@
-{% extends "base.html" %}
+{% extends "_brief_skeleton.html" %}
+{% from "_macros.html" import faq_section, strategic_points, share_buttons %}
 {% block title %}Fact sheet — {{ site_name }}{% endblock %}
 {% block body_class %}page-fact-sheet{% endblock %}
+{% block brief_layout_class %}page-fact-sheet{% endblock %}
 {% block meta_description %}One-page fact sheet for volunteers: kei vehicle registration in Illinois, our position, five points to remember, and FAQs.{% endblock %}
 
-{% block content %}
-<div class="fact-sheet legal-page">
-    <header class="fact-sheet-header" aria-label="Fact sheet title and purpose">
-        <h1 class="fact-sheet-title">Kei Vehicle Registration in Illinois — Fact Sheet for Volunteers</h1>
-        <p class="fact-sheet-intro">Stay on message. Use this page to share the issue, our position, and five points with volunteers and supporters.</p>
-    </header>
+{% block brief_title %}Kei Vehicle Registration in Illinois — Fact Sheet for Volunteers{% endblock %}
+{% block brief_intro %}
+<p class="legal-page-intro">Stay on message. Use this page to share the issue, our position, and five points with volunteers and supporters.</p>
+{% endblock %}
+{% block brief_main_heading %}{% endblock %}
+{% block brief_main %}
+<div class="fact-sheet-sections">
+    <section class="fact-sheet-section" aria-labelledby="fact-issue-heading">
+        <h2 id="fact-issue-heading">The issue</h2>
+        <p>{{ fact_sheet_issue }}</p>
+    </section>
 
-    <div class="fact-sheet-main">
-        <section class="fact-sheet-section" aria-labelledby="fact-issue-heading">
-            <h2 id="fact-issue-heading">The issue</h2>
-            <p>{{ fact_sheet_issue }}</p>
-        </section>
+    <section class="fact-sheet-section" aria-labelledby="fact-position-heading">
+        <h2 id="fact-position-heading">Our position</h2>
+        <p>{{ fact_sheet_position }}</p>
+    </section>
 
-        <section class="fact-sheet-section" aria-labelledby="fact-position-heading">
-            <h2 id="fact-position-heading">Our position</h2>
-            <p>{{ fact_sheet_position }}</p>
-        </section>
+    <section class="fact-sheet-section">
+        {{ strategic_points(strategic_five_points, 'banner', 'fact-key-points', 'fact-points-heading', 'Five points to remember (stay on message)') }}
+    </section>
 
-        <section class="fact-sheet-section" aria-labelledby="fact-points-heading">
-            <h2 id="fact-points-heading">Five points to remember (stay on message)</h2>
-            <ol class="fact-sheet-points-list" role="list">
-                {% for point in strategic_five_points %}
-                <li class="fact-sheet-points-item">{{ point }}</li>
-                {% endfor %}
-            </ol>
-        </section>
+    <section class="fact-sheet-section">
+        {{ faq_section(fact_sheet_faq_items, 'Key FAQs for volunteers', 'fact-faq') }}
+    </section>
 
-        <section class="fact-sheet-section" aria-labelledby="fact-supporters-heading">
-            <h2 id="fact-supporters-heading">Supporters</h2>
-            <p class="fact-sheet-placeholder">{{ fact_sheet_supporters_placeholder }}</p>
-        </section>
-
-        <section class="fact-sheet-section fact-sheet-faq" aria-labelledby="fact-faq-heading">
-            <h2 id="fact-faq-heading">Key FAQs for volunteers</h2>
-            <dl class="fact-sheet-faq-list">
-                {% for item in fact_sheet_faq_items %}
-                <div class="fact-sheet-faq-item">
-                    <dt id="faq-{{ item.id }}"><strong>{{ item.question }}</strong></dt>
-                    <dd aria-labelledby="faq-{{ item.id }}">{{ item.answer }}</dd>
-                </div>
-                {% endfor %}
-            </dl>
-        </section>
-
-        <section class="fact-sheet-section" aria-labelledby="fact-links-heading">
-            <h2 id="fact-links-heading">Links</h2>
-            <ul class="fact-sheet-links" role="list">
-                <li><a href="/the-issue">The Issue</a> (constituent narrative)</li>
-                <li><a href="/legislator-brief">Legislator brief</a> (one-pager)</li>
-                <li><a href="/advocacy/">Advocacy tool</a> (find your legislators, call/email)</li>
-            </ul>
-        </section>
-    </div>
+    <section class="fact-sheet-section" aria-labelledby="fact-links-heading">
+        <h2 id="fact-links-heading">Links</h2>
+        <ul class="fact-sheet-links" role="list">
+            <li><a href="/the-issue">The Issue</a> (constituent narrative)</li>
+            <li><a href="/legislator-brief">Legislator brief</a> (one-pager)</li>
+            <li><a href="/advocacy/">Advocacy tool</a> (find your legislators, call/email)</li>
+        </ul>
+    </section>
 </div>
+{% endblock %}
+{% block brief_sidebar %}
+<aside class="legislator-brief-sidebar" aria-labelledby="fact-sidebar-heading">
+    <h2 id="fact-sidebar-heading" class="legislator-brief-sidebar__title">Community poll</h2>
+    <div class="legislator-brief-sidebar__content">
+        <section class="legislator-brief-sidebar__poll" aria-labelledby="sidebar-kei-poll-heading">
+            {% include "_sidebar_kei_poll.html" %}
+        </section>
+        {{ share_buttons('sidebar', 'fact-share', 'constituent') }}
+    </div>
+</aside>
 {% endblock %}

@@ -23,6 +23,10 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False)
     zip_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
     wants_updates: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    kei_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    welcome_email_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -62,6 +66,7 @@ class Campaign(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     start_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     end_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    session_milestone_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 
@@ -160,6 +165,20 @@ class CommunityMemberEmail(Base):
             unique=True,
         ),
     )
+
+
+class KeiPollResponse(Base):
+    """One row per kei poll. Logged-in: user_id set; anon: user_id NULL, session_id optional."""
+
+    __tablename__ = "kei_poll_responses"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=True, index=True
+    )
+    session_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    kei_status: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 
 class BugReport(Base):

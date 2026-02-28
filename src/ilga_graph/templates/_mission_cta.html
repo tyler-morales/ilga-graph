@@ -9,14 +9,8 @@
     <div class="home-cta-subscribe" id="home-cta-subscribe">
         <p class="home-cta-subscribe-p">Not ready to call or email? Get one update when we move—no spam, only when it matters.</p>
         <div id="home-cta-subscribe-wrap" class="home-cta-subscribe-wrap">
-            <form action="/updates/subscribe-email" method="post" class="home-cta-subscribe-form subscribe-form"
-                hx-post="/updates/subscribe-email" hx-target="#home-cta-subscribe-wrap" hx-swap="innerHTML"
-                aria-label="Subscribe to campaign updates by email">
-                <label for="home-cta-subscribe-email" class="visually-hidden">Your email</label>
-                <input type="email" id="home-cta-subscribe-email" name="email" class="home-cta-subscribe-input subscribe-input"
-                    placeholder="Your email" required autocomplete="email" inputmode="email" maxlength="320">
-                <button type="submit" class="home-cta-subscribe-btn subscribe-btn">Subscribe</button>
-            </form>
+            {% from "_macros.html" import subscribe_form %}
+            {{ subscribe_form('home-cta-subscribe', '/updates/subscribe-email', 'inline') }}
         </div>
     </div>
 </section>

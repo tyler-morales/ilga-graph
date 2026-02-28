@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import logging
 from email.message import EmailMessage
 from email.mime.multipart import MIMEMultipart
@@ -69,3 +70,48 @@ async def send_email(to: str, subject: str, plain: str, html: str) -> bool:
         )
         return True
     return await send_message(msg)
+
+
+def _welcome_email_plain(site_name: str, advocacy_url: str, kei_poll_url: str) -> str:
+    """Plain text body for welcome email."""
+    return (
+        f"Thanks for signing in. You're now part of the effort to fix kei vehicle "
+        f"registration in Illinois.\n\n"
+        f"Next step: Enter your ZIP to see who represents you and get a 2-minute call "
+        f"script and email template: {advocacy_url}\n\n"
+        f"Your input helps us explain to legislators who's affected (numbers speak louder): "
+        f"{kei_poll_url}\n\n"
+        f"You're receiving this because you just signed in to {site_name}.\n"
+    )
+
+
+def _welcome_email_html(site_name: str, advocacy_url: str, kei_poll_url: str) -> str:
+    """HTML body for welcome email."""
+    s = html.escape(site_name)
+    return f"""<!DOCTYPE html>
+<html>
+<body style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+    <p style="font-size: 0.9em; color: #666;">{s}</p>
+    <h2 style="margin-top: 1em;">Welcome</h2>
+    <p>Thanks for signing in. You're now part of the effort to fix kei vehicle registration in Illinois.</p>
+    <p><strong>Next step:</strong> <a href="{html.escape(advocacy_url)}">Enter your ZIP</a> to see who represents you and get a 2-minute call script and email template.</p>
+    <p>Your input helps us explain to legislators who's affected — <a href="{html.escape(kei_poll_url)}">tell us your kei status</a> (one quick question). Numbers speak louder than words.</p>
+    <hr style="border: none; border-top: 1px solid #eee; margin: 2em 0;">
+    <p style="font-size: 0.85em; color: #666;">You're receiving this because you just signed in to {s}.</p>
+</body>
+</html>"""
+
+
+async def send_welcome_email(email: str, site_name: str | None = None) -> bool:
+    """Send welcome email to a newly signed-in user. Returns True if sent or dev mock."""
+    base = (cfg.APP_BASE_URL or "").rstrip("/") or "https://landofkei.com"
+    site = site_name or cfg.SITE_NAME or "Land of Kei"
+    advocacy_url = f"{base}/advocacy"
+    kei_poll_url = f"{base}/updates?prompt=kei"
+    subject = f"Welcome to {site}"
+    plain = _welcome_email_plain(site, advocacy_url, kei_poll_url)
+    html_body = _welcome_email_html(site, advocacy_url, kei_poll_url)
+    sent = await send_email(email, subject, plain, html_body)
+    if sent:
+        LOGGER.info("Welcome email sent to %s", email)
+    return sent

@@ -404,10 +404,14 @@ class TestOutreachRecordCampaignId:
             importlib.reload(db_mod)
             _run(setup())
 
-        client.post(
-            "/auth/verify-code",
-            data=_data_with_csrf(client, {"email": email, "code": code}),
-        )
+        with patch(
+            "ilga_graph.routers.auth.rate_limit_verify_code",
+            return_value=True,
+        ):
+            client.post(
+                "/auth/verify-code",
+                data=_data_with_csrf(client, {"email": email, "code": code}),
+            )
         with patch(
             "ilga_graph.routers.outreach.find_member_by_id",
             return_value=object(),

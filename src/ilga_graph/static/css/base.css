@@ -465,6 +465,553 @@ a:visited {
 
 .footer-get-updates {
   margin-top: 1rem;
+  max-width: 28rem;
+  margin-inline: auto;
+}
+
+/* State of kei poll (home "Why you care", /updates?prompt=kei). */
+
+/* Kei poll card: single container, rounded corners, shadow. No inner double padding. */
+.kei-poll-card {
+  background: #fff;
+  border: 1px solid #cacaca;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  padding: 0;
+  overflow: hidden;
+}
+
+.kei-poll__header-strip {
+  background: #1a1a1a;
+  color: #fff;
+  padding: 0.4rem 1.25rem;
+  border-radius: 8px 8px 0 0;
+}
+
+.kei-poll__heading {
+  font-size: 1rem;
+  font-weight: 600;
+  color: inherit;
+  margin: 0;
+}
+
+/* Collapsible Results drawer (details/summary) in sidebar and after submit */
+.kei-poll-drawer {
+  display: block;
+}
+
+.kei-poll-drawer__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.kei-poll-drawer__summary::-webkit-details-marker,
+.kei-poll-drawer__summary::marker {
+  display: none;
+}
+
+.kei-poll-drawer__summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.kei-poll-drawer__chevron {
+  flex-shrink: 0;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid currentColor;
+  transition: transform 0.2s ease;
+}
+
+.kei-poll-drawer[open] .kei-poll-drawer__chevron {
+  transform: rotate(180deg);
+}
+
+/* Animated panel: height transition driven by JS */
+.kei-poll-drawer__panel {
+  overflow: hidden;
+  transition: height 0.25s ease;
+}
+
+.kei-poll__body {
+  padding: 0.5rem 1.25rem;
+}
+
+.kei-poll__progress {
+  margin: 0 0 0.5rem 0;
+}
+
+.kei-poll__progress-steps {
+  display: flex;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.kei-poll__progress-step {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  border: 2px solid #cacaca;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: #666;
+}
+
+.kei-poll__progress-step--current {
+  border-color: #1976d2;
+  background: #1976d2;
+  color: #fff;
+}
+
+.kei-poll__progress-step-num {
+  line-height: 1;
+}
+
+.kei-poll__intro {
+  font-size: var(--font-size-sm);
+  color: #555;
+  margin: 0 0 0.5rem 0;
+}
+
+.kei-poll__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.kei-poll__step1 {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.kei-poll__step-legend {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 0.35rem;
+}
+
+.kei-poll__branch-btns {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.kei-poll__branch-btn {
+  font-size: var(--font-size-sm);
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+}
+
+.kei-poll__branch-btn:hover {
+  background: #f5f5f5;
+  border-color: #999;
+}
+
+.kei-poll__branch-btn:focus-visible {
+  outline: 2px solid var(--link-color, #5a2d82);
+  outline-offset: 2px;
+}
+
+.kei-poll__branch-btn[aria-pressed="true"] {
+  background: #1976d2;
+  color: #fff;
+  border-color: #1976d2;
+}
+
+.kei-poll__step2-panel {
+  margin-top: 0.5rem;
+}
+
+.kei-poll__step2-panel .kei-poll__options {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.kei-poll__step2-panel--hidden {
+  display: none;
+}
+
+.kei-poll__email {
+  max-width: 20rem;
+  padding: 0.4rem 0.6rem;
+  font-size: var(--font-size-sm);
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.kei-poll__email:focus {
+  outline: 2px solid var(--link-color, #5a2d82);
+  outline-offset: 1px;
+}
+
+.kei-poll__options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.kei-poll__option {
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.kei-poll__option input {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.kei-poll__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #eee;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.kei-poll__footer--results .kei-poll__total {
+  margin-right: auto;
+}
+
+.kei-poll__total {
+  font-size: var(--font-size-sm);
+  color: #555;
+}
+
+.kei-poll__submit {
+  padding: 0.4rem 0.75rem;
+  font-size: var(--font-size-sm);
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #fff;
+  background: #1976d2;
+  border: none;
+}
+
+.kei-poll__submit:hover:not(:disabled) {
+  background: #1565c0;
+}
+
+.kei-poll__submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.kei-poll__submit:focus-visible {
+  outline: 2px solid #1976d2;
+  outline-offset: 2px;
+}
+
+.kei-status-success,
+.kei-status-error {
+  font-size: var(--font-size-sm);
+  margin-top: 0.5rem;
+}
+
+.kei-status-success {
+  color: #2e7d32;
+}
+
+.kei-status-error {
+  color: #c62828;
+}
+
+/* Prominent CTA block: sign in to save poll response (hardballer-style nudge). Yellow alert style, full-bleed under Results header, no radius. */
+.kei-poll-nudge-block {
+  margin: -0.5rem -1.25rem 0 -1.25rem;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  background: var(--color-warning-bg, #fef7e0);
+  border: 1px solid var(--color-warning-border, #e6c200);
+  border-left: none;
+  border-right: none;
+  border-radius: 0;
+}
+
+.kei-poll-nudge-block__icon {
+  flex-shrink: 0;
+  color: #b38600;
+  margin-top: 0.1rem;
+}
+
+.kei-poll-nudge-block__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.kei-poll-nudge-block__copy {
+  margin: 0 0 0.75rem;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+/* Poll sign-in: link-style blue text, hover stays blue (no filled button). */
+.kei-poll-nudge-block__signin-link {
+  font-weight: 600;
+  color: var(--link-color, #1a73e8);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.kei-poll-nudge-block__signin-link:hover {
+  color: #1a73e8;
+}
+
+.kei-poll-nudge-block__signin-link:focus-visible {
+  outline: 2px solid var(--color-focus-ring, #1a73e8);
+  outline-offset: 2px;
+}
+
+.kei-poll-results {
+  margin-top: 0.25rem;
+  font-size: var(--font-size-sm);
+}
+
+/* Kei poll results bar chart (after submit): X% Label, bar (green=highest, blue=others). Selected choice: "Verified" above percent. */
+.kei-poll-chart {
+  margin-top: 0.35rem;
+}
+
+.kei-poll-chart__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.kei-poll-chart__row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: var(--font-size-sm);
+}
+
+/* Single column: badge (if any) and percent, then option label below — never two columns */
+.kei-poll-chart__label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.kei-poll-chart__pct-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.kei-poll-chart__verified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #059669;
+}
+
+.kei-poll-chart__verified-icon {
+  display: block;
+  flex-shrink: 0;
+  color: #059669;
+}
+
+/* Anonymous: "Your choice" dimmed until user signs in; hover swaps to "Sign in to save your choice" */
+.kei-poll-chart__verified-badge--pending {
+  opacity: 0.55;
+}
+
+.kei-poll-chart__verified-badge--pending:hover {
+  opacity: 1;
+}
+
+.kei-poll-chart__verified-badge__mask {
+  display: inline-block;
+  height: 1.5em;
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.kei-poll-chart__verified-badge__track {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.22s ease-out;
+}
+
+.kei-poll-chart__verified-badge--pending:hover .kei-poll-chart__verified-badge__track {
+  transform: translateY(-1.5em);
+}
+
+.kei-poll-chart__verified-badge__line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 1.5em;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: opacity 0.2s ease-out;
+}
+
+.kei-poll-chart__verified-badge__line:last-child {
+  opacity: 0;
+}
+
+.kei-poll-chart__verified-badge--pending:hover .kei-poll-chart__verified-badge__line:first-child {
+  opacity: 0;
+}
+
+.kei-poll-chart__verified-badge--pending:hover .kei-poll-chart__verified-badge__line:last-child {
+  opacity: 1;
+}
+
+.kei-poll-chart__pct {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: #374151;
+}
+
+.kei-poll-chart__label-text {
+  flex: 0 1 auto;
+  min-width: 0;
+  line-height: 1.35;
+  color: #1a1a1a;
+}
+
+.kei-poll-chart__bar-wrap {
+  height: 6px;
+  min-height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.kei-poll-chart__bar {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: 3px;
+  transition: width 0.25s ease-out;
+}
+
+.kei-poll-chart__bar--highest {
+  background: #2e7d32;
+}
+
+.kei-poll-chart__bar--other {
+  background: #1976d2;
+}
+
+.kei-poll-results__empty {
+  font-size: var(--font-size-sm);
+  color: #666;
+  margin-top: 0.5rem;
+}
+
+.kei-poll-signin-wrap {
+  margin-top: 1rem;
+  container-type: inline-size;
+  container-name: signin-inline;
+}
+
+.kei-poll-signin-wrap .hero-signin-inline {
+  margin-top: 0.5rem;
+}
+
+.poll-signup-prompt {
+  margin-top: 1rem;
+}
+
+.poll-signup-prompt__copy {
+  margin: 0 0 0.5rem;
+  font-size: var(--font-size-sm);
+}
+
+.poll-signup-prompt__actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.poll-signup-notyet {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--link-color, #0066cc);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.poll-signup-notyet:hover {
+  color: #004499;
+}
+
+.poll-signup-notyet:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.kei-poll-change-wrap {
+  margin-top: 0.75rem;
+}
+
+.kei-poll-change-btn.link-style {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--link-color, #0066cc);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.kei-poll-change-btn.link-style:hover {
+  color: #004499;
+}
+
+.kei-poll-change-btn.link-style:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }
 
 /* Shared subscribe component: form, input, button (footer, sidebar, home CTA, updates, drawer). Variations in mission-statement.css (home), advocacy-drawer.css (drawer). */
@@ -777,6 +1324,13 @@ a:visited {
 
 .session-pill[data-expanded] .session-pill-text {
   opacity: 1;
+}
+
+.session-pill-next-deadline {
+  display: block;
+  font-size: 0.875em;
+  color: var(--color-text-muted, #555);
+  margin-top: 0.25em;
 }
 
 .session-pill-text-sizer {
@@ -1175,37 +1729,10 @@ a:visited {
   margin: 0 0 0.5rem;
 }
 
-.fact-sheet-points-list {
-  margin: 0.5rem 0 0;
-  padding-left: 1.5rem;
-}
-
-.fact-sheet-points-item {
-  margin-bottom: 0.35rem;
-}
-
 .fact-sheet-placeholder {
   font-style: italic;
   color: #666;
   margin: 0;
-}
-
-.fact-sheet-faq-list {
-  margin: 0.5rem 0 0;
-  padding: 0;
-}
-
-.fact-sheet-faq-item {
-  margin-bottom: 1rem;
-}
-
-.fact-sheet-faq-item dt {
-  margin: 0 0 0.25rem;
-  font-weight: 600;
-}
-
-.fact-sheet-faq-item dd {
-  margin: 0 0 0 1rem;
 }
 
 .fact-sheet-links {
@@ -1286,6 +1813,96 @@ a:visited {
   font-weight: 600;
   margin: 0.75rem 0 0.2rem;
   color: #202124;
+}
+
+.legislator-brief-sidebar__poll {
+  margin-top: 1rem;
+}
+
+.legislator-brief-sidebar__poll .kei-poll-card {
+  border-radius: 0;
+}
+
+.legislator-brief-sidebar__poll .kei-poll-card .kei-poll__header-strip {
+  border-radius: 0;
+}
+
+@supports (container-type: inline-size) {
+  .legislator-brief-sidebar__poll {
+    container-type: inline-size;
+    container-name: sidebar-poll;
+  }
+}
+
+@container sidebar-poll (max-width: 320px) {
+  .kei-poll-card .kei-poll__header-strip {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .kei-poll-card .kei-poll__heading {
+    font-size: 0.9375rem;
+  }
+
+  .kei-poll-card .kei-poll__body {
+    padding: 0.75rem;
+  }
+
+  .kei-poll-card .kei-poll-nudge-block {
+    margin: -0.75rem -0.75rem 0 -0.75rem;
+    padding: 0.75rem;
+  }
+
+  .kei-poll-card .kei-poll-nudge-block__copy {
+    margin-bottom: 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .kei-poll-card .kei-poll-chart__list {
+    gap: 0.5rem;
+  }
+
+  .kei-poll-card .kei-poll-chart__row {
+    gap: 0.2rem;
+  }
+
+  .kei-poll-card .kei-poll-chart__pct {
+    min-width: 0;
+    font-size: 0.8125rem;
+  }
+
+  .kei-poll-card .kei-poll__footer {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+  }
+
+  .kei-poll-card .kei-poll__total,
+  .kei-poll-card .kei-poll-change-wrap .kei-poll-change-btn {
+    font-size: 0.8125rem;
+  }
+}
+
+@container sidebar-poll (max-width: 240px) {
+  .kei-poll-card .kei-poll__header-strip {
+    padding: 0.4rem 0.6rem;
+  }
+
+  .kei-poll-card .kei-poll__heading {
+    font-size: 0.875rem;
+  }
+
+  .kei-poll-card .kei-poll__body {
+    padding: 0.5rem 0.6rem;
+  }
+
+  .kei-poll-card .kei-poll-nudge-block {
+    margin: -0.5rem -0.6rem 0 -0.6rem;
+    padding: 0.5rem 0.6rem;
+  }
+
+  .kei-poll-card .kei-poll-chart__bar-wrap {
+    height: 5px;
+    min-height: 5px;
+  }
 }
 
 .legislator-brief-sidebar__stay-informed {
@@ -1422,31 +2039,31 @@ a:visited {
   line-height: 1.25;
 }
 
-/* Public updates page: campaign timeline and sidebar TOC (blog-style, date prominent). */
-.campaign-timeline {
+/* Public updates page: progress checklist and sidebar TOC (blog-style, date prominent). */
+.progress-checklist {
   list-style: none;
   padding: 0;
   margin: 1rem 0 0;
 }
 
-.campaign-timeline__item {
+.progress-checklist__item {
   padding: 0.25rem 0;
   border-left: 3px solid #e5e7eb;
   padding-left: 0.75rem;
   margin-left: 0.25rem;
 }
 
-.campaign-timeline__item--achieved {
+.progress-checklist__item--achieved {
   opacity: 1;
   border-left-color: var(--color-success, #059669);
   color: var(--color-success, #059669);
 }
 
-.campaign-timeline__item--pending {
+.progress-checklist__item--pending {
   opacity: 0.45;
 }
 
-.campaign-timeline__num {
+.progress-checklist__num {
   margin-right: 0.25rem;
   font-weight: 600;
 }
@@ -1671,15 +2288,15 @@ a:visited {
 
 /* FAQ section at end of brief main content (the-issue, legislator-brief). */
 .brief-faq {
-  margin-top: 2rem;
-  padding-top: 1.5rem;
+  margin-top: 2.5rem;
+  padding-top: 2rem;
   border-top: 1px solid #e5e7eb;
 }
 
 .brief-faq__list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .brief-faq__item {
@@ -1689,7 +2306,7 @@ a:visited {
 }
 
 .brief-faq__question {
-  padding: 0.75rem 1rem;
+  padding: 1rem 1.25rem;
   font-weight: 600;
   cursor: pointer;
   list-style: none;
@@ -1721,32 +2338,71 @@ a:visited {
 }
 
 .brief-faq__answer {
-  padding: 0 1rem 1rem;
+  padding: 0 1.25rem 1.25rem;
 }
 
-.brief-faq__answer p {
+.brief-faq__answer p,
+.brief-faq__answer-text {
   margin: 0;
-  line-height: 1.5;
+  line-height: 1.6;
+  max-width: 65ch;
 }
 
 .brief-faq__answer-list {
   margin: 0.5rem 0 0;
   padding-left: 1.25rem;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .brief-faq__intro {
-  margin: 0 0 1rem;
+  margin: 0 0 1.25rem;
   color: #555;
   font-size: var(--font-size-sm, 0.875rem);
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .brief-faq__sources-label {
-  margin: 0.75rem 0 0.25rem;
-  font-size: var(--font-size-xs, 0.75rem);
+  margin: 1.25rem 0 0.5rem;
+  font-size: var(--font-size-sm, 0.875rem);
   font-weight: 600;
   color: #374151;
+}
+
+/* Session deadlines table (The Issue FAQ): readable columns, no awkward wrapping. */
+.session-deadlines-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm, 0.875rem);
+  line-height: 1.5;
+  margin-top: 0.5rem;
+}
+
+.session-deadlines-table th,
+.session-deadlines-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.session-deadlines-table th {
+  font-weight: 600;
+  color: #374151;
+  background: #f9fafb;
+}
+
+.session-deadlines-table__date {
+  white-space: nowrap;
+  min-width: 6.5rem;
+}
+
+.session-deadlines-table__chamber {
+  white-space: nowrap;
+  min-width: 4.5rem;
+}
+
+.session-deadlines-table__desc {
+  min-width: 0;
 }
 
 .brief-faq__sources {
@@ -1859,6 +2515,116 @@ a:visited {
 
 .legal-page li {
   margin-bottom: 0.35em;
+}
+
+/* Glossary page: dictionary-style layout */
+.glossary-page {
+  max-width: 38rem;
+  margin: 0 auto;
+  padding: 0 var(--space-lg, 1rem);
+}
+
+.glossary-header {
+  margin-bottom: 2rem;
+}
+
+.glossary-title {
+  font-size: var(--font-size-h1);
+  font-weight: 600;
+  margin: 0 0 0.35em;
+  letter-spacing: -0.02em;
+}
+
+.glossary-intro {
+  color: var(--color-text-secondary, #555);
+  margin: 0;
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body, 1.5);
+}
+
+.glossary-section {
+  margin-top: 2.5rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--color-border-light, #e5e7eb);
+}
+
+.glossary-section:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.glossary-section-title {
+  font-size: var(--font-size-sm, 0.875rem);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-tertiary, #666);
+  margin: 0 0 0.5rem;
+}
+
+.glossary-section-intro {
+  color: var(--color-text-secondary, #555);
+  margin-bottom: 1.25rem;
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+}
+
+.glossary-category {
+  font-size: var(--font-size-h3, 1.125rem);
+  font-weight: 600;
+  margin: 1.5rem 0 0.75rem;
+  color: var(--color-text, #222);
+}
+
+.glossary-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.glossary-entry {
+  display: block;
+  padding: 0.75rem 0 0.75rem 1rem;
+  margin: 0;
+  border-left: 3px solid var(--color-text-tertiary, #666);
+  padding-left: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.glossary-entry:last-child {
+  margin-bottom: 0;
+}
+
+.glossary-term {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--color-text, #222);
+  margin: 0 0 0.35rem;
+  line-height: 1.3;
+}
+
+.glossary-def {
+  margin: 0;
+  font-size: var(--font-size-body);
+  line-height: 1.55;
+  color: var(--color-text-muted, #444);
+}
+
+.glossary-source {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  font-style: normal;
+  color: var(--color-text-secondary, #666);
+}
+
+.glossary-source cite {
+  font-style: italic;
+}
+
+.glossary-term:focus-visible {
+  outline: 2px solid var(--color-border-focus, #333);
+  outline-offset: 2px;
 }
 
 .content-cta {
@@ -2544,7 +3310,7 @@ ML Intelligence Dashboard
 .reason-cell {
   max-width: 200px;
   font-size: var(--font-size-label);
-  color: #555;
+  color: var(--color-text-secondary);
 }
 
 /* ── Score bars ── */
@@ -2552,8 +3318,8 @@ ML Intelligence Dashboard
   position: relative;
   width: 100px;
   height: 18px;
-  background: #eee;
-  border: 1px solid #ccc;
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border);
   display: inline-block;
   vertical-align: middle;
 }
@@ -2749,4 +3515,43 @@ ML Intelligence Dashboard
     border-top: none;
     padding-top: 0;
   }
+}
+
+/* ── Inline glossary terms (The Issue, Timeline, legislator brief) ── */
+.glossary-inline-term {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  cursor: help;
+}
+
+.glossary-inline-term:hover {
+  text-decoration-style: solid;
+}
+
+.glossary-inline-term:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* Content is cloned into Tippy; hide inline copy to avoid duplicate */
+.tooltip-wrap .tooltip-content.glossary-inline-def {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Tippy.js glossary theme: wider max-width for readable definitions */
+.tippy-box[data-theme="glossary"] {
+  max-width: min(32rem, 92vw);
 }

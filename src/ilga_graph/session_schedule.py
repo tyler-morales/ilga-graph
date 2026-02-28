@@ -26,6 +26,8 @@ def _validate_event(ev: dict, chamber: str, index: int) -> None:
             raise ValueError(
                 f"session_schedule: chamber {chamber} event[{index}].{key} must be str"
             )
+    if "id" in ev and not isinstance(ev["id"], str):
+        raise ValueError(f"session_schedule: chamber {chamber} event[{index}].id must be str")
 
 
 def _validate_schedule(data: list) -> None:
@@ -107,3 +109,49 @@ def session_label() -> str:
     if schedule:
         return schedule[0].get("session", "")
     return ""
+
+
+def get_deadlines_for_campaigns() -> list[dict]:
+    """Return deadlines that have an optional 'id' for campaign milestone dropdown.
+
+    Each dict has: id, date, chamber, description, label (short for UI).
+    Sorted by date. Used by admin campaign form to set end_at from a session milestone.
+    """
+    result: list[dict] = []
+    seen_ids: set[str] = set()
+    for chamber, ev in get_all_deadlines():
+        mid = ev.get("id") if isinstance(ev.get("id"), str) else None
+        if not mid or mid in seen_ids:
+            continue
+        seen_ids.add(mid)
+        desc = ev.get("description", "")
+        label = ev.get("label", desc) if isinstance(ev.get("label"), str) else desc
+        if len(label) > 60:
+            label = label[:57] + "..."
+        result.append(
+            {
+                "id": mid,
+                "date": ev.get("date", ""),
+                "chamber": chamber,
+                "description": desc,
+                "label": label,
+            }
+        )
+    result.sort(key=lambda d: (d["date"], d["chamber"]))
+    return result
+
+
+def get_milestone_by_id(milestone_id: str) -> dict | None:
+    """Return the deadline dict for a given session_milestone_id, or None."""
+    for d in get_deadlines_for_campaigns():
+        if d["id"] == milestone_id:
+            return d
+    return None
+
+
+def get_next_deadline_safe() -> dict | None:
+    """Next session deadline on or after today. Returns None if no schedule or none upcoming."""
+    try:
+        return next_deadline_on_or_after(date.today())
+    except (FileNotFoundError, ValueError):
+        return None

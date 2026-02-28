@@ -16,7 +16,7 @@ When writing or editing **substantive content** on the site (copy, key points, F
 | **Legislator brief PDF** | Same as .txt | `/static/advocacy/IL_Kei_Vehicle_Registration_Fix_Brief.pdf` |
 | **Constituent brief** | Canonical .txt (repo root) | `Illinois_Kei_Vehicle_Registration_Constituent_Brief.txt` — The Issue page narrative sources from this at runtime |
 | **Constituent brief PDF** | Same as .txt | `/static/images/Illinois_Kei_Vehicle_Registration_Constituent_Brief.pdf` |
-| **Fact sheet for volunteers** | content.py | FACT_SHEET_ISSUE, FACT_SHEET_POSITION, FACT_SHEET_SUPPORTERS_PLACEHOLDER; web page /fact-sheet |
+| **Fact sheet for volunteers** | content.py | FACT_SHEET_ISSUE, FACT_SHEET_POSITION; web page /fact-sheet |
 | **Fact sheet PDF** | Same as /fact-sheet content | `/static/advocacy/Kei_Registration_Fact_Sheet.pdf` — linked from The Issue sidebar; place file (e.g. print /fact-sheet to PDF) |
 | **FAQs** | content.py | FAQ_LAW + FAQ_ADVOCACY (The Issue), FAQ_LEGISLATORS (legislator brief) |
 | **State table, bills, sources** | content.py | BRIEF_STATE_STATUS, BRIEF_BILLS_*, BRIEF_SOURCES, BRIEF_DOCUMENTS |

@@ -54,11 +54,10 @@
                     {% if c.is_procedural %}
                     <span style="color: #888;" title="Advancement rate not meaningful for routing committees">—</span>
                     {% elif c.total_bills > 0 %}
+                    {% from "_macros.html" import score_bar %}
                     <div class="score-bar-container" style="width: 60px; display: inline-block;">
-                        <div class="score-bar {% if c.advancement_rate >= 0.5 %}score-bar-high{% elif c.advancement_rate >= 0.2 %}score-bar-moderate{% else %}score-bar-low{% endif %}"
-                             style="width: {{ [1, (c.advancement_rate * 100)|round|int]|max }}%;"></div>
+                        {{ score_bar([1, (c.advancement_rate * 100)|round|int]|max, '<1%' if c.advancement_rate > 0 and c.advancement_rate < 0.01 else "%.0f"|format(c.advancement_rate * 100) ~ '%', 100, 'sm', 'score-bar-high' if c.advancement_rate >= 0.5 else 'score-bar-moderate' if c.advancement_rate >= 0.2 else 'score-bar-low') }}
                     </div>
-                    {% if c.advancement_rate > 0 and c.advancement_rate < 0.01 %}&lt;1%{% else %}{{ "%.0f"|format(c.advancement_rate * 100) }}%{% endif %}
                     {% else %}<span style="color: #aaa;">—</span>{% endif %}
                 </td>
                 <td data-sort-value="{{ c.passed_count }}">{{ c.passed_count }}</td>

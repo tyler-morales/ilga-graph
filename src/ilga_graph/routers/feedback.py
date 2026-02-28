@@ -18,6 +18,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import config as cfg
+from ..constants import KEI_STATUS_OPTIONS
 from ..db import get_db
 from ..db_models import BugReport
 from ..email_utils import send_message
@@ -28,6 +29,7 @@ from ..security import (
     validate_csrf_token,
     validate_page_url,
 )
+from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
 
 LOGGER = logging.getLogger(__name__)
 
@@ -88,6 +90,9 @@ templates.env.globals["features"] = cfg.get_client_features()
 from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
 
 templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
+templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
+templates.env.globals["get_next_deadline"] = get_next_deadline_safe
+templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 
 
 def _mime_type_for_filename(filename: str) -> tuple[str, str]:

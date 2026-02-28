@@ -10,6 +10,7 @@ from fastapi.templating import Jinja2Templates
 
 from .. import config as cfg
 from ..app_state import state
+from ..constants import KEI_STATUS_OPTIONS
 from ..date_parse import parse_action_date
 from ..intelligence_helpers import (
     bill_description_for_slip_bill_number,
@@ -18,6 +19,7 @@ from ..intelligence_helpers import (
 from ..ml.rule_engine import get_bill_to_law_process
 from ..models import Bill
 from ..routers.content import STRATEGIC_FIVE_POINTS
+from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
 router = APIRouter()
@@ -40,6 +42,9 @@ templates.env.globals["features"] = cfg.get_client_features()
 from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
 
 templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
+templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
+templates.env.globals["get_next_deadline"] = get_next_deadline_safe
+templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 
 # Procedural/routing committees: bills are assigned here after passing substantive
 # committees (e.g. "Referred to Rules * Reports"). "Advanced" in our pipeline

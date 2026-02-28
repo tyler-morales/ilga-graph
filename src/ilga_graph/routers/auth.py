@@ -24,7 +24,7 @@ from .. import config as cfg
 from ..db import get_db
 from ..db_models import AuthCode, OutreachStepEvent, User
 from ..dependencies import create_session_token, get_current_user_optional
-from ..email_utils import send_email
+from ..email_utils import send_email, send_welcome_email
 from ..security import (
     CSRF_COOKIE_NAME,
     rate_limit_request_code,
@@ -179,12 +179,14 @@ async def verify_code(
     code: str = Form(...),
     anon_session_id: str | None = Form(None),
     csrf_token: str | None = Form(None),
+    from_poll: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
     """Verify the 6-digit code. On success: create/get user, set session cookie.
 
     If anon_session_id is provided and valid, outreach_step_events rows with that
     session_id are attributed to the user (user_id set, session_id cleared).
+    If from_poll is set, welcome email is deferred (sent when user opts in via poll).
     """
     cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
     if not validate_csrf_token(csrf_token, cookie_token):
@@ -241,6 +243,17 @@ async def verify_code(
 
     await db.commit()
 
+    # Send welcome email on first sign-in (when not yet sent). Defer if from_poll so
+    # user gets it only when they click "Yes" to sign up for updates in the poll.
+    if not from_poll and getattr(user, "welcome_email_sent_at", None) is None:
+        try:
+            sent = await send_welcome_email(user.email)
+            if sent:
+                user.welcome_email_sent_at = now
+                await db.commit()
+        except Exception:
+            LOGGER.exception("Failed to send welcome email to %s", user.email)
+
     token = create_session_token(user.id)
     response = JSONResponse({"ok": True, "email": user.email})
     response.set_cookie(
@@ -265,7 +278,11 @@ async def logout():
 
 @router.get("/me")
 async def me(user: User | None = Depends(get_current_user_optional)):
-    """Return the current user's email. Always 200; use body.authenticated to check session."""
+    """Return current user email and kei_status. Always 200; body.authenticated for session."""
     if user is None:
         return {"authenticated": False}
-    return {"authenticated": True, "email": user.email}
+    return {
+        "authenticated": True,
+        "email": user.email,
+        "kei_status": getattr(user, "kei_status", None),
+    }

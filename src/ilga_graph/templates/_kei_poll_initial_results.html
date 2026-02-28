@@ -1,0 +1,8 @@
+{# Initial load when user already voted (logged-in or cookie): show results card instead of form. #}
+<div class="kei-poll kei-poll-card" id="{{ poll_id }}-wrap" aria-labelledby="{{ poll_id }}-heading">
+{% if kei_poll_initial_anon %}
+    {% include "_kei_poll_anonymous_success.html" %}
+{% else %}
+    {% include "_kei_poll_logged_in_success.html" %}
+{% endif %}
+</div>

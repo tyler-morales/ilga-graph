@@ -26,6 +26,7 @@
     <script defer src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>
     {% endif %}
     <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/components.css">
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/advocacy-form.css">
     <link rel="stylesheet" href="/static/css/advocacy-drawer.css">
@@ -35,6 +36,7 @@
     <link rel="stylesheet" href="/static/css/why-you-care.css">
     <link rel="stylesheet" href="/static/css/mission-statement.css">
     <link rel="stylesheet" href="/static/css/strategic-points.css">
+    <link rel="stylesheet" href="/static/css/timeline.css">
     {% if features.get('message_marquee') %}
     <link rel="stylesheet" href="/static/css/message-marquee.css">
     {% endif %}
@@ -95,7 +97,8 @@
         })();
     </script>
     {% endif %}
-    {% set active_campaign = get_current_action_campaign(request) if request is defined else none %}
+    {% set active_campaign = active_campaign if active_campaign is defined else (get_current_action_campaign(request) if
+    request is defined else none) %}
     {% block current_action_banner %}
     {% include "_current_action_banner.html" %}
     {% endblock %}
@@ -209,7 +212,11 @@
                 <span class="footer-nav-sep" aria-hidden="true"> · </span>
                 <a href="/fact-sheet">Fact sheet</a>
                 <span class="footer-nav-sep" aria-hidden="true"> · </span>
+                <a href="/glossary">Glossary</a>
+                <span class="footer-nav-sep" aria-hidden="true"> · </span>
                 <a href="/updates">Updates</a>
+                <span class="footer-nav-sep" aria-hidden="true"> · </span>
+                <a href="/timeline">Timeline</a>
             </nav>
             <nav class="footer-nav footer-nav-secondary" aria-label="Legal and support">
                 {% if show_beta_banner %}
@@ -221,14 +228,8 @@
             <div class="footer-get-updates" id="footer-email-subscribe-wrap"
                 aria-labelledby="footer-get-updates-heading">
                 <h2 id="footer-get-updates-heading" class="visually-hidden">Get updates</h2>
-                <form action="/updates/subscribe-email" method="post" class="footer-subscribe-form"
-                    hx-post="/updates/subscribe-email" hx-target="#footer-email-subscribe-wrap" hx-swap="innerHTML"
-                    aria-label="Subscribe to campaign updates by email">
-                    <label for="footer-subscribe-email-input" class="visually-hidden">Your email</label>
-                    <input type="email" id="footer-subscribe-email-input" name="email" class="footer-subscribe-input"
-                        placeholder="Your email" required autocomplete="email" inputmode="email" maxlength="320">
-                    <button type="submit" class="footer-subscribe-btn">Subscribe</button>
-                </form>
+                {% from "_macros.html" import subscribe_form %}
+                {{ subscribe_form('footer-email-subscribe', '/updates/subscribe-email', 'inline') }}
             </div>
             <p class="footer-disclaimer">Not affiliated with the Illinois General Assembly. Information here is for
                 advocacy and educational purposes only.</p>
@@ -278,6 +279,149 @@
             } else {
                 initStrategicStatesIcon();
             }
+        })();
+    </script>
+    {# Kei poll: two-step branch (have kei / registration vs want). #}
+    <script>
+        (function () {
+            function initKeiPollBranch(container) {
+                var root = container && container.nodeType === 1 ? container : document;
+                root.querySelectorAll('[data-kei-poll-branch]').forEach(function (wrap) {
+                    if (wrap.getAttribute('data-kei-poll-branch-inited')) return;
+                    wrap.setAttribute('data-kei-poll-branch-inited', '1');
+                    var branchBtns = wrap.querySelectorAll('.kei-poll__branch-btn');
+                    var panels = wrap.querySelectorAll('.kei-poll__step2-panel');
+                    var form = wrap.querySelector('form');
+                    if (!branchBtns.length || !panels.length || !form) return;
+                    var headingPrefix = 'Poll: ';
+                    function setHeading(suffix) {
+                        var h2 = wrap.querySelector('.kei-poll__heading');
+                        if (h2) h2.textContent = headingPrefix + suffix;
+                    }
+                    function showBranch(branch) {
+                        branchBtns.forEach(function (btn) {
+                            btn.setAttribute('aria-pressed', btn.getAttribute('data-branch') === branch ? 'true' : 'false');
+                        });
+                        panels.forEach(function (panel) {
+                            var hidden = panel.getAttribute('data-branch') !== branch;
+                            panel.classList.toggle('kei-poll__step2-panel--hidden', hidden);
+                            panel.setAttribute('aria-hidden', hidden ? 'true' : 'false');
+                            if (!hidden) setHeading('Question 2 of 2');
+                        });
+                        form.querySelectorAll('input[name="kei_status"]').forEach(function (radio) {
+                            radio.checked = false;
+                        });
+                        var progressSteps = wrap.querySelectorAll('.kei-poll__progress-step');
+                        if (progressSteps.length >= 2) {
+                            progressSteps[0].classList.remove('kei-poll__progress-step--current');
+                            progressSteps[0].removeAttribute('aria-current');
+                            progressSteps[1].classList.add('kei-poll__progress-step--current');
+                            progressSteps[1].setAttribute('aria-current', 'step');
+                        }
+                        var submitBtn = wrap.querySelector('.kei-poll__submit');
+                        if (submitBtn) submitBtn.disabled = true;
+                    }
+                    function updateSubmitState() {
+                        var visiblePanel = wrap.querySelector('.kei-poll__step2-panel:not(.kei-poll__step2-panel--hidden)');
+                        var checked = wrap.querySelector('input[name="kei_status"]:checked');
+                        var submitBtn = wrap.querySelector('.kei-poll__submit');
+                        if (submitBtn) submitBtn.disabled = !visiblePanel || !checked;
+                    }
+                    setHeading('Question 1 of 2');
+                    var submitBtn = wrap.querySelector('.kei-poll__submit');
+                    if (submitBtn) submitBtn.disabled = true;
+                    form.addEventListener('change', function (ev) {
+                        if (ev.target && ev.target.name === 'kei_status') updateSubmitState();
+                    });
+                    branchBtns.forEach(function (btn) {
+                        btn.addEventListener('click', function () {
+                            showBranch(btn.getAttribute('data-branch'));
+                        });
+                    });
+                });
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function () { initKeiPollBranch(document); });
+            } else {
+                initKeiPollBranch(document);
+            }
+            document.body.addEventListener('htmx:afterSwap', function (ev) {
+                // After outerHTML swap the target is the removed node; new form is in document.
+                initKeiPollBranch(document);
+            });
+        })();
+    </script>
+    {# Kei poll: init inline sign-in in poll fragment (on load and after HTMX swap). #}
+    <script>
+        (function () {
+            function initPollSignin() {
+                var wrap = document.getElementById('poll-signin-wrap');
+                if (wrap && wrap.hasAttribute('data-poll-signin-init') && typeof window.initInlineSignin === 'function') {
+                    var inline = wrap.querySelector('.hero-signin-inline');
+                    if (inline && !wrap.querySelector('.auth-strip-signin-btn') && !document.getElementById('poll-signin-btn')) inline.hidden = false;
+                    window.initInlineSignin(wrap);
+                }
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initPollSignin);
+            } else {
+                initPollSignin();
+            }
+            document.body.addEventListener('htmx:afterSwap', function (ev) {
+                initPollSignin();
+            });
+        })();
+    </script>
+    {# Kei poll results drawer: animate open/close #}
+    <script>
+        (function () {
+            var DURATION_MS = 250;
+            function initDrawer(drawer) {
+                if (drawer.hasAttribute('data-drawer-inited')) return;
+                drawer.setAttribute('data-drawer-inited', '1');
+                var summary = drawer.querySelector('.kei-poll-drawer__summary');
+                var panel = drawer.querySelector('.kei-poll-drawer__panel');
+                if (!summary || !panel) return;
+                function openPanel() {
+                    drawer.setAttribute('open', '');
+                    var h = panel.scrollHeight;
+                    panel.style.height = '0px';
+                    requestAnimationFrame(function () {
+                        panel.style.height = h + 'px';
+                        setTimeout(function () {
+                            panel.style.height = '';
+                        }, DURATION_MS);
+                    });
+                }
+                function closePanel() {
+                    var h = panel.scrollHeight;
+                    panel.style.height = h + 'px';
+                    requestAnimationFrame(function () {
+                        panel.style.height = '0px';
+                        setTimeout(function () {
+                            drawer.removeAttribute('open');
+                            panel.style.height = '';
+                        }, DURATION_MS);
+                    });
+                }
+                if (drawer.hasAttribute('open')) {
+                    panel.style.height = panel.scrollHeight + 'px';
+                    setTimeout(function () { panel.style.height = ''; }, 0);
+                }
+                summary.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    if (drawer.hasAttribute('open')) closePanel(); else openPanel();
+                });
+            }
+            function initAllDrawers(root) {
+                root.querySelectorAll('.kei-poll-drawer').forEach(initDrawer);
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function () { initAllDrawers(document); });
+            } else {
+                initAllDrawers(document);
+            }
+            document.body.addEventListener('htmx:afterSwap', function () { initAllDrawers(document); });
         })();
     </script>
 
@@ -556,6 +700,50 @@
         })();
     </script>
     {% endif %}
+    <script>
+        (function () {
+            function getGlossaryContent(wrap) {
+                var contentEl = wrap && wrap.querySelector('.tooltip-content.glossary-inline-def');
+                if (!contentEl) return document.createElement('span');
+                var clone = contentEl.cloneNode(true);
+                clone.removeAttribute('hidden');
+                return clone;
+            }
+            function initGlossaryInlineTerms() {
+                var terms = document.querySelectorAll('.glossary-inline-term');
+                if (!terms.length || typeof tippy === 'undefined') return;
+                var common = {
+                    theme: 'glossary',
+                    placement: 'top',
+                    appendTo: document.body,
+                    content: function (reference) {
+                        var wrap = reference.closest('.tooltip-wrap');
+                        return getGlossaryContent(wrap);
+                    },
+                    trigger: 'click focus',
+                    interactive: true,
+                    hideOnClick: true,
+                    onShow: function (inst) {
+                        var r = inst.reference;
+                        if (r && r.setAttribute) r.setAttribute('aria-expanded', 'true');
+                    },
+                    onHide: function (inst) {
+                        var r = inst.reference;
+                        if (r && r.setAttribute) r.setAttribute('aria-expanded', 'false');
+                    }
+                };
+                var instances = tippy(terms, common);
+                if (typeof tippy.createSingleton === 'function') {
+                    tippy.createSingleton(instances, { moveTransition: 'transform 0.2s ease-out', overrides: ['content', 'placement'] });
+                }
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initGlossaryInlineTerms);
+            } else {
+                initGlossaryInlineTerms();
+            }
+        })();
+    </script>
     <script src="/static/js/hero-auth-strip.js"></script>
     {% block extra_scripts %}{% endblock %}
 </body>

@@ -9,47 +9,12 @@
 {% include "_why_you_care.html" %}
 {% include "_mission_statement.html" %}
 {% if strategic_five_points %}
-{% set five_point_colors = ['#E53935', '#1E88E5', '#FDD835', '#43A047', '#FB8C00'] %}
-{# Heroicons (solid) via Iconify — one icon pack for consistent, clean icons. #}
-{% set five_point_icons = ['heroicons-solid:check-circle', 'heroicons-solid:map', 'heroicons-solid:document-text',
-'heroicons-solid:cog', 'heroicons-solid:user-group'] %}
-<section class="strategic-points strategic-points--home" id="strategic-points"
-    aria-labelledby="strategic-points-heading" lang="en">
-    <h2 class="strategic-points-heading" id="strategic-points-heading">Our message in 5 points</h2>
-    <div class="strategic-points-rows" role="list" aria-label="Our message in 5 points">
-        <div class="strategic-points-row strategic-points-row--top">
-            {% for point in strategic_five_points[:2] %}
-            <article class="strategic-points-card" role="listitem">
-                <span class="strategic-points-icon" {% if loop.index0 !=1 %}aria-hidden="true" {% endif %}
-                    style="color: {{ five_point_colors[loop.index0] }};">
-                    {% if loop.index0 == 1 %}
-                    {% include "_strategic_states_icon.html" %}
-                    {% else %}
-                    <iconify-icon icon="{{ five_point_icons[loop.index0] }}" style="color: inherit;"></iconify-icon>
-                    {% endif %}
-                </span>
-                <p class="strategic-points-card-text">{% if loop.index0 == 0 %}{{ point.replace("federally legal ",
-                    "federally legal<br>")|safe }}{% elif loop.index0 == 1 %}{{ point.replace("allow ",
-                    "allow<br>")|safe }}{% else %}{{ point }}{% endif %}</p>
-            </article>
-            {% endfor %}
-        </div>
-        <div class="strategic-points-row strategic-points-row--bottom">
-            {% for point in strategic_five_points[2:5] %}
-            <article class="strategic-points-card" role="listitem">
-                <span class="strategic-points-icon" aria-hidden="true">
-                    <iconify-icon icon="{{ five_point_icons[loop.index0 + 2] }}"
-                        style="color: {{ five_point_colors[loop.index0 + 2] }};"></iconify-icon>
-                </span>
-                <p class="strategic-points-card-text">{{ point }}</p>
-            </article>
-            {% endfor %}
-        </div>
-    </div>
-</section>
+{% from "_macros.html" import strategic_points %}
+{{ strategic_points(strategic_five_points, 'cards', 'strategic-points', 'strategic-points-heading') }}
 {% endif %}
 {% include "_mission_cta.html" %}
-{% include "_share_section.html" %}
+{% from "_macros.html" import share_buttons %}
+{{ share_buttons('full') }}
 {# On mobile, session pill moves below share (see base.css .session-pill-mobile-wrap) #}
 {% if hero_urgency_line %}
 <div class="session-pill-mobile-wrap">

@@ -22,13 +22,19 @@ Where to find things in the repo.
 | `pyproject.toml` | Deps, extras: `dev`, `docs`, `ml`. |
 | `TODOS.md` | Roadmap and completed work. |
 
+**Occasional tools (scripts/):** `audit_css_usage.py`, `audit_js_usage.py`, `audit_template_reachability.py` report dead CSS/JS and unreachable templates; run as needed for UI cleanup. See docs/development/ui-cleanup.md.
+
 ---
 
 ## Application (`src/ilga_graph/`)
 
 | Module / path | Purpose |
 |----------------|---------|
-| `main.py` | FastAPI app, lifespan/ETL, routes (intelligence, explore, GraphQL, logs, health), mounts routers. |
+| `main.py` | FastAPI app, lifespan/ETL, mounts routers (home, admin, campaigns, dev, advocacy, auth, content, updates, feedback, bills, explore, intelligence, outreach). |
+| `routers/home.py` | Home (/) and site-level routes: favicon, sitemap.xml, robots.txt, /advocacy and /intelligence redirects. |
+| `routers/content.py` | Content pages: the-issue, legislator-brief, fact-sheet, glossary, timeline, privacy, terms; imports constants from content_constants, view helpers (glossary, timeline waterfall) and route handlers here. |
+| `routers/content_constants.py` | Canonical copy and data: STRATEGIC_*, FAQ_*, glossaries, TIMELINE_PHASES, MARQUEE_IMAGES, BRIEF_STATE_STATUS, etc. No FastAPI or DB. |
+| `kei_poll_context.py` | Kei poll context: get_kei_poll_initial_state, get_kei_poll_sidebar_context; shared by home, content, advocacy, updates. |
 | `routers/advocacy.py` | SSR advocacy routes: landing, drawer (call/email), search, letter template; uses app state and get_db/get_current_user_optional. |
 | `scraper.py` | ILGA scraper: members, committees, bills, votes; caching. |
 | `models.py` | Dataclasses: Member, Bill, Committee, Office, etc. |

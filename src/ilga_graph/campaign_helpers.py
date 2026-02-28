@@ -30,12 +30,12 @@ def _as_utc(dt: datetime | None) -> datetime | None:
     return dt.astimezone(timezone.utc)
 
 
-async def get_active_campaign(db: AsyncSession) -> Campaign | None:
+async def get_active_campaign(db: AsyncSession, *, for_admin: bool = False) -> Campaign | None:
     """Return the single active campaign, or None.
 
-    Filters by is_active=True. When start_at/end_at are set, enforces
-    start_at <= now <= end_at; when null, no time constraint (foundation for
-    future session dates).
+    Filters by is_active=True. When for_admin=False (default), enforces
+    start_at <= now <= end_at when those are set; when for_admin=True, returns
+    the campaign marked active regardless of start_at/end_at (for admin dashboard).
     """
     now = datetime.now(timezone.utc)
     q = (
@@ -48,6 +48,8 @@ async def get_active_campaign(db: AsyncSession) -> Campaign | None:
     campaign = result.scalar_one_or_none()
     if campaign is None:
         return None
+    if for_admin:
+        return campaign
     start_at = _as_utc(campaign.start_at)
     end_at = _as_utc(campaign.end_at)
     if start_at is not None and now < start_at:

@@ -9,14 +9,30 @@
 
 {% block brief_main_heading %}Where we are{% endblock %}
 {% block brief_main %}
+{% if prompt_kei and kei_status_options is defined and kei_status_options %}
+<section class="updates-kei-prompt" id="kei-prompt" aria-labelledby="kei-prompt-heading">
+    <h2 id="kei-prompt-heading">Your input helps legislators see who's affected</h2>
+    {% if kei_submitted %}
+    <p class="kei-status-success" role="status">Thanks — your response helps us show legislators that numbers speak louder than words.</p>
+    {% elif kei_error %}
+    <p class="kei-status-error" role="alert">Please choose an option{% if kei_error == 'email' %} and enter a valid email{% endif %}.</p>
+    {% endif %}
+    {% if kei_poll_done %}
+    {% include "_kei_poll_initial_results.html" %}
+    {% else %}
+    {% from "_macros.html" import kei_poll %}
+    {{ kei_poll('updates-kei-poll') }}
+    {% endif %}
+</section>
+{% endif %}
 {% if active_campaign %}
 {% include "_priority_callout.html" %}
 {% endif %}
 <p class="updates-campaign-status" id="where-we-are">{{ campaign_status }}</p>
 
-<ol class="campaign-timeline" role="list" aria-label="Campaign milestones from current phase to Keis be legal">
-    {% for step in campaign_timeline %}
-    <li class="campaign-timeline__item campaign-timeline__item--{{ 'achieved' if step.achieved else 'pending' }}"><span class="campaign-timeline__num" aria-hidden="true">{{ loop.index }}.</span> {{ step.label }}</li>
+<ol class="progress-checklist" role="list" aria-label="Progress toward Keis be legal">
+    {% for step in progress_checklist %}
+    <li class="progress-checklist__item progress-checklist__item--{{ 'achieved' if step.achieved else 'pending' }}"><span class="progress-checklist__num" aria-hidden="true">{{ loop.index }}.</span> {{ step.label }}</li>
     {% endfor %}
 </ol>
 
@@ -35,14 +51,8 @@
     {% else %}
     <p>Get one update when we move. No spam—only when it matters.</p>
     <div id="updates-email-subscribe-wrap" class="updates-subscribe-email-wrap">
-        <form action="/updates/subscribe-email" method="post" class="updates-subscribe-email-form subscribe-form"
-            hx-post="/updates/subscribe-email" hx-target="#updates-email-subscribe-wrap" hx-swap="innerHTML"
-            aria-label="Subscribe to campaign updates by email">
-            <label for="updates-subscribe-email-input" class="visually-hidden">Your email</label>
-            <input type="email" id="updates-subscribe-email-input" name="email" class="updates-subscribe-email-input subscribe-input"
-                placeholder="Your email" required autocomplete="email" inputmode="email" maxlength="320">
-            <button type="submit" class="updates-subscribe-email-btn subscribe-btn">Subscribe</button>
-        </form>
+        {% from "_macros.html" import subscribe_form %}
+        {{ subscribe_form('updates-email-subscribe', '/updates/subscribe-email', 'inline') }}
     </div>
     <p class="updates-subscribe-note">No spam. One email when we move. <a href="/advocacy">Sign in</a> to track your outreach.</p>
     {% endif %}

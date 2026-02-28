@@ -16,10 +16,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import config as cfg
 from ..app_state import state
 from ..campaign_helpers import campaign_outreach_count, deactivate_other_campaigns
+from ..constants import KEI_STATUS_OPTIONS
 from ..db import get_db
 from ..db_models import Campaign, OutreachEvent
 from ..dependencies import require_admin
 from ..routers.content import STRATEGIC_FIVE_POINTS
+from ..session_schedule import (
+    get_deadlines_for_campaigns,
+    get_milestone_by_id,
+    get_next_deadline_safe,
+)
 
 router = APIRouter()
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -42,6 +48,9 @@ templates.env.globals["features"] = cfg.get_client_features()
 from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
 
 templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
+templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
+templates.env.globals["get_next_deadline"] = get_next_deadline_safe
+templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 
 
 def _district_options_from_zip_crosswalk() -> list[tuple[str, str]]:
@@ -111,6 +120,14 @@ async def admin_campaigns_list(
     )
 
 
+def _campaign_milestones() -> list[dict]:
+    """Session milestones for campaign dropdown (end-at deadline)."""
+    try:
+        return get_deadlines_for_campaigns()
+    except (FileNotFoundError, ValueError):
+        return []
+
+
 @router.get("/admin/campaigns/new", include_in_schema=False)
 async def admin_campaigns_new(
     request: Request,
@@ -128,6 +145,7 @@ async def admin_campaigns_new(
             "district_ids_plain": "",
             "member_ids_plain": "",
             "members": state.members,
+            "campaign_milestones": _campaign_milestones(),
         },
     )
 
@@ -144,6 +162,7 @@ async def admin_campaigns_create(
     is_active: str = Form("0"),
     start_at: str = Form(""),
     end_at: str = Form(""),
+    session_milestone_id: str = Form(""),
     db: AsyncSession = Depends(get_db),
     admin_user: Any = Depends(require_admin),
 ):
@@ -164,6 +183,11 @@ async def admin_campaigns_create(
             member_json = json.dumps(raw[:500])
     start_dt = _parse_naive_dt(start_at)
     end_dt = _parse_naive_dt(end_at)
+    mid = session_milestone_id.strip() or None
+    if mid and not end_dt:
+        milestone = get_milestone_by_id(mid)
+        if milestone:
+            end_dt = _end_at_from_milestone_date(milestone.get("date"))
     active = is_active.strip() in ("1", "true", "on", "yes")
     campaign = Campaign(
         title=title,
@@ -175,6 +199,7 @@ async def admin_campaigns_create(
         is_active=active,
         start_at=start_dt,
         end_at=end_dt,
+        session_milestone_id=mid,
     )
     db.add(campaign)
     await db.flush()
@@ -182,6 +207,18 @@ async def admin_campaigns_create(
         await deactivate_other_campaigns(db, campaign.id)
     await db.commit()
     return RedirectResponse("/admin/campaigns?flash=created", status_code=303)
+
+
+def _end_at_from_milestone_date(date_str: str) -> datetime | None:
+    """Return end-of-day UTC for the given YYYY-MM-DD (campaign ends before this deadline)."""
+    s = (date_str or "").strip()
+    if not s or len(s) < 10:
+        return None
+    try:
+        dt = datetime.strptime(s[:10], "%Y-%m-%d")
+        return dt.replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+    except ValueError:
+        return None
 
 
 def _parse_naive_dt(s: str) -> datetime | None:
@@ -248,6 +285,7 @@ async def admin_campaign_detail(
             "member_ids_plain": _campaign_member_ids_plain(campaign),
             "members": state.members,
             "flash": flash,
+            "campaign_milestones": _campaign_milestones(),
         },
     )
 
@@ -265,6 +303,7 @@ async def admin_campaign_update(
     is_active: str = Form("0"),
     start_at: str = Form(""),
     end_at: str = Form(""),
+    session_milestone_id: str = Form(""),
     db: AsyncSession = Depends(get_db),
     admin_user: Any = Depends(require_admin),
 ):
@@ -287,8 +326,14 @@ async def admin_campaign_update(
         campaign.target_member_ids = json.dumps(raw[:500]) if raw else None
     else:
         campaign.target_member_ids = None
+    campaign.session_milestone_id = session_milestone_id.strip() or None
+    end_dt = _parse_naive_dt(end_at)
+    if campaign.session_milestone_id and not end_dt:
+        milestone = get_milestone_by_id(campaign.session_milestone_id)
+        if milestone:
+            end_dt = _end_at_from_milestone_date(milestone.get("date"))
     campaign.start_at = _parse_naive_dt(start_at)
-    campaign.end_at = _parse_naive_dt(end_at)
+    campaign.end_at = end_dt
     active = is_active.strip() in ("1", "true", "on", "yes")
     campaign.is_active = active
     if active:

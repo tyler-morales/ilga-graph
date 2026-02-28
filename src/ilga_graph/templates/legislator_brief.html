@@ -1,4 +1,5 @@
 {% extends "_brief_skeleton.html" %}
+{% from "_macros.html" import faq_section, state_status_table, share_buttons, strategic_points %}
 {% block title %}Legislator brief — {{ site_name }}{% endblock %}
 {% block brief_title %}Legislator brief{% endblock %}
 {% block brief_intro %}
@@ -19,25 +20,18 @@
 {% block brief_main_heading %}Official brief{% endblock %}
 {% block brief_main %}
 {% if strategic_five_points %}
-<section class="strategic-points strategic-points--brief" id="brief-key-points" aria-labelledby="brief-key-points-heading">
-    <h2 id="brief-key-points-heading">Key points</h2>
-    <ul class="strategic-points-list" role="list">
-        {% for point in strategic_five_points %}
-        <li class="strategic-points-item">{{ point }}</li>
-        {% endfor %}
-    </ul>
-</section>
+{{ strategic_points(strategic_five_points, 'banner', 'brief-key-points', 'brief-key-points-heading') }}
 {% endif %}
 {% if legislator_brief %}
 <section aria-labelledby="brief-issue">
     <h2 id="brief-issue">Issue in one sentence</h2>
-    <p>{{ legislator_brief.issue_one_sentence }}</p>
-    <p><strong>Core ambiguity:</strong> {{ legislator_brief.core_ambiguity }}</p>
+    <p>{% if legislator_brief.get('issue_one_sentence_html') %}{{ legislator_brief.issue_one_sentence_html|safe }}{% else %}{{ legislator_brief.issue_one_sentence }}{% endif %}</p>
+    <p><strong>Core ambiguity:</strong> {% if legislator_brief.get('core_ambiguity_html') %}{{ legislator_brief.core_ambiguity_html|safe }}{% else %}{{ legislator_brief.core_ambiguity }}{% endif %}</p>
 </section>
 {% for sec in legislator_brief.sections %}
 <section aria-labelledby="brief-sec-{{ loop.index }}">
     <h2 id="brief-sec-{{ loop.index }}">{{ sec.heading }}</h2>
-    {% for p in sec.paragraphs %}<p>{{ p }}</p>{% endfor %}
+    {% for p in (sec.paragraphs_html if sec.get('paragraphs_html') else sec.paragraphs) %}<p>{% if sec.get('paragraphs_html') %}{{ p|safe }}{% else %}{{ p }}{% endif %}</p>{% endfor %}
 </section>
 {% endfor %}
 <section aria-labelledby="brief-ask">
@@ -96,121 +90,8 @@
 <section aria-labelledby="brief-current-law">
     <h2 id="brief-current-law">State-by-state authorization</h2>
     <p>Recent examples where states authorized or restored Kei registration via statute or policy. (See map and table below.)</p>
-
     <h3 id="brief-states-view">States with bills passed or in progress</h3>
-    <div class="brief-states-view" data-view="table" data-state-status="{{ brief_state_map_status_json }}"
-        data-aamva-fix-abbrs="{{ brief_aamva_fix_state_abbrs_json|default('[]') }}">
-        <div class="brief-states-filter-toggle" role="group" aria-label="Filter by legal to register or countered AAMVA">
-            <button type="button" class="brief-states-filter-btn brief-states-filter-btn--active" data-filter="all"
-                aria-pressed="true" aria-controls="brief-view-map brief-view-table">All legal to register</button>
-            <button type="button" class="brief-states-filter-btn" data-filter="aamva"
-                aria-pressed="false" aria-controls="brief-view-map brief-view-table">Countered AAMVA</button>
-        </div>
-        <div class="brief-states-view-toggle" role="group" aria-label="View as table or map">
-            <button type="button" class="brief-states-view-btn brief-states-view-btn--active" data-view="table"
-                aria-pressed="true" aria-controls="brief-view-map brief-view-table">Table</button>
-            <button type="button" class="brief-states-view-btn" data-view="map" aria-pressed="false"
-                aria-controls="brief-view-map brief-view-table">Map</button>
-        </div>
-        <div class="brief-states-view-panel brief-states-view-panel--map" id="brief-view-map" role="region"
-            aria-label="Map view">
-            <div class="brief-us-map-wrap" role="img"
-                aria-label="United States map. States with kei bills passed in green; bills in progress in orange; policy change in blue; restricted (antique/speed cap) in yellow; others in gray.">
-                <div class="brief-us-map" title="US states by bill status" aria-hidden="true"></div>
-            </div>
-            <p class="brief-map-legend" role="region" aria-label="Map legend">
-                <span class="brief-map-legend-item"><span class="brief-map-swatch brief-map-swatch--passed"
-                        aria-hidden="true"></span> Bill passed</span>
-                <span class="brief-map-legend-item"><span class="brief-map-swatch brief-map-swatch--pending"
-                        aria-hidden="true"></span> Bill in progress</span>
-                <span class="brief-map-legend-item"><span class="brief-map-swatch brief-map-swatch--policy"
-                        aria-hidden="true"></span> Policy change</span>
-                <span class="brief-map-legend-item"><span class="brief-map-swatch brief-map-swatch--restricted"
-                        aria-hidden="true"></span> Restricted</span>
-            </p>
-        </div>
-        <div class="brief-states-view-panel brief-states-view-panel--table" id="brief-view-table" role="region"
-            aria-label="Table view">
-            <p class="brief-states-table-intro">Recent examples where states authorized or restored kei registration via
-                statute or policy. (Not exhaustive.)</p>
-            <div class="bill-actions-table-wrap" role="region" aria-label="State mechanisms table">
-                <table class="intel-table legislator-brief-states-table">
-                    <thead>
-                        <tr>
-                            <th scope="col">State</th>
-                            <th scope="col" class="brief-table-col-indicator" title="Legislation (statute or bill)">Bill
-                            </th>
-                            <th scope="col" class="brief-table-col-indicator" title="Administrative policy change">
-                                Policy</th>
-                            <th scope="col">How</th>
-                            <th scope="col">Effective</th>
-                            <th scope="col" class="brief-table-col-indicator" title="Max speed or route restricted (e.g. 55 mph or no Interstates)">Speed</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for s in brief_state_status|default([]) %}
-                        <tr data-aamva-fix="{{ 'true' if s.get('aamva_fix') else 'false' }}">
-                            <td data-label="State">{{ s.state }}</td>
-                            <td data-label="Bill" class="brief-table-cell-indicator">
-                                {% if s.get('restricted') %}
-                                <span class="brief-table-indicator brief-table-indicator--restricted" role="img"
-                                    aria-label="Restricted use (e.g. antique/collector or speed cap)">⚠</span>
-                                {% elif s.bill_status == 'passed' %}
-                                <span class="brief-table-indicator brief-table-indicator--yes" role="img"
-                                    aria-label="Has bill: yes">✓</span>
-                                {% elif s.bill_status == 'pending' %}
-                                <span class="brief-table-indicator brief-table-indicator--pending" role="img"
-                                    aria-label="Bill in progress">●</span>
-                                {% else %}
-                                <span class="brief-table-indicator brief-table-indicator--no" role="img"
-                                    aria-label="Has bill: no">—</span>
-                                {% endif %}
-                            </td>
-                            <td data-label="Policy" class="brief-table-cell-indicator">
-                                {% if s.policy %}
-                                <span class="brief-table-indicator brief-table-indicator--yes" role="img"
-                                    aria-label="Policy change: yes">✓</span>
-                                {% else %}
-                                <span class="brief-table-indicator brief-table-indicator--no" role="img"
-                                    aria-label="Policy change: no">—</span>
-                                {% endif %}
-                            </td>
-                            <td data-label="How">{{ s.get('how') or '—' }}</td>
-                            <td data-label="Effective">{{ s.get('effective') or '—' }}</td>
-                            <td data-label="Speed" class="brief-table-cell-indicator">
-                                {% if s.get('speed') %}
-                                <span class="brief-table-indicator brief-table-indicator--yes" role="text"
-                                    aria-label="Speed or route restriction: {{ s.speed }}">{{ s.speed }}</span>
-                                {% elif s.get('speed_limited') %}
-                                <span class="brief-table-indicator brief-table-indicator--yes" role="img"
-                                    aria-label="Max speed or route limited">Limited</span>
-                                {% else %}
-                                <span class="brief-table-indicator brief-table-indicator--no" role="img"
-                                    aria-label="No speed limit restriction">—</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            <footer class="brief-table-notes" id="brief-table-key" role="region" aria-label="Table notes and indicators">
-                <div class="brief-table-notes__col brief-table-notes__col--indicators">
-                    <span class="brief-table-notes__label">Indicators</span>
-                    <ul class="brief-table-notes__list" role="list">
-                        <li><span class="brief-table-indicator brief-table-indicator--yes" aria-hidden="true">✓</span> Passed into law</li>
-                        <li><span class="brief-table-indicator brief-table-indicator--pending" aria-hidden="true">●</span> Bill in progress</li>
-                        <li><span class="brief-table-indicator brief-table-indicator--no" aria-hidden="true">—</span> No bill / no policy</li>
-                        <li><span class="brief-table-indicator brief-table-indicator--restricted" aria-hidden="true">⚠</span> Restricted: antique/collector or speed/radius cap only.</li>
-                    </ul>
-                </div>
-                <div class="brief-table-notes__col brief-table-notes__col--notes">
-                    <span class="brief-table-notes__label">Notes</span>
-                    <p class="brief-table-notes__text"><strong>How:</strong> Law or policy that made Keis registrable (— if none). <strong>Effective:</strong> Date the change or law took effect (— if no date). Speed: value when set; <strong>Limited</strong> when restricted but no value; — when no restriction.</p>
-                </div>
-            </footer>
-        </div>
-    </div>
+    {{ state_status_table(brief_state_status, brief_state_map_status_json, brief_aamva_fix_state_abbrs_json|default('[]'), 'brief-view') }}
 </section>
 
 <section aria-labelledby="brief-attachments" class="brief-attachments">
@@ -247,28 +128,7 @@
 </section>
 
 {% if faq %}
-<section class="brief-faq" aria-labelledby="brief-faq-heading">
-    <h2 id="brief-faq-heading">{{ faq.title }}</h2>
-    {% if faq.intro %}<p class="brief-faq__intro">{{ faq.intro }}</p>{% endif %}
-    <div class="brief-faq__list">
-        {% for item in faq['items'] %}
-        <details class="brief-faq__item" id="brief-faq-{{ item.id }}">
-            <summary class="brief-faq__question">{{ item.question }}</summary>
-            <div class="brief-faq__answer">
-                <p>{{ item.answer }}</p>
-                {% if item.sources %}
-                <p class="brief-faq__sources-label">Sources:</p>
-                <ul class="brief-faq__sources" role="list">
-                    {% for src in item.sources %}
-                    <li><a href="{{ src.url }}" target="_blank" rel="noopener noreferrer" class="brief-faq__source-link">{{ src.label }}</a></li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
-            </div>
-        </details>
-        {% endfor %}
-    </div>
-</section>
+{{ faq_section(faq['items'], faq.title, 'brief-faq', faq.intro) }}
 {% endif %}
 {% endblock %}
 {% block brief_sidebar %}
@@ -338,9 +198,10 @@
             </li>
             {% endfor %}
         </ul>
-        {% with target='legislator', section_id='brief-share' %}
-        {% include "_share_section_sidebar.html" %}
-        {% endwith %}
+        <section class="legislator-brief-sidebar__poll" aria-labelledby="sidebar-kei-poll-heading">
+            {% include "_sidebar_kei_poll.html" %}
+        </section>
+        {{ share_buttons('sidebar', 'brief-share', 'legislator') }}
     </div>
 </aside>
 {% endblock %}

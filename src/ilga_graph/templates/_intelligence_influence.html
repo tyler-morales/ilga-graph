@@ -46,11 +46,10 @@
                 <td>{{ p.chamber }}</td>
                 <td>{{ p.party }}</td>
                 <td>
+                    {% from "_macros.html" import score_bar %}
                     <div class="score-bar-container" style="width: 80px; display: inline-block;">
-                        <div class="score-bar {% if p.score >= 60 %}score-bar-high{% elif p.score >= 30 %}score-bar-moderate{% else %}score-bar-low{% endif %}"
-                             style="width: {{ p.score }}%;"></div>
+                        {{ score_bar(p.score|int, "%.1f"|format(p.score), 100, 'md', 'score-bar-high' if p.score >= 60 else 'score-bar-moderate' if p.score >= 30 else 'score-bar-low') }}
                     </div>
-                    <strong>{{ "%.1f"|format(p.score) }}</strong>
                 </td>
                 <td>
                     <span class="intel-trust-badge intel-trust-{{ p.label|lower }}">{{ p.label }}</span>

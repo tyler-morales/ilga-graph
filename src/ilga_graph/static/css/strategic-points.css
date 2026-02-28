@@ -1,6 +1,6 @@
 /**
- * Strategic plan 5-point message — home page and The Issue.
- * Shared list styling; .strategic-points--issue for Issue page context.
+ * Strategic plan 5-point message — home (card grid), The Issue, legislator brief, fact sheet.
+ * List-style key points use .strategic-points--banner (subtle strip: bg, left border); home uses .strategic-points--home (cards).
  */
 
 .strategic-points {
@@ -33,7 +33,51 @@
   margin-bottom: 0;
 }
 
-/* The Issue page: same list, no extra top border if first section */
+/* Key points banner — list-style key points (The Issue, legislator brief, fact sheet). Subtle strip, not flashy. */
+.strategic-points--banner {
+  padding: 1rem 1.25rem 1.25rem;
+  background: var(--color-bg-muted, #f5f5f5);
+  border-left: 4px solid var(--color-primary, #1a73e8);
+  border-radius: 0 6px 6px 0;
+  border-top: none;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.strategic-points--banner .strategic-points-list {
+  margin-top: 0.5rem;
+  padding-left: 1.25rem;
+}
+
+.strategic-points--banner .strategic-points-item {
+  margin-bottom: 0.4rem;
+}
+
+.strategic-points--banner h2 {
+  font-size: var(--font-size-h2, 1.35rem);
+  font-weight: 600;
+  color: var(--color-text, #1a1a1a);
+  margin: 0 0 0.5rem 0;
+}
+
+/* Fact sheet: key points use banner; avoid double border from .fact-sheet-section */
+.strategic-points--banner.fact-sheet-section {
+  border-top: none;
+  padding-top: 0;
+}
+
+/* The Issue page: banner first section, no extra top margin */
+.strategic-points--issue.strategic-points--banner {
+  margin-top: 0;
+  margin-bottom: 2rem;
+}
+
+.strategic-points--issue .strategic-points-heading,
+.strategic-points--issue h2 {
+  margin-bottom: 0.5rem;
+}
+
+/* Legacy: non-banner issue block (if used without --banner) */
 .strategic-points--issue {
   margin-top: 0;
   padding-top: 0;
@@ -93,6 +137,23 @@
 
 .strategic-points--home .strategic-points-row .strategic-points-card {
   max-width: 28rem;
+}
+
+/* Mobile: single-column stack; cards full width for consistent, pleasant layout. */
+@media (max-width: 899px) {
+  .strategic-points--home .strategic-points-rows {
+    width: 100%;
+  }
+
+  .strategic-points--home .strategic-points-row {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .strategic-points--home .strategic-points-row .strategic-points-card {
+    width: 100%;
+    max-width: none;
+  }
 }
 
 .strategic-points--home .strategic-points-card {
@@ -223,11 +284,27 @@
   }
 }
 
-/* Narrow: single-column stack. */
+/* Narrow: single-column stack; cards full width. */
 @supports (container-type: inline-size) {
   .strategic-points--home {
     container-type: inline-size;
     container-name: strategic-points;
+  }
+
+  @container strategic-points (max-width: 899px) {
+    .strategic-points--home .strategic-points-rows {
+      width: 100%;
+    }
+
+    .strategic-points--home .strategic-points-row {
+      align-items: stretch;
+      width: 100%;
+    }
+
+    .strategic-points--home .strategic-points-row .strategic-points-card {
+      width: 100%;
+      max-width: none;
+    }
   }
 
   @container strategic-points (min-width: 900px) {

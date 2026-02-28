@@ -84,29 +84,8 @@
                         </svg></span> Verified <span id="auth-strip-email"></span> &middot; <button type="button"
                         class="auth-strip-signout" id="auth-strip-signout">Sign out</button></span>
             </div>
-            <div id="auth-strip-inline-signin" class="hero-signin-inline" hidden>
-                <div class="hero-signin-state" id="hero-signin-state-email">
-                    <input type="email" class="hero-signin-input" id="hero-signin-email" placeholder="Your email"
-                        autocomplete="email" inputmode="email">
-                    <button type="button" class="hero-signin-btn" id="hero-signin-request-btn">Send code</button>
-                </div>
-                <div class="hero-signin-state" id="hero-signin-state-code" hidden>
-                    <span class="hero-signin-code-hint" id="hero-signin-code-hint">Check your email for a 6-digit
-                        code</span>
-                    {% if dev_available %}
-                    <p class="hero-signin-dev-hint" aria-live="polite">Dev mode: your code appears in the <strong>server
-                            terminal</strong> (where you ran the app), not in the browser.</p>
-                    {% endif %}
-                    <div class="hero-signin-code-row">
-                        <input type="text" class="hero-signin-code-input" id="hero-signin-code-input"
-                            placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code">
-                        <button type="button" class="hero-signin-btn" id="hero-signin-verify-btn">Confirm</button>
-                    </div>
-                    <span class="hero-signin-error" id="hero-signin-error" hidden></span>
-                    <button type="button" class="hero-signin-resend" id="hero-signin-resend">Resend code</button>
-                </div>
-                <button type="button" class="hero-signin-cancel" id="hero-signin-cancel">Cancel</button>
-            </div>
+            {% from "_macros.html" import inline_signin %}
+            {{ inline_signin('hero', dev_available) }}
         </div>
     </div>
 </div>

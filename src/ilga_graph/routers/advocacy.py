@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import re
 from pathlib import Path
 from typing import Any
@@ -21,11 +20,17 @@ from ..app_state import state
 from ..campaign_helpers import get_active_campaign, is_campaign_visible_to_zip
 from ..community_email import get_effective_email_for_member
 from ..config import DEV_MODE
-from ..constants import CATEGORY_CHOICES, CATEGORY_COMMITTEES, GENERAL_COMMITTEE_CODES
+from ..constants import (
+    CATEGORY_CHOICES,
+    CATEGORY_COMMITTEES,
+    GENERAL_COMMITTEE_CODES,
+    KEI_STATUS_OPTIONS,
+)
 from ..data_source import is_using_mocks
 from ..db import get_db
 from ..db_models import OutreachEvent, User
 from ..dependencies import get_current_user_optional, require_user
+from ..kei_poll_context import get_kei_poll_sidebar_context
 from ..member_lookup import (
     find_member_by_district,
     find_member_by_id,
@@ -42,6 +47,7 @@ from ..security import (
     validate_csrf_token,
     validate_photo_url_for_drawer,
 )
+from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
 
 _ZIP_RE = re.compile(r"^\d{5}$")
 # Pre-fill hero ZIP in dev/mocks; must exist in state.zip_to_district.
@@ -81,6 +87,9 @@ templates.env.globals["features"] = cfg.get_client_features()
 from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
 
 templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
+templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
+templates.env.globals["get_next_deadline"] = get_next_deadline_safe
+templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 
 _HERO_SUBHEAD = (
     "Illinois is treating lawfully imported kei vehicles as off-highway, so owners cannot "
@@ -385,55 +394,15 @@ async def _build_search_results_context(
             .order_by(OutreachEvent.created_at.desc())
         )
         member_kinds: dict[str, set[str]] = {}
-        # #region agent log
-        _raw_events: list[list[str]] = []
-        _total_call_events = 0
-        _total_email_events = 0
-        # #endregion
         for mid, kind in sidebar_result.all():
-            if kind == "call":
-                _total_call_events += 1
-            elif kind == "email":
-                _total_email_events += 1
             mid_str = str(mid)
             if mid_str not in member_kinds:
                 member_kinds[mid_str] = set()
             member_kinds[mid_str].add(kind)
-            # #region agent log
-            _raw_events.append([mid_str, kind])
-            # #endregion
         distinct_members_called = sum(1 for k in member_kinds.values() if "call" in k)
         distinct_members_emailed = sum(1 for k in member_kinds.values() if "email" in k)
         outreach_calls_count = distinct_members_called
         outreach_emails_count = distinct_members_emailed
-        # #region agent log
-        try:
-            _log_path = Path("/Users/tyler/Projects/Code/ilga_graph_poc/.cursor/debug-40cdc3.log")
-            with open(_log_path, "a") as _f:
-                _f.write(
-                    json.dumps(
-                        {
-                            "sessionId": "40cdc3",
-                            "hypothesisId": "H1_H2_H3",
-                            "runId": "post-fix",
-                            "location": "advocacy.py:sidebar_counts",
-                            "message": "outreach sidebar events and counts",
-                            "data": {
-                                "user_id": user.id,
-                                "raw_events": _raw_events,
-                                "total_call_events": _total_call_events,
-                                "total_email_events": _total_email_events,
-                                "outreach_calls_count_displayed": outreach_calls_count,
-                                "outreach_emails_count_displayed": outreach_emails_count,
-                            },
-                            "timestamp": __import__("time").time() * 1000,
-                        }
-                    )
-                    + "\n"
-                )
-        except Exception:
-            pass
-        # #endregion
         for member_id in member_kinds:
             member = state.member_lookup_by_id.get(member_id)
             if member is None:
@@ -547,6 +516,7 @@ async def advocacy_index(
     if zip_param and in_district:
         results_ctx = await _build_search_results_context(zip_param, "Transportation", db, user)
         ctx.update(results_ctx)
+        ctx.update(await get_kei_poll_sidebar_context(request, user, db))
     elif zip_param and not in_district:
         ctx["error"] = (
             f"ZIP code {zip_param!r} not found in Illinois district data. "
@@ -1094,6 +1064,7 @@ async def advocacy_search(
         return templates.TemplateResponse(tpl, ctx_error)
 
     results_ctx = await _build_search_results_context(zip_code, category, db, user)
+    poll_ctx = await get_kei_poll_sidebar_context(request, user, db)
     tpl = "_results_partial.html" if is_htmx else "results.html"
     return templates.TemplateResponse(
         tpl,
@@ -1102,5 +1073,6 @@ async def advocacy_search(
             "title": cfg.SITE_NAME,
             "categories": CATEGORY_CHOICES,
             **results_ctx,
+            **poll_ctx,
         },
     )

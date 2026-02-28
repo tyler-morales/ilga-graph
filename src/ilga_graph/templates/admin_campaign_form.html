@@ -71,6 +71,16 @@
                 <textarea id="target_member_ids" name="target_member_ids" rows="2" placeholder="3264">{{ member_ids_plain|default('') }}</textarea>
             </div>
             <div class="admin-updates-field">
+                <label for="session_milestone_id">End at session milestone (optional)</label>
+                <select id="session_milestone_id" name="session_milestone_id" aria-describedby="milestone-hint">
+                    <option value="">— None —</option>
+                    {% for m in campaign_milestones|default([]) %}
+                    <option value="{{ m.id }}"{% if campaign and campaign.session_milestone_id == m.id %} selected{% endif %}>{{ m.date }} — {{ m.label }}</option>
+                    {% endfor %}
+                </select>
+                <span id="milestone-hint" class="admin-updates-hint">Sets end date to end of that day. Override below if needed.</span>
+            </div>
+            <div class="admin-updates-field">
                 <label for="start_at">Start at (optional)</label>
                 <input type="datetime-local" id="start_at" name="start_at" value="{{ campaign.start_at.strftime('%Y-%m-%dT%H:%M') if campaign and campaign.start_at else '' }}">
             </div>

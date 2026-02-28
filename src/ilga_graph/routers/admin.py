@@ -10,21 +10,27 @@ from typing import Any
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import String, cast, delete, func, select
+from sqlalchemy import String, cast, delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import advocacy_helpers as ah
 from .. import config as cfg
 from ..app_state import state
 from ..campaign_helpers import campaign_outreach_count, get_active_campaign
-from ..constants import CATEGORY_COMMITTEES, GENERAL_COMMITTEE_CODES
+from ..constants import (
+    CATEGORY_COMMITTEES,
+    GENERAL_COMMITTEE_CODES,
+    KEI_STATUS_OPTIONS,
+    KEI_STATUS_SLUGS,
+)
 from ..db import get_db
-from ..db_models import OutreachEvent, OutreachStepEvent, Update, User
+from ..db_models import KeiPollResponse, OutreachEvent, OutreachStepEvent, Update, User
 from ..dependencies import get_current_user_optional, require_admin
-from ..member_lookup import find_member_by_district
+from ..member_lookup import find_member_by_district, find_member_by_id
 from ..routers.content import STRATEGIC_FIVE_POINTS
 from ..run_log import get_log_path, load_recent_runs
 from ..security import validate_photo_url_for_drawer
+from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
 
 router = APIRouter()
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -47,6 +53,9 @@ templates.env.globals["features"] = cfg.get_client_features()
 from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
 
 templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
+templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
+templates.env.globals["get_next_deadline"] = get_next_deadline_safe
+templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 
 _ZIP_RE = re.compile(r"^\d{5}$")
 MOCK_DEV_USER_EMAIL = "funky_mama11@gmail.com"
@@ -62,6 +71,59 @@ def _safe_admin_next(next_param: str | None) -> str:
     if not path.startswith("/") or "//" in path or path == "/admin/login":
         return "/admin"
     return s
+
+
+async def _outreach_volume_for_window(
+    db: AsyncSession, now: datetime, *, days: int
+) -> dict[str, int]:
+    """Return total_calls and total_emails for OutreachEvent in the last `days`."""
+    window_start = now - timedelta(days=days)
+    kinds_call = ["call"]
+    kinds_email = ["email"]
+    q_calls = (
+        select(func.count())
+        .select_from(OutreachEvent)
+        .where(OutreachEvent.kind.in_(kinds_call))
+        .where(OutreachEvent.created_at >= window_start)
+        .where(OutreachEvent.created_at <= now)
+    )
+    q_emails = (
+        select(func.count())
+        .select_from(OutreachEvent)
+        .where(OutreachEvent.kind.in_(kinds_email))
+        .where(OutreachEvent.created_at >= window_start)
+        .where(OutreachEvent.created_at <= now)
+    )
+    total_calls = (await db.execute(q_calls)).scalar() or 0
+    total_emails = (await db.execute(q_emails)).scalar() or 0
+    return {
+        "total_calls": total_calls,
+        "total_emails": total_emails,
+        "total_actions": total_calls + total_emails,
+    }
+
+
+async def _latest_sent_update(db: AsyncSession) -> Update | None:
+    """Return the most recently sent update, or None."""
+    q = select(Update).where(Update.sent_at.isnot(None)).order_by(Update.sent_at.desc()).limit(1)
+    r = await db.execute(q)
+    return r.scalar_one_or_none()
+
+
+async def _top_members_by_outreach_count(
+    db: AsyncSession, *, limit: int = 5
+) -> list[tuple[str, int]]:
+    """Return top N member_ids by count of call+email outreach events."""
+    cnt = func.count(OutreachEvent.id).label("cnt")
+    q = (
+        select(OutreachEvent.member_id, cnt)
+        .where(OutreachEvent.kind.in_(["call", "email"]))
+        .group_by(OutreachEvent.member_id)
+        .order_by(desc(cnt))
+        .limit(limit)
+    )
+    r = await db.execute(q)
+    return [(row[0], row[1]) for row in r.all()]
 
 
 @router.get("/admin/login", include_in_schema=False)
@@ -97,7 +159,8 @@ async def admin_dashboard(
     admin_user: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    """Admin dashboard: at-a-glance stats and links to Email, Users, Outreach stats."""
+    """Admin dashboard: advocacy effort status. Outreach totals, 7d/30d trend,
+    conversion, last update sent, active campaign, top legislators."""
     now = datetime.now(timezone.utc)
     window_7d = now - timedelta(days=7)
 
@@ -131,12 +194,27 @@ async def admin_dashboard(
         "total_outreach_actions": conversion_data["volumes"]["total_outreach_actions"],
     }
 
+    outreach_trend_7d = await _outreach_volume_for_window(db, now, days=7)
+    outreach_trend_30d = await _outreach_volume_for_window(db, now, days=30)
+
+    last_sent_update = await _latest_sent_update(db)
+    last_update_sent_at = last_sent_update.sent_at if last_sent_update else None
+    last_update_title = last_sent_update.title if last_sent_update else None
+
     subscriber_rate_pct = round(100.0 * subscribers / total_users) if total_users else 0
 
-    active_campaign = await get_active_campaign(db)
+    active_campaign = await get_active_campaign(db, for_admin=True)
     active_campaign_actions = (
         await campaign_outreach_count(db, active_campaign.id) if active_campaign else 0
     )
+
+    top_raw = await _top_members_by_outreach_count(db, limit=5)
+    top_members_by_contacts = []
+    for mid, cnt in top_raw:
+        member = find_member_by_id(state, mid)
+        top_members_by_contacts.append(
+            {"member_id": mid, "count": cnt, "name": member.name if member else None}
+        )
 
     return templates.TemplateResponse(
         "admin_dashboard.html",
@@ -149,9 +227,14 @@ async def admin_dashboard(
             "drafts": drafts,
             "total_emails_sent": total_emails_sent,
             "outreach_summary": outreach_summary,
+            "outreach_trend_7d": outreach_trend_7d,
+            "outreach_trend_30d": outreach_trend_30d,
+            "last_update_sent_at": last_update_sent_at,
+            "last_update_title": last_update_title,
             "subscriber_rate_pct": subscriber_rate_pct,
             "active_campaign": active_campaign,
             "active_campaign_actions": active_campaign_actions,
+            "top_members_by_contacts": top_members_by_contacts,
         },
     )
 
@@ -380,6 +463,57 @@ async def admin_outreach_page(
     return templates.TemplateResponse(
         "admin_outreach.html",
         {"request": request, "conversion_data": data},
+    )
+
+
+async def _get_kei_poll_results(db: AsyncSession) -> dict[str, Any]:
+    """Verified-only kei poll counts (from User). For admin display."""
+    result = await db.execute(
+        select(User.kei_status, func.count())
+        .where(User.kei_status.isnot(None))
+        .where(User.last_login_at.isnot(None))
+        .group_by(User.kei_status)
+    )
+    by_status: dict[str, int] = {row[0]: row[1] for row in result.all()}
+    total = sum(by_status.values())
+    return {
+        "by_status": {slug: by_status.get(slug, 0) for slug in KEI_STATUS_SLUGS},
+        "total_responses": total,
+    }
+
+
+async def _get_kei_poll_all_responses(db: AsyncSession) -> dict[str, Any]:
+    """All kei poll response counts (from kei_poll_responses table)."""
+    result = await db.execute(
+        select(KeiPollResponse.kei_status, func.count())
+        .where(KeiPollResponse.kei_status.isnot(None))
+        .group_by(KeiPollResponse.kei_status)
+    )
+    by_status: dict[str, int] = {row[0]: row[1] for row in result.all()}
+    total = sum(by_status.values())
+    return {
+        "by_status": {slug: by_status.get(slug, 0) for slug in KEI_STATUS_SLUGS},
+        "total_responses": total,
+    }
+
+
+@router.get("/admin/poll", include_in_schema=False)
+async def admin_poll_page(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+):
+    """Kei poll results: verified users and all responses; pie chart + table toggle."""
+    verified = await _get_kei_poll_results(db)
+    all_responses = await _get_kei_poll_all_responses(db)
+    return templates.TemplateResponse(
+        "admin_poll.html",
+        {
+            "request": request,
+            "verified": verified,
+            "all_responses": all_responses,
+            "kei_status_options": KEI_STATUS_OPTIONS,
+        },
     )
 
 

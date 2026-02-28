@@ -14,6 +14,7 @@ from strawberry.fastapi import GraphQLRouter
 
 from . import config as cfg
 from .app_state import state
+from .constants import KEI_STATUS_OPTIONS
 from .middleware import register_middleware
 from .routers.admin import router as _admin_router
 from .routers.advocacy import router as _advocacy_router
@@ -31,10 +32,9 @@ from .routers.explore import router as _explore_router
 from .routers.feedback import router as _feedback_router
 from .routers.home import router as _home_router
 from .routers.intelligence import router as _intelligence_router
-from .routers.legal import router as _legal_router
 from .routers.outreach import router as _outreach_router
-from .routers.site import router as _site_router
 from .routers.updates import router as _updates_router
+from .session_schedule import get_milestone_by_id, get_next_deadline_safe
 
 # ── Configure logging ────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -128,6 +128,19 @@ templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
 templates.env.globals["hero_urgency_line"] = HERO_URGENCY_LINE
 templates.env.globals["hero_clarity_line"] = HERO_CLARITY_LINE
 templates.env.globals["features"] = cfg.get_client_features()
+templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
+
+
+templates.env.globals["get_next_deadline"] = get_next_deadline_safe
+templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
+
+
+def _get_current_action_campaign(request: Request) -> object | None:
+    """Return active campaign for the request (set by middleware) for base template top bar."""
+    return getattr(request.state, "current_action_campaign", None)
+
+
+templates.env.globals["get_current_action_campaign"] = _get_current_action_campaign
 
 
 def _get_current_action_campaign(request: Request) -> object | None:
@@ -314,7 +327,6 @@ register_middleware(app)
 
 app.include_router(graphql_app, prefix="/graphql")
 app.include_router(_home_router)
-app.include_router(_site_router)
 app.include_router(_admin_router)
 app.include_router(_campaigns_router)
 app.include_router(_dev_router, prefix="/dev")
@@ -324,7 +336,6 @@ app.include_router(_auth_router)
 app.include_router(_content_router)
 app.include_router(_updates_router)
 app.include_router(_feedback_router)
-app.include_router(_legal_router)
 app.include_router(_bills_router, prefix="/api")
 app.include_router(_explore_router)
 app.include_router(_intelligence_router, prefix="/intelligence")

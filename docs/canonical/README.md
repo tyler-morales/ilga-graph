@@ -37,7 +37,7 @@ This doc defines the **approved sources** for all substantive content on the sit
 ### 4. Fact sheet for volunteers
 
 - **PDF:** `/static/advocacy/Kei_Registration_Fact_Sheet.pdf` (linked from The Issue sidebar as "Fact sheet for volunteers"). Place the file at this path; you can generate it by printing the `/fact-sheet` page to PDF.
-- **Canonical text in repo:** `content.py` — `FACT_SHEET_ISSUE`, `FACT_SHEET_POSITION`, `FACT_SHEET_SUPPORTERS_PLACEHOLDER`, plus `STRATEGIC_FIVE_POINTS` and selected `FAQ_ADVOCACY` items. The web page at `/fact-sheet` renders this content.
+- **Canonical text in repo:** `content.py` — `FACT_SHEET_ISSUE`, `FACT_SHEET_POSITION`, plus `STRATEGIC_FIVE_POINTS` and selected `FAQ_ADVOCACY` items. The web page at `/fact-sheet` renders this content.
 - **Rule:** Fact sheet copy must match these constants and `docs/advocacy/focused-next-steps-1-2-4-5-6.md` §5. Do not invent.
 
 ### 5. FAQs
@@ -52,8 +52,8 @@ This doc defines the **approved sources** for all substantive content on the sit
 
 ### 7. Session schedule (House/Senate)
 
-- **Where:** `reference/session_schedule.json` — single source of truth for Illinois General Assembly session dates, deadlines, and holidays (104th GA Spring 2026). Loaded at runtime by `src/ilga_graph/session_schedule.py` (`load_schedule()`, `get_all_deadlines()`, etc.).
-- **Used on:** The Issue page (FAQ “Session calendar & deadlines” and key-deadlines list), and any future reminders or date-driven copy.
+- **Where:** `reference/session_schedule.json` — single source of truth for Illinois General Assembly session dates, deadlines, and holidays (104th GA Spring 2026). Loaded at runtime by `src/ilga_graph/session_schedule.py` (`load_schedule()`, `get_all_deadlines()`, `session_label()`, etc.).
+- **Used on:** The Issue page (FAQ “Session calendar & deadlines” and key-deadlines list), the **Timeline page** (`/timeline` — "Key session deadlines" section), and any future reminders or date-driven copy.
 - **Rule:** All session dates, deadlines, and reminders must be derived from this file. Do not hardcode session or deadline dates elsewhere. When the session calendar changes, update `reference/session_schedule.json`.
 
 ## Adding or changing canonical text
@@ -61,7 +61,7 @@ This doc defines the **approved sources** for all substantive content on the sit
 - **Strategic message:** Edit `STRATEGIC_MISSION`, `STRATEGIC_VISION`, `STRATEGIC_SUCCESS_MEASURE`, `STRATEGIC_FIVE_POINTS` in content.py.
 - **Legislator brief:** Edit `IL_Kei_Vehicle_Registration_Fix_Brief 1.txt` in the repo root. The legislator brief page reads it at request time. Keep the PDF in sync for downloads.
 - **Constituent brief:** Edit `Illinois_Kei_Vehicle_Registration_Constituent_Brief.txt` in the repo root. The Issue page narrative reads it at request time. Keep the PDF in sync for downloads.
-- **Fact sheet:** Edit `FACT_SHEET_ISSUE`, `FACT_SHEET_POSITION`, `FACT_SHEET_SUPPORTERS_PLACEHOLDER` in content.py. The `/fact-sheet` page renders this; for the sidebar document, place a PDF at `src/ilga_graph/static/advocacy/Kei_Registration_Fact_Sheet.pdf` (e.g. print /fact-sheet to PDF).
+- **Fact sheet:** Edit `FACT_SHEET_ISSUE`, `FACT_SHEET_POSITION` in content.py. The `/fact-sheet` page renders this; for the sidebar document, place a PDF at `src/ilga_graph/static/advocacy/Kei_Registration_Fact_Sheet.pdf` (e.g. print /fact-sheet to PDF).
 - **FAQs:** Edit `FAQ_LAW`, `FAQ_ADVOCACY`, `FAQ_SESSION`, and `FAQ_LEGISLATORS` in content.py.
 - **Session schedule:** Edit `reference/session_schedule.json`. Code reads it via `ilga_graph.session_schedule`; do not duplicate dates in content.py or templates.
 

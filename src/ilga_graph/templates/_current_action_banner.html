@@ -4,6 +4,7 @@
 {% set _banner_id = 'current-action-banner-inline' if _slot == 'inline' else 'current-action-banner' %}
 {% set _dismiss_key = 'ilga_current_action_banner_inline_dismissed' if _slot == 'inline' else
 'ilga_current_action_banner_dismissed' %}
+{% set _milestone = get_milestone_by_id(active_campaign.session_milestone_id) if active_campaign.session_milestone_id else none %}
 <div class="current-action-banner{% if _full %} current-action-banner--full{% endif %}" id="{{ _banner_id }}"
   role="region" aria-label="Current action" data-dismiss-key="{{ _dismiss_key }}">
   <span class="current-action-banner-emoji" aria-hidden="true">📢</span>
@@ -12,6 +13,9 @@
     {{ active_campaign.title }} —
     {% if _full and active_campaign.message and (active_campaign.message|lower != active_campaign.ask|lower) %}
     {{ active_campaign.message }} —
+    {% endif %}
+    {% if _milestone %}
+    <span class="current-action-banner-milestone">Contact before {{ _milestone.label }} ({{ _milestone.date }})</span> —
     {% endif %}
     <a href="/advocacy#zip_code" class="current-action-banner-cta">{{ active_campaign.ask }}</a>
   </span>

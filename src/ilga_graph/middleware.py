@@ -89,6 +89,7 @@ def register_middleware(app: FastAPI) -> None:
             if (
                 not browser_get
                 and path not in exempt
+                and not path.startswith("/admin")
                 and not path.startswith("/advocacy")
                 and not path.startswith("/auth")
                 and not path.startswith("/outreach")
