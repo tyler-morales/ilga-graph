@@ -59,6 +59,27 @@ from .graphql_query import (  # noqa: E402, F401 - _member_career_start for test
 from .loaders import create_loaders  # noqa: E402
 from .startup import lifespan  # noqa: E402
 
+# #region agent log
+try:
+    import json as _json
+    import os as _os
+    import time as _t
+
+    _path = _os.path.join(_os.environ.get("TMPDIR", "/tmp"), "debug-d3a55a.log")
+    with open(_path, "a") as _f:
+        payload = {
+            "sessionId": "d3a55a",
+            "location": "main.py",
+            "message": "main_loaded",
+            "hypothesisId": "H3",
+            "data": {},
+            "timestamp": int(_t.time() * 1000),
+        }
+        _f.write(_json.dumps(payload) + "\n")
+except Exception:
+    pass
+# #endregion
+
 
 async def get_graphql_context() -> dict:
     """Request-scoped context with state and batch loaders for GraphQL."""
@@ -114,6 +135,14 @@ templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
+
+
+def _get_current_action_campaign(request: Request) -> object | None:
+    """Return active campaign for the request (set by middleware) for base template top bar."""
+    return getattr(request.state, "current_action_campaign", None)
+
+
+templates.env.globals["get_current_action_campaign"] = _get_current_action_campaign
 
 
 def _get_current_action_campaign(request: Request) -> object | None:
