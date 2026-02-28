@@ -473,6 +473,86 @@ class TestSubscribeUnsubscribe:
         assert resp.status_code == 400
         assert b"valid" in resp.content.lower() or b"email" in resp.content.lower()
 
+    def test_kei_status_authenticated_sets_status(
+        self, authed_client: TestClient, test_db_path: Path
+    ) -> None:
+        """POST /updates/kei-status with auth sets user.kei_status."""
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            importlib.reload(updates_router_mod)
+        resp = authed_client.post(
+            "/updates/kei-status",
+            data={"kei_status": "would_want"},
+            headers={"HX-Request": "true"},
+        )
+        assert resp.status_code == 200
+        assert b"Thanks" in resp.content or b"community" in resp.content
+
+        async def check():
+            from sqlalchemy import select
+
+            from ilga_graph.db_models import User
+
+            async with db_mod.async_session_factory() as session:
+                r = await session.execute(select(User))
+                users = list(r.scalars().all())
+                assert len(users) >= 1
+                u = next((x for x in users if x.email == "subscriber@example.com"), None)
+                assert u is not None
+                assert u.kei_status == "would_want"
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(check())
+
+    def test_kei_status_anonymous_with_email_creates_user(
+        self, client: TestClient, test_db_path: Path
+    ) -> None:
+        """POST /updates/kei-status without auth but with email get-or-creates user with kei_status."""
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            importlib.reload(updates_router_mod)
+        resp = client.post(
+            "/updates/kei-status",
+            data={"kei_status": "registered", "email": "kei.poll@example.com"},
+            headers={"HX-Request": "true"},
+        )
+        assert resp.status_code == 200
+
+        async def check():
+            from sqlalchemy import select
+
+            from ilga_graph.db_models import User
+
+            async with db_mod.async_session_factory() as session:
+                r = await session.execute(
+                    select(User).where(User.email == "kei.poll@example.com")
+                )
+                u = r.scalar_one_or_none()
+                assert u is not None
+                assert u.kei_status == "registered"
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(check())
+
+    def test_kei_status_invalid_slug_returns_400(
+        self, client: TestClient, test_db_path: Path
+    ) -> None:
+        """POST /updates/kei-status with invalid kei_status returns 400."""
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            importlib.reload(updates_router_mod)
+        resp = client.post(
+            "/updates/kei-status",
+            data={"kei_status": "invalid_slug", "email": "a@b.co"},
+            headers={"HX-Request": "true"},
+        )
+        assert resp.status_code == 400
+
 
 class TestAdminGate:
     """Admin routes require admin email."""

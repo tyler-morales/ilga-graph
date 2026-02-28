@@ -10,7 +10,7 @@ import importlib
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import FastAPI
@@ -178,6 +178,47 @@ class TestAuthVerifyRoundtrip:
         # kei_status present when auth /me returns it (sprint-3)
         if "kei_status" in data:
             assert data["kei_status"] is None or isinstance(data["kei_status"], str)
+
+    def test_welcome_email_sent_on_first_verify(self, client: TestClient, test_db_path: Path) -> None:
+        """First sign-in triggers welcome email and sets welcome_email_sent_at."""
+        import asyncio
+
+        from sqlalchemy import select
+
+        from ilga_graph.db_models import User
+
+        email = "welcome@example.com"
+        known_code = "789012"
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            asyncio.run(_add_auth_code(email, known_code))
+
+        with patch(
+            "ilga_graph.routers.auth.send_welcome_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_send:
+            resp = client.post(
+                "/auth/verify-code",
+                data=_data_with_csrf(client, {"email": email, "code": known_code}),
+            )
+            assert resp.status_code == 200
+            assert resp.json().get("ok") is True
+            mock_send.assert_called_once_with(email)
+
+        async def check_user():
+            with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+                importlib.reload(db_mod)
+                async with db_mod.async_session_factory() as session:
+                    r = await session.execute(select(User).where(User.email == email))
+                    u = r.scalar_one_or_none()
+                    assert u is not None
+                    assert getattr(u, "welcome_email_sent_at", None) is not None
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(check_user())
 
 
 class TestOutreachRecord:
