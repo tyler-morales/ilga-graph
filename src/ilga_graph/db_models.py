@@ -23,6 +23,10 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False)
     zip_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
     wants_updates: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    kei_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    welcome_email_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
