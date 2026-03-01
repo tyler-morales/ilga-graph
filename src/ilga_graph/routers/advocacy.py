@@ -9,13 +9,14 @@ from typing import Any
 from urllib.parse import urljoin
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import advocacy_helpers as ah
 from .. import config as cfg
+from ..advocacy_helpers import CallerProfile
 from ..app_state import state
 from ..campaign_config import get_campaign_config
 from ..campaign_helpers import get_active_campaign, is_campaign_visible_to_zip
@@ -25,13 +26,23 @@ from ..constants import (
     CATEGORY_CHOICES,
     CATEGORY_COMMITTEES,
     GENERAL_COMMITTEE_CODES,
+    KEI_FIRST_OPTIONS,
+    KEI_IMPACT_OPTIONS,
+    KEI_IMPACT_SLUG_COOKIE,
+    KEI_STATUS_BY_FIRST,
     KEI_STATUS_OPTIONS,
+    KEI_STATUS_SLUGS,
 )
 from ..data_source import is_using_mocks
 from ..db import get_db
-from ..db_models import OutreachEvent, User
+from ..db_models import KeiPollResponse, OutreachEvent, Poll, PollResponse, User
 from ..dependencies import get_current_user_optional, require_user
-from ..kei_poll_context import get_kei_poll_sidebar_context
+from ..kei_poll_context import (
+    KEI_POLL_CHOICE_COOKIE,
+    KEI_POLL_VOTED_COOKIE,
+    KEI_POLL_VOTED_MAX_AGE,
+    get_kei_poll_sidebar_context,
+)
 from ..member_lookup import (
     find_member_by_district,
     find_member_by_id,
@@ -42,7 +53,7 @@ from ..routers.content import (
     HERO_URGENCY_LINE,
     STRATEGIC_FIVE_POINTS,
 )
-from ..routers.outreach import get_outreach_aggregate
+from ..routers.outreach import get_outreach_aggregate, get_outreach_count_for_member
 from ..security import (
     CSRF_COOKIE_NAME,
     validate_csrf_token,
@@ -53,6 +64,91 @@ from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
 _ZIP_RE = re.compile(r"^\d{5}$")
 # Pre-fill hero ZIP in dev/mocks; must exist in state.zip_to_district.
 DEFAULT_HERO_ZIP = "60007"
+
+
+async def _dual_write_kei_poll(
+    db: AsyncSession,
+    user_id: int | None,
+    kei_status: str,
+    session_id: str | None,
+) -> None:
+    """Write kei poll to KeiPollResponse and PollResponse (campaign poll) for counts sync."""
+    db.add(KeiPollResponse(user_id=user_id, session_id=session_id, kei_status=kei_status))
+    poll_slug = get_campaign_config().poll_slug or "kei"
+    campaign_poll = (
+        await db.execute(select(Poll).where(Poll.slug == poll_slug))
+    ).scalar_one_or_none()
+    if campaign_poll:
+        db.add(
+            PollResponse(
+                poll_id=campaign_poll.id,
+                user_id=user_id,
+                session_id=session_id,
+                option_slug=kei_status,
+            )
+        )
+
+
+async def _dual_write_kei_impact(db: AsyncSession, user_id: int, option_slug: str) -> None:
+    """Write impact choice to kei_impact poll for aggregate results (verified users only)."""
+    impact_poll = (
+        await db.execute(select(Poll).where(Poll.slug == "kei_impact"))
+    ).scalar_one_or_none()
+    if impact_poll:
+        db.add(
+            PollResponse(
+                poll_id=impact_poll.id,
+                user_id=user_id,
+                session_id=None,
+                option_slug=option_slug,
+            )
+        )
+
+
+# Cookie names for script personalization (anon users and skip flag).
+KEI_PERSONAL_NOTE_COOKIE = "kei_personal_note"
+KEI_PERSONALIZATION_SKIPPED_COOKIE = "kei_personalization_skipped"
+PERSONALIZATION_COOKIE_MAX_AGE = 365 * 24 * 60 * 60  # 1 year
+
+
+def _caller_profile_from_request(request: Request, user: User | None) -> CallerProfile:
+    """Build CallerProfile from user record or cookies (anon)."""
+    if user:
+        return CallerProfile(
+            kei_status=getattr(user, "kei_status", None),
+            kei_impact_slug=getattr(user, "kei_impact_slug", None),
+            kei_personal_note=getattr(user, "kei_personal_note", None),
+        )
+    choice = request.cookies.get(KEI_POLL_CHOICE_COOKIE)
+    kei_status = choice.strip() if choice and choice.strip() in KEI_STATUS_SLUGS else None
+    impact = request.cookies.get(KEI_IMPACT_SLUG_COOKIE)
+    note = request.cookies.get(KEI_PERSONAL_NOTE_COOKIE)
+    return CallerProfile(
+        kei_status=kei_status,
+        kei_impact_slug=impact.strip() if impact and impact.strip() else None,
+        kei_personal_note=note.strip() if note and note.strip() else None,
+    )
+
+
+def _caller_profile_complete(caller: CallerProfile, request: Request) -> bool:
+    """True if we show script directly (skip cookie, or poll answered, or impact/note captured)."""
+    if request.cookies.get(KEI_PERSONALIZATION_SKIPPED_COOKIE) == "1":
+        return True
+    if caller.kei_status:
+        return True
+    return bool(caller.kei_impact_slug or caller.kei_personal_note)
+
+
+def _validate_kei_impact_slug(slug: str | None, kei_status: str | None) -> str | None:
+    """Return slug if valid for the given kei_status, else None. 'other' is always allowed."""
+    if not slug or not (s := slug.strip()):
+        return None
+    if s == "other":
+        return s
+    options = KEI_IMPACT_OPTIONS.get(kei_status or "", []) if kei_status else []
+    valid = {opt[0] for opt in options}
+    return s if s in valid else None
+
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
 _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
@@ -146,12 +242,16 @@ def _hero_context_advocacy() -> dict[str, Any]:
 
 
 async def _build_search_results_context(
+    request: Request,
     zip_code: str,
     category: str,
     db: AsyncSession,
     user: User | None,
+    *,
+    calls_total: int = 0,
 ) -> dict[str, Any]:
     """Build context for the results partial. Assumes zip_code is in state.zip_to_district."""
+    caller = _caller_profile_from_request(request, user)
     district_info = state.zip_to_district[zip_code]
     senate_district = district_info.il_senate
     house_district = district_info.il_house
@@ -177,18 +277,21 @@ async def _build_search_results_context(
             relevant_committee_codes=relevant_committee_codes,
         )
         senator_card["script_hint"] = ah.build_script_hint_senator(
-            senator_card, zip_code, senate_district
+            senator_card, zip_code, senate_district, calls_total=calls_total
         )
         senator_card["script_sections"] = ah.build_script_sections_senator(
-            senator_card, zip_code, senate_district
+            senator_card, zip_code, senate_district, calls_total=calls_total
         )
-        senator_card["email_subject"] = ah.build_email_subject(zip_code)
+        senator_card["email_subject"] = ah.build_email_subject(zip_code, district=senate_district)
         senator_card["email_body"] = ah.build_email_body(
             senator_member.name,
             senator_card["script_hint"],
             has_public_email=bool(senator_member.email),
             chamber=senator_member.chamber,
+            district=senate_district,
             one_pager_points=_one_pager_points(),
+            calls_total=calls_total,
+            caller=caller,
         )
     elif senate_district:
         warnings.append(
@@ -205,17 +308,22 @@ async def _build_search_results_context(
             why=f"Represents IL House District {house_district}, which contains ZIP {zip_code}.",
             relevant_committee_codes=relevant_committee_codes,
         )
-        rep_card["script_hint"] = ah.build_script_hint_rep(rep_card, zip_code, house_district)
-        rep_card["script_sections"] = ah.build_script_sections_rep(
-            rep_card, zip_code, house_district
+        rep_card["script_hint"] = ah.build_script_hint_rep(
+            rep_card, zip_code, house_district, calls_total=calls_total
         )
-        rep_card["email_subject"] = ah.build_email_subject(zip_code)
+        rep_card["script_sections"] = ah.build_script_sections_rep(
+            rep_card, zip_code, house_district, calls_total=calls_total
+        )
+        rep_card["email_subject"] = ah.build_email_subject(zip_code, district=house_district)
         rep_card["email_body"] = ah.build_email_body(
             rep_member.name,
             rep_card["script_hint"],
             has_public_email=bool(rep_member.email),
             chamber=rep_member.chamber,
+            district=house_district,
             one_pager_points=_one_pager_points(),
+            calls_total=calls_total,
+            caller=caller,
         )
     elif house_district:
         warnings.append(
@@ -253,15 +361,24 @@ async def _build_search_results_context(
             why=broker_why,
             relevant_committee_codes=relevant_committee_codes,
         )
-        broker_card["script_hint"] = ah.build_script_hint_broker(broker_card, broker_why)
-        broker_card["script_sections"] = ah.build_script_sections_broker(broker_card, broker_why)
-        broker_card["email_subject"] = ah.build_email_subject(zip_code)
+        broker_card["script_hint"] = ah.build_script_hint_broker(
+            broker_card, broker_why, calls_total=calls_total
+        )
+        broker_card["script_sections"] = ah.build_script_sections_broker(
+            broker_card, broker_why, calls_total=calls_total
+        )
+        broker_card["email_subject"] = ah.build_email_subject(
+            zip_code, district=getattr(broker_member, "district", None)
+        )
         broker_card["email_body"] = ah.build_email_body(
             broker_member.name,
             broker_card["script_hint"],
             has_public_email=bool(broker_member.email),
             chamber=broker_member.chamber,
+            district=getattr(broker_member, "district", None),
             one_pager_points=_one_pager_points(),
+            calls_total=calls_total,
+            caller=caller,
         )
 
     error = "; ".join(warnings) if warnings else None
@@ -473,6 +590,7 @@ async def _build_search_results_context(
         "outreach_calls_count": outreach_calls_count,
         "outreach_emails_count": outreach_emails_count,
         "show_my_outreach": user is not None,
+        "calls_total": calls_total,
     }
 
 
@@ -522,7 +640,9 @@ async def advocacy_index(
     elif cfg.DEV_MODE or is_using_mocks():
         ctx["zip"] = DEFAULT_HERO_ZIP
     if zip_param and in_district:
-        results_ctx = await _build_search_results_context(zip_param, _default_topic(), db, user)
+        results_ctx = await _build_search_results_context(
+            request, zip_param, _default_topic(), db, user, calls_total=calls_total
+        )
         ctx.update(results_ctx)
         ctx.update(await get_kei_poll_sidebar_context(request, user, db))
     elif zip_param and not in_district:
@@ -662,12 +782,19 @@ async def advocacy_drawer(
         )
     is_constituent = is_constituent_for_zip_member(state, zip_code, member)
     legislator_name = member.name if member else ""
-    phone = ah.get_preferred_phone_for_member(member)
     effective_email, email_source, community_verification = await get_effective_email_for_member(
         state, db, member_id_stripped
     )
     has_public_email = bool(effective_email)
     recipient_email = effective_email
+
+    caller = _caller_profile_from_request(request, user)
+    show_personalization = (
+        view == "call"
+        and member_id_stripped
+        and member is not None
+        and not _caller_profile_complete(caller, request)
+    )
 
     if view == "email":
         show_call_nudge = True
@@ -686,7 +813,14 @@ async def advocacy_drawer(
         target_type = "POWER_BROKER" if target_type_param == "POWER_BROKER" else "NON_COMMITTEE"
         chamber = getattr(member, "chamber", None) if member else None
         district = getattr(member, "district", None) if member else None
-        subject_constituent = ah.build_email_subject_line(zip_code, variant="constituent")
+        try:
+            agg = await get_outreach_aggregate(db)
+            drawer_calls_total = agg["calls_total"]
+        except Exception:
+            drawer_calls_total = 0
+        subject_constituent = ah.build_email_subject_line(
+            zip_code, variant="constituent", district=district
+        )
         subject_general = ah.build_email_subject_line(zip_code, variant="general")
         body = ah.build_email_first_body(
             legislator_name,
@@ -695,6 +829,8 @@ async def advocacy_drawer(
             district=district,
             target_type=target_type,
             one_pager_points=_one_pager_points(),
+            calls_total=drawer_calls_total,
+            caller=caller,
         )
         body_followup = ah.build_after_call_email_body(
             "",
@@ -705,6 +841,8 @@ async def advocacy_drawer(
             target_type=target_type,
             call_date="",
             one_pager_points=_one_pager_points(),
+            calls_total=drawer_calls_total,
+            caller=caller,
         )
         legislator_display_name = ah.get_legislator_display_name(legislator_name, chamber, district)
         party_abbr = ah.party_abbr_for_member(member)
@@ -740,13 +878,335 @@ async def advocacy_drawer(
             },
         )
 
-    photo_url = photo_url_validated or (getattr(member, "photo_url", "") or "" if member else "")
+    if show_personalization:
+        photo_url_for_personalize = photo_url_validated or (
+            (getattr(member, "photo_url", "") or "") if member else ""
+        )
+        if photo_url_for_personalize and not photo_url_for_personalize.startswith(
+            ("http://", "https://")
+        ):
+            photo_url_for_personalize = urljoin("https://www.ilga.gov/", photo_url_for_personalize)
+        # Flat list (slug, label, first_choice) for step 2; template uses data-first to show 3 or 2.
+        kei_status_with_first = [
+            (slug, label, first_key)
+            for first_key, opts in KEI_STATUS_BY_FIRST.items()
+            for slug, label in opts
+        ]
+        return templates.TemplateResponse(
+            "_kei_personalize_drawer.html",
+            {
+                "request": request,
+                "member_id": member_id_stripped,
+                "zip_code": zip_code,
+                "photo_url": photo_url_for_personalize,
+                "target_type": target_type_param or "NON_COMMITTEE",
+                "legislator_name": legislator_name,
+                "is_constituent": is_constituent,
+                "kei_first_options": KEI_FIRST_OPTIONS,
+                "kei_status_options": KEI_STATUS_OPTIONS,
+                "kei_status_with_first": kei_status_with_first,
+                "kei_status_selected": caller.kei_status,
+                "kei_impact_options": KEI_IMPACT_OPTIONS.get(caller.kei_status or "", []),
+                "kei_impact_options_by_status": KEI_IMPACT_OPTIONS,
+            },
+        )
+
+    return await _render_call_drawer(
+        request,
+        member_id_stripped,
+        zip_code,
+        photo_url_validated,
+        target_type_param,
+        user,
+        db,
+        caller,
+    )
+
+
+@router.post("/personalize-poll")
+async def advocacy_personalize_poll(
+    request: Request,
+    kei_status: str | None = Form(None),
+    kei_impact_slug: str | None = Form(None),
+    csrf_token: str | None = Form(None),
+    db: AsyncSession = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+):
+    """Persist poll choice (step 2/3) when user answers; called from JS, no HTML swap."""
+    cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
+    if not validate_csrf_token(csrf_token, cookie_token):
+        raise HTTPException(status_code=403, detail="Invalid or missing CSRF token")
+    updated_caller = _caller_profile_from_request(request, user)
+    raw_status = (kei_status or "").strip()
+    kei_status_val = raw_status if raw_status in KEI_STATUS_SLUGS else None
+    impact_val = _validate_kei_impact_slug(
+        (kei_impact_slug or "").strip() or None, updated_caller.kei_status or kei_status_val
+    )
+    cookies_to_set: list[dict[str, Any]] = []
+    if user:
+        if kei_status_val:
+            user.kei_status = kei_status_val
+        if impact_val is not None:
+            user.kei_impact_slug = impact_val
+            await _dual_write_kei_impact(db, user.id, impact_val)
+        if kei_status_val or impact_val is not None:
+            await _dual_write_kei_poll(db, user.id, kei_status_val, None)
+            await db.commit()
+    else:
+        if kei_status_val:
+            cookies_to_set.append(
+                {
+                    "key": KEI_POLL_CHOICE_COOKIE,
+                    "value": kei_status_val,
+                    "max_age": PERSONALIZATION_COOKIE_MAX_AGE,
+                    "path": "/",
+                    "httponly": False,
+                    "samesite": "lax",
+                }
+            )
+            cookies_to_set.append(
+                {
+                    "key": KEI_POLL_VOTED_COOKIE,
+                    "value": "1",
+                    "max_age": KEI_POLL_VOTED_MAX_AGE,
+                    "path": "/",
+                    "httponly": False,
+                    "samesite": "lax",
+                }
+            )
+        if impact_val:
+            cookies_to_set.append(
+                {
+                    "key": KEI_IMPACT_SLUG_COOKIE,
+                    "value": impact_val,
+                    "max_age": PERSONALIZATION_COOKIE_MAX_AGE,
+                    "path": "/",
+                    "httponly": False,
+                    "samesite": "lax",
+                }
+            )
+        if kei_status_val:
+            await _dual_write_kei_poll(db, None, kei_status_val, None)
+            await db.commit()
+    resp = JSONResponse({"ok": True})
+    for params in cookies_to_set:
+        resp.set_cookie(**params)
+    return resp
+
+
+@router.post("/personalize")
+async def advocacy_personalize(
+    request: Request,
+    member_id: str = Form(""),
+    zip_code: str = Form(""),
+    photo_url: str = Form(""),
+    target_type: str = Form("NON_COMMITTEE"),
+    kei_status: str | None = Form(None),
+    kei_impact_slug: str | None = Form(None),
+    kei_personal_note: str | None = Form(None),
+    skip: str | None = Form(None),
+    constituent: str = Form(""),
+    csrf_token: str | None = Form(None),
+    db: AsyncSession = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+):
+    """Save script personalization (impact + note); return call drawer HTML for HTMX swap."""
+    cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
+    if not validate_csrf_token(csrf_token, cookie_token):
+        raise HTTPException(status_code=403, detail="Invalid or missing CSRF token")
+    mid = (member_id or "").strip()
+    zip_val = (zip_code or "").strip() if _ZIP_RE.match((zip_code or "").strip()) else ""
+    member = find_member_by_id(state, mid) if mid else None
+    if not mid or not member:
+        raise HTTPException(status_code=404, detail="Legislator not found")
+
+    cookies_to_set: list[dict[str, Any]] = []
+    updated_caller = _caller_profile_from_request(request, user)
+
+    if (skip or "").strip() == "1":
+        cookies_to_set.append(
+            {
+                "key": KEI_PERSONALIZATION_SKIPPED_COOKIE,
+                "value": "1",
+                "max_age": PERSONALIZATION_COOKIE_MAX_AGE,
+                "path": "/",
+                "httponly": False,
+                "samesite": "lax",
+            }
+        )
+    else:
+        raw_s = (kei_status or "").strip()
+        kei_status_val = raw_s if raw_s in KEI_STATUS_SLUGS else None
+        impact_val = _validate_kei_impact_slug(
+            (kei_impact_slug or "").strip() or None,
+            updated_caller.kei_status or kei_status_val,
+        )
+        raw_note = (kei_personal_note or "").strip()
+        note_val = raw_note[:200] if raw_note else None
+        if user:
+            if kei_status_val:
+                user.kei_status = kei_status_val
+                await _dual_write_kei_poll(db, user.id, kei_status_val, None)
+            if impact_val is not None:
+                user.kei_impact_slug = impact_val
+                await _dual_write_kei_impact(db, user.id, impact_val)
+            if note_val is not None:
+                user.kei_personal_note = note_val
+            await db.commit()
+        else:
+            if kei_status_val:
+                cookies_to_set.append(
+                    {
+                        "key": KEI_POLL_CHOICE_COOKIE,
+                        "value": kei_status_val,
+                        "max_age": PERSONALIZATION_COOKIE_MAX_AGE,
+                        "path": "/",
+                        "httponly": False,
+                        "samesite": "lax",
+                    }
+                )
+                cookies_to_set.append(
+                    {
+                        "key": KEI_POLL_VOTED_COOKIE,
+                        "value": "1",
+                        "max_age": KEI_POLL_VOTED_MAX_AGE,
+                        "path": "/",
+                        "httponly": False,
+                        "samesite": "lax",
+                    }
+                )
+                await _dual_write_kei_poll(db, None, kei_status_val, None)
+                await db.commit()
+            if impact_val:
+                cookies_to_set.append(
+                    {
+                        "key": KEI_IMPACT_SLUG_COOKIE,
+                        "value": impact_val,
+                        "max_age": PERSONALIZATION_COOKIE_MAX_AGE,
+                        "path": "/",
+                        "httponly": False,
+                        "samesite": "lax",
+                    }
+                )
+            if note_val is not None:
+                cookies_to_set.append(
+                    {
+                        "key": KEI_PERSONAL_NOTE_COOKIE,
+                        "value": note_val,
+                        "max_age": PERSONALIZATION_COOKIE_MAX_AGE,
+                        "path": "/",
+                        "httponly": False,
+                        "samesite": "lax",
+                    }
+                )
+        updated_caller = CallerProfile(
+            kei_status=kei_status_val or updated_caller.kei_status,
+            kei_impact_slug=impact_val or updated_caller.kei_impact_slug,
+            kei_personal_note=note_val
+            if note_val is not None
+            else updated_caller.kei_personal_note,
+        )
+
+    photo_url_validated = validate_photo_url_for_drawer((photo_url or "").strip() or None)
+    target_type_param = (target_type or "NON_COMMITTEE").strip().upper()
+    constituent_override: bool | None = None
+    if (constituent or "").strip().lower() in ("1", "true", "yes"):
+        constituent_override = True
+    elif (constituent or "").strip().lower() in ("0", "false", "no"):
+        constituent_override = False
+    response = await _render_call_drawer(
+        request,
+        mid,
+        zip_val,
+        photo_url_validated,
+        target_type_param,
+        user,
+        db,
+        updated_caller,
+        is_constituent_override=constituent_override,
+    )
+    for params in cookies_to_set:
+        response.set_cookie(**params)
+    response.headers["HX-Trigger"] = "pollVoted"
+    return response
+
+
+async def _render_call_drawer(
+    request: Request,
+    member_id_stripped: str,
+    zip_code: str,
+    photo_url_validated: str | None,
+    target_type_param: str,
+    user: User | None,
+    db: AsyncSession,
+    caller: CallerProfile,
+    *,
+    is_constituent_override: bool | None = None,
+) -> Response:
+    """Build and return call drawer (script + wrap-up). Used by GET drawer and POST personalize."""
+    member = find_member_by_id(state, member_id_stripped)
+    if not member:
+        return JSONResponse({"detail": "Legislator not found."}, status_code=404)
+    is_constituent = (
+        is_constituent_override
+        if is_constituent_override is not None
+        else is_constituent_for_zip_member(state, zip_code, member)
+    )
+    legislator_name = member.name or ""
+    phone = ah.get_preferred_phone_for_member(member)
+    effective_email, email_source, community_verification = await get_effective_email_for_member(
+        state, db, member_id_stripped
+    )
+    photo_url = photo_url_validated or (getattr(member, "photo_url", "") or "")
     if photo_url and not photo_url.startswith(("http://", "https://")):
         photo_url = urljoin("https://www.ilga.gov/", photo_url)
-    member_public_email = effective_email
     target_type = "POWER_BROKER" if target_type_param == "POWER_BROKER" else "NON_COMMITTEE"
     drawer_ctx = ah.legislator_drawer_context(member)
-
+    try:
+        agg = await get_outreach_aggregate(db)
+        call_drawer_calls_total = agg["calls_total"]
+    except Exception:
+        call_drawer_calls_total = 0
+    contact_count_this_office = 0
+    try:
+        contact_count_this_office = await get_outreach_count_for_member(db, member_id_stripped)
+    except Exception:
+        pass
+    script_sections = None
+    if member and zip_code:
+        district_info = state.zip_to_district.get(zip_code)
+        senate_district = district_info.il_senate if district_info else ""
+        house_district = district_info.il_house if district_info else ""
+        card = ah.member_to_card(state, member, why="")
+        chamber = (getattr(member, "chamber", None) or "").strip().lower()
+        if chamber == "senate":
+            script_sections = ah.build_script_sections_senator(
+                card,
+                zip_code,
+                senate_district,
+                calls_total=call_drawer_calls_total,
+                contact_count_this_office=contact_count_this_office,
+            )
+        elif chamber == "house":
+            script_sections = ah.build_script_sections_rep(
+                card,
+                zip_code,
+                house_district,
+                calls_total=call_drawer_calls_total,
+                contact_count_this_office=contact_count_this_office,
+            )
+        else:
+            script_sections = ah.build_script_sections_broker(
+                card,
+                "This senator has high influence.",
+                calls_total=call_drawer_calls_total,
+                contact_count_this_office=contact_count_this_office,
+            )
+        if script_sections and caller and (caller.kei_status or caller.kei_impact_slug):
+            script_sections = dict(script_sections)
+            script_sections["opening"] = ah.build_personalized_opening(
+                caller, is_constituent, drawer_ctx["title_label"], drawer_ctx["legislator_last"]
+            )
     call_completed = False
     call_notes = ""
     call_contact_name = ""
@@ -769,8 +1229,7 @@ async def advocacy_drawer(
             call_contact_name = (last_call.contact_name or "").strip()
             if last_call.support_score is not None and 1 <= last_call.support_score <= 5:
                 call_support_score = last_call.support_score
-
-    response = templates.TemplateResponse(
+    resp = templates.TemplateResponse(
         "_advocacy_drawer_call.html",
         {
             "request": request,
@@ -778,9 +1237,9 @@ async def advocacy_drawer(
             "zip_code": zip_code,
             "is_constituent": is_constituent,
             "phone": phone or "",
-            "member_id": member_id or "",
+            "member_id": member_id_stripped,
             "photo_url": photo_url,
-            "member_public_email": member_public_email,
+            "member_public_email": effective_email,
             "target_type": target_type,
             "email_source": email_source,
             "community_verification": community_verification,
@@ -788,11 +1247,13 @@ async def advocacy_drawer(
             "call_notes": call_notes,
             "call_contact_name": call_contact_name,
             "call_support_score": call_support_score,
+            "calls_total": call_drawer_calls_total,
+            "script_sections": script_sections,
             **drawer_ctx,
         },
     )
-    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
-    return response
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    return resp
 
 
 @router.post("/call/{call_id}/wrapup")
@@ -800,6 +1261,7 @@ async def advocacy_call_wrapup(
     request: Request,
     call_id: str,
     db: AsyncSession = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
 ):
     """Wrap-up from call: swap drawer to Email view (prefilled or copy-only)."""
     form = await request.form()
@@ -823,8 +1285,16 @@ async def advocacy_call_wrapup(
     chamber = getattr(member, "chamber", None) if member else None
     district = getattr(member, "district", None) if member else None
     is_constituent = is_constituent_for_zip_member(state, zip_code, member)
-    subject_constituent = ah.build_email_subject_line(zip_code, variant="constituent")
+    try:
+        agg = await get_outreach_aggregate(db)
+        wrapup_calls_total = agg["calls_total"]
+    except Exception:
+        wrapup_calls_total = 0
+    subject_constituent = ah.build_email_subject_line(
+        zip_code, variant="constituent", district=district
+    )
     subject_general = ah.build_email_subject_line(zip_code, variant="general")
+    wrapup_caller = _caller_profile_from_request(request, user)
     body = ah.build_after_call_email_body(
         staffer,
         legislator_name,
@@ -834,6 +1304,8 @@ async def advocacy_call_wrapup(
         target_type=target_type,
         call_date=call_date,
         one_pager_points=_one_pager_points(),
+        calls_total=wrapup_calls_total,
+        caller=wrapup_caller,
     )
     body_first = ah.build_email_first_body(
         legislator_name,
@@ -842,6 +1314,8 @@ async def advocacy_call_wrapup(
         district=district,
         target_type=target_type,
         one_pager_points=_one_pager_points(),
+        calls_total=wrapup_calls_total,
+        caller=wrapup_caller,
     )
 
     contact_name = staffer or ""
@@ -1090,7 +1564,14 @@ async def advocacy_search(
                 ctx_error["calls_this_week"] = 0
         return templates.TemplateResponse(tpl, ctx_error)
 
-    results_ctx = await _build_search_results_context(zip_code, category, db, user)
+    try:
+        agg = await get_outreach_aggregate(db)
+        calls_total = agg["calls_total"]
+    except Exception:
+        calls_total = 0
+    results_ctx = await _build_search_results_context(
+        request, zip_code, category, db, user, calls_total=calls_total
+    )
     poll_ctx = await get_kei_poll_sidebar_context(request, user, db)
     tpl = "_results_partial.html" if is_htmx else "results.html"
     return templates.TemplateResponse(

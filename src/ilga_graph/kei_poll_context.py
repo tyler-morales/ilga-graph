@@ -8,8 +8,13 @@ from fastapi import Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .constants import KEI_STATUS_SLUGS
-from .db_models import User
+from .constants import (
+    KEI_IMPACT_ALL_OPTIONS,
+    KEI_IMPACT_SLUG_COOKIE,
+    KEI_POLL_IMPACT_SLUGS,
+    KEI_STATUS_SLUGS,
+)
+from .db_models import Poll, PollResponse, User
 
 SIDEBAR_KEI_POLL_ID = "sidebar-kei-poll"
 _KEI_POLL_IDS = frozenset(
@@ -23,6 +28,13 @@ KEI_POLL_VOTED_MAX_AGE = 365 * 24 * 60 * 60  # 1 year
 def _validate_kei_status(slug: str | None) -> str | None:
     """Return slug if valid, else None."""
     if not slug or (s := slug.strip()) not in KEI_STATUS_SLUGS:
+        return None
+    return s
+
+
+def _validate_kei_poll_impact(slug: str | None) -> str | None:
+    """Return slug if valid for main poll Q3 (universal impact), else None."""
+    if not slug or (s := slug.strip()) not in KEI_POLL_IMPACT_SLUGS:
         return None
     return s
 
@@ -43,6 +55,36 @@ async def _get_kei_status_results(db: AsyncSession) -> dict[str, Any]:
     }
 
 
+def _impact_options_for_results(by_slug: dict[str, int]) -> list[tuple[str, str]]:
+    """Full options list for impact results: KEI_IMPACT_ALL_OPTIONS plus any DB slugs not in it."""
+    known = {s for s, _ in KEI_IMPACT_ALL_OPTIONS}
+    extra = [(s, "Other") for s in by_slug if s not in known]
+    return list(KEI_IMPACT_ALL_OPTIONS) + extra
+
+
+async def _get_kei_impact_results(db: AsyncSession) -> dict[str, Any] | None:
+    """Aggregate kei_impact poll counts for verified users. Returns None if kei_impact poll missing.
+    Includes all impact options (status-specific + universal) for results display."""
+    poll = (await db.execute(select(Poll).where(Poll.slug == "kei_impact"))).scalar_one_or_none()
+    if not poll:
+        return None
+    result = await db.execute(
+        select(PollResponse.option_slug, func.count())
+        .join(User, PollResponse.user_id == User.id)
+        .where(PollResponse.poll_id == poll.id)
+        .where(User.last_login_at.isnot(None))
+        .group_by(PollResponse.option_slug)
+    )
+    by_slug: dict[str, int] = {row[0]: row[1] for row in result.all()}
+    total = sum(by_slug.values())
+    options = _impact_options_for_results(by_slug)
+    return {
+        "by_status": {s: by_slug.get(s, 0) for s, _ in options},
+        "total_responses": total,
+        "options": options,
+    }
+
+
 async def get_kei_poll_initial_state(
     request: Request,
     user: User | None,
@@ -60,10 +102,17 @@ async def get_kei_poll_initial_state(
     if not selected and voted_cookie:
         choice_cookie = request.cookies.get(KEI_POLL_CHOICE_COOKIE)
         selected = _validate_kei_status(choice_cookie) if choice_cookie else None
+    impact_selected = getattr(user, "kei_impact_slug", None) if user else None
+    if not impact_selected:
+        impact_cookie = request.cookies.get(KEI_IMPACT_SLUG_COOKIE)
+        impact_selected = _validate_kei_poll_impact(impact_cookie) if impact_cookie else None
+    impact_results = await _get_kei_impact_results(db)
     return {
         "kei_poll_done": True,
         "kei_status_results": results,
         "kei_status_selected": selected,
+        "kei_impact_selected": impact_selected,
+        "kei_impact_results": impact_results,
         "kei_poll_initial_anon": not logged_in_voted,
     }
 

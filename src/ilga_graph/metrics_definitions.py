@@ -199,6 +199,15 @@ def get_effectiveness_score_definition() -> MetricDefinition:
     )
 
 
+# ── Poll / campaign tracking (for reporting and docs) ─────────────────────────
+
+KEI_IMPACT_DEFINITION: str = (
+    "User-selected reason for caring about the issue: I support the cause, "
+    "I know someone affected, Civic duty, or Other. Collected in the main Kei poll (question 3) "
+    "and stored on User.kei_impact_slug and in the kei_impact poll for admin reporting."
+)
+
+
 # ── Glossary for API / UI ────────────────────────────────────────────────────
 
 

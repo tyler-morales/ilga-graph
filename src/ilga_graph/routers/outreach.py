@@ -287,6 +287,21 @@ async def get_outreach_aggregate(db: AsyncSession) -> dict[str, int]:
     }
 
 
+async def get_outreach_count_for_member(db: AsyncSession, member_id: str) -> int:
+    """Return total call + email events for this member (for script social proof)."""
+    if not (mid := (member_id or "").strip()):
+        return 0
+    r = await db.execute(
+        select(func.count())
+        .select_from(OutreachEvent)
+        .where(
+            OutreachEvent.member_id == mid,
+            OutreachEvent.kind.in_(["call", "email"]),
+        )
+    )
+    return r.scalar() or 0
+
+
 @router.get("/aggregate")
 async def outreach_aggregate(db: AsyncSession = Depends(get_db)):
     """Public global outreach counts for landing page social proof."""

@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import config as cfg
 from ..campaign_config import get_campaign_config
-from ..constants import KEI_STATUS_OPTIONS
+from ..constants import KEI_POLL_IMPACT_OPTIONS, KEI_STATUS_OPTIONS
 from ..db import get_db
 from ..db_models import User
 from ..dependencies import get_current_user_optional
@@ -93,6 +93,7 @@ templates.env.globals["get_current_action_campaign"] = get_current_action_campai
 templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
+templates.env.globals["kei_impact_options"] = KEI_POLL_IMPACT_OPTIONS
 templates.env.globals["why_you_care_default_cards"] = WHY_YOU_CARE_DEFAULT_CARDS
 
 
