@@ -66,6 +66,7 @@
 
 | Area              | Summary |
 |-------------------|--------|
+| **White-label / bare metal (Warlord)** | **Litestream + SQLite:** Use Litestream to stream .db changes to S3 in real time (~$0.10/mo). On Vultr failure, spin up new box, restore from Litestream backup → back online in ~60s, zero data loss. Makes bare metal safe enough to sell to clients. Optional follow-up: Caddyfile for routing landofkei.com and housingrights.org to FastAPI with automatic SSL. Do when ready to white-label. |
 | Trust/supporters  | When we have supporters: add "Led by [X]" or "Supported by [Y, Z]" near hero or footer. Not implemented yet — no supporters to list. |
 
 ---
