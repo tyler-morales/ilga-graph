@@ -92,8 +92,10 @@ def _data_with_csrf(client: TestClient, data: dict) -> dict:
     return out
 
 
-# Valid kei_status + kei_impact_slug for POST /updates/kei-status (Q2 + Q3 required).
-POLL_SUBMIT_DATA = {"kei_status": "would_want", "kei_impact_slug": "support_cause"}
+# Valid kei_status + kei_impact_slug for POST /updates/kei-status and /advocacy/personalize-poll.
+# Use "other" so it passes both: KEI_POLL_IMPACT_SLUGS (updates) and
+# KEI_IMPACT_OPTIONS["would_want"] (advocacy).
+POLL_SUBMIT_DATA = {"kei_status": "would_want", "kei_impact_slug": "other"}
 
 
 async def _add_auth_code(email: str, plain_code: str) -> None:
@@ -132,6 +134,7 @@ def client(test_db_path: Path) -> TestClient:
         importlib.reload(cfg_mod)
         importlib.reload(db_mod)
         importlib.reload(deps_mod)
+        importlib.reload(advocacy_router_mod)
         importlib.reload(updates_router_mod)
         importlib.reload(auth_router_mod)
         importlib.reload(stories_router_mod)
@@ -581,7 +584,7 @@ class TestSubscribeUnsubscribeEmail:
                 u = next((x for x in users if x.email == "subscriber@example.com"), None)
                 assert u is not None
                 assert u.kei_status == "would_want"
-                assert u.kei_impact_slug == "support_cause"
+                assert u.kei_impact_slug == "other"
                 pr = await session.execute(select(KeiPollResponse))
                 responses = list(pr.scalars().all())
                 assert len(responses) == 1
@@ -804,7 +807,7 @@ class TestAdvocacyPersonalizePoll:
     def test_personalize_poll_authenticated_sets_user_and_dual_writes(
         self, authed_client: TestClient, test_db_path: Path
     ) -> None:
-        """POST with auth: user kei_status and kei_impact_slug set; kei_impact PollResponse created."""
+        """POST with auth: kei_status and kei_impact_slug set; kei_impact PollResponse created."""
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
@@ -823,7 +826,7 @@ class TestAdvocacyPersonalizePoll:
                 u = r.scalar_one_or_none()
                 assert u is not None
                 assert u.kei_status == "would_want"
-                assert u.kei_impact_slug == "support_cause"
+                assert u.kei_impact_slug == "other"
                 poll = (
                     await session.execute(select(Poll).where(Poll.slug == "kei_impact"))
                 ).scalar_one_or_none()
@@ -840,7 +843,7 @@ class TestAdvocacyPersonalizePoll:
                     )
                     responses = list(pr.scalars().all())
                     assert len(responses) == 1
-                    assert responses[0].option_slug == "support_cause"
+                    assert responses[0].option_slug == "other"
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
@@ -867,7 +870,7 @@ class TestAdvocacyPersonalizePoll:
         assert resp.status_code == 200
         assert resp.cookies.get(KEI_POLL_VOTED_COOKIE) == "1"
         assert resp.cookies.get(KEI_POLL_CHOICE_COOKIE) == "would_want"
-        assert resp.cookies.get(KEI_IMPACT_SLUG_COOKIE) == "support_cause"
+        assert resp.cookies.get(KEI_IMPACT_SLUG_COOKIE) == "other"
 
     def test_personalize_poll_invalid_impact_does_not_persist_impact(
         self, authed_client: TestClient, test_db_path: Path
