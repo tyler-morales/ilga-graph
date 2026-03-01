@@ -184,6 +184,16 @@ STORY_MAX_IMAGE_BYTES: int = int(_env("ILGA_STORY_MAX_IMAGE_MB", "5")) * 1024 * 
 RATE_LIMIT_BUG_REPORT_PER_HOUR: int = int(_env("ILGA_RATE_LIMIT_BUG_REPORT_PER_HOUR", "10"))
 RATE_LIMIT_REQUEST_CODE_PER_15MIN: int = int(_env("ILGA_RATE_LIMIT_REQUEST_CODE_PER_15MIN", "3"))
 RATE_LIMIT_VERIFY_CODE_PER_15MIN: int = int(_env("ILGA_RATE_LIMIT_VERIFY_CODE_PER_15MIN", "10"))
+RATE_LIMIT_SUBSCRIBE_EMAIL_PER_HOUR: int = int(
+    _env("ILGA_RATE_LIMIT_SUBSCRIBE_EMAIL_PER_HOUR", "10")
+)
+RATE_LIMIT_KEI_STATUS_ANON_PER_HOUR: int = int(
+    _env("ILGA_RATE_LIMIT_KEI_STATUS_ANON_PER_HOUR", "20")
+)
+RATE_LIMIT_STORY_SUBMIT_PER_HOUR: int = int(_env("ILGA_RATE_LIMIT_STORY_SUBMIT_PER_HOUR", "5"))
+RATE_LIMIT_STATEMENT_SUBMIT_PER_HOUR: int = int(
+    _env("ILGA_RATE_LIMIT_STATEMENT_SUBMIT_PER_HOUR", "5")
+)
 
 # Cloudflare Turnstile (optional). Free tier: 1M requests/month. When both keys are set,
 # the bug report form shows the widget and server verifies the token.

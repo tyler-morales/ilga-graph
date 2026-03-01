@@ -36,6 +36,7 @@ from ..db import async_session_factory, get_db
 from ..db_models import KeiPollResponse, OutreachEvent, Poll, PollResponse, Update, User
 from ..dependencies import get_current_user_optional, require_admin, require_user
 from ..email_utils import send_email, send_welcome_email
+from ..file_validation import magic_matches_image_content_type
 from ..kei_poll_context import (
     KEI_POLL_CHOICE_COOKIE,
     KEI_POLL_VOTED_COOKIE,
@@ -54,7 +55,13 @@ from ..routers.content import (
     WHY_YOU_CARE_BRANCHES,
     WHY_YOU_CARE_DEFAULT_CARDS,
 )
-from ..security import validate_anon_session_id
+from ..security import (
+    CSRF_COOKIE_NAME,
+    rate_limit_kei_status,
+    rate_limit_subscribe_email,
+    validate_anon_session_id,
+    validate_csrf_token,
+)
 from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
 
 LOGGER = logging.getLogger(__name__)
@@ -62,6 +69,14 @@ LOGGER = logging.getLogger(__name__)
 # Email validation for public subscribe (no auth code). Max length matches User.email.
 _EMAIL_MAX_LEN = 320
 _EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", re.IGNORECASE)
+
+
+def _client_ip(request: Request) -> str:
+    """Return client IP from X-Forwarded-For or direct connection."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else ""
 
 
 def _normalize_and_validate_subscribe_email(raw: str) -> str | None:
@@ -149,6 +164,12 @@ async def _save_update_image(upload: UploadFile, update_id: int) -> str | None:
             LOGGER.warning("Update image rejected: too large")
             return None
     if not content:
+        return None
+    if not magic_matches_image_content_type(content, upload.content_type):
+        LOGGER.warning(
+            "Update image rejected: magic bytes do not match content_type=%s",
+            upload.content_type,
+        )
         return None
     upload_dir = _STATIC_DIR / cfg.UPDATE_IMAGE_UPLOAD_DIR
     upload_dir.mkdir(parents=True, exist_ok=True)
@@ -719,10 +740,31 @@ async def kei_status_post(
     email: str | None = Form(None, max_length=_EMAIL_MAX_LEN),
     poll_id: str = Form("footer-kei-poll", max_length=64),
     session_id: str | None = Form(None, max_length=64),
+    csrf_token: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
     user: User | None = Depends(get_current_user_optional),
 ):
     """Set kei status. Insert kei_poll_responses; if logged-in also set User.kei_status."""
+    token = csrf_token or request.headers.get("X-XSRF-TOKEN")
+    cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
+    if not validate_csrf_token(token, cookie_token):
+        if request.headers.get("HX-Request"):
+            return HTMLResponse(
+                '<p class="kei-status-error" role="alert">Invalid or expired security token. '
+                "Reload the page and try again.</p>",
+                status_code=403,
+            )
+        return RedirectResponse("/updates?prompt=kei&error=csrf", status_code=303)
+    if user is None:
+        client_ip = _client_ip(request)
+        if not rate_limit_kei_status(client_ip):
+            if request.headers.get("HX-Request"):
+                return HTMLResponse(
+                    '<p class="kei-status-error" role="alert">Too many responses from this '
+                    "device. Try again later.</p>",
+                    status_code=429,
+                )
+            return RedirectResponse("/updates?prompt=kei&error=rate", status_code=303)
     if poll_id not in get_kei_poll_ids():
         poll_id = "footer-kei-poll"
     validated = _validate_kei_status(kei_status)
@@ -843,9 +885,29 @@ async def kei_status_post(
 async def subscribe_email_post(
     request: Request,
     email: str = Form(..., max_length=_EMAIL_MAX_LEN),
+    csrf_token: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
     """Public email-only subscription: create/update user wants_updates=True. No auth code."""
+    token = csrf_token or request.headers.get("X-XSRF-TOKEN")
+    cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
+    if not validate_csrf_token(token, cookie_token):
+        if request.headers.get("HX-Request"):
+            return HTMLResponse(
+                '<p class="subscribe-email-error" role="alert">Invalid or expired security '
+                "token. Reload the page and try again.</p>",
+                status_code=403,
+            )
+        return RedirectResponse("/updates?subscribe=csrf", status_code=303)
+    client_ip = _client_ip(request)
+    if not rate_limit_subscribe_email(client_ip):
+        if request.headers.get("HX-Request"):
+            return HTMLResponse(
+                '<p class="subscribe-email-error" role="alert">Too many signup attempts. '
+                "Try again later.</p>",
+                status_code=429,
+            )
+        return RedirectResponse("/updates?subscribe=rate", status_code=303)
     normalized = _normalize_and_validate_subscribe_email(email)
     if not normalized:
         if request.headers.get("HX-Request"):

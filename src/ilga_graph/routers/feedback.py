@@ -22,6 +22,7 @@ from ..constants import KEI_STATUS_OPTIONS
 from ..db import get_db
 from ..db_models import BugReport
 from ..email_utils import send_message
+from ..file_validation import magic_matches_image_content_type
 from ..routers.content import STRATEGIC_FIVE_POINTS
 from ..security import (
     CSRF_COOKIE_NAME,
@@ -354,6 +355,12 @@ async def _save_bug_report_image(upload: UploadFile) -> str | None:
             LOGGER.warning("Bug report image rejected: too large")
             return None
     if not content:
+        return None
+    if not magic_matches_image_content_type(content, upload.content_type):
+        LOGGER.warning(
+            "Bug report image rejected: magic bytes do not match content_type=%s",
+            upload.content_type,
+        )
         return None
     upload_dir = Path(cfg.BUG_REPORT_UPLOAD_DIR)
     upload_dir.mkdir(parents=True, exist_ok=True)

@@ -230,6 +230,7 @@
         <form id="{{ poll_id }}-form" action="/updates/kei-status" method="post" class="kei-poll__form"
             hx-post="/updates/kei-status" hx-target="#{{ poll_id }}-wrap" hx-swap="innerHTML"
             aria-label="Your kei status">
+            <input type="hidden" name="csrf_token" value="{{ (request.state.csrf_token or '') if request is defined else '' }}">
             <input type="hidden" name="poll_id" value="{{ poll_id }}">
             {% if show_email %}
             <label for="{{ poll_id }}-email" class="visually-hidden">Your email (optional if signed in)</label>
@@ -284,6 +285,7 @@
     <form id="{{ poll_id }}-form" action="/updates/kei-status" method="post" class="wyc-inline-poll__form"
         hx-post="/updates/kei-status" hx-target="#{{ swap_target_id }}" hx-swap="innerHTML"
         aria-label="Your kei status">
+        <input type="hidden" name="csrf_token" value="{{ (request.state.csrf_token or '') if request is defined else '' }}">
         <input type="hidden" name="poll_id" value="{{ poll_id }}">
         <div class="wyc-inline-question" role="group" aria-label="Do you have a kei vehicle?">
             <p class="wyc-inline-question__label" id="{{ poll_id }}-heading">Do you have a kei vehicle?</p>
@@ -393,6 +395,7 @@ dimmed (anonymous until sign-in). #}
 {% macro subscribe_form(form_id, action="/updates/subscribe-email", variant="inline") %}
 <form action="{{ action }}" method="post" class="stay-informed-form" hx-post="{{ action }}"
     hx-target="#{{ form_id }}-wrap" hx-swap="innerHTML" aria-label="Subscribe to campaign updates by email">
+    <input type="hidden" name="csrf_token" value="{{ (request.state.csrf_token or '') if request is defined else '' }}">
     <label for="{{ form_id }}-input" class="visually-hidden">Your email</label>
     <input type="email" id="{{ form_id }}-input" name="email" class="stay-informed-input input" placeholder="Your email"
         required autocomplete="email" inputmode="email" maxlength="320">

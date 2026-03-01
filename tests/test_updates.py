@@ -441,7 +441,7 @@ class TestSubscribeUnsubscribe:
             importlib.reload(updates_router_mod)
         resp = client.post(
             "/updates/subscribe-email",
-            data={"email": "  NewSub@Example.com  "},
+            data=_data_with_csrf(client, {"email": "  NewSub@Example.com  "}),
             follow_redirects=False,
         )
         assert resp.status_code == 303
@@ -472,7 +472,7 @@ class TestSubscribeUnsubscribe:
             importlib.reload(updates_router_mod)
         resp = client.post(
             "/updates/subscribe-email",
-            data={"email": "not-an-email"},
+            data=_data_with_csrf(client, {"email": "not-an-email"}),
             headers={"HX-Request": "true"},
         )
         assert resp.status_code == 400
@@ -488,7 +488,7 @@ class TestSubscribeUnsubscribe:
             importlib.reload(updates_router_mod)
         resp = authed_client.post(
             "/updates/kei-status",
-            data={"kei_status": "would_want"},
+            data=_data_with_csrf(authed_client, {"kei_status": "would_want"}),
             headers={"HX-Request": "true"},
         )
         assert resp.status_code == 200
@@ -526,7 +526,7 @@ class TestSubscribeUnsubscribe:
             importlib.reload(updates_router_mod)
         resp = client.post(
             "/updates/kei-status",
-            data={"kei_status": "registered"},
+            data=_data_with_csrf(client, {"kei_status": "registered"}),
             headers={"HX-Request": "true"},
         )
         assert resp.status_code == 200
@@ -563,7 +563,7 @@ class TestSubscribeUnsubscribe:
             importlib.reload(updates_router_mod)
         resp = client.post(
             "/updates/kei-status",
-            data={"kei_status": "registered"},
+            data=_data_with_csrf(client, {"kei_status": "registered"}),
             headers={"HX-Request": "true"},
         )
         assert resp.status_code == 200
@@ -616,7 +616,7 @@ class TestSubscribeUnsubscribe:
             importlib.reload(updates_router_mod)
         resp = client.post(
             "/updates/kei-status",
-            data={"kei_status": "invalid_slug", "email": "a@b.co"},
+            data=_data_with_csrf(client, {"kei_status": "invalid_slug", "email": "a@b.co"}),
             headers={"HX-Request": "true"},
         )
         assert resp.status_code == 400

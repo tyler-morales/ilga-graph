@@ -112,6 +112,42 @@ def rate_limit_verify_code(client_ip: str) -> bool:
     )
 
 
+def rate_limit_subscribe_email(client_ip: str) -> bool:
+    """Allow if under subscribe-email limit (per IP)."""
+    return rate_limit_check(
+        f"subscribe_email:{client_ip}",
+        window_seconds=3600,
+        max_count=cfg.RATE_LIMIT_SUBSCRIBE_EMAIL_PER_HOUR,
+    )
+
+
+def rate_limit_kei_status(client_ip: str) -> bool:
+    """Allow if under kei-status limit (per IP, for anonymous submissions)."""
+    return rate_limit_check(
+        f"kei_status:{client_ip}",
+        window_seconds=3600,
+        max_count=cfg.RATE_LIMIT_KEI_STATUS_ANON_PER_HOUR,
+    )
+
+
+def rate_limit_story_submit(client_ip: str) -> bool:
+    """Allow if under community-story submit limit (per IP)."""
+    return rate_limit_check(
+        f"story_submit:{client_ip}",
+        window_seconds=3600,
+        max_count=cfg.RATE_LIMIT_STORY_SUBMIT_PER_HOUR,
+    )
+
+
+def rate_limit_statement_submit(client_ip: str) -> bool:
+    """Allow if under community-statement submit limit (per IP)."""
+    return rate_limit_check(
+        f"statement_submit:{client_ip}",
+        window_seconds=3600,
+        max_count=cfg.RATE_LIMIT_STATEMENT_SUBMIT_PER_HOUR,
+    )
+
+
 # Anonymous funnel: session id from client (sessionStorage ilga_anon_sid).
 _ANON_SESSION_ID_RE = re.compile(r"^[a-zA-Z0-9\-]{1,64}$")
 

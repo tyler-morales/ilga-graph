@@ -18,7 +18,12 @@ from ..constants import KEI_STATUS_OPTIONS
 from ..db import get_db
 from ..db_models import CommunityStory, KeiInterestStatement, User
 from ..dependencies import get_current_user_optional
-from ..session_schedule import get_all_deadlines, session_label
+from ..session_schedule import (
+    get_all_deadlines,
+    get_milestone_by_id,
+    get_next_deadline_safe,
+    session_label,
+)
 from .content_constants import (
     BRIEF_BILLS_CURRENT,
     BRIEF_BILLS_PASSED,
@@ -261,6 +266,8 @@ templates.env.globals["kei_poll_why_we_ask"] = KEI_POLL_WHY_WE_ASK
 from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
 
 templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
+templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
+templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 
 

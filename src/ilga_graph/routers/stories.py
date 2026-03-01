@@ -19,8 +19,14 @@ from ..db import get_db
 from ..db_models import CommunityStory, KeiInterestStatement, User
 from ..dependencies import require_admin, require_user
 from ..email_utils import send_statement_review_email, send_story_review_email
+from ..file_validation import magic_matches_image_content_type
 from ..routers.content import STRATEGIC_FIVE_POINTS
-from ..security import CSRF_COOKIE_NAME, validate_csrf_token
+from ..security import (
+    CSRF_COOKIE_NAME,
+    rate_limit_statement_submit,
+    rate_limit_story_submit,
+    validate_csrf_token,
+)
 from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
 
 LOGGER = logging.getLogger(__name__)
@@ -53,11 +59,6 @@ templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 
 _STORY_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 _STORY_IMAGE_EXT = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
-# Magic bytes for content-type verification (reject spoofed types).
-_JPEG_MAGIC = b"\xff\xd8\xff"
-_PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
-_WEBP_RIFF = b"RIFF"
-_WEBP_WEBP = b"WEBP"  # at offset 8
 _STORY_MAX_LEN = 500
 _STATEMENT_MAX_LEN = 500
 _NAME_MAX_LEN = 120
@@ -66,17 +67,12 @@ _KEI_OWNER_SLUGS = frozenset({"registered", "revoked", "denied"})
 _KEI_NON_OWNER_SLUGS = frozenset({"would_want", "would_not_want"})
 
 
-def _magic_matches_content_type(content: bytes, content_type: str) -> bool:
-    """Return True if file magic bytes match the declared content type."""
-    if not content:
-        return False
-    if content_type == "image/jpeg":
-        return content.startswith(_JPEG_MAGIC)
-    if content_type == "image/png":
-        return content.startswith(_PNG_MAGIC)
-    if content_type == "image/webp":
-        return len(content) >= 12 and content.startswith(_WEBP_RIFF) and content[8:12] == _WEBP_WEBP
-    return False
+def _client_ip(request: Request) -> str:
+    """Return client IP from X-Forwarded-For or direct connection."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else ""
 
 
 async def _save_story_image(upload: UploadFile, user_id: int) -> str | None:
@@ -98,7 +94,7 @@ async def _save_story_image(upload: UploadFile, user_id: int) -> str | None:
             return None
     if not content:
         return None
-    if not _magic_matches_content_type(content, upload.content_type):
+    if not magic_matches_image_content_type(content, upload.content_type):
         LOGGER.warning(
             "Story image rejected: magic bytes do not match content_type=%s",
             upload.content_type,
@@ -129,6 +125,11 @@ async def community_stories_submit(
         raise HTTPException(
             status_code=403,
             detail="Invalid or expired security token. Reload the page and try again.",
+        )
+    if not rate_limit_story_submit(_client_ip(request)):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many submissions. Try again later.",
         )
     if not consent or consent.strip().lower() not in ("on", "true", "1", "yes"):
         raise HTTPException(
@@ -191,6 +192,11 @@ async def community_statements_submit(
         raise HTTPException(
             status_code=403,
             detail="Invalid or expired security token. Reload the page and try again.",
+        )
+    if not rate_limit_statement_submit(_client_ip(request)):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many submissions. Try again later.",
         )
     kei_status = getattr(user, "kei_status", None)
     if kei_status not in _KEI_NON_OWNER_SLUGS:
