@@ -488,7 +488,7 @@
                 }
                 initDrawerEmailActions(body);
                 initDrawerCapturePulse(body);
-                initDrawerEndCall(body);
+                ConversationUI.initDrawerEndCall(body);
                 initDrawerConstituentCheckbox(body);
                 initDrawerVoicemailToggle(body);
                 if (view === 'call_wrapup') showWrapupWithMockPoll(body);
@@ -793,120 +793,6 @@
         if (btnEmail) btnEmail.addEventListener('click', openMailto);
         if (btnCopy) btnCopy.addEventListener('click', copyLink);
         if (btnCancel) btnCancel.addEventListener('click', closeReminderModal);
-    }
-
-    function initDrawerEndCall(container) {
-        if (!container) container = document.getElementById('advocacy-drawer-body');
-        var endCallBtn = container && container.querySelector('#drawer-end-call');
-        var endCallVmBtn = container && container.querySelector('#drawer-end-call-vm');
-        var pill = container && container.querySelector('.drawer-call-number-pill');
-        var wrapupInline = container && container.querySelector('#drawer-wrapup-inline');
-        var pollBubble = container && container.querySelector('#drawer-wrapup-poll-bubble');
-        var pollPillsWrap = container && container.querySelector('#drawer-wrapup-poll-pills');
-        var draftBubble = container && container.querySelector('#drawer-draft-followup-bubble');
-
-        function showInlineWrapup() {
-            if (endCallBtn) endCallBtn.style.display = 'none';
-            if (wrapupInline) {
-                wrapupInline.removeAttribute('hidden');
-                wrapupInline.classList.add('drawer-wrapup-inline-just-in');
-                if (pollBubble) pollBubble.setAttribute('hidden', '');
-                if (pollPillsWrap) pollPillsWrap.setAttribute('hidden', '');
-                if (draftBubble) {
-                    draftBubble.setAttribute('hidden', '');
-                    var ctaBlock = draftBubble.querySelector('#drawer-draft-followup-cta-block');
-                    if (ctaBlock) ctaBlock.classList.remove('drawer-draft-followup-cta-visible');
-                }
-                wrapupInline.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-            if (pill) pill.classList.add('drawer-call-number-pill-ended');
-            window.setTimeout(function () {
-                if (pollBubble) {
-                    pollBubble.removeAttribute('hidden');
-                    pollBubble.classList.add('drawer-bubble-just-in');
-                    pollBubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
-                window.setTimeout(function () {
-                    if (pollPillsWrap) {
-                        pollPillsWrap.removeAttribute('hidden');
-                        pollPillsWrap.classList.add('drawer-bubble-just-in');
-                        requestAnimationFrame(function () {
-                            pollPillsWrap.scrollIntoView({ behavior: 'smooth', block: 'end' });
-                        });
-                    }
-                }, 500);
-            }, 800);
-        }
-
-        var phoneLink = container && container.querySelector('a.drawer-call-number-pill');
-        if (phoneLink) {
-            phoneLink.addEventListener('click', function () {
-                var drawer = document.getElementById('advocacy-drawer');
-                var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
-                if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'call', 'phone_clicked');
-            });
-        }
-        if (endCallBtn) {
-            endCallBtn.addEventListener('click', function () {
-                var drawer = document.getElementById('advocacy-drawer');
-                var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
-                if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'call', 'end_call_clicked');
-                endCallBtn.classList.add('micro-thunk');
-                setTimeout(function () {
-                    endCallBtn.classList.remove('micro-thunk');
-                    showInlineWrapup();
-                }, 160);
-            });
-        }
-        if (endCallVmBtn) {
-            endCallVmBtn.addEventListener('click', function () {
-                var drawer = document.getElementById('advocacy-drawer');
-                var memberId = (drawer && drawer.getAttribute('data-member-id') || '').trim();
-                if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'call', 'end_call_clicked_vm');
-                endCallVmBtn.classList.add('micro-thunk');
-                setTimeout(function () {
-                    endCallVmBtn.classList.remove('micro-thunk');
-                    var drawer = document.getElementById('advocacy-drawer');
-                    var bodyEl = document.getElementById('advocacy-drawer-body');
-                    if (!drawer || !bodyEl) return;
-                    var memberId = (drawer.getAttribute('data-member-id') || '').trim();
-                    if (!memberId) {
-                        bodyEl.innerHTML = '<p class="drawer-error" role="alert">Missing legislator. Close and try again.</p>';
-                        if (typeof initDrawerFocusTrapAndFocus === 'function') initDrawerFocusTrapAndFocus();
-                        return;
-                    }
-                    var zipCode = (typeof getConstituentZip === 'function' ? getConstituentZip() : (drawer.getAttribute('data-drawer-zip') || '')) || '';
-                    var voicemailEl = container && container.querySelector('#drawer-voicemail');
-                    var outcome = (voicemailEl && voicemailEl.getAttribute('hidden') === null) ? 'voicemail' : 'no_answer';
-                    var constAttr = (drawer.getAttribute('data-drawer-constituent') || '').trim();
-                    var constituent = (constAttr === 'true' || constAttr === 'false') ? constAttr : undefined;
-                    recordOutreach(memberId, 'no_answer', zipCode, outcome, '', '', undefined, constituent, undefined);
-                    var formData = new FormData();
-                    formData.append('zip', zipCode);
-                    formData.append('outcome', outcome);
-                    fetch('/advocacy/call/' + encodeURIComponent(memberId) + '/no-answer', {
-                        method: 'POST',
-                        body: formData,
-                        credentials: 'same-origin',
-                        headers: { 'Accept': 'text/html' }
-                    })
-                        .then(function (r) {
-                            if (!r.ok) throw new Error('No-answer screen failed');
-                            return r.text();
-                        })
-                        .then(function (html) {
-                            bodyEl.innerHTML = html;
-                            if (typeof htmx !== 'undefined' && htmx.process) htmx.process(bodyEl);
-                            if (typeof initDrawerFocusTrapAndFocus === 'function') initDrawerFocusTrapAndFocus();
-                            if (typeof refreshAdvocacyResults === 'function') refreshAdvocacyResults();
-                        })
-                        .catch(function () {
-                            bodyEl.innerHTML = '<p class="drawer-error" role="alert">Couldn\'t load. Try again.</p>';
-                            if (typeof initDrawerFocusTrapAndFocus === 'function') initDrawerFocusTrapAndFocus();
-                        });
-                }, 160);
-            });
-        }
     }
 
     function initDrawerConstituentCheckbox(container) {
@@ -2647,20 +2533,15 @@
         var pill = container.querySelector('.drawer-call-number-pill');
         if (endCallBtn) endCallBtn.style.display = 'none';
         if (pill) pill.classList.add('drawer-call-number-pill-ended');
-        if (wrapupInline) {
-            wrapupInline.removeAttribute('hidden');
-            wrapupInline.classList.add('drawer-wrapup-inline-just-in');
-        }
+        if (wrapupInline) ConversationUI.revealBubble(wrapupInline);
         if (pollBubble) {
-            pollBubble.removeAttribute('hidden');
-            pollBubble.classList.add('drawer-bubble-just-in');
+            ConversationUI.revealBubble(pollBubble);
             pollBubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
         var pollPillsWrap = container.querySelector('#drawer-wrapup-poll-pills');
         if (pollPillsWrap) {
             window.setTimeout(function () {
-                pollPillsWrap.removeAttribute('hidden');
-                pollPillsWrap.classList.add('drawer-bubble-just-in');
+                ConversationUI.revealBubble(pollPillsWrap);
                 requestAnimationFrame(function () {
                     pollPillsWrap.scrollIntoView({ behavior: 'smooth', block: 'end' });
                 });
@@ -2684,8 +2565,7 @@
             if (draftBubble) {
                 var ctaBlock = draftBubble.querySelector('#drawer-draft-followup-cta-block');
                 if (ctaBlock) ctaBlock.classList.remove('drawer-draft-followup-cta-visible');
-                draftBubble.removeAttribute('hidden');
-                draftBubble.classList.add('drawer-bubble-just-in');
+                ConversationUI.revealBubble(draftBubble);
                 draftBubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 window.setTimeout(function () {
                     if (ctaBlock) ctaBlock.classList.add('drawer-draft-followup-cta-visible');
@@ -2824,17 +2704,11 @@
                         if (draftBubble) {
                             var ctaBlock = draftBubble.querySelector('#drawer-draft-followup-cta-block');
                             if (ctaBlock) ctaBlock.classList.remove('drawer-draft-followup-cta-visible');
-                            draftBubble.removeAttribute('hidden');
-                            draftBubble.classList.add('drawer-bubble-just-in');
+                            ConversationUI.revealBubble(draftBubble);
                             draftBubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                             window.setTimeout(function () {
                                 if (ctaBlock) ctaBlock.classList.add('drawer-draft-followup-cta-visible');
                             }, 500);
-                        }
-                        var subscribeWrap = document.getElementById('drawer-subscribe-wrap');
-                        if (subscribeWrap) {
-                            subscribeWrap.removeAttribute('hidden');
-                            subscribeWrap.classList.add('drawer-bubble-just-in');
                         }
                     }, 200);
                 })
@@ -2847,17 +2721,11 @@
                         if (draftBubble) {
                             var ctaBlock = draftBubble.querySelector('#drawer-draft-followup-cta-block');
                             if (ctaBlock) ctaBlock.classList.remove('drawer-draft-followup-cta-visible');
-                            draftBubble.removeAttribute('hidden');
-                            draftBubble.classList.add('drawer-bubble-just-in');
+                            ConversationUI.revealBubble(draftBubble);
                             draftBubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                             window.setTimeout(function () {
                                 if (ctaBlock) ctaBlock.classList.add('drawer-draft-followup-cta-visible');
                             }, 500);
-                        }
-                        var subscribeWrap = document.getElementById('drawer-subscribe-wrap');
-                        if (subscribeWrap) {
-                            subscribeWrap.removeAttribute('hidden');
-                            subscribeWrap.classList.add('drawer-bubble-just-in');
                         }
                     }, 200);
                 });
@@ -2932,7 +2800,7 @@
                 initDrawerEmailActions(body);
                 if (body.querySelector('.drawer-call-content')) {
                     initDrawerCapturePulse(body);
-                    initDrawerEndCall(body);
+                    ConversationUI.initDrawerEndCall(body);
                     initDrawerVoicemailToggle(body);
                 }
                 updateDrawerStepStrip('email');
@@ -2953,23 +2821,31 @@
     document.body.addEventListener('htmx:afterSwap', function (e) {
         if (e.detail.target && e.detail.target.id === 'advocacy-drawer-body') {
             var body = e.detail.target;
+            body.scrollTop = 0;
             if (body.querySelector('.gmail-compose')) body.classList.add('drawer-email-open');
             else body.classList.remove('drawer-email-open');
             var root = body.querySelector('.drawer-call-content') || body.querySelector('.gmail-compose');
             var headerCheckbox = document.getElementById('advocacy-drawer-constituent-checkbox');
             var drawer = document.getElementById('advocacy-drawer');
             if (root && headerCheckbox && drawer) {
-                var isConst = root.getAttribute('data-is-constituent') === 'true';
-                headerCheckbox.checked = isConst;
-                drawer.setAttribute('data-drawer-constituent', isConst ? 'true' : 'false');
+                var drawerConst = (drawer.getAttribute('data-drawer-constituent') || '').trim();
+                if (drawerConst === 'true' || drawerConst === 'false') {
+                    headerCheckbox.checked = drawerConst === 'true';
+                } else {
+                    var isConst = root.getAttribute('data-is-constituent') === 'true';
+                    headerCheckbox.checked = isConst;
+                    drawer.setAttribute('data-drawer-constituent', isConst ? 'true' : 'false');
+                }
             }
             initDrawerEmailActions(body);
             if (body.querySelector('.drawer-call-content')) {
                 initDrawerCapturePulse(body);
-                initDrawerEndCall(body);
+                ConversationUI.initDrawerEndCall(body);
+                initDrawerConstituentCheckbox(body);
                 initDrawerVoicemailToggle(body);
                 restoreDrawerWrapupState(body);
             }
+            if (body.querySelector('#kei-personalize-flow')) ConversationUI.initKeiPersonalizeFlow();
             if (drawer && drawer.classList.contains('open')) initDrawerFocusTrapAndFocus();
         }
     });

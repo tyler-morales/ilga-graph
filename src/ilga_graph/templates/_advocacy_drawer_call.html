@@ -31,58 +31,103 @@
     </div>
 
     <div class="drawer-chat" id="drawer-chat">
-        <div class="chat-divider"><span>Opening (~25–40 sec — then ask for email + next step)</span></div>
+        <div class="chat-divider"><span>Opening (about 30 seconds, then ask for email)</span></div>
         <div class="chat-bubble chat-you" id="drawer-intro-bubble">
             <span class="chat-label">You</span>
-            Hi — my name is <strong>[CALLER_NAME]</strong>, <span id="drawer-intro-location-phrase">I'm a
-                constituent</span>. May I leave a quick message for <strong>{{ title_label }} {{ legislator_last
-                }}</strong> about kei vehicles in Illinois?
+            {% if script_sections and script_sections.opening %}
+            {{ script_sections.opening }}
+            {% else %}
+            My name is <strong>[CALLER_NAME]</strong>. <span id="drawer-intro-location-phrase">I'm a
+                constituent</span> — I'd like to leave a quick message for <strong>{{ title_label }} {{ legislator_last
+                }}</strong>. It's about an issue that's affecting people in the district.
+            {% endif %}
         </div>
 
         <div class="chat-bubble chat-them">
             <span class="chat-label">Staffer</span>
-            They'll say yes or transfer — then hit the next bubble.
+            They'll say yes or transfer — then continue below.
         </div>
 
-        <div class="chat-divider"><span>THE PROBLEM (1–2 sentences)</span></div>
+        <div class="chat-divider"><span>Quick context (if they need it)</span></div>
         <div class="chat-bubble chat-you">
             <span class="chat-label">You</span>
-            Kei vehicles are federally legal to import under the 25-year rule, but Illinois is blocking registration at
-            the state level based on how it reads the statute. Real Illinois residents in your district have had
-            registrations denied or revoked and titles branded <strong>"Not Eligible for Registration."</strong>
+            {% if script_sections and script_sections.kei_explainer_question %}
+            {{ script_sections.kei_explainer_question }}
+            {% else %}
+            Ever heard of Kei vehicles?
+            {% endif %}
         </div>
-
-        <div class="chat-divider"><span>THE LEGAL "WHY" (keep it simple)</span></div>
         <div class="chat-bubble chat-you">
             <span class="chat-label">You</span>
-            The current statute has an ambiguity, not a prohibition. SOS reads <strong>625 ILCS 5/3-401(c-1)</strong> —
-            "originally manufactured for operation on highways" — as meaning U.S. highways only, so they deny
-            registration even for 25+ year old, lawfully imported vehicles. The General Assembly can clarify that
-            highway-built, federally lawful imports qualify.
+            {% if script_sections and script_sections.kei_explainer_short %}
+            {{ script_sections.kei_explainer_short }}
+            {% else %}
+            They're a Japanese vehicle class — compact trucks, vans, and cars built to strict size and engine limits.
+            Built for the highway in Japan, and federally legal to import here once they're 25 years old.
+            {% endif %}
         </div>
 
-        <div class="chat-divider"><span>THE ASK</span></div>
+        <div class="chat-divider"><span>The problem (1–2 sentences)</span></div>
         <div class="chat-bubble chat-you">
             <span class="chat-label">You</span>
-            I'm asking <strong>{{ title_label }} {{ legislator_last }}</strong> to support a narrow statutory
-            clarification to 625 ILCS 5/3-401(c-1)—no new regulatory framework; safety, insurance, and equipment
-            requirements stay intact. Twenty-one plus states already allow this; Illinois is the outlier. Constituents
-            in your district are affected and want a fix so they can register legal vehicles.
+            {% if script_sections and script_sections.the_problem_after_explainer %}
+            {{ script_sections.the_problem_after_explainer }}
+            {% elif script_sections and script_sections.the_problem %}
+            {{ script_sections.the_problem }}
+            {% else %}
+            Here in Illinois, people in your district have had registration denied or their titles stamped
+            <strong>"Not Eligible for Registration."</strong> Lots of Illinois residents have been reaching out to
+            legislators about it.
+            {% endif %}
         </div>
 
-        <div class="chat-divider"><span>Three points to remember (elevator)</span></div>
-        <div class="chat-bubble chat-you chat-optional">
-            <span class="chat-label">You (if you have time)</span>
-            <p>(1) Federally legal imports are being blocked by an Illinois interpretation, not federal law.
-            (2) A narrow statutory clarification fixes it without weakening safety or enforcement.
-            (3) Constituents in your district are affected and want a fix.</p>
+        <div class="chat-divider"><span>The legal why (keep it simple)</span></div>
+        <div class="chat-bubble chat-you">
+            <span class="chat-label">You</span>
+            {% if script_sections and script_sections.the_legal_why %}
+            {{ script_sections.the_legal_why }}
+            {% else %}
+            The state's reading <strong>625 ILCS 5/3-401(c-1)</strong> in a way that excludes these vehicles. There's an
+            ambiguity in the statute, not a clear ban — the General Assembly could clarify it so highway-built,
+            federally legal imports can be registered here.
+            {% endif %}
         </div>
 
-        <div class="chat-divider"><span>Next step (this one matters)</span></div>
+        <div class="chat-divider"><span>The ask</span></div>
+        <div class="chat-bubble chat-you">
+            <span class="chat-label">You</span>
+            {% if script_sections and script_sections.the_ask %}
+            {{ script_sections.the_ask }}
+            {% else %}
+            I'm just asking <strong>{{ title_label }} {{ legislator_last }}</strong> to be aware of it. I can email a
+            one-pager — two pages, has the statute and shows which states have already fixed their Kei bans. No
+            commitment — I just want the office to have the facts.
+            {% endif %}
+        </div>
+
+        <div class="chat-divider"><span>Next step (get their name + email)</span></div>
         <div class="chat-bubble chat-you chat-key">
             <span class="chat-label">You</span>
-            What's the <strong>best email for constituent correspondence</strong> so I can send a one-pager? And could I
-            please get <strong>your name</strong> so I can address my follow-up correctly?
+            {% if script_sections and script_sections.easy_yes_close %}
+            {{ script_sections.easy_yes_close }}
+            {% else %}
+            Could I get your name and the best email to send that one-pager to?
+            {% endif %}
+        </div>
+
+        <div class="drawer-email-capture-wrap">
+            <input type="email" id="drawer-email-capture"
+                class="drawer-email-capture drawer-capture-input drawer-capture-pulse" placeholder="Email of the office"
+                autocomplete="email" inputmode="email">
+            <div class="drawer-email-saved" aria-hidden="true" title="Tap to edit">
+                <span class="drawer-email-saved-pill"><span class="drawer-email-saved-check"
+                        aria-hidden="true">✓</span><span class="drawer-email-saved-text"></span></span>
+            </div>
+            {% if email_source is defined and email_source == 'community' and member_public_email %}
+            <p class="drawer-email-capture-attribution" role="status" aria-live="polite">
+                From a previous caller — another constituent shared this email.
+            </p>
+            {% endif %}
         </div>
 
         <div class="drawer-name-capture-wrap">
@@ -107,27 +152,24 @@
         </div>
         <div class="chat-bubble chat-you chat-optional">
             <span class="chat-label">You</span>
-            <p><strong>"They're not highway vehicles / don't meet federal standards."</strong> — Totally understood —
-                that's why the request is for a state statute with restrictions. Federal import eligibility doesn't
-                equal state road registration — we're asking Illinois to set clear rules.</p>
-            <p><strong>"We need more info."</strong> — Great — I'll email a one-pager with the exact statute
-                reference and examples of how other states have clarified this.</p>
-            <p><strong>"We can't commit."</strong> — That's fine — could you tell me the right staffer for
-                transportation/vehicle policy, and the best email to send the one-pager?</p>
+            <p><strong>"They're not highway vehicles / don't meet federal standards."</strong> — I get that — that's
+                why we're asking for a state clarification with restrictions. Federal import rules are one thing;
+                we're just asking Illinois to set clear rules for registration.</p>
+            <p><strong>"We need more info."</strong> — No problem — I'll email a one-pager with the statute and
+                which states have already fixed their Kei bans.</p>
+            <p><strong>"We can't commit."</strong> — That's totally fine — could you point me to the right staffer
+                for transportation or vehicle policy, and the best email to send the one-pager?</p>
         </div>
 
-        <div class="drawer-email-capture-wrap">
-            <input type="email" id="drawer-email-capture"
-                class="drawer-email-capture drawer-capture-input drawer-capture-pulse" placeholder="Email of the office"
-                autocomplete="email" inputmode="email">
-            <div class="drawer-email-saved" aria-hidden="true" title="Tap to edit">
-                <span class="drawer-email-saved-pill"><span class="drawer-email-saved-check"
-                        aria-hidden="true">✓</span><span class="drawer-email-saved-text"></span></span>
-            </div>
-            {% if email_source is defined and email_source == 'community' and member_public_email %}
-            <p class="drawer-email-capture-attribution" role="status" aria-live="polite">
-                From a previous caller — another constituent shared this email.
-            </p>
+        <div class="chat-divider"><span>Three points to remember (if they want more)</span></div>
+        <div class="chat-bubble chat-you chat-optional">
+            <span class="chat-label">You (if you have time)</span>
+            {% if script_sections and script_sections.conclusions %}
+            <p>{% for point in script_sections.conclusions %}({{ loop.index }}) {{ point }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
+            {% else %}
+            <p>(1) It's a real issue in your district — people have had legal vehicles denied registration.<br>
+            (2) The fix is simple: one line of Illinois law clarified, not a new vehicle class or a big exemption.<br>
+            (3) The one-pager shows which states have already fixed their Kei bans — Illinois can do the same.</p>
             {% endif %}
         </div>
 
@@ -215,17 +257,6 @@
                 <p class="drawer-draft-followup-recorded-msg" id="drawer-draft-followup-recorded-msg" hidden
                     aria-live="polite">Call recorded. You can draft an email anytime from this card.</p>
             </div>
-            {# Stay informed: email capture after call completion (no auth code). Hidden when user already subscribed. #}
-            {% if not (request.state.user and request.state.user.wants_updates) %}
-            <div class="drawer-subscribe-wrap drawer-bubble-delayed" id="drawer-subscribe-wrap" {% if not call_completed %}hidden{% endif %}{% if call_completed %} class="drawer-bubble-just-in"{% endif %}>
-                <div class="chat-bubble chat-them">
-                    <span class="chat-label">Stay informed</span>
-                    <p class="drawer-subscribe-p">Want to know when the bill moves? We'll send one email.</p>
-                    {% from "_macros.html" import subscribe_form %}
-                    {{ subscribe_form('drawer-subscribe', '/updates/subscribe-email', 'inline') }}
-                </div>
-            </div>
-            {% endif %}
         </div>
     </div>
 
@@ -237,15 +268,15 @@
             <span class="chat-label">You (say this)</span>
             <p>Hi, this is <strong>[CALLER_NAME]</strong>, <span id="drawer-voicemail-location-phrase">a
                     constituent</span>. I'm calling for <strong>{{ title_label }} {{ legislator_last }}</strong> about
-                kei vehicles in Illinois.</p>
-            <p>Kei vehicles are federally legal to import; Illinois is blocking registration at the state level. The
-                fix is a narrow statutory clarification—no new regulatory framework. Constituents in your district are
-                affected and want a fix.</p>
-            <p>I'm asking <strong>{{ legislator_last }}</strong> to support a narrow clarification to
-                625 ILCS 5/3-401(c-1) so highway-built, federally lawful imports can be registered here, like in 21+
-                other states.</p>
-            <p>Please call me back at <strong>[CALLER_PHONE]</strong> — and if possible, email me the best address for
-                constituent correspondence so I can send a short one-pager. Thank you.</p>
+                kei vehicle registration in Illinois.</p>
+            <p>Kei vehicles are those compact trucks, vans, and cars from Japan — built for the highway, federally
+                legal to import after 25 years. Illinois is blocking registration at the state level because of how
+                it reads 625 ILCS 5/3-401(c-1). People in your district are affected and we're asking for a fix.</p>
+            <p>I'm asking <strong>{{ legislator_last }}</strong> to support a narrow clarification to that statute so
+                highway-built, federally legal imports can be registered here — like other states that have already
+                fixed their Kei bans.</p>
+            <p>Please call me back at <strong>[CALLER_PHONE]</strong> when you can — and if possible, the best
+                email for constituent mail so I can send a short one-pager. Thanks.</p>
         </div>
         <div class="chat-bubble chat-them drawer-voicemail-reminder-bubble" id="drawer-voicemail-reminder-bubble"
             hidden>

@@ -521,9 +521,15 @@
   min-width: 0;
   padding: 16px;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   display: flex;
   flex-direction: column;
   position: relative;
+}
+
+.gmail-body-area::-webkit-scrollbar {
+  display: none;
 }
 
 .gmail-body-text {
@@ -973,6 +979,8 @@
   inset: 0;
   overflow-x: hidden;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   min-width: 0;
   width: 100%;
   box-sizing: border-box;
@@ -984,6 +992,10 @@
   color: #3c4043;
   margin: 0;
   padding: 15px;
+}
+
+.madlib-body::-webkit-scrollbar {
+  display: none;
 }
 
 /* Hidden span used to measure mad lib text width (same font as input); kept in flow but invisible */

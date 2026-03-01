@@ -24,7 +24,7 @@
             </div>
             <p class="wyc-poll-intro">{{ kei_poll_why_we_ask }}</p>
             {% from "_macros.html" import kei_poll_inline %}
-            {{ kei_poll_inline('home-kei-poll', kei_status_total|default(none), 'why-you-care-flow') }}
+            {{ kei_poll_inline('home-kei-poll', kei_status_total|default(none), 'why-you-care-flow', kei_impact_options) }}
             {% endif %}
         </div>
         {% else %}

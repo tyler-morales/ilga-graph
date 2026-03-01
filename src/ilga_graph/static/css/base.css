@@ -651,6 +651,19 @@ a:visited {
   display: none;
 }
 
+.kei-poll__step3-panel {
+  margin-top: 0.5rem;
+}
+
+.kei-poll__step3-panel .kei-poll__options {
+  border: 0;
+  margin: 0;
+}
+
+.kei-poll__step3-panel--hidden {
+  display: none;
+}
+
 .kei-poll__email {
   max-width: 20rem;
   padding: 0.4rem 0.6rem;
@@ -991,9 +1004,25 @@ a:visited {
   margin-top: 0.75rem;
 }
 
-/* Change answer: use shared btn--secondary (no link-style). */
+/* Change answer: gray text link-style, not a full button. */
 .kei-poll-change-btn {
+  background: none;
+  border: none;
+  padding: 0;
   font-size: var(--font-size-sm);
+  font-weight: inherit;
+  color: var(--color-text-muted, #555);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.kei-poll-change-btn:hover {
+  color: var(--color-text, #111);
+  text-decoration: underline;
+}
+.kei-poll-change-btn:focus-visible {
+  outline: 2px solid var(--color-border-focus, #333);
+  outline-offset: 2px;
 }
 
 .kei-poll-story-cta {

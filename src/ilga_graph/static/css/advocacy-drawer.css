@@ -3,6 +3,30 @@
 :root {
     --drawer-ease: cubic-bezier(0.33, 1, 0.68, 1);
     --drawer-duration: 0.28s;
+
+    /* === Bubble Component Tokens === */
+    --bubble-radius: 18px;
+    --bubble-radius-corner: 4px;
+    --bubble-pad: 10px 14px;
+
+    /* "you" side (right-aligned, your words) */
+    --bubble-you-bg: #0070e0;
+    --bubble-you-color: #fff;
+    --bubble-you-bg-hover: #005bbf;
+    --bubble-you-bg-selected: #004a94;
+
+    /* "them" side (left-aligned, app/staffer) */
+    --bubble-them-bg: #ebebf0;
+    --bubble-them-color: #1a1a1a;
+
+    /* option buttons use same blue as user bubbles (unified bubble component) */
+
+    /* timing — single source of truth */
+    --bubble-enter-duration: 0.35s;
+    --bubble-enter-easing: ease;
+    --bubble-transition: 0.15s ease;
+    --bubble-bar-fill-duration: 1.2s;
+    --bubble-bar-fill-delay: 0.25s;
 }
 
 .phone-overlay {
@@ -174,14 +198,20 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    padding: 0 24px 20px 24px;
+    padding: 0 24px 40px 24px;
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
     font-size: var(--font-size-body);
     line-height: 1.7;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.phone-panel-body::-webkit-scrollbar {
+    display: none;
 }
 
 /* Email drawer: single scroll (textarea only); prevent panel scrollbar */
@@ -428,6 +458,174 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
+/* Pre-drawer personalization flow: same chat bubbles and typography as call script */
+.drawer-personalize-skip-wrap {
+    margin: 8px 0 0;
+    text-align: right;
+}
+
+.drawer-personalize-skip-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: var(--font-size-sm);
+    font-family: inherit;
+    color: #248a3d;
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+.drawer-personalize-skip-btn:hover {
+    color: #1e7a33;
+}
+
+.drawer-personalize-skip-btn:focus-visible {
+    outline: 2px solid #1a5fb4;
+    outline-offset: 2px;
+}
+
+.drawer-personalize-chat .kei-step-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+/* [hidden] must win so step 2/3/4 stay hidden until JS reveals them (same idea as sidebar .kei-poll__step2-panel--hidden) */
+.drawer-personalize-chat .kei-step-options[hidden],
+.drawer-personalize-chat .kei-step-bubble[hidden] {
+    display: none !important;
+}
+
+/* Personalize option buttons: same stagger as .bubble-in-stagger (kept for backward compat until JS uses bubble-in-stagger) */
+.drawer-personalize-chat .kei-step-options.kei-options-animate .kei-option-btn {
+    opacity: 0;
+    transform: translateY(6px);
+    animation: drawer-reminder-in var(--bubble-enter-duration) var(--bubble-enter-easing) forwards;
+}
+.drawer-personalize-chat .kei-step-options.kei-options-animate .kei-option-btn:nth-child(1) { animation-delay: 0.05s; }
+.drawer-personalize-chat .kei-step-options.kei-options-animate .kei-option-btn:nth-child(2) { animation-delay: 0.12s; }
+.drawer-personalize-chat .kei-step-options.kei-options-animate .kei-option-btn:nth-child(3) { animation-delay: 0.19s; }
+.drawer-personalize-chat .kei-step-options.kei-options-animate .kei-option-btn:nth-child(4) { animation-delay: 0.26s; }
+.drawer-personalize-chat .kei-step-options.kei-options-animate .kei-option-btn:nth-child(5) { animation-delay: 0.33s; }
+
+/* After selection, dim unselected bubbles in this step */
+.drawer-personalize-chat .kei-step-options--has-selection .kei-option-btn:not(.kei-option-btn--selected):not([aria-pressed="true"]) {
+    opacity: 0.45;
+    transition: opacity var(--bubble-transition);
+}
+
+/* Option bubbles: same blue and animation as user bubbles; selected = darker + ring */
+.drawer-personalize-chat .kei-option-btn {
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    border: none;
+    transition: background var(--bubble-transition), transform var(--bubble-transition);
+    background: var(--bubble-you-bg);
+    color: var(--bubble-you-color);
+}
+
+.drawer-personalize-chat .kei-option-btn .chat-label {
+    color: var(--bubble-you-color);
+    opacity: 0.9;
+}
+
+.drawer-personalize-chat .kei-option-btn:hover {
+    background: var(--bubble-you-bg-hover);
+    color: var(--bubble-you-color);
+}
+
+.drawer-personalize-chat .kei-option-btn:active {
+    transform: scale(0.98);
+}
+
+.drawer-personalize-chat .kei-option-btn:focus-visible {
+    outline: 2px solid #1a5fb4;
+    outline-offset: 2px;
+}
+
+/* Selected = darker blue + visible ring so user clearly sees their choice */
+.drawer-personalize-chat .kei-option-btn--selected,
+.drawer-personalize-chat .kei-option-btn[aria-pressed="true"] {
+    background: var(--bubble-you-bg-selected);
+    color: var(--bubble-you-color);
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--bubble-you-bg-selected);
+}
+
+.drawer-personalize-chat .kei-option-btn--selected .chat-label,
+.drawer-personalize-chat .kei-option-btn[aria-pressed="true"] .chat-label {
+    color: var(--bubble-you-color);
+    opacity: 0.9;
+}
+
+.kei-note-wrap {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.kei-note-input {
+    padding: 10px 14px;
+    border: 1px solid #c6c6c8;
+    border-radius: 18px;
+    font-size: var(--font-size-label);
+    line-height: 1.55;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    resize: vertical;
+    min-height: 60px;
+}
+
+.kei-note-input:focus {
+    outline: none;
+    border-color: #1a5fb4;
+}
+
+.kei-note-char-count {
+    font-size: var(--font-size-xs);
+    color: #8e8e93;
+}
+
+/* See my script: CTA button (not a bubble), matches drawer green primary CTAs */
+.kei-see-script-btn {
+    margin-top: 12px;
+    align-self: flex-start;
+    padding: 12px 20px;
+    border-radius: 22px;
+    font-size: var(--font-size-body);
+    font-weight: 600;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    border: none;
+    cursor: pointer;
+    background: #34c759;
+    color: #fff;
+    transition: background 0.15s ease, transform 0.12s ease;
+}
+
+.kei-see-script-btn:hover {
+    background: #2db84e;
+}
+
+.kei-see-script-btn:active {
+    transform: scale(0.98);
+}
+
+.kei-see-script-btn:focus-visible {
+    outline: 2px solid #34c759;
+    outline-offset: 2px;
+}
+
+.htmx-indicator {
+    display: none;
+}
+
+.htmx-request .htmx-indicator {
+    display: inline;
+}
+
 /* Minimal no-answer hint: below header, above script — visible but not alarming */
 .drawer-no-answer-hint {
     display: flex;
@@ -651,9 +849,6 @@
     text-decoration: underline;
 }
 
-.drawer-reminder-inline-just-in {
-    animation: drawer-reminder-in 0.35s ease;
-}
 
 /* In-chat wrap up (iMessage-style) when they answered */
 .drawer-wrapup-inline {
@@ -757,16 +952,8 @@
     transform: scale(0.98);
 }
 
-.drawer-wrapup-inline-just-in {
-    animation: drawer-reminder-in 0.35s ease;
-}
-
 .drawer-bubble-delayed[hidden] {
     display: none !important;
-}
-
-.drawer-bubble-just-in {
-    animation: drawer-reminder-in 0.35s ease;
 }
 
 .drawer-draft-followup-wrap {
@@ -852,7 +1039,7 @@
 
 .drawer-draft-followup-cta-block.drawer-draft-followup-cta-staggered {
     opacity: 0;
-    transition: opacity 0.35s ease;
+    transition: opacity var(--bubble-enter-duration) var(--bubble-enter-easing);
 }
 
 .drawer-draft-followup-cta-block.drawer-draft-followup-cta-staggered.drawer-draft-followup-cta-visible {
@@ -914,18 +1101,7 @@
     color: #6d6d72;
 }
 
-/* Stay informed: email capture after call/done (no auth code) */
-.drawer-subscribe-wrap {
-    margin-top: 16px;
-}
-
-.drawer-subscribe-p {
-    margin: 0 0 10px 0;
-    font-size: var(--font-size-sm);
-    color: #1a1a1a;
-}
-
-/* Drawer subscribe: base from base.css .subscribe-*; variations below (green accent, 8px radius). */
+/* Drawer subscribe (done view): base from base.css .subscribe-*; variations below (green accent, 8px radius). */
 .drawer-subscribe-form {
     gap: 8px;
 }
@@ -1049,10 +1225,6 @@
     margin-top: 12px;
 }
 
-.drawer-voicemail-reminder-just-in {
-    animation: drawer-reminder-in 0.35s ease;
-}
-
 @keyframes drawer-reminder-in {
     from {
         opacity: 0;
@@ -1062,6 +1234,40 @@
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+/* THE contract: anything revealed in a conversation gets .bubble-in (or alias below) */
+.bubble-in,
+.drawer-bubble-just-in,
+.drawer-wrapup-inline-just-in,
+.drawer-reminder-inline-just-in,
+.drawer-voicemail-reminder-just-in {
+    animation: drawer-reminder-in var(--bubble-enter-duration) var(--bubble-enter-easing);
+}
+
+/* Option/button containers: staggered child enter (same timing as personalize flow) */
+.bubble-in-stagger > * {
+    opacity: 0;
+    transform: translateY(6px);
+    animation: drawer-reminder-in var(--bubble-enter-duration) var(--bubble-enter-easing) forwards;
+}
+.bubble-in-stagger > *:nth-child(1) { animation-delay: 0.05s; }
+.bubble-in-stagger > *:nth-child(2) { animation-delay: 0.12s; }
+.bubble-in-stagger > *:nth-child(3) { animation-delay: 0.19s; }
+.bubble-in-stagger > *:nth-child(4) { animation-delay: 0.26s; }
+.bubble-in-stagger > *:nth-child(5) { animation-delay: 0.33s; }
+
+@media (prefers-reduced-motion: reduce) {
+    .bubble-in,
+    .drawer-bubble-just-in,
+    .drawer-wrapup-inline-just-in,
+    .drawer-reminder-inline-just-in,
+    .drawer-voicemail-reminder-just-in,
+    .bubble-in-stagger > *,
+    .drawer-personalize-chat .kei-step-options.kei-options-animate .kei-option-btn {
+        animation: none;
+        opacity: 1;
     }
 }
 
@@ -1113,8 +1319,8 @@
 
 .chat-bubble {
     max-width: 88%;
-    padding: 10px 14px;
-    border-radius: 18px;
+    padding: var(--bubble-pad);
+    border-radius: var(--bubble-radius);
     font-size: var(--font-size-label);
     line-height: 1.55;
     position: relative;
@@ -1124,6 +1330,12 @@
 
 .chat-bubble strong {
     font-weight: 700;
+}
+
+/* Interactive message bubbles (option buttons, etc.): consistent pointer cursor */
+button.chat-bubble,
+a.chat-bubble {
+    cursor: pointer;
 }
 
 .chat-label {
@@ -1137,10 +1349,10 @@
 
 /* You = single blue for all your bubbles, high contrast white text */
 .chat-you {
-    background: #0070e0;
-    color: #fff;
+    background: var(--bubble-you-bg);
+    color: var(--bubble-you-color);
     align-self: flex-end;
-    border-bottom-right-radius: 4px;
+    border-bottom-right-radius: var(--bubble-radius-corner);
 }
 
 .chat-you .chat-label {
@@ -1155,10 +1367,10 @@
 
 /* Staffer = gray bubble, dark text for readability */
 .chat-them {
-    background: #ebebf0;
-    color: #1a1a1a;
+    background: var(--bubble-them-bg);
+    color: var(--bubble-them-color);
     align-self: flex-start;
-    border-bottom-left-radius: 4px;
+    border-bottom-left-radius: var(--bubble-radius-corner);
 }
 
 .chat-them .chat-label {
@@ -1809,10 +2021,15 @@
     color: #1c1c1e;
 }
 
+/* Interest poll: iOS-style list — clear selected state, 44px tap targets, tap feedback */
+.drawer-interest-pills-wrap {
+    margin-top: 4px;
+}
+
 .drawer-interest-pills {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
 }
 
 .drawer-interest-pill {
@@ -1820,21 +2037,35 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding: 12px 14px;
+    min-height: 44px;
+    padding: 12px 16px;
     border-radius: 12px;
-    border: 1px solid transparent;
-    border-right: none;
+    border: 2px solid transparent;
     font-size: var(--font-size-body);
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.35s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
     text-align: left;
     position: relative;
     overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .drawer-interest-pill:not(.poll-voted):hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.drawer-interest-pill:not(.poll-voted):active {
+    transform: scale(0.98);
+}
+
+.drawer-interest-pill:focus-visible {
+    outline: 2px solid #0070e0;
+    outline-offset: 2px;
+}
+
+.drawer-interest-pill[aria-pressed="true"]:not(.poll-voted) {
+    box-shadow: 0 0 0 2px currentColor;
 }
 
 .drawer-interest-pill-label {
@@ -1844,19 +2075,19 @@
 }
 
 .drawer-interest-pill-dot {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     border: 2px solid currentColor;
-    opacity: 0.9;
+    opacity: 0.85;
     flex-shrink: 0;
-    margin-left: 10px;
-    transition: background 0.2s, border-color 0.2s, opacity 0.2s;
+    margin-left: 12px;
+    transition: background 0.2s, border-color 0.2s, opacity 0.2s, transform 0.15s;
     position: relative;
     z-index: 1;
 }
 
-.drawer-interest-pill[aria-pressed="true"] .drawer-interest-pill-dot {
+.drawer-interest-pill[aria-pressed="true"]:not(.poll-voted) .drawer-interest-pill-dot {
     background: currentColor;
     opacity: 1;
     border-color: transparent;
@@ -1872,6 +2103,7 @@
     pointer-events: none;
     transition: background 0.2s ease;
     background: rgba(0, 0, 0, 0.03);
+    border-right: none;
 }
 
 .drawer-interest-pill.poll-voted::after {
@@ -1884,7 +2116,7 @@
     background: var(--pill-fill, transparent);
     border-radius: inherit;
     z-index: 0;
-    transition: width 1.2s ease-out 0.25s;
+    transition: width var(--bubble-bar-fill-duration) ease-out var(--bubble-bar-fill-delay);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1941,8 +2173,8 @@
 }
 
 .drawer-interest-pill-score-1[aria-pressed="true"]:not(.poll-voted) {
-    background: rgba(230, 57, 70, 0.28);
-    color: #C1121F;
+    background: rgba(230, 57, 70, 0.42);
+    color: #A00D19;
     border-color: #E63946;
 }
 
@@ -1964,8 +2196,8 @@
 }
 
 .drawer-interest-pill-score-2[aria-pressed="true"]:not(.poll-voted) {
-    background: rgba(249, 115, 22, 0.28);
-    color: #EA580C;
+    background: rgba(249, 115, 22, 0.42);
+    color: #C2410C;
     border-color: #F97316;
 }
 
@@ -1987,8 +2219,8 @@
 }
 
 .drawer-interest-pill-score-3[aria-pressed="true"]:not(.poll-voted) {
-    background: rgba(107, 114, 128, 0.22);
-    color: #4B5563;
+    background: rgba(107, 114, 128, 0.38);
+    color: #374151;
     border-color: #6B7280;
 }
 
@@ -2010,8 +2242,8 @@
 }
 
 .drawer-interest-pill-score-4[aria-pressed="true"]:not(.poll-voted) {
-    background: rgba(34, 197, 94, 0.28);
-    color: #15803D;
+    background: rgba(34, 197, 94, 0.42);
+    color: #166534;
     border-color: #22C55E;
 }
 
@@ -2033,8 +2265,8 @@
 }
 
 .drawer-interest-pill-score-5[aria-pressed="true"]:not(.poll-voted) {
-    background: rgba(234, 179, 8, 0.32);
-    color: #A16207;
+    background: rgba(234, 179, 8, 0.48);
+    color: #854D0E;
     border-color: #EAB308;
     text-shadow: none;
 }
@@ -2335,7 +2567,7 @@
     }
 
     .phone-panel-body {
-        padding: 0 18px;
+        padding: 0 18px 40px 18px;
     }
 
     .phone-panel.phone-panel--email {
@@ -2378,7 +2610,7 @@
         }
 
         .phone-panel-body {
-            padding: 0 18px;
+            padding: 0 18px 40px 18px;
         }
     }
 }
