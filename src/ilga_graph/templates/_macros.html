@@ -178,6 +178,11 @@
 </table>
 {% endmacro %}
 
+{% macro icon_caution() %}
+{# Warning triangle with exclamation mark (stem + dot). Use inside .kei-poll-nudge-block__icon for color. #}
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/><path d="M12 8v6"/><circle cx="12" cy="17" r="1.5"/></svg>
+{% endmacro %}
+
 {% macro inline_signin(id_prefix, dev_available=false) %}
 <div id="{{ id_prefix }}-inline-signin" class="hero-signin-inline" hidden aria-label="Sign in with email">
     <div class="hero-signin-state" id="{{ id_prefix }}-signin-state-email">
@@ -225,6 +230,7 @@
         <form id="{{ poll_id }}-form" action="/updates/kei-status" method="post" class="kei-poll__form"
             hx-post="/updates/kei-status" hx-target="#{{ poll_id }}-wrap" hx-swap="innerHTML"
             aria-label="Your kei status">
+            <input type="hidden" name="csrf_token" value="{{ (request.state.csrf_token or '') if request is defined else '' }}">
             <input type="hidden" name="poll_id" value="{{ poll_id }}">
             {% if show_email %}
             <label for="{{ poll_id }}-email" class="visually-hidden">Your email (optional if signed in)</label>
@@ -269,6 +275,57 @@
                 aria-label="Submit and see results" disabled>Submit and see results</button>
         </footer>
     </div>
+</div>
+{% endmacro %}
+
+{# Inline variant for Why-you-care adventure flow: no card chrome, no progress dots. Question + Yes/No pills + sub-options.
+   swap_target_id: element id whose innerHTML is replaced on submit (e.g. why-you-care-flow). #}
+{% macro kei_poll_inline(poll_id="home-kei-poll", kei_status_total=none, swap_target_id="why-you-care-flow") %}
+<div class="wyc-inline-poll" data-kei-poll-branch data-kei-poll-inline aria-labelledby="{{ poll_id }}-heading">
+    <form id="{{ poll_id }}-form" action="/updates/kei-status" method="post" class="wyc-inline-poll__form"
+        hx-post="/updates/kei-status" hx-target="#{{ swap_target_id }}" hx-swap="innerHTML"
+        aria-label="Your kei status">
+        <input type="hidden" name="csrf_token" value="{{ (request.state.csrf_token or '') if request is defined else '' }}">
+        <input type="hidden" name="poll_id" value="{{ poll_id }}">
+        <div class="wyc-inline-question" role="group" aria-label="Do you have a kei vehicle?">
+            <p class="wyc-inline-question__label" id="{{ poll_id }}-heading">Do you have a kei vehicle?</p>
+            <div class="wyc-inline-question__branch-btns" role="group">
+                <button type="button" class="wyc-inline-question__btn wyc-inline-question__btn--branch" data-branch="yes"
+                    aria-pressed="false">Yes</button>
+                <button type="button" class="wyc-inline-question__btn wyc-inline-question__btn--branch" data-branch="no"
+                    aria-pressed="false">No</button>
+            </div>
+        </div>
+        <div class="wyc-inline-poll__step2 wyc-inline-poll__step2--hidden" id="{{ poll_id }}-panel-have"
+            data-branch="yes" aria-hidden="true">
+            <p class="wyc-inline-poll__step2-legend">What's your registration status?</p>
+            <div class="wyc-inline-poll__options" role="group" aria-label="What's your registration status?">
+                <label class="wyc-inline-poll__option"><input type="radio" name="kei_status" value="registered"
+                    required>Registered</label>
+                <label class="wyc-inline-poll__option"><input type="radio" name="kei_status" value="revoked">Had one;
+                    registration was revoked</label>
+                <label class="wyc-inline-poll__option"><input type="radio" name="kei_status" value="denied">Was denied
+                    registration</label>
+            </div>
+        </div>
+        <div class="wyc-inline-poll__step2 wyc-inline-poll__step2--hidden" id="{{ poll_id }}-panel-no"
+            data-branch="no" aria-hidden="true">
+            <p class="wyc-inline-poll__step2-legend">Would you want one?</p>
+            <div class="wyc-inline-poll__options" role="group" aria-label="Would you want one?">
+                <label class="wyc-inline-poll__option"><input type="radio" name="kei_status" value="would_want">Yes, I'd
+                    want one</label>
+                <label class="wyc-inline-poll__option"><input type="radio" name="kei_status" value="would_not_want">No, I
+                    wouldn't want one</label>
+            </div>
+        </div>
+        <footer class="wyc-inline-poll__footer">
+            <span class="wyc-inline-poll__total" aria-hidden="true">Total Votes: {{ kei_status_total if kei_status_total is not none else '—' }}</span>
+            <span class="wyc-inline-poll__submit-wrap wyc-inline-poll__submit-wrap--hidden" aria-hidden="true">
+                <button type="submit" class="wyc-inline-poll__submit btn btn--success" aria-label="Submit and see results"
+                    disabled>Submit and see results</button>
+            </span>
+        </footer>
+    </form>
 </div>
 {% endmacro %}
 
@@ -338,6 +395,7 @@ dimmed (anonymous until sign-in). #}
 {% macro subscribe_form(form_id, action="/updates/subscribe-email", variant="inline") %}
 <form action="{{ action }}" method="post" class="stay-informed-form" hx-post="{{ action }}"
     hx-target="#{{ form_id }}-wrap" hx-swap="innerHTML" aria-label="Subscribe to campaign updates by email">
+    <input type="hidden" name="csrf_token" value="{{ (request.state.csrf_token or '') if request is defined else '' }}">
     <label for="{{ form_id }}-input" class="visually-hidden">Your email</label>
     <input type="email" id="{{ form_id }}-input" name="email" class="stay-informed-input input" placeholder="Your email"
         required autocomplete="email" inputmode="email" maxlength="320">
@@ -479,21 +537,43 @@ dimmed (anonymous until sign-in). #}
     </ul>
 </section>
 {% else %}
+{# Card icons: Heroicons (Iconify) + states SVG for "21+ states" (index 1). Per TODOS 2026-02-25 / 2026-02-26. #}
+{% set _five_point_icons = [
+  {'icon': 'heroicons-solid:check-circle', 'color': '#E53935'},
+  'states',
+  {'icon': 'heroicons-solid:document-text', 'color': '#FDD835'},
+  {'icon': 'heroicons-solid:cog-6-tooth', 'color': '#43A047'},
+  {'icon': 'heroicons-solid:user-group', 'color': '#FB8C00'}
+] %}
 <section class="strategic-points strategic-points--home" id="{{ section_id }}" aria-labelledby="{{ h2_id }}">
     <h2 class="strategic-points-heading" id="{{ h2_id }}">{{ h2_text }}</h2>
     <div class="strategic-points-rows" role="list" aria-label="Our message in 5 points">
         <div class="strategic-points-row strategic-points-row--top">
             {% for point in points[:2] %}
+            {% set _card_index = loop.index0 %}
             <article class="strategic-points-card" role="listitem">
-                <span class="strategic-points-icon" aria-hidden="true"></span>
+                <span class="strategic-points-icon" aria-hidden="true">
+                    {% if _five_point_icons[_card_index] == 'states' %}
+                    {% include "_strategic_states_icon.html" %}
+                    {% else %}
+                    <iconify-icon icon="{{ _five_point_icons[_card_index].icon }}" style="color: {{ _five_point_icons[_card_index].color }}"></iconify-icon>
+                    {% endif %}
+                </span>
                 <p class="strategic-points-card-text">{{ point|safe }}</p>
             </article>
             {% endfor %}
         </div>
         <div class="strategic-points-row strategic-points-row--bottom">
             {% for point in points[2:5] %}
+            {% set _card_index = loop.index0 + 2 %}
             <article class="strategic-points-card" role="listitem">
-                <span class="strategic-points-icon" aria-hidden="true"></span>
+                <span class="strategic-points-icon" aria-hidden="true">
+                    {% if _five_point_icons[_card_index] == 'states' %}
+                    {% include "_strategic_states_icon.html" %}
+                    {% else %}
+                    <iconify-icon icon="{{ _five_point_icons[_card_index].icon }}" style="color: {{ _five_point_icons[_card_index].color }}"></iconify-icon>
+                    {% endif %}
+                </span>
                 <p class="strategic-points-card-text">{{ point|safe }}</p>
             </article>
             {% endfor %}

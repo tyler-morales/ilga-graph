@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Polls — Admin — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="admin-polls-page">
+  <header class="admin-polls-header">
+    <h1 id="admin-polls-heading">Polls</h1>
+    {% include "_admin_nav.html" %}
+    <p><a href="/admin/polls/new" class="btn btn--primary">Create poll</a></p>
+  </header>
+
+  {% if request.query_params.get('created') %}
+  <div class="admin-updates-flash admin-updates-flash--success" role="status">Poll created.</div>
+  {% endif %}
+  {% if request.query_params.get('updated') %}
+  <div class="admin-updates-flash admin-updates-flash--success" role="status">Poll updated.</div>
+  {% endif %}
+
+  <section class="admin-polls-list" aria-labelledby="admin-polls-list-heading">
+    <h2 id="admin-polls-list-heading">All polls</h2>
+    {% if polls %}
+    <table class="admin-polls-table">
+      <thead>
+        <tr>
+          <th scope="col">Title</th>
+          <th scope="col">Slug</th>
+          <th scope="col">Status</th>
+          <th scope="col">Placement</th>
+          <th scope="col">Responses</th>
+          <th scope="col">Created</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in polls %}
+        <tr>
+          <td>{{ p.title }}</td>
+          <td><code>{{ p.slug }}</code></td>
+          <td>{% if p.is_active %}Active{% else %}Inactive{% endif %}</td>
+          <td>{{ p.placement or '—' }}</td>
+          <td>{{ p.response_count }}</td>
+          <td><time datetime="{{ p.created_at.isoformat() }}">{{ p.created_at.strftime('%Y-%m-%d') }}</time></td>
+          <td>
+            <a href="/admin/polls/{{ p.id }}/edit">Edit</a>
+            <span aria-hidden="true"> · </span>
+            <a href="/admin/polls/{{ p.id }}/results">Results</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p>No polls yet. <a href="/admin/polls/new">Create one</a> to collect responses.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

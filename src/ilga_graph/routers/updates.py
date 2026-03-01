@@ -33,9 +33,10 @@ from ..app_state import state
 from ..campaign_helpers import get_active_campaign
 from ..constants import CATEGORY_COMMITTEES, KEI_STATUS_OPTIONS
 from ..db import async_session_factory, get_db
-from ..db_models import KeiPollResponse, OutreachEvent, Update, User
+from ..db_models import KeiPollResponse, OutreachEvent, Poll, PollResponse, Update, User
 from ..dependencies import get_current_user_optional, require_admin, require_user
 from ..email_utils import send_email, send_welcome_email
+from ..file_validation import magic_matches_image_content_type
 from ..kei_poll_context import (
     KEI_POLL_CHOICE_COOKIE,
     KEI_POLL_VOTED_COOKIE,
@@ -51,8 +52,16 @@ from ..routers.content import (
     PROGRESS_ACHIEVED_COUNT,
     PROGRESS_CHECKPOINTS,
     STRATEGIC_FIVE_POINTS,
+    WHY_YOU_CARE_BRANCHES,
+    WHY_YOU_CARE_DEFAULT_CARDS,
 )
-from ..security import validate_anon_session_id
+from ..security import (
+    CSRF_COOKIE_NAME,
+    rate_limit_kei_status,
+    rate_limit_subscribe_email,
+    validate_anon_session_id,
+    validate_csrf_token,
+)
 from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
 
 LOGGER = logging.getLogger(__name__)
@@ -60,6 +69,14 @@ LOGGER = logging.getLogger(__name__)
 # Email validation for public subscribe (no auth code). Max length matches User.email.
 _EMAIL_MAX_LEN = 320
 _EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", re.IGNORECASE)
+
+
+def _client_ip(request: Request) -> str:
+    """Return client IP from X-Forwarded-For or direct connection."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else ""
 
 
 def _normalize_and_validate_subscribe_email(raw: str) -> str | None:
@@ -147,6 +164,12 @@ async def _save_update_image(upload: UploadFile, update_id: int) -> str | None:
             LOGGER.warning("Update image rejected: too large")
             return None
     if not content:
+        return None
+    if not magic_matches_image_content_type(content, upload.content_type):
+        LOGGER.warning(
+            "Update image rejected: magic bytes do not match content_type=%s",
+            upload.content_type,
+        )
         return None
     upload_dir = _STATIC_DIR / cfg.UPDATE_IMAGE_UPLOAD_DIR
     upload_dir.mkdir(parents=True, exist_ok=True)
@@ -670,6 +693,23 @@ async def kei_poll_form(
     )
 
 
+@router.get("/updates/why-you-care-flow", include_in_schema=False)
+async def why_you_care_flow(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return ambient Why-you-care flow HTML for HTMX swap into #why-you-care-flow."""
+    results = await _get_kei_status_results(db)
+    return templates.TemplateResponse(
+        request,
+        "_why_you_care_flow_ambient.html",
+        {
+            "why_you_care_default_cards": WHY_YOU_CARE_DEFAULT_CARDS,
+            "kei_status_total": results["total_responses"],
+        },
+    )
+
+
 @router.get("/updates/kei-poll-results", include_in_schema=False)
 async def kei_poll_results(
     request: Request,
@@ -700,10 +740,31 @@ async def kei_status_post(
     email: str | None = Form(None, max_length=_EMAIL_MAX_LEN),
     poll_id: str = Form("footer-kei-poll", max_length=64),
     session_id: str | None = Form(None, max_length=64),
+    csrf_token: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
     user: User | None = Depends(get_current_user_optional),
 ):
     """Set kei status. Insert kei_poll_responses; if logged-in also set User.kei_status."""
+    token = csrf_token or request.headers.get("X-XSRF-TOKEN")
+    cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
+    if not validate_csrf_token(token, cookie_token):
+        if request.headers.get("HX-Request"):
+            return HTMLResponse(
+                '<p class="kei-status-error" role="alert">Invalid or expired security token. '
+                "Reload the page and try again.</p>",
+                status_code=403,
+            )
+        return RedirectResponse("/updates?prompt=kei&error=csrf", status_code=303)
+    if user is None:
+        client_ip = _client_ip(request)
+        if not rate_limit_kei_status(client_ip):
+            if request.headers.get("HX-Request"):
+                return HTMLResponse(
+                    '<p class="kei-status-error" role="alert">Too many responses from this '
+                    "device. Try again later.</p>",
+                    status_code=429,
+                )
+            return RedirectResponse("/updates?prompt=kei&error=rate", status_code=303)
     if poll_id not in get_kei_poll_ids():
         poll_id = "footer-kei-poll"
     validated = _validate_kei_status(kei_status)
@@ -723,6 +784,17 @@ async def kei_status_post(
     db.add(response_row)
     if user:
         user.kei_status = validated
+    # Dual-write to poll_responses so admin Polls list and per-poll results stay in sync.
+    kei_poll = (await db.execute(select(Poll).where(Poll.slug == "kei"))).scalar_one_or_none()
+    if kei_poll:
+        db.add(
+            PollResponse(
+                poll_id=kei_poll.id,
+                user_id=user.id if user else None,
+                session_id=anon_sid,
+                option_slug=validated,
+            )
+        )
     await db.commit()
     LOGGER.info(
         "Kei poll response id=%s user_id=%s kei_status=%s",
@@ -733,6 +805,25 @@ async def kei_status_post(
     if user:
         if request.headers.get("HX-Request"):
             results = await _get_kei_status_results(db)
+            if poll_id == "home-kei-poll":
+                branch_slug = (
+                    "owner" if validated in ("registered", "revoked", "denied") else validated
+                )
+                why_you_care_branch = WHY_YOU_CARE_BRANCHES.get(
+                    branch_slug, WHY_YOU_CARE_BRANCHES["would_not_want"]
+                )
+                return templates.TemplateResponse(
+                    request,
+                    "_why_you_care_branch.html",
+                    {
+                        "why_you_care_branch": why_you_care_branch,
+                        "kei_status_results": results,
+                        "kei_status_options": KEI_STATUS_OPTIONS,
+                        "kei_status_selected": validated,
+                        "kei_poll_initial_anon": False,
+                        "poll_id": poll_id,
+                    },
+                )
             return templates.TemplateResponse(
                 request,
                 "_kei_poll_logged_in_success.html",
@@ -752,17 +843,35 @@ async def kei_status_post(
         {"key": KEI_POLL_CHOICE_COOKIE, "value": validated, **cookie_opts},
     ]
     if request.headers.get("HX-Request"):
-        resp = templates.TemplateResponse(
-            request,
-            "_kei_poll_anonymous_success.html",
-            {
-                "kei_status_results": results,
-                "kei_status_options": KEI_STATUS_OPTIONS,
-                "kei_status_selected": validated,
-                "dev_available": cfg.DEV_MODE,
-                "poll_id": poll_id,
-            },
-        )
+        if poll_id == "home-kei-poll":
+            branch_slug = "owner" if validated in ("registered", "revoked", "denied") else validated
+            why_you_care_branch = WHY_YOU_CARE_BRANCHES.get(
+                branch_slug, WHY_YOU_CARE_BRANCHES["would_not_want"]
+            )
+            resp = templates.TemplateResponse(
+                request,
+                "_why_you_care_branch.html",
+                {
+                    "why_you_care_branch": why_you_care_branch,
+                    "kei_status_results": results,
+                    "kei_status_options": KEI_STATUS_OPTIONS,
+                    "kei_status_selected": validated,
+                    "kei_poll_initial_anon": True,
+                    "poll_id": poll_id,
+                },
+            )
+        else:
+            resp = templates.TemplateResponse(
+                request,
+                "_kei_poll_anonymous_success.html",
+                {
+                    "kei_status_results": results,
+                    "kei_status_options": KEI_STATUS_OPTIONS,
+                    "kei_status_selected": validated,
+                    "dev_available": cfg.DEV_MODE,
+                    "poll_id": poll_id,
+                },
+            )
         for params in cookies_to_set:
             resp.set_cookie(**params)
         return resp
@@ -776,9 +885,29 @@ async def kei_status_post(
 async def subscribe_email_post(
     request: Request,
     email: str = Form(..., max_length=_EMAIL_MAX_LEN),
+    csrf_token: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
     """Public email-only subscription: create/update user wants_updates=True. No auth code."""
+    token = csrf_token or request.headers.get("X-XSRF-TOKEN")
+    cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
+    if not validate_csrf_token(token, cookie_token):
+        if request.headers.get("HX-Request"):
+            return HTMLResponse(
+                '<p class="subscribe-email-error" role="alert">Invalid or expired security '
+                "token. Reload the page and try again.</p>",
+                status_code=403,
+            )
+        return RedirectResponse("/updates?subscribe=csrf", status_code=303)
+    client_ip = _client_ip(request)
+    if not rate_limit_subscribe_email(client_ip):
+        if request.headers.get("HX-Request"):
+            return HTMLResponse(
+                '<p class="subscribe-email-error" role="alert">Too many signup attempts. '
+                "Try again later.</p>",
+                status_code=429,
+            )
+        return RedirectResponse("/updates?subscribe=rate", status_code=303)
     normalized = _normalize_and_validate_subscribe_email(email)
     if not normalized:
         if request.headers.get("HX-Request"):

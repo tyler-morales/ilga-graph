@@ -18,6 +18,15 @@
     <footer class="kei-poll__footer kei-poll__footer--results">
         <span class="kei-poll__total">Total Votes: {{ kei_status_results.total_responses if kei_status_results else 0 }}</span>
     </footer>
+    <p class="kei-poll-story-cta">
+        {% if kei_status_selected in ('registered', 'revoked', 'denied') %}
+        <button type="button" class="story-submit-trigger kei-poll-story-cta__btn" data-marquee-type="story" aria-label="Open form to share your photo and story on the community wall">Share your story</button>
+        <span class="kei-poll-story-cta__hint">Add your photo to our community wall.</span>
+        {% else %}
+        <button type="button" class="story-submit-trigger kei-poll-story-cta__btn" data-marquee-type="statement" aria-label="Open form to share your interest (e.g. would buy if legal) on the community wall">Share your story</button>
+        <span class="kei-poll-story-cta__hint">Share that you&rsquo;d buy one if it were legal—we&rsquo;ll add it to the wall.</span>
+        {% endif %}
+    </p>
     <p class="kei-poll-change-wrap">
         <button type="button" class="kei-poll-change-btn link-style"
             hx-get="/updates/kei-poll-form?poll_id={{ poll_id|e }}"

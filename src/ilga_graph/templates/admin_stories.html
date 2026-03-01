@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Community stories — Admin — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="admin-stories-page">
+  <header class="admin-stories-header">
+    <h1 id="admin-stories-heading">Community stories</h1>
+    <p class="admin-stories-intro">User-submitted photos and stories for the home page marquee. Approve to add to the carousel; deny to decline. You can send an optional message with either action.</p>
+    {% include "_admin_nav.html" %}
+  </header>
+
+  {% if request.query_params.get('flash') == 'approved' %}
+  <p class="admin-stories-flash admin-stories-flash--success" role="status">Story approved. Submitter has been emailed.</p>
+  {% elif request.query_params.get('flash') == 'denied' %}
+  <p class="admin-stories-flash admin-stories-flash--info" role="status">Story denied. Submitter has been emailed.</p>
+  {% elif request.query_params.get('flash') == 'not_found' %}
+  <p class="admin-stories-flash admin-stories-flash--error" role="status">Story not found.</p>
+  {% elif request.query_params.get('flash') == 'already_reviewed' %}
+  <p class="admin-stories-flash admin-stories-flash--error" role="status">That story was already reviewed.</p>
+  {% elif request.query_params.get('flash') == 'invalid_action' %}
+  <p class="admin-stories-flash admin-stories-flash--error" role="status">Invalid action.</p>
+  {% elif request.query_params.get('flash') == 'csrf' %}
+  <p class="admin-stories-flash admin-stories-flash--error" role="status">Invalid or expired security token. Reload the page and try again.</p>
+  {% endif %}
+
+  <section class="admin-stories-section" aria-labelledby="admin-stories-pending-heading">
+    <h2 id="admin-stories-pending-heading" class="admin-stories-section-heading">Pending <span class="admin-stories-count">({{ pending|length }})</span></h2>
+    {% if pending %}
+    <ul class="admin-stories-list">
+      {% for story in pending %}
+      <li class="admin-stories-card admin-stories-card--pending">
+        <div class="admin-stories-card__preview">
+          <img src="/static/{{ story.image_path }}" alt="" width="120" height="90" loading="lazy">
+        </div>
+        <div class="admin-stories-card__body">
+          <p class="admin-stories-card__name">{{ story.name }}</p>
+          <p class="admin-stories-card__meta">{{ story.location }} · {{ story.email }}</p>
+          <p class="admin-stories-card__story">{{ story.story }}</p>
+          <p class="admin-stories-card__date">Submitted {{ story.created_at.strftime('%Y-%m-%d %H:%M') if story.created_at else '—' }}</p>
+          <form action="/admin/stories/{{ story.id }}/review" method="post" class="admin-stories-review-form">
+            <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token or '' }}">
+            <label for="admin-stories-message-{{ story.id }}" class="admin-stories-review-form__label">Message to submitter (optional)</label>
+            <textarea id="admin-stories-message-{{ story.id }}" name="message" rows="2" class="admin-stories-review-form__message" placeholder="e.g. Thanks! We've added you to the wall."></textarea>
+            <div class="admin-stories-review-form__actions">
+              <button type="submit" name="action" value="approve" class="admin-stories-review-form__btn admin-stories-review-form__btn--approve">Approve</button>
+              <button type="submit" name="action" value="deny" class="admin-stories-review-form__btn admin-stories-review-form__btn--deny">Deny</button>
+            </div>
+          </form>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="admin-stories-empty">No pending submissions.</p>
+    {% endif %}
+  </section>
+
+  <section class="admin-stories-section" aria-labelledby="admin-stories-approved-heading">
+    <h2 id="admin-stories-approved-heading" class="admin-stories-section-heading">Approved <span class="admin-stories-count">({{ approved|length }})</span></h2>
+    {% if approved %}
+    <ul class="admin-stories-list">
+      {% for story in approved %}
+      <li class="admin-stories-card admin-stories-card--approved">
+        <div class="admin-stories-card__preview">
+          <img src="/static/{{ story.image_path }}" alt="" width="120" height="90" loading="lazy">
+        </div>
+        <div class="admin-stories-card__body">
+          <p class="admin-stories-card__name">{{ story.name }}</p>
+          <p class="admin-stories-card__meta">{{ story.location }}</p>
+          <p class="admin-stories-card__story">{{ story.story }}</p>
+          <p class="admin-stories-card__date">Reviewed {{ story.reviewed_at.strftime('%Y-%m-%d %H:%M') if story.reviewed_at else '—' }}</p>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="admin-stories-empty">No approved stories yet.</p>
+    {% endif %}
+  </section>
+
+  <section class="admin-stories-section" aria-labelledby="admin-stories-denied-heading">
+    <h2 id="admin-stories-denied-heading" class="admin-stories-section-heading">Denied <span class="admin-stories-count">({{ denied|length }})</span></h2>
+    {% if denied %}
+    <ul class="admin-stories-list">
+      {% for story in denied %}
+      <li class="admin-stories-card admin-stories-card--denied">
+        <div class="admin-stories-card__preview">
+          <img src="/static/{{ story.image_path }}" alt="" width="120" height="90" loading="lazy">
+        </div>
+        <div class="admin-stories-card__body">
+          <p class="admin-stories-card__name">{{ story.name }}</p>
+          <p class="admin-stories-card__meta">{{ story.location }}</p>
+          <p class="admin-stories-card__story">{{ story.story }}</p>
+          <p class="admin-stories-card__date">Reviewed {{ story.reviewed_at.strftime('%Y-%m-%d %H:%M') if story.reviewed_at else '—' }}</p>
+          {% if story.admin_message %}
+          <p class="admin-stories-card__admin-message">Message sent: {{ story.admin_message }}</p>
+          {% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="admin-stories-empty">No denied submissions.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

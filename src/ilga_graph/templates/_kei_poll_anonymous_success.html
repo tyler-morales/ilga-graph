@@ -9,7 +9,8 @@
         <div class="kei-poll__body">
             <div class="kei-poll-nudge-block" role="status" aria-live="polite">
                 <span class="kei-poll-nudge-block__icon" aria-hidden="true">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/><circle cx="12" cy="17" r="1"/></svg>
+                    {% from "_macros.html" import icon_caution %}
+                    {{ icon_caution() }}
                 </span>
                 <div class="kei-poll-nudge-block__content">
                     <p class="kei-poll-nudge-block__copy">Your response isn&rsquo;t counted yet. Sign in to save your answer
@@ -46,6 +47,7 @@
                     <div class="poll-signup-prompt__success" id="poll-signup-success" hidden role="status"></div>
                 </div>
             </div>
+            <p class="kei-poll-story-cta">Sign in to share your story on our community wall.</p>
             <p class="kei-poll-change-wrap">
                 <button type="button" class="kei-poll-change-btn link-style"
                     hx-get="/updates/kei-poll-form?poll_id={{ poll_id|e }}" hx-target="#{{ poll_id|e }}-wrap"

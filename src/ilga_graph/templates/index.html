@@ -78,6 +78,7 @@
                 <form action="/updates/subscribe-email" method="post" class="drawer-subscribe-form subscribe-form"
                     hx-post="/updates/subscribe-email" hx-target="this" hx-swap="outerHTML"
                     aria-label="Subscribe to campaign updates">
+                    <input type="hidden" name="csrf_token" value="{{ (request.state.csrf_token or '') if request is defined else '' }}">
                     <input type="email" name="email" class="drawer-subscribe-input subscribe-input"
                         placeholder="Your email" required autocomplete="email" inputmode="email" maxlength="320">
                     <button type="submit" class="drawer-subscribe-btn subscribe-btn">Subscribe</button>

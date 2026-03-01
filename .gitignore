@@ -64,3 +64,9 @@ src/ilga_graph/static/updates/*.jpg
 src/ilga_graph/static/updates/*.png
 src/ilga_graph/static/updates/*.webp
 !src/ilga_graph/static/updates/.gitkeep
+
+# Community story images: user uploads; do not commit (directory kept via .gitkeep)
+src/ilga_graph/static/uploads/stories/*.jpg
+src/ilga_graph/static/uploads/stories/*.png
+src/ilga_graph/static/uploads/stories/*.webp
+!src/ilga_graph/static/uploads/stories/.gitkeep

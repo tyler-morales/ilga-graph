@@ -668,6 +668,8 @@ a:visited {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  /* Horizontal padding so focus outline (2px + 1px offset) on options is not clipped by overflow:hidden ancestors */
+  padding: 0 3px;
 }
 
 .kei-poll__option {
@@ -676,6 +678,21 @@ a:visited {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  width: 100%;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--color-border-light, #e5e5e5);
+  border-radius: 6px;
+  background: var(--color-bg-card, #fff);
+}
+
+.kei-poll__option:hover {
+  background: #e3f2fd;
+  border-color: #90caf9;
+}
+
+.kei-poll__option:focus-within {
+  outline: 2px solid #1976d2;
+  outline-offset: 1px;
 }
 
 .kei-poll__option input {
@@ -774,21 +791,18 @@ a:visited {
   color: #1a1a1a;
 }
 
-/* Poll sign-in: link-style blue text, hover stays blue (no filled button). */
-.kei-poll-nudge-block__signin-link {
-  font-weight: 600;
-  color: var(--link-color, #1a73e8);
-  text-decoration: underline;
-  text-underline-offset: 2px;
+/* Poll sign-in: use shared btn--secondary (no link-style). No blue background — blue text on hover only. */
+.kei-poll-nudge-block__signin-link.btn,
+.kei-poll-nudge-block .auth-strip-signin-btn {
+  background: transparent;
+  color: inherit;
+  text-decoration: none;
 }
 
-.kei-poll-nudge-block__signin-link:hover {
+.kei-poll-nudge-block__signin-link.btn:hover,
+.kei-poll-nudge-block .auth-strip-signin-btn:hover {
+  background: transparent;
   color: #1a73e8;
-}
-
-.kei-poll-nudge-block__signin-link:focus-visible {
-  outline: 2px solid var(--color-focus-ring, #1a73e8);
-  outline-offset: 2px;
 }
 
 .kei-poll-results {
@@ -968,50 +982,162 @@ a:visited {
   flex-wrap: wrap;
 }
 
+/* Not yet: use shared btn--secondary (no link-style). */
 .poll-signup-notyet {
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
   font-size: var(--font-size-sm);
-  color: var(--link-color, #0066cc);
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.poll-signup-notyet:hover {
-  color: #004499;
-}
-
-.poll-signup-notyet:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 2px;
 }
 
 .kei-poll-change-wrap {
   margin-top: 0.75rem;
 }
 
-.kei-poll-change-btn.link-style {
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
+/* Change answer: use shared btn--secondary (no link-style). */
+.kei-poll-change-btn {
   font-size: var(--font-size-sm);
-  color: var(--link-color, #0066cc);
+}
+
+.kei-poll-story-cta {
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Share your story: uses .btn.btn--story (orange) from components.css. */
+.kei-poll-story-cta__btn {
+  font-size: var(--font-size-sm);
+}
+
+.kei-poll-story-cta__hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted, #555);
+}
+
+/* Community story submission dialog — restore centering overridden by * { margin: 0 } */
+.story-submit-dialog {
+  margin: auto;
+  max-width: min(28rem, 92vw);
+  padding: 0;
+  border: 1px solid var(--color-border-light, #ddd);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: var(--shadow-lg, 0 10px 25px rgba(0, 0, 0, 0.15));
+}
+
+.story-submit-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.story-submit-dialog__wrap {
+  padding: 1.25rem;
+}
+
+.story-submit-dialog__title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
+}
+
+.story-submit-dialog__intro {
+  margin: 0 0 1rem 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted, #555);
+}
+
+.story-submit-form__field {
+  margin-bottom: 1rem;
+}
+
+.story-submit-form__label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.story-submit-form__input,
+.story-submit-form__textarea,
+.story-submit-form__file {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  font-size: var(--font-size-sm);
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.story-submit-form__textarea {
+  resize: vertical;
+  min-height: 4em;
+}
+
+.story-submit-form__hint {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #555);
+}
+
+.story-submit-form__preview {
+  margin-top: 0.5rem;
+}
+
+.story-submit-form__preview-img {
+  max-width: 120px;
+  max-height: 90px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+
+.story-submit-form__counter {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #555);
+}
+
+.story-submit-form__email {
+  margin: 0 0 0.75rem 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted, #555);
+}
+
+.story-submit-form__field--consent .story-submit-form__consent-text {
+  font-size: var(--font-size-sm);
+}
+
+.story-submit-form__checkbox-wrap {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.story-submit-form__checkbox {
+  margin-top: 0.25rem;
+  flex-shrink: 0;
+}
+
+.story-submit-form__actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+/* Form actions use shared .btn; modifiers only for disabled state. */
+.story-submit-form__btn {
   cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
 }
 
-.kei-poll-change-btn.link-style:hover {
-  color: #004499;
+.story-submit-form__btn--submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
-.kei-poll-change-btn.link-style:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 2px;
+.story-submit-success {
+  padding: 0.5rem 0;
+}
+
+.story-submit-success__message {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
 }
 
 /* Shared subscribe component: form, input, button (footer, sidebar, home CTA, updates, drawer). Variations in mission-statement.css (home), advocacy-drawer.css (drawer). */

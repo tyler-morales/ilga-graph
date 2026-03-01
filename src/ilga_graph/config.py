@@ -176,11 +176,24 @@ BUG_REPORT_MAX_IMAGE_BYTES: int = int(_env("ILGA_BUG_REPORT_MAX_IMAGE_MB", "5"))
 # Update image uploads: subdir under static (e.g. updates → /static/updates/). Created on first use.
 UPDATE_IMAGE_UPLOAD_DIR: str = _env("ILGA_UPDATE_IMAGE_UPLOAD_DIR", "updates").strip()
 UPDATE_MAX_IMAGE_BYTES: int = int(_env("ILGA_UPDATE_MAX_IMAGE_MB", "5")) * 1024 * 1024
+# Community story uploads: subdir under static (e.g. uploads/stories).
+STORY_IMAGE_UPLOAD_DIR: str = _env("ILGA_STORY_IMAGE_UPLOAD_DIR", "uploads/stories").strip()
+STORY_MAX_IMAGE_BYTES: int = int(_env("ILGA_STORY_MAX_IMAGE_MB", "5")) * 1024 * 1024
 
 # Rate limits (per key: IP or IP+email). In-memory; resets on process restart.
 RATE_LIMIT_BUG_REPORT_PER_HOUR: int = int(_env("ILGA_RATE_LIMIT_BUG_REPORT_PER_HOUR", "10"))
 RATE_LIMIT_REQUEST_CODE_PER_15MIN: int = int(_env("ILGA_RATE_LIMIT_REQUEST_CODE_PER_15MIN", "3"))
 RATE_LIMIT_VERIFY_CODE_PER_15MIN: int = int(_env("ILGA_RATE_LIMIT_VERIFY_CODE_PER_15MIN", "10"))
+RATE_LIMIT_SUBSCRIBE_EMAIL_PER_HOUR: int = int(
+    _env("ILGA_RATE_LIMIT_SUBSCRIBE_EMAIL_PER_HOUR", "10")
+)
+RATE_LIMIT_KEI_STATUS_ANON_PER_HOUR: int = int(
+    _env("ILGA_RATE_LIMIT_KEI_STATUS_ANON_PER_HOUR", "20")
+)
+RATE_LIMIT_STORY_SUBMIT_PER_HOUR: int = int(_env("ILGA_RATE_LIMIT_STORY_SUBMIT_PER_HOUR", "5"))
+RATE_LIMIT_STATEMENT_SUBMIT_PER_HOUR: int = int(
+    _env("ILGA_RATE_LIMIT_STATEMENT_SUBMIT_PER_HOUR", "5")
+)
 
 # Cloudflare Turnstile (optional). Free tier: 1M requests/month. When both keys are set,
 # the bug report form shows the widget and server verifies the token.

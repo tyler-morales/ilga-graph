@@ -67,28 +67,6 @@ async def _send_code_email(email: str, code: str) -> None:
         f"If you didn't request this, you can ignore this email."
     )
     sent = await send_email(email, subject, plain, _verification_email_html(code))
-    # #region agent log
-    try:
-        import json as _json
-        import time as _time_mod
-
-        _log_path = "/Users/tyler/Projects/Code/hardball/.cursor/debug-88d29a.log"
-        with open(_log_path, "a") as _f:
-            payload = {
-                "sessionId": "88d29a",
-                "location": "auth.py:_send_code_email",
-                "message": "send_code result",
-                "data": {
-                    "sent": sent,
-                    "DEV_MODE": cfg.DEV_MODE,
-                    "SMTP_configured": bool(cfg.SMTP_HOST),
-                },
-                "timestamp": _time_mod.time_ns() // 1_000_000,
-            }
-            _f.write(_json.dumps(payload) + "\n")
-    except Exception:
-        pass
-    # #endregion
     if not sent:
         banner = (
             "\n"

@@ -15,12 +15,11 @@ from ..constants import KEI_STATUS_OPTIONS
 from ..db import get_db
 from ..db_models import User
 from ..dependencies import get_current_user_optional
-from ..kei_poll_context import get_kei_poll_initial_state
+from ..kei_poll_context import _get_kei_status_results, get_kei_poll_initial_state
 from ..routers.advocacy import DEFAULT_HERO_ZIP, _hero_context
 from ..routers.content import (
     HERO_CLARITY_LINE,
     HERO_URGENCY_LINE,
-    MARQUEE_IMAGES,
     STRATEGIC_FIVE_POINTS,
     STRATEGIC_MISSION,
     STRATEGIC_VISION,
@@ -28,6 +27,8 @@ from ..routers.content import (
     WHY_SHOULD_YOU_CARE_INTRO,
     WHY_SHOULD_YOU_CARE_TEASER_ITEMS,
     WHY_SHOULD_YOU_CARE_VOICE,
+    WHY_YOU_CARE_BRANCHES,
+    get_marquee_items,
     get_strategic_states_tooltips,
 )
 from ..routers.outreach import get_outreach_aggregate
@@ -74,7 +75,7 @@ templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
 templates.env.globals["hero_urgency_line"] = HERO_URGENCY_LINE
 templates.env.globals["hero_clarity_line"] = HERO_CLARITY_LINE
 templates.env.globals["features"] = cfg.get_client_features()
-templates.env.globals["marquee_images"] = MARQUEE_IMAGES
+templates.env.globals["marquee_items"] = []  # Overridden per-request when db available
 templates.env.globals["why_should_you_care_heading"] = WHY_SHOULD_YOU_CARE_HEADING
 templates.env.globals["why_should_you_care_intro"] = WHY_SHOULD_YOU_CARE_INTRO
 templates.env.globals["why_should_you_care_teaser_items"] = WHY_SHOULD_YOU_CARE_TEASER_ITEMS
@@ -158,4 +159,14 @@ async def home(
     poll_state = await get_kei_poll_initial_state(request, user, db)
     ctx.update(poll_state)
     ctx["poll_id"] = "home-kei-poll"
+    ctx["marquee_items"] = await get_marquee_items(db)
+    if ctx.get("kei_poll_done") and ctx.get("kei_status_selected"):
+        slug = ctx["kei_status_selected"]
+        branch_slug = "owner" if slug in ("registered", "revoked", "denied") else slug
+        ctx["why_you_care_branch"] = WHY_YOU_CARE_BRANCHES.get(
+            branch_slug, WHY_YOU_CARE_BRANCHES["would_not_want"]
+        )
+    if not ctx.get("kei_poll_done"):
+        results = await _get_kei_status_results(db)
+        ctx["kei_status_total"] = results["total_responses"]
     return templates.TemplateResponse("home.html", ctx)

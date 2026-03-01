@@ -40,6 +40,69 @@ WHY_SHOULD_YOU_CARE_TEASER_ITEMS: list[str] = [
     "Your voice helps legislators see the issue deserves a fix.",
 ]
 
+# Short line above the kei poll explaining why we collect this (Hardball: making the case to legislators).
+KEI_POLL_WHY_WE_ASK = (
+    "We use responses to show legislators how many people are affected and who supports the fix."
+)
+
+# Why-you-care adventure flow: default cards (ambient state) and branch-specific content (after poll).
+# All copy from WHY_SHOULD_YOU_CARE_* and STRATEGIC_FIVE_POINTS; CTAs are paths/labels only.
+WHY_YOU_CARE_DEFAULT_CARDS: list[dict[str, str]] = [
+    {
+        "headline": "Real people, real impact",
+        "body": WHY_SHOULD_YOU_CARE_TEASER_ITEMS[0],
+    },
+    {
+        "headline": "Fair and consistent law",
+        "body": WHY_SHOULD_YOU_CARE_TEASER_ITEMS[1],
+    },
+    {
+        "headline": "Your voice matters",
+        "body": WHY_SHOULD_YOU_CARE_TEASER_ITEMS[2],
+    },
+]
+
+# Branch slug -> { headline, body, primary_cta_label, primary_cta_href, secondary_cta_label?, secondary_cta_href? }
+WHY_YOU_CARE_BRANCHES: dict[str, dict[str, str]] = {
+    "owner": {
+        "headline": "You're living this.",
+        "body": (
+            "Clear law protects residents. When statutory language is ambiguous, regular people absorb the consequences. "
+            "This affects real Illinois residents who own legal vehicles they can't register—registrations denied or revoked, "
+            "titles branded 'Not Eligible for Registration,' plates surrendered."
+        ),
+        "primary_cta_label": "Start outreach",
+        "primary_cta_href": "/advocacy",
+        "secondary_cta_label": "Share your story",
+        "secondary_cta_href": "#",  # opens modal via data-marquee-type
+        "secondary_cta_modal_type": "story",
+    },
+    "would_want": {
+        "headline": "You can't buy what other states already allow.",
+        "body": (
+            "Even if you don't own one, it's about fair and consistent application of the law. "
+            "21+ states already allow registration—Illinois is the outlier. Your voice helps legislators see the issue deserves a fix."
+        ),
+        "primary_cta_label": "Learn about the issue",
+        "primary_cta_href": "/the-issue",
+        "secondary_cta_label": "Start outreach",
+        "secondary_cta_href": "/advocacy",
+        "secondary_cta_modal_type": "",
+    },
+    "would_not_want": {
+        "headline": "It's about clear, consistent law.",
+        "body": (
+            "Even if you don't want one, ambiguous law affects everyone. "
+            "Your voice helps legislators see the issue deserves a fix."
+        ),
+        "primary_cta_label": "Read about the issue",
+        "primary_cta_href": "/the-issue",
+        "secondary_cta_label": "",
+        "secondary_cta_href": "",
+        "secondary_cta_modal_type": "",
+    },
+}
+
 # Why-you-care marquee: list of {"src", "alt", "name", "caption", "location"}.
 # name = person's name (bold in blurb); caption = description; location = city only.
 MARQUEE_IMAGES: list[dict[str, str]] = [

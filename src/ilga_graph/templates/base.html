@@ -281,18 +281,53 @@
             }
         })();
     </script>
-    {# Kei poll: two-step branch (have kei / registration vs want). #}
+    {# Kei poll: two-step branch (have kei / registration vs want). Also inline variant (Why-you-care flow). #}
     <script>
         (function () {
             function initKeiPollBranch(container) {
                 var root = container && container.nodeType === 1 ? container : document;
                 root.querySelectorAll('[data-kei-poll-branch]').forEach(function (wrap) {
                     if (wrap.getAttribute('data-kei-poll-branch-inited')) return;
-                    wrap.setAttribute('data-kei-poll-branch-inited', '1');
-                    var branchBtns = wrap.querySelectorAll('.kei-poll__branch-btn');
-                    var panels = wrap.querySelectorAll('.kei-poll__step2-panel');
+                    var isInline = wrap.hasAttribute('data-kei-poll-inline');
+                    var branchBtns = wrap.querySelectorAll(isInline ? '.wyc-inline-question__btn--branch' : '.kei-poll__branch-btn');
+                    var panels = wrap.querySelectorAll(isInline ? '.wyc-inline-poll__step2' : '.kei-poll__step2-panel');
                     var form = wrap.querySelector('form');
                     if (!branchBtns.length || !panels.length || !form) return;
+                    wrap.setAttribute('data-kei-poll-branch-inited', '1');
+                    if (isInline) {
+                        function showBranchInline(branch) {
+                            branchBtns.forEach(function (btn) {
+                                btn.setAttribute('aria-pressed', btn.getAttribute('data-branch') === branch ? 'true' : 'false');
+                            });
+                            panels.forEach(function (panel) {
+                                var hidden = panel.getAttribute('data-branch') !== branch;
+                                panel.classList.toggle('wyc-inline-poll__step2--hidden', hidden);
+                                panel.setAttribute('aria-hidden', hidden ? 'true' : 'false');
+                            });
+                            form.querySelectorAll('input[name="kei_status"]').forEach(function (radio) { radio.checked = false; });
+                            var submitBtn = wrap.querySelector('.wyc-inline-poll__submit');
+                            if (submitBtn) submitBtn.disabled = true;
+                            var submitWrap = wrap.querySelector('.wyc-inline-poll__submit-wrap');
+                            if (submitWrap) {
+                                submitWrap.classList.remove('wyc-inline-poll__submit-wrap--hidden');
+                                submitWrap.removeAttribute('aria-hidden');
+                            }
+                        }
+                        function updateSubmitStateInline() {
+                            var visiblePanel = wrap.querySelector('.wyc-inline-poll__step2:not(.wyc-inline-poll__step2--hidden)');
+                            var checked = wrap.querySelector('input[name="kei_status"]:checked');
+                            var submitBtn = wrap.querySelector('.wyc-inline-poll__submit');
+                            if (submitBtn) submitBtn.disabled = !visiblePanel || !checked;
+                        }
+                        form.addEventListener('change', function (ev) {
+                            if (ev.target && ev.target.name === 'kei_status') updateSubmitStateInline();
+                        });
+                        branchBtns.forEach(function (btn) {
+                            btn.addEventListener('click', function () { showBranchInline(btn.getAttribute('data-branch')); });
+                        });
+                        updateSubmitStateInline();
+                        return;
+                    }
                     var headingPrefix = 'Poll: ';
                     function setHeading(suffix) {
                         var h2 = wrap.querySelector('.kei-poll__heading');
@@ -340,14 +375,97 @@
                     });
                 });
             }
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', function () { initKeiPollBranch(document); });
-            } else {
+            function initWycResetFlow(container) {
+                var root = container && container.nodeType === 1 ? container : document;
+                root.querySelectorAll('[data-wyc-reset-flow]').forEach(function (btn) {
+                    if (btn.getAttribute('data-wyc-reset-inited')) return;
+                    btn.setAttribute('data-wyc-reset-inited', '1');
+                    btn.addEventListener('click', function () {
+                        var target = document.getElementById('why-you-care-flow');
+                        if (target && typeof htmx !== 'undefined') {
+                            htmx.ajax('GET', '/updates/why-you-care-flow', { target: target, swap: 'innerHTML' });
+                        }
+                    });
+                });
+            }
+            function initWhyYouCareFlow() {
                 initKeiPollBranch(document);
+                initWycResetFlow(document);
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initWhyYouCareFlow);
+            } else {
+                initWhyYouCareFlow();
             }
             document.body.addEventListener('htmx:afterSwap', function (ev) {
-                // After outerHTML swap the target is the removed node; new form is in document.
                 initKeiPollBranch(document);
+                initWycResetFlow(document);
+                var target = ev.detail && ev.detail.target;
+                if (target && target.id === 'why-you-care-flow') {
+                    var branch = target.querySelector('.wyc-branch-content');
+                    if (branch) {
+                        if (typeof window.recordWycStep === 'function') {
+                            window.recordWycStep('wyc_branch_viewed');
+                        }
+                        var headline = branch.querySelector('.wyc-branch-content__headline');
+                        if (headline) {
+                            requestAnimationFrame(function () {
+                                headline.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            });
+                        }
+                    }
+                }
+            });
+        })();
+    </script>
+    {# WYC funnel: record steps for why-you-care section (relies on hero-auth-strip.js for getCsrfToken / getAnonSessionId). #}
+    <script>
+        (function () {
+            function recordWycStep(stepSlug) {
+                if (!stepSlug) return;
+                var body = new FormData();
+                body.append('member_id', '');
+                body.append('outreach_type', 'wyc');
+                body.append('step_slug', stepSlug);
+                if (typeof getCsrfToken === 'function') body.append('csrf_token', getCsrfToken());
+                if (!window._ilgaUserEmail && typeof getAnonSessionId === 'function') {
+                    var anonSid = getAnonSessionId();
+                    if (anonSid) body.append('session_id', anonSid);
+                }
+                fetch('/outreach/step', { method: 'POST', body: body, credentials: 'same-origin' })
+                    .then(function (r) { return r.json ? r.json() : {}; })
+                    .catch(function () { return undefined; });
+            }
+            window.recordWycStep = recordWycStep;
+
+            function initWycStepDelegation() {
+                var wyc = document.getElementById('why-you-care');
+                if (!wyc || wyc.getAttribute('data-wyc-step-delegation-inited')) return;
+                wyc.setAttribute('data-wyc-step-delegation-inited', '1');
+                wyc.addEventListener('click', function (ev) {
+                    var el = ev.target && ev.target.closest ? ev.target.closest('[data-wyc-step]') : null;
+                    if (el && typeof recordWycStep === 'function') {
+                        recordWycStep(el.getAttribute('data-wyc-step'));
+                    }
+                });
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initWycStepDelegation);
+            } else {
+                initWycStepDelegation();
+            }
+            document.body.addEventListener('htmx:afterSwap', function () {
+                initWycStepDelegation();
+            });
+
+            document.body.addEventListener('htmx:beforeRequest', function (ev) {
+                var path = ev.detail && ev.detail.pathInfo && ev.detail.pathInfo.requestPath;
+                var verb = ev.detail && ev.detail.verb;
+                if (path && path.indexOf('/updates/kei-status') !== -1 && verb === 'post') {
+                    if (typeof window.recordWycStep === 'function') {
+                        window.recordWycStep('wyc_poll_submitted');
+                    }
+                }
             });
         })();
     </script>
@@ -742,6 +860,109 @@
             } else {
                 initGlossaryInlineTerms();
             }
+        })();
+    </script>
+    {% include "_story_submit_modal.html" %}
+    {% include "_statement_submit_modal.html" %}
+    <script>
+        (function () {
+            var storyDialog = document.getElementById('story-submit-dialog');
+            var statementDialog = document.getElementById('statement-submit-dialog');
+            document.addEventListener('click', function (e) {
+                if (e.target && e.target.classList && e.target.classList.contains('story-submit-trigger')) {
+                    e.preventDefault();
+                    var type = e.target.getAttribute('data-marquee-type');
+                    if (type === 'statement' && statementDialog) {
+                        statementDialog.showModal();
+                    } else if (storyDialog) {
+                        storyDialog.showModal();
+                    }
+                }
+            });
+            var cancelBtn = document.getElementById('story-submit-cancel');
+            if (cancelBtn) cancelBtn.addEventListener('click', function () { if (storyDialog) storyDialog.close(); });
+            if (storyDialog) storyDialog.addEventListener('close', function () {
+                var form = document.getElementById('story-submit-form');
+                if (form && form.reset) form.reset();
+                var preview = document.getElementById('story-submit-preview');
+                if (preview) preview.innerHTML = '';
+                var counter = document.getElementById('story-submit-counter');
+                if (counter) counter.textContent = '0 / 500';
+                var submitBtn = document.getElementById('story-submit-submit');
+                if (submitBtn) submitBtn.disabled = true;
+            });
+            var stmtCancelBtn = document.getElementById('statement-submit-cancel');
+            if (stmtCancelBtn) stmtCancelBtn.addEventListener('click', function () { if (statementDialog) statementDialog.close(); });
+            if (statementDialog) statementDialog.addEventListener('close', function () {
+                var form = document.getElementById('statement-submit-form');
+                if (form && form.reset) form.reset();
+                var counter = document.getElementById('statement-submit-counter');
+                if (counter) counter.textContent = '0 / 500';
+                var submitBtn = document.getElementById('statement-submit-submit');
+                if (submitBtn) submitBtn.disabled = true;
+            });
+            function updateStatementState() {
+                var form = document.getElementById('statement-submit-form');
+                if (!form) return;
+                var name = (form.querySelector('#statement-submit-name') || {}).value || '';
+                var location = (form.querySelector('#statement-submit-location') || {}).value || '';
+                var statement = (form.querySelector('#statement-submit-statement') || {}).value || '';
+                var consent = (form.querySelector('#statement-submit-consent') || {}).checked;
+                var submitBtn = document.getElementById('statement-submit-submit');
+                if (submitBtn) submitBtn.disabled = !(name.trim() && location.trim() && statement.trim() && consent);
+            }
+            document.addEventListener('input', function (e) {
+                if (e.target && e.target.id === 'statement-submit-statement') {
+                    var counter = document.getElementById('statement-submit-counter');
+                    if (counter) counter.textContent = (e.target.value || '').length + ' / 500';
+                    updateStatementState();
+                }
+                if (e.target && (e.target.id === 'statement-submit-name' || e.target.id === 'statement-submit-location')) updateStatementState();
+            });
+            document.addEventListener('change', function (e) {
+                if (e.target && e.target.id === 'statement-submit-consent') updateStatementState();
+            });
+            document.addEventListener('DOMContentLoaded', updateStatementState);
+            function updateSubmitState() {
+                var form = document.getElementById('story-submit-form');
+                if (!form) return;
+                var name = (form.querySelector('#story-submit-name') || {}).value || '';
+                var location = (form.querySelector('#story-submit-location') || {}).value || '';
+                var story = (form.querySelector('#story-submit-story') || {}).value || '';
+                var consent = (form.querySelector('#story-submit-consent') || {}).checked;
+                var image = (form.querySelector('#story-submit-image') || {}).files;
+                var hasImage = image && image.length > 0;
+                var submitBtn = document.getElementById('story-submit-submit');
+                if (submitBtn) submitBtn.disabled = !(name.trim() && location.trim() && story.trim() && consent && hasImage);
+            }
+            document.addEventListener('change', function (e) {
+                if (e.target && e.target.id === 'story-submit-image') {
+                    var preview = document.getElementById('story-submit-preview');
+                    if (!preview) return;
+                    preview.innerHTML = '';
+                    preview.setAttribute('aria-hidden', 'true');
+                    var file = e.target.files && e.target.files[0];
+                    if (file && file.type.indexOf('image/') === 0) {
+                        var img = document.createElement('img');
+                        img.src = URL.createObjectURL(file);
+                        img.alt = 'Preview';
+                        img.className = 'story-submit-form__preview-img';
+                        preview.appendChild(img);
+                        preview.removeAttribute('aria-hidden');
+                    }
+                    updateSubmitState();
+                }
+                if (e.target && e.target.id === 'story-submit-consent') updateSubmitState();
+            });
+            document.addEventListener('input', function (e) {
+                if (e.target && e.target.id === 'story-submit-story') {
+                    var counter = document.getElementById('story-submit-counter');
+                    if (counter) counter.textContent = (e.target.value || '').length + ' / 500';
+                    updateSubmitState();
+                }
+                if (e.target && (e.target.id === 'story-submit-name' || e.target.id === 'story-submit-location')) updateSubmitState();
+            });
+            document.addEventListener('DOMContentLoaded', updateSubmitState);
         })();
     </script>
     <script src="/static/js/hero-auth-strip.js"></script>

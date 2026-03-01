@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{% if poll %}Edit poll{% else %}New poll{% endif %} — Admin — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="admin-poll-form-page">
+  <header class="admin-poll-form-header">
+    <h1 id="admin-poll-form-heading">{% if poll %}Edit poll{% else %}New poll{% endif %}</h1>
+    {% include "_admin_nav.html" %}
+    <p><a href="/admin/polls">Back to polls</a></p>
+  </header>
+
+  {% if error %}
+  <div class="admin-updates-flash admin-updates-flash--error" role="alert">{{ error }}</div>
+  {% endif %}
+
+  <section class="admin-poll-form-section" aria-labelledby="admin-poll-form-section-heading">
+    <h2 id="admin-poll-form-section-heading">{% if poll %}Edit{% else %}Create{% endif %} poll</h2>
+    <form method="post" action="{% if poll %}/admin/polls/{{ poll.id }}{% else %}/admin/polls{% endif %}" class="admin-updates-form" id="admin-poll-form">
+      <div class="admin-updates-field">
+        <label for="poll-title">Title</label>
+        <input type="text" id="poll-title" name="title" required maxlength="200" value="{{ poll.title if poll else '' }}" placeholder="e.g. State of kei">
+      </div>
+      <div class="admin-updates-field">
+        <label for="poll-slug">Slug (URL-safe, unique)</label>
+        <input type="text" id="poll-slug" name="slug" required maxlength="64" value="{{ poll.slug if poll else '' }}" placeholder="e.g. kei"{% if poll %} readonly aria-describedby="poll-slug-hint"{% endif %}>
+        {% if poll %}<span id="poll-slug-hint" class="admin-updates-hint">Slug cannot be changed after creation.</span>{% endif %}
+      </div>
+      <div class="admin-updates-field">
+        <label for="poll-placement">Placement</label>
+        <select id="poll-placement" name="placement" aria-describedby="poll-placement-hint">
+          {% for val, label in placement_choices %}
+          <option value="{{ val }}"{% if poll and poll.placement == val or not poll and val == '' %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <span id="poll-placement-hint" class="admin-updates-hint">Where this poll appears on the site (Home, Sidebar, Updates page).</span>
+      </div>
+      <div class="admin-updates-field">
+        <label class="admin-campaign-checkbox-wrap">
+          <input type="checkbox" name="is_active" value="1"{% if not poll or poll.is_active %} checked{% endif %}>
+          <span>Active</span>
+        </label>
+      </div>
+
+      <fieldset class="admin-updates-fieldset" aria-labelledby="poll-options-legend">
+        <legend id="poll-options-legend" class="admin-updates-legend">Options (slug and label)</legend>
+        <div id="poll-options-container">
+          {% if poll and poll.options %}
+          {% for o in poll.options %}
+          <div class="admin-poll-option-row">
+            <input type="text" name="option_slug" value="{{ o.slug }}" placeholder="slug" maxlength="64" aria-label="Option slug">
+            <input type="text" name="option_label" value="{{ o.label }}" placeholder="Label" maxlength="256" aria-label="Option label">
+            <button type="button" class="admin-poll-option-remove btn btn--secondary" aria-label="Remove option">Remove</button>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="admin-poll-option-row">
+            <input type="text" name="option_slug" placeholder="slug" maxlength="64" aria-label="Option slug">
+            <input type="text" name="option_label" placeholder="Label" maxlength="256" aria-label="Option label">
+            <button type="button" class="admin-poll-option-remove btn btn--secondary" aria-label="Remove option">Remove</button>
+          </div>
+          {% endif %}
+        </div>
+        <button type="button" id="admin-poll-add-option" class="btn btn--secondary">Add option</button>
+      </fieldset>
+
+      <button type="submit" class="btn btn--primary">{% if poll %}Save changes{% else %}Create poll{% endif %}</button>
+    </form>
+  </section>
+</div>
+
+<script>
+(function() {
+  var container = document.getElementById('poll-options-container');
+  var addBtn = document.getElementById('admin-poll-add-option');
+  if (!container || !addBtn) return;
+
+  function createRow(slug, label) {
+    var row = document.createElement('div');
+    row.className = 'admin-poll-option-row';
+    row.innerHTML =
+      '<input type="text" name="option_slug" value="' + (slug || '') + '" placeholder="slug" maxlength="64" aria-label="Option slug">' +
+      '<input type="text" name="option_label" value="' + (label || '') + '" placeholder="Label" maxlength="256" aria-label="Option label">' +
+      '<button type="button" class="admin-poll-option-remove btn btn--secondary" aria-label="Remove option">Remove</button>';
+    row.querySelector('.admin-poll-option-remove').addEventListener('click', function() {
+      if (container.querySelectorAll('.admin-poll-option-row').length > 1) row.remove();
+    });
+    return row;
+  }
+
+  addBtn.addEventListener('click', function() {
+    container.appendChild(createRow('', ''));
+  });
+
+  container.querySelectorAll('.admin-poll-option-remove').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var row = btn.closest('.admin-poll-option-row');
+      if (container.querySelectorAll('.admin-poll-option-row').length > 1) row.remove();
+    });
+  });
+})();
+</script>
+{% endblock %}
