@@ -14,6 +14,7 @@ from strawberry.fastapi import GraphQLRouter
 
 from . import config as cfg
 from .app_state import state
+from .campaign_config import get_campaign_config
 from .constants import KEI_STATUS_OPTIONS
 from .middleware import register_middleware
 from .routers.admin import router as _admin_router
@@ -116,6 +117,10 @@ templates.env.globals["dev_available"] = cfg.DEV_MODE
 templates.env.globals["app_base_url"] = cfg.APP_BASE_URL
 templates.env.globals["site_name"] = cfg.SITE_NAME
 templates.env.globals["meta_description"] = cfg.META_DESCRIPTION
+_campaign = get_campaign_config()
+templates.env.globals["campaign_name"] = _campaign.campaign_name or cfg.SITE_NAME
+templates.env.globals["primary_color"] = _campaign.primary_color or "#FF4500"
+templates.env.globals["issue_summary"] = _campaign.issue_summary
 templates.env.globals["og_image_url"] = cfg.OG_IMAGE_URL
 # Umami script only in prod (and only when website ID is set)
 templates.env.globals["umami_enabled"] = cfg.PROFILE == "prod" and bool(cfg.UMAMI_WEBSITE_ID)

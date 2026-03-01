@@ -59,9 +59,18 @@ if PROFILE not in _PROFILE_DEFAULTS:
 
 _defaults = _PROFILE_DEFAULTS[PROFILE]
 
+# When ILGA_DB_PATH is not set, ILGA_TENANT (e.g. "tenants_union") → data/{tenant}_{profile}.db
+_db_fallback = (
+    f"data/{os.getenv('ILGA_TENANT', '').strip()}_{PROFILE}.db"
+    if os.getenv("ILGA_TENANT", "").strip()
+    else _defaults.get("ILGA_DB_PATH", "data/ilga.db")
+)
+
 
 def _env(key: str, fallback: str = "") -> str:
     """Read an env var, falling back to profile default then *fallback*."""
+    if key == "ILGA_DB_PATH":
+        return os.getenv(key, _db_fallback)
     return os.getenv(key, _defaults.get(key, fallback))
 
 
@@ -75,18 +84,35 @@ GA_NUMBER: int = GA_ID + 86
 
 # ── Base URLs ────────────────────────────────────────────────────────────────
 BASE_URL: str = _env("ILGA_BASE_URL", "https://www.ilga.gov/").rstrip("/") + "/"
-# Public URL of this app (startup banner, logs). Set in production e.g. https://landofkei.org
+# Public URL of this app (startup banner, logs). Set in production to your public URL.
 APP_BASE_URL: str = _env("ILGA_APP_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
 # Optional; docs site URL for startup banner when different from app (e.g. same host).
 DOCS_BASE_URL: str = _env("ILGA_DOCS_BASE_URL", "").strip().rstrip("/")
 
+
+def _site_name_default() -> str:
+    """Default SITE_NAME from campaign config when env not set; env overrides."""
+    from .campaign_config import get_campaign_config
+
+    c = get_campaign_config()
+    return (c.campaign_name or "Campaign").strip() or "Campaign"
+
+
+def _meta_description_default() -> str:
+    """Default META_DESCRIPTION from campaign (issue_summary or hero) when env not set."""
+    from .campaign_config import get_campaign_config
+
+    c = get_campaign_config()
+    if c.issue_summary:
+        return c.issue_summary.strip()
+    if c.hero_subhead:
+        return c.hero_subhead.strip()[:160]
+    return "Find your Illinois legislators and take action."
+
+
 # ── SEO & share (Open Graph, canonical, meta description) ─────────────────────
-SITE_NAME: str = _env("ILGA_SITE_NAME", "The Land of Kei").strip() or "The Land of Kei"
-META_DESCRIPTION: str = _env(
-    "ILGA_META_DESCRIPTION",
-    "Find your Illinois legislators and advocate with The Land of Kei for a statutory fix so "
-    "highway-built Kei vehicles can be titled and registered. 625 ILCS 5/3-401(c-1).",
-).strip()
+SITE_NAME: str = _env("ILGA_SITE_NAME", "").strip() or _site_name_default()
+META_DESCRIPTION: str = _env("ILGA_META_DESCRIPTION", "").strip() or _meta_description_default()
 # Optional absolute URL for share card image (1200×630). Unset → APP_BASE_URL/static/og-image.png.
 _OG_IMAGE_OVERRIDE: str = _env("ILGA_OG_IMAGE_URL", "").strip()
 OG_IMAGE_URL: str = (

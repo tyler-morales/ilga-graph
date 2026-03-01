@@ -80,7 +80,7 @@ def _welcome_email_plain(
 ) -> str:
     """Plain text body for welcome email."""
     body = (
-        f"Hello! My name is Tyler and I'm the founder of Land of Kei. "
+        f"Hello! My name is Tyler and I'm the founder of {site_name}. "
         f"Whether you daydream of riding in a Honda Acty or are frustrated with the legal status of your kei vehicle, you're in the right place. \n\n"
         f"Thanks for signing in. You're now part of the effort to fix kei vehicle registration in Illinois.\n\n"
         f"Next step: Enter your ZIP to see who represents you and get a 2-minute call "
@@ -91,7 +91,7 @@ def _welcome_email_plain(
     )
     if unsub_url:
         body += f"\nUnsubscribe: {unsub_url}\n"
-    body += "\n\nTyler Morales\nFounder of Land of Kei\n773-318-8539\n"
+    body += f"\n\nTyler Morales\nFounder of {site_name}\n773-318-8539\n"
     return body
 
 
@@ -116,7 +116,7 @@ def _welcome_email_html(
     <p>Your input helps us explain to legislators who's affected — <a href="{html.escape(kei_poll_url)}">tell us your kei status</a> (one quick question). Numbers speak louder than words.</p>
     <hr style="border: none; border-top: 1px solid #eee; margin: 2em 0;">
     <p style="font-size: 0.85em; color: #666;">You're receiving this because you just signed in to {s}.</p>{unsub_block}
-    <p style="margin-top: 1.5em; font-size: 0.95em;">Tyler Morales<br>Founder of Land of Kei<br><a href="tel:+17733188539">773-318-8539</a></p>
+    <p style="margin-top: 1.5em; font-size: 0.95em;">Tyler Morales<br>Founder of {s}<br><a href="tel:+17733188539">773-318-8539</a></p>
 </body>
 </html>"""
 
@@ -127,8 +127,8 @@ async def send_welcome_email(
     unsub_url: str | None = None,
 ) -> bool:
     """Send welcome email to a newly signed-in user. Returns True if sent or dev mock."""
-    base = (cfg.APP_BASE_URL or "").rstrip("/") or "https://landofkei.com"
-    site = site_name or cfg.SITE_NAME or "Land of Kei"
+    base = (cfg.APP_BASE_URL or "").rstrip("/")
+    site = site_name or cfg.SITE_NAME
     advocacy_url = f"{base}/advocacy"
     kei_poll_url = f"{base}/updates?prompt=kei"
     subject = f"Welcome to {site}"
@@ -142,7 +142,7 @@ async def send_welcome_email(
 
 def _story_review_plain(approved: bool, site_name: str, admin_message: str | None) -> str:
     """Plain text for community story approval/denial email."""
-    site = site_name or "Land of Kei"
+    site = site_name or cfg.SITE_NAME
     if approved:
         line = "Your story is now live on the site."
         if admin_message and admin_message.strip():
@@ -156,7 +156,7 @@ def _story_review_plain(approved: bool, site_name: str, admin_message: str | Non
 
 def _story_review_html(approved: bool, site_name: str, admin_message: str | None) -> str:
     """HTML body for community story approval/denial email."""
-    site = html.escape(site_name or "Land of Kei")
+    site = html.escape(site_name or cfg.SITE_NAME)
     if approved:
         line = "<p>Your story is now live on the site.</p>"
         if admin_message and admin_message.strip():
@@ -176,7 +176,7 @@ async def send_story_review_email(
     to: str, approved: bool, admin_message: str | None = None
 ) -> bool:
     """Notify user after admin approves or denies their community story submission."""
-    site = cfg.SITE_NAME or "Land of Kei"
+    site = cfg.SITE_NAME
     subject = "Your community story — update" if approved else "Your community story submission"
     plain = _story_review_plain(approved, site, admin_message)
     html_body = _story_review_html(approved, site, admin_message)
@@ -188,7 +188,7 @@ async def send_story_review_email(
 
 def _statement_review_plain(approved: bool, site_name: str, admin_message: str | None) -> str:
     """Plain text for interest statement approval/denial email."""
-    site = site_name or "Land of Kei"
+    site = site_name or cfg.SITE_NAME
     if approved:
         line = "Your statement is now live on the site."
         if admin_message and admin_message.strip():
@@ -202,7 +202,7 @@ def _statement_review_plain(approved: bool, site_name: str, admin_message: str |
 
 def _statement_review_html(approved: bool, site_name: str, admin_message: str | None) -> str:
     """HTML body for interest statement approval/denial email."""
-    site = html.escape(site_name or "Land of Kei")
+    site = html.escape(site_name or cfg.SITE_NAME)
     if approved:
         line = "<p>Your statement is now live on the site.</p>"
         if admin_message and admin_message.strip():
@@ -224,7 +224,7 @@ async def send_statement_review_email(
     to: str, approved: bool, admin_message: str | None = None
 ) -> bool:
     """Notify user after admin approves or denies their interest statement submission."""
-    site = cfg.SITE_NAME or "Land of Kei"
+    site = cfg.SITE_NAME
     subject = "Your statement — update" if approved else "Your statement submission"
     plain = _statement_review_plain(approved, site, admin_message)
     html_body = _statement_review_html(approved, site, admin_message)

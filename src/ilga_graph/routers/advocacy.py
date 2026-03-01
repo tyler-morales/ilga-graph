@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import advocacy_helpers as ah
 from .. import config as cfg
 from ..app_state import state
+from ..campaign_config import get_campaign_config
 from ..campaign_helpers import get_active_campaign, is_campaign_visible_to_zip
 from ..community_email import get_effective_email_for_member
 from ..config import DEV_MODE
@@ -54,15 +55,15 @@ _ZIP_RE = re.compile(r"^\d{5}$")
 DEFAULT_HERO_ZIP = "60007"
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
-_LETTER_PDF_PATH = (
-    Path(__file__).resolve().parent.parent / "static" / "advocacy" / "letter-template.pdf"
-)
-_BRIEF_PDF_PATH = (
-    Path(__file__).resolve().parent.parent
-    / "static"
-    / "advocacy"
-    / "IL_Kei_Vehicle_Registration_Fix_Brief.pdf"
-)
+_STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+_LETTER_PDF_PATH = _STATIC_DIR / "advocacy" / "letter-template.pdf"
+
+
+def _brief_pdf_path() -> Path:
+    """Legislator brief PDF path from campaign config."""
+    cfg_campaign = get_campaign_config()
+    return _STATIC_DIR / "advocacy" / cfg_campaign.brief_pdf_filename
+
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
@@ -70,6 +71,10 @@ templates.env.globals["dev_available"] = DEV_MODE
 # SEO, share cards, analytics (base.html uses these; same as main.py globals)
 templates.env.globals["app_base_url"] = cfg.APP_BASE_URL
 templates.env.globals["site_name"] = cfg.SITE_NAME
+_campaign = get_campaign_config()
+templates.env.globals["campaign_name"] = _campaign.campaign_name or cfg.SITE_NAME
+templates.env.globals["primary_color"] = _campaign.primary_color or "#FF4500"
+templates.env.globals["issue_summary"] = _campaign.issue_summary
 templates.env.globals["meta_description"] = cfg.META_DESCRIPTION
 templates.env.globals["og_image_url"] = cfg.OG_IMAGE_URL
 templates.env.globals["umami_enabled"] = cfg.PROFILE == "prod" and bool(cfg.UMAMI_WEBSITE_ID)
@@ -79,7 +84,20 @@ templates.env.globals["show_beta_banner"] = cfg.BETA_BANNER
 templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
 templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
-templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
+
+
+def _one_pager_points() -> list[str]:
+    """One-pager points from campaign config; fallback to content constants."""
+    points = get_campaign_config().one_pager_points
+    return points if points else list(STRATEGIC_FIVE_POINTS)
+
+
+def _default_topic() -> str:
+    """Default policy topic for Power Broker / category from campaign config."""
+    return get_campaign_config().default_topic
+
+
+templates.env.globals["strategic_five_points"] = _one_pager_points()
 templates.env.globals["hero_urgency_line"] = HERO_URGENCY_LINE
 templates.env.globals["hero_clarity_line"] = HERO_CLARITY_LINE
 templates.env.globals["features"] = cfg.get_client_features()
@@ -91,49 +109,39 @@ templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 
-_HERO_SUBHEAD = (
-    "Illinois is treating lawfully imported kei vehicles as off-highway, so owners cannot "
-    "register them for normal road use. You can help fix it—contact your legislator with a "
-    "pre-written script in under a minute."
-)
-
-# Two-line subhead: break after "below"; second line starts with "to".
-_HERO_SUBHEAD_ADVOCACY_LINE1 = "We're building constituent support and identifying a sponsor."
-_HERO_SUBHEAD_ADVOCACY_LINE2 = (
-    " No bill yet — your rep needs to hear from you now so we're ready when legislation moves."
-)
-
 
 def _hero_context() -> dict[str, Any]:
-    """Shared hero headline/subhead for home page (issue-focused)."""
+    """Shared hero headline/subhead for home page (issue-focused). From campaign config."""
+    c = get_campaign_config()
     return {
-        "hero_headline": "Fix the statutory gap. Allow kei vehicle registration.",
-        "hero_headline_line1": "Fix the statutory gap.",
-        "hero_headline_line1_prefix": "",
-        "hero_headline_line1_highlight": "Fix",
-        "hero_headline_line1_suffix": " the statutory gap.",
-        "hero_headline_line2": "Allow kei vehicle registration.",
-        "hero_headline_line2_prefix": "Allow ",
-        "hero_headline_highlight": "kei vehicle",
-        "hero_headline_line2_suffix": " registration.",
-        "hero_subhead": _HERO_SUBHEAD,
+        "hero_headline": c.hero_headline,
+        "hero_headline_line1": c.hero_headline_line1,
+        "hero_headline_line1_prefix": c.hero_headline_line1_prefix,
+        "hero_headline_line1_highlight": c.hero_headline_line1_highlight,
+        "hero_headline_line1_suffix": c.hero_headline_line1_suffix,
+        "hero_headline_line2": c.hero_headline_line2,
+        "hero_headline_line2_prefix": c.hero_headline_line2_prefix,
+        "hero_headline_highlight": c.hero_headline_highlight,
+        "hero_headline_line2_suffix": c.hero_headline_line2_suffix,
+        "hero_subhead": c.hero_subhead,
     }
 
 
 def _hero_context_advocacy() -> dict[str, Any]:
-    """Advocacy-page hero: advocate-focused headline (find legislators, take action)."""
+    """Advocacy-page hero: advocate-focused headline. From campaign config."""
+    c = get_campaign_config()
     return {
-        "hero_headline": "Find your legislators. Build support for the Kei vehicle registration.",
-        "hero_headline_line1": "Contact your legislators.",
-        "hero_headline_line1_prefix": "",
-        "hero_headline_line1_highlight": "",
-        "hero_headline_line1_suffix": "",
-        "hero_headline_line2": "Build support for the Kei registration fix",
-        "hero_headline_line2_prefix": "",
-        "hero_headline_highlight": "Build support",
-        "hero_headline_line2_suffix": " for Kei vehicle registration.",
-        "hero_subhead_line1": _HERO_SUBHEAD_ADVOCACY_LINE1,
-        "hero_subhead_line2": _HERO_SUBHEAD_ADVOCACY_LINE2,
+        "hero_headline": c.advocacy_hero_headline,
+        "hero_headline_line1": c.advocacy_hero_headline_line1,
+        "hero_headline_line1_prefix": c.advocacy_hero_headline_line1_prefix,
+        "hero_headline_line1_highlight": c.advocacy_hero_headline_line1_highlight,
+        "hero_headline_line1_suffix": c.advocacy_hero_headline_line1_suffix,
+        "hero_headline_line2": c.advocacy_hero_headline_line2,
+        "hero_headline_line2_prefix": c.advocacy_hero_headline_line2_prefix,
+        "hero_headline_highlight": c.advocacy_hero_headline_highlight,
+        "hero_headline_line2_suffix": c.advocacy_hero_headline_line2_suffix,
+        "hero_subhead_line1": c.advocacy_hero_subhead_line1,
+        "hero_subhead_line2": c.advocacy_hero_subhead_line2,
     }
 
 
@@ -149,8 +157,8 @@ async def _build_search_results_context(
     house_district = district_info.il_house
     warnings: list[str] = []
 
-    # Power Broker: default topic to Transportation when no category selected.
-    topic_for_broker = category or "Transportation"
+    # Power Broker: default topic from campaign config when no category selected.
+    topic_for_broker = category or get_campaign_config().default_topic
     committee_codes = CATEGORY_COMMITTEES.get(topic_for_broker, [])
     committee_ids = ah.committee_member_ids(state, committee_codes) if committee_codes else None
     category_label = category if category else ""
@@ -180,7 +188,7 @@ async def _build_search_results_context(
             senator_card["script_hint"],
             has_public_email=bool(senator_member.email),
             chamber=senator_member.chamber,
-            one_pager_points=STRATEGIC_FIVE_POINTS,
+            one_pager_points=_one_pager_points(),
         )
     elif senate_district:
         warnings.append(
@@ -207,7 +215,7 @@ async def _build_search_results_context(
             rep_card["script_hint"],
             has_public_email=bool(rep_member.email),
             chamber=rep_member.chamber,
-            one_pager_points=STRATEGIC_FIVE_POINTS,
+            one_pager_points=_one_pager_points(),
         )
     elif house_district:
         warnings.append(
@@ -253,7 +261,7 @@ async def _build_search_results_context(
             broker_card["script_hint"],
             has_public_email=bool(broker_member.email),
             chamber=broker_member.chamber,
-            one_pager_points=STRATEGIC_FIVE_POINTS,
+            one_pager_points=_one_pager_points(),
         )
 
     error = "; ".join(warnings) if warnings else None
@@ -504,7 +512,7 @@ async def advocacy_index(
         "categories": CATEGORY_CHOICES,
         "member_count": member_count,
         "zip_count": zip_count,
-        "category": "Transportation",
+        "category": _default_topic(),
         "calls_total": calls_total,
         "calls_this_week": calls_this_week,
         "features": cfg.get_client_features(),
@@ -514,7 +522,7 @@ async def advocacy_index(
     elif cfg.DEV_MODE or is_using_mocks():
         ctx["zip"] = DEFAULT_HERO_ZIP
     if zip_param and in_district:
-        results_ctx = await _build_search_results_context(zip_param, "Transportation", db, user)
+        results_ctx = await _build_search_results_context(zip_param, _default_topic(), db, user)
         ctx.update(results_ctx)
         ctx.update(await get_kei_poll_sidebar_context(request, user, db))
     elif zip_param and not in_district:
@@ -587,27 +595,38 @@ async def advocacy_letter_template_pdf():
     )
 
 
-@router.get("/IL_Kei_Vehicle_Registration_Fix_Brief.pdf")
-async def advocacy_brief_pdf():
-    """Download Kei vehicle registration fix brief PDF from static/advocacy."""
-    if not _BRIEF_PDF_PATH.is_file():
+def _serve_brief_pdf() -> FileResponse | JSONResponse:
+    """Serve legislator brief PDF from campaign config path."""
+    path = _brief_pdf_path()
+    if not path.is_file():
         return JSONResponse(
             status_code=404,
             content={
                 "detail": (
                     "Brief PDF not found. Add static/advocacy/"
-                    "IL_Kei_Vehicle_Registration_Fix_Brief.pdf."
+                    f"{get_campaign_config().brief_pdf_filename}"
                 ),
             },
         )
+    filename = get_campaign_config().brief_pdf_filename
     return FileResponse(
-        path=str(_BRIEF_PDF_PATH),
+        path=str(path),
         media_type="application/pdf",
-        filename="IL_Kei_Vehicle_Registration_Fix_Brief.pdf",
-        headers={
-            "Content-Disposition": "attachment; filename=IL_Kei_Vehicle_Registration_Fix_Brief.pdf"  # noqa: E501
-        },
+        filename=filename,
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+@router.get("/brief.pdf")
+async def advocacy_brief_pdf_canonical():
+    """Download legislator brief PDF (campaign-configured). Use this URL in app links."""
+    return _serve_brief_pdf()
+
+
+@router.get("/IL_Kei_Vehicle_Registration_Fix_Brief.pdf")
+async def advocacy_brief_pdf_legacy():
+    """Legacy URL for Kei brief; serves campaign-configured brief for backward compatibility."""
+    return _serve_brief_pdf()
 
 
 def _role_label_for_member(member: Any) -> str | None:
@@ -675,7 +694,7 @@ async def advocacy_drawer(
             chamber=chamber,
             district=district,
             target_type=target_type,
-            one_pager_points=STRATEGIC_FIVE_POINTS,
+            one_pager_points=_one_pager_points(),
         )
         body_followup = ah.build_after_call_email_body(
             "",
@@ -685,11 +704,12 @@ async def advocacy_drawer(
             district=district,
             target_type=target_type,
             call_date="",
-            one_pager_points=STRATEGIC_FIVE_POINTS,
+            one_pager_points=_one_pager_points(),
         )
         legislator_display_name = ah.get_legislator_display_name(legislator_name, chamber, district)
         party_abbr = ah.party_abbr_for_member(member)
         current_role_label = _role_label_for_member(member)
+        c = get_campaign_config()
         return templates.TemplateResponse(
             "_advocacy_drawer_email.html",
             {
@@ -715,6 +735,8 @@ async def advocacy_drawer(
                 "party_abbr": party_abbr,
                 "current_member_role_label": current_role_label,
                 "current_member_already_called": not show_call_nudge,
+                "brief_pdf_url": c.brief_pdf_url_path,
+                "brief_pdf_download_name": c.brief_pdf_filename,
             },
         )
 
@@ -811,7 +833,7 @@ async def advocacy_call_wrapup(
         district=district,
         target_type=target_type,
         call_date=call_date,
-        one_pager_points=STRATEGIC_FIVE_POINTS,
+        one_pager_points=_one_pager_points(),
     )
     body_first = ah.build_email_first_body(
         legislator_name,
@@ -819,7 +841,7 @@ async def advocacy_call_wrapup(
         chamber=chamber,
         district=district,
         target_type=target_type,
-        one_pager_points=STRATEGIC_FIVE_POINTS,
+        one_pager_points=_one_pager_points(),
     )
 
     contact_name = staffer or ""
@@ -831,6 +853,7 @@ async def advocacy_call_wrapup(
         community_verification if used_community_recipient and email_source == "community" else None
     )
     wrapup_role_label = _role_label_for_member(member)
+    c = get_campaign_config()
     if recipient:
         return templates.TemplateResponse(
             "_advocacy_drawer_email.html",
@@ -858,6 +881,8 @@ async def advocacy_call_wrapup(
                 "party_abbr": party_abbr,
                 "current_member_role_label": wrapup_role_label,
                 "current_member_already_called": True,
+                "brief_pdf_url": c.brief_pdf_url_path,
+                "brief_pdf_download_name": c.brief_pdf_filename,
             },
         )
 
@@ -888,6 +913,8 @@ async def advocacy_call_wrapup(
             "party_abbr": party_abbr,
             "current_member_role_label": wrapup_role_label,
             "current_member_already_called": True,
+            "brief_pdf_url": c.brief_pdf_url_path,
+            "brief_pdf_download_name": c.brief_pdf_filename,
         },
     )
 
@@ -1020,7 +1047,7 @@ async def advocacy_search(
             **hero_ctx_err,
             "categories": CATEGORY_CHOICES,
             "zip": "",
-            "category": category or "Transportation",
+            "category": category or _default_topic(),
             "error": error,
         }
         if not is_htmx:
@@ -1050,7 +1077,7 @@ async def advocacy_search(
             **hero_ctx_err2,
             "categories": CATEGORY_CHOICES,
             "zip": DEFAULT_HERO_ZIP,
-            "category": category or "Transportation",
+            "category": category or _default_topic(),
             "error": error,
         }
         if not is_htmx:

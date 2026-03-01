@@ -157,8 +157,8 @@
 
     {# ── Attachment bar ── #}
     <div class="gmail-attachment-bar" id="gmail-attachment-bar">
-        <a href="/advocacy/IL_Kei_Vehicle_Registration_Fix_Brief.pdf"
-            download="IL_Kei_Vehicle_Registration_Fix_Brief.pdf" rel="noopener" class="gmail-attachment"
+        <a href="{{ brief_pdf_url | default('/advocacy/brief.pdf') }}"
+            download="{{ brief_pdf_download_name | default('IL_Kei_Vehicle_Registration_Fix_Brief.pdf') }}" rel="noopener" class="gmail-attachment"
             id="gmail-attachment-link">
             <span class="gmail-attachment-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -171,7 +171,7 @@
                 </svg>
             </span>
             <span class="gmail-attachment-info">
-                <span class="gmail-attachment-name">IL_Kei_Vehicle_Registration_Fix_Brief.pdf</span>
+                <span class="gmail-attachment-name">{{ brief_pdf_download_name | default('IL_Kei_Vehicle_Registration_Fix_Brief.pdf') }}</span>
                 <span class="gmail-attachment-desc">One-pager to attach when you send</span>
             </span>
         </a>

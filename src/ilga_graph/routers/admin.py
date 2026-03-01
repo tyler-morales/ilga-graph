@@ -17,6 +17,7 @@ from sqlalchemy.orm import selectinload
 from .. import advocacy_helpers as ah
 from .. import config as cfg
 from ..app_state import state
+from ..campaign_config import get_campaign_config
 from ..campaign_helpers import campaign_outreach_count, get_active_campaign
 from ..constants import (
     CATEGORY_COMMITTEES,
@@ -58,6 +59,10 @@ templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
 templates.env.globals["dev_available"] = cfg.DEV_MODE
 templates.env.globals["app_base_url"] = cfg.APP_BASE_URL
 templates.env.globals["site_name"] = cfg.SITE_NAME
+_campaign = get_campaign_config()
+templates.env.globals["campaign_name"] = _campaign.campaign_name or cfg.SITE_NAME
+templates.env.globals["primary_color"] = _campaign.primary_color or "#FF4500"
+templates.env.globals["issue_summary"] = _campaign.issue_summary
 templates.env.globals["meta_description"] = cfg.META_DESCRIPTION
 templates.env.globals["og_image_url"] = cfg.OG_IMAGE_URL
 templates.env.globals["umami_enabled"] = cfg.PROFILE == "prod" and bool(cfg.UMAMI_WEBSITE_ID)
@@ -640,11 +645,12 @@ async def admin_poll_redirect(
     db: AsyncSession = Depends(get_db),
     admin_user: User = Depends(require_admin),
 ):
-    """Legacy: redirect to kei poll results if it exists, else polls list."""
-    r = await db.execute(select(Poll).where(Poll.slug == "kei"))
-    kei = r.scalar_one_or_none()
-    if kei:
-        return RedirectResponse(url=f"/admin/polls/{kei.id}/results", status_code=302)
+    """Legacy: redirect to campaign poll results if it exists, else polls list."""
+    poll_slug = get_campaign_config().poll_slug or "kei"
+    r = await db.execute(select(Poll).where(Poll.slug == poll_slug))
+    poll = r.scalar_one_or_none()
+    if poll:
+        return RedirectResponse(url=f"/admin/polls/{poll.id}/results", status_code=302)
     return RedirectResponse(url="/admin/polls", status_code=302)
 
 
