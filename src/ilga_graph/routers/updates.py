@@ -704,6 +704,7 @@ async def why_you_care_flow(
         request,
         "_why_you_care_flow_ambient.html",
         {
+            "request": request,
             "why_you_care_default_cards": WHY_YOU_CARE_DEFAULT_CARDS,
             "kei_status_total": results["total_responses"],
         },

@@ -100,6 +100,7 @@ def register_middleware(app: FastAPI) -> None:
                 and not path.startswith("/api/dev")
                 and not path.startswith("/dev")
                 and not path.startswith("/static")
+                and not path.startswith("/updates")
                 and request.method != "OPTIONS"
             ):
                 provided = request.headers.get("X-API-Key", "")
@@ -124,7 +125,7 @@ def register_middleware(app: FastAPI) -> None:
                 path="/",
                 httponly=False,
                 samesite="strict",
-                secure=cfg.PROFILE == "prod",
+                secure=request.url.scheme == "https",
             )
         return response
 

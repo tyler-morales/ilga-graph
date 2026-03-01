@@ -458,6 +458,13 @@
                 initWycStepDelegation();
             });
 
+            document.body.addEventListener('htmx:configRequest', function (ev) {
+                var verb = ev.detail && ev.detail.verb;
+                if (verb === 'post' && ev.detail && ev.detail.headers && typeof window.getCsrfToken === 'function') {
+                    var token = window.getCsrfToken();
+                    if (token) ev.detail.headers['X-XSRF-TOKEN'] = token;
+                }
+            });
             document.body.addEventListener('htmx:beforeRequest', function (ev) {
                 var path = ev.detail && ev.detail.pathInfo && ev.detail.pathInfo.requestPath;
                 var verb = ev.detail && ev.detail.verb;
