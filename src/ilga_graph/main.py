@@ -17,6 +17,7 @@ from .app_state import state
 from .campaign_config import get_campaign_config
 from .constants import KEI_STATUS_OPTIONS
 from .middleware import register_middleware
+from .routers.account import router as _account_router
 from .routers.admin import router as _admin_router
 from .routers.advocacy import router as _advocacy_router
 from .routers.auth import router as _auth_router
@@ -110,6 +111,7 @@ class StaticFilesWithCache(BaseStaticFiles):
 
 app.mount("/static", StaticFilesWithCache(directory=str(_STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
+app.state.templates = templates
 
 # Dev bar is available when running in dev profile (never rendered in prod)
 templates.env.globals["dev_available"] = cfg.DEV_MODE
@@ -339,6 +341,7 @@ app.include_router(_dev_router, prefix="/dev")
 
 app.include_router(_advocacy_router, prefix="/advocacy")
 app.include_router(_auth_router)
+app.include_router(_account_router)
 app.include_router(_content_router)
 app.include_router(_stories_router)
 app.include_router(_updates_router)

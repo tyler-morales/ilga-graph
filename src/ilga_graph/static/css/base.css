@@ -2672,6 +2672,100 @@ a:visited {
   margin-bottom: 0.35em;
 }
 
+/* Account page */
+.account-flash {
+  margin-bottom: 1rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+}
+.account-flash--success {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+.account-flash--error {
+  background: #ffebee;
+  color: #b71c1c;
+}
+
+.account-section {
+  margin-top: 2rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--color-border-light, #e5e7eb);
+}
+.account-section:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.account-profile-email {
+  margin-bottom: 1rem;
+}
+.account-read-only {
+  font-weight: normal;
+  color: var(--color-text-secondary, #555);
+}
+
+.account-form .input {
+  margin-right: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.account-field {
+  margin-bottom: 1.25rem;
+}
+.account-field-desc {
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-secondary, #555);
+  margin-top: 0.25rem;
+  margin-bottom: 0.35rem;
+}
+.account-hint {
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-secondary, #555);
+  margin-top: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+.account-checkbox-label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+.account-checkbox {
+  margin-right: 0.5rem;
+}
+.account-dl {
+  margin: 0.5rem 0 1rem;
+}
+.account-dl dt {
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+.account-dl dd {
+  margin-left: 0;
+  margin-bottom: 0.25rem;
+}
+
+.account-footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border-light, #e5e7eb);
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-secondary, #555);
+}
+.account-footer .account-meta,
+.account-footer .account-privacy {
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+}
+.account-footer .account-privacy:not(:first-child) {
+  margin-top: 0.25rem;
+}
+.account-meta,
+.account-privacy {
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-secondary, #555);
+  margin-top: 1rem;
+}
+
 /* Glossary page: dictionary-style layout */
 .glossary-page {
   max-width: 38rem;

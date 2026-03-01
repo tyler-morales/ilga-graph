@@ -11,19 +11,23 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import re
 import secrets
 import sys
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, Form, Request
+from pydantic import BaseModel
+
+from fastapi import APIRouter, Body, Depends, Form, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import config as cfg
+from ..app_state import state
 from ..db import get_db
 from ..db_models import AuthCode, OutreachStepEvent, User
-from ..dependencies import create_session_token, get_current_user_optional
+from ..dependencies import create_session_token, get_current_user_optional, require_user
 from ..email_utils import send_email, send_welcome_email
 from ..security import (
     CSRF_COOKIE_NAME,
@@ -39,6 +43,14 @@ LOGGER = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 _CODE_TTL = timedelta(minutes=10)
+_ZIP_RE = re.compile(r"^\d{5}$")
+
+
+class PatchMeBody(BaseModel):
+    """Optional profile fields for PATCH /auth/me."""
+
+    zip_code: str | None = None
+    wants_updates: bool | None = None
 
 
 def _hash_code(code: str) -> str:
@@ -259,11 +271,45 @@ async def logout():
 
 @router.get("/me")
 async def me(user: User | None = Depends(get_current_user_optional)):
-    """Return current user email and kei_status. Always 200; body.authenticated for session."""
+    """Return current user profile fields. Always 200; body.authenticated for session."""
     if user is None:
         return {"authenticated": False}
+    created_at = getattr(user, "created_at", None)
     return {
         "authenticated": True,
         "email": user.email,
         "kei_status": getattr(user, "kei_status", None),
+        "kei_impact_slug": getattr(user, "kei_impact_slug", None),
+        "zip_code": getattr(user, "zip_code", None),
+        "wants_updates": getattr(user, "wants_updates", True),
+        "created_at": created_at.isoformat() if created_at else None,
+    }
+
+
+@router.patch("/me")
+async def patch_me(
+    body: PatchMeBody | None = Body(None),
+    user: User = Depends(require_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update current user's zip_code and/or wants_updates. Returns 400 for invalid ZIP."""
+    if body is None:
+        return {"ok": True, "zip_code": user.zip_code, "wants_updates": user.wants_updates}
+    if body.zip_code is not None:
+        zip_param = (body.zip_code or "").strip()
+        if zip_param and (
+            not _ZIP_RE.match(zip_param) or zip_param not in getattr(state, "zip_to_district", {})
+        ):
+            return JSONResponse(
+                {"ok": False, "error": "Invalid or unsupported Illinois ZIP code."},
+                status_code=400,
+            )
+        user.zip_code = zip_param if zip_param else None
+    if body.wants_updates is not None:
+        user.wants_updates = body.wants_updates
+    await db.commit()
+    return {
+        "ok": True,
+        "zip_code": user.zip_code,
+        "wants_updates": user.wants_updates,
     }

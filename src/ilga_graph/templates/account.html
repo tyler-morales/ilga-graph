@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Account — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="account-page legal-page">
+    <h1>Account</h1>
+    <p class="legal-page-intro">View and update your profile. We use this to personalize outreach and show legislators who&rsquo;s affected.</p>
+
+    {% if request.query_params.get('saved') %}
+    <p class="account-flash account-flash--success" role="status">Your changes have been saved.</p>
+    {% endif %}
+    {% if request.query_params.get('error') == 'csrf' %}
+    <p class="account-flash account-flash--error" role="alert">Security token invalid. Please try again.</p>
+    {% endif %}
+    {% if request.query_params.get('error') == 'zip' %}
+    <p class="account-flash account-flash--error" role="alert">Please enter a valid 5-digit Illinois ZIP code.</p>
+    {% endif %}
+
+    <section class="account-section account-section--profile" aria-labelledby="account-profile-heading">
+        <h2 id="account-profile-heading">Profile</h2>
+        <p class="account-profile-email"><strong>Email</strong> {{ email }} <span class="account-read-only">(read-only)</span></p>
+        <form method="post" action="/account" class="account-form">
+            <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token or '' }}">
+            <div class="account-field">
+                <label for="account-zip">ZIP code</label>
+                <p class="account-field-desc">We use your ZIP to show your legislators and pre-fill the advocacy search.</p>
+                <input type="text" id="account-zip" name="zip_code" value="{{ zip_code }}" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" placeholder="e.g. 60601" class="input account-input" aria-describedby="account-zip-hint">
+                <p id="account-zip-hint" class="account-hint">Optional. Must be a valid Illinois ZIP.</p>
+            </div>
+            <div class="account-field">
+                <label class="account-checkbox-label">
+                    <input type="checkbox" name="wants_updates" value="1" {% if wants_updates %}checked{% endif %} class="account-checkbox" aria-describedby="account-updates-hint">
+                    <span>Email me campaign updates</span>
+                </label>
+                <p id="account-updates-hint" class="account-hint">We send occasional updates when the bill moves. You can unsubscribe from any email.</p>
+            </div>
+            <button type="submit" class="btn btn-primary">Save changes</button>
+        </form>
+    </section>
+
+    {% if kei_status_label or kei_impact_label or kei_personal_note %}
+    <section class="account-section account-section--answers" aria-labelledby="account-answers-heading">
+        <h2 id="account-answers-heading">Your answers</h2>
+        <p>Responses you gave in the poll (used to personalize your call script and show legislators who&rsquo;s affected).</p>
+        <dl class="account-dl">
+            {% if kei_status_label %}
+            <dt>Your response</dt>
+            <dd>{{ kei_status_label }}</dd>
+            {% endif %}
+            {% if kei_impact_label %}
+            <dt>How it affects you</dt>
+            <dd>{{ kei_impact_label }}</dd>
+            {% endif %}
+            {% if kei_personal_note %}
+            <dt>Your note</dt>
+            <dd>{{ kei_personal_note }}</dd>
+            {% endif %}
+        </dl>
+        <p><a href="/updates?prompt=kei">Change your answer</a> on the Updates page.</p>
+    </section>
+    {% endif %}
+
+    <footer class="account-footer" role="contentinfo">
+        {% if created_at_iso %}
+        <p class="account-meta">Member since <time datetime="{{ created_at_iso }}">{{ created_at.strftime('%B %Y') if created_at is defined and created_at else '' }}</time>.</p>
+        {% endif %}
+        <p class="account-privacy"><a href="/privacy">Privacy policy</a></p>
+    </footer>
+</div>
+{% endblock %}

@@ -6,6 +6,7 @@ real app lifespan and data/ilga.db are not used.
 
 from __future__ import annotations
 
+import asyncio
 import importlib
 import os
 from contextlib import asynccontextmanager
@@ -175,9 +176,13 @@ class TestAuthVerifyRoundtrip:
         assert resp2.status_code == 200
         data = resp2.json()
         assert data["authenticated"] is True and data["email"] == email
-        # kei_status present when auth /me returns it (sprint-3)
-        if "kei_status" in data:
-            assert data["kei_status"] is None or isinstance(data["kei_status"], str)
+        assert "kei_status" in data
+        assert data["kei_status"] is None or isinstance(data["kei_status"], str)
+        assert "kei_impact_slug" in data
+        assert "zip_code" in data
+        assert "wants_updates" in data
+        assert data["wants_updates"] is True
+        assert "created_at" in data
 
     def test_welcome_email_sent_on_first_verify(
         self, client: TestClient, test_db_path: Path
@@ -225,6 +230,51 @@ class TestAuthVerifyRoundtrip:
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
             asyncio.run(check_user())
+
+
+class TestPatchMe:
+    """PATCH /auth/me: update zip_code and/or wants_updates; invalid zip returns 400."""
+
+    def test_patch_me_requires_auth(self, client: TestClient) -> None:
+        resp = client.patch("/auth/me", json={"wants_updates": False})
+        assert resp.status_code == 401
+
+    def test_patch_me_wants_updates(
+        self, client: TestClient, test_db_path: Path
+    ) -> None:
+        email = "patchme@example.com"
+        known_code = "111222"
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            asyncio.run(_add_auth_code(email, known_code))
+        client.post(
+            "/auth/verify-code",
+            data=_data_with_csrf(client, {"email": email, "code": known_code}),
+        )
+        resp = client.patch("/auth/me", json={"wants_updates": False})
+        assert resp.status_code == 200
+        assert resp.json().get("ok") is True
+        assert resp.json().get("wants_updates") is False
+        me = client.get("/auth/me").json()
+        assert me.get("wants_updates") is False
+
+    def test_patch_me_invalid_zip_returns_400(
+        self, client: TestClient, test_db_path: Path
+    ) -> None:
+        email = "patchzip@example.com"
+        known_code = "333444"
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            asyncio.run(_add_auth_code(email, known_code))
+        client.post(
+            "/auth/verify-code",
+            data=_data_with_csrf(client, {"email": email, "code": known_code}),
+        )
+        resp = client.patch("/auth/me", json={"zip_code": "99999"})
+        assert resp.status_code == 400
+        assert "Invalid" in resp.json().get("error", "")
 
 
 class TestOutreachRecord:
