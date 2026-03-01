@@ -28,6 +28,7 @@ from ..routers.content import (
     WHY_SHOULD_YOU_CARE_TEASER_ITEMS,
     WHY_SHOULD_YOU_CARE_VOICE,
     WHY_YOU_CARE_BRANCHES,
+    WHY_YOU_CARE_DEFAULT_CARDS,
     get_marquee_items,
     get_strategic_states_tooltips,
 )
@@ -87,6 +88,7 @@ templates.env.globals["get_current_action_campaign"] = get_current_action_campai
 templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
+templates.env.globals["why_you_care_default_cards"] = WHY_YOU_CARE_DEFAULT_CARDS
 
 
 @router.get("/advocacy", include_in_schema=False)
