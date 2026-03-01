@@ -32,7 +32,12 @@ from .. import config as cfg
 from ..app_state import state
 from ..campaign_config import get_campaign_config
 from ..campaign_helpers import get_active_campaign
-from ..constants import CATEGORY_COMMITTEES, KEI_STATUS_OPTIONS
+from ..constants import (
+    CATEGORY_COMMITTEES,
+    KEI_IMPACT_SLUG_COOKIE,
+    KEI_POLL_IMPACT_OPTIONS,
+    KEI_STATUS_OPTIONS,
+)
 from ..db import async_session_factory, get_db
 from ..db_models import KeiPollResponse, OutreachEvent, Poll, PollResponse, Update, User
 from ..dependencies import get_current_user_optional, require_admin, require_user
@@ -42,10 +47,13 @@ from ..kei_poll_context import (
     KEI_POLL_CHOICE_COOKIE,
     KEI_POLL_VOTED_COOKIE,
     KEI_POLL_VOTED_MAX_AGE,
+    _get_kei_impact_results,
     _get_kei_status_results,
+    _validate_kei_poll_impact,
     _validate_kei_status,
     get_kei_poll_ids,
     get_kei_poll_initial_state,
+    get_kei_poll_sidebar_context,
 )
 from ..member_lookup import find_member_by_district
 from ..routers.content import (
@@ -118,6 +126,7 @@ templates.env.globals["get_current_action_campaign"] = get_current_action_campai
 templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
+templates.env.globals["kei_impact_options"] = KEI_POLL_IMPACT_OPTIONS
 
 # Email update types: slug -> display label. Default for new drafts is "other".
 UPDATE_TYPES = [("major", "Major"), ("minor", "Minor"), ("other", "Other")]
@@ -678,17 +687,34 @@ async def kei_status_results(
     return JSONResponse(data)
 
 
+@router.get("/updates/kei-poll-sidebar-fragment", include_in_schema=False)
+async def kei_poll_sidebar_fragment(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+):
+    """Return sidebar kei poll fragment (form or results) for HTMX refresh after vote in drawer."""
+    ctx = await get_kei_poll_sidebar_context(request, user, db)
+    return templates.TemplateResponse(
+        request,
+        "_sidebar_kei_poll.html",
+        ctx,
+    )
+
+
 @router.get("/updates/kei-poll-form", include_in_schema=False)
 async def kei_poll_form(
     request: Request,
     poll_id: str = "footer-kei-poll",
     show_email: bool = False,
     db: AsyncSession = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
 ):
-    """Return poll form HTML for HTMX swap (e.g. change your answer). Includes total for footer."""
+    """Return poll form HTML for HTMX swap (e.g. change your answer). Includes total and impact."""
     if poll_id not in get_kei_poll_ids():
         poll_id = "footer-kei-poll"
     results = await _get_kei_status_results(db)
+    state = await get_kei_poll_initial_state(request, user, db)
     return templates.TemplateResponse(
         request,
         "_kei_poll_form_partial.html",
@@ -696,6 +722,9 @@ async def kei_poll_form(
             "poll_id": poll_id,
             "show_email": show_email,
             "kei_status_total": results["total_responses"],
+            "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
+            "kei_status_selected": state.get("kei_status_selected"),
+            "kei_impact_selected": state.get("kei_impact_selected"),
         },
     )
 
@@ -729,6 +758,7 @@ async def kei_poll_results(
     if poll_id not in get_kei_poll_ids():
         poll_id = "footer-kei-poll"
     results = await _get_kei_status_results(db)
+    impact_results = await _get_kei_impact_results(db)
     return templates.TemplateResponse(
         request,
         "_kei_poll_logged_in_success.html",
@@ -736,6 +766,9 @@ async def kei_poll_results(
             "kei_status_results": results,
             "kei_status_options": KEI_STATUS_OPTIONS,
             "kei_status_selected": user.kei_status,
+            "kei_impact_selected": user.kei_impact_slug,
+            "kei_impact_results": impact_results,
+            "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
             "poll_id": poll_id,
         },
     )
@@ -745,6 +778,7 @@ async def kei_poll_results(
 async def kei_status_post(
     request: Request,
     kei_status: str = Form(..., max_length=32),
+    kei_impact_slug: str | None = Form(None, max_length=32),
     email: str | None = Form(None, max_length=_EMAIL_MAX_LEN),
     poll_id: str = Form("footer-kei-poll", max_length=64),
     session_id: str | None = Form(None, max_length=64),
@@ -752,7 +786,7 @@ async def kei_status_post(
     db: AsyncSession = Depends(get_db),
     user: User | None = Depends(get_current_user_optional),
 ):
-    """Set kei status. Insert kei_poll_responses; if logged-in also set User.kei_status."""
+    """Set kei status and impact (Q3). Insert responses; set user fields if logged in."""
     token = csrf_token or request.headers.get("X-XSRF-TOKEN")
     cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
     if not validate_csrf_token(token, cookie_token):
@@ -783,6 +817,14 @@ async def kei_status_post(
                 status_code=400,
             )
         return RedirectResponse("/updates?prompt=kei&error=invalid", status_code=303)
+    impact_val = _validate_kei_poll_impact((kei_impact_slug or "").strip() or None)
+    if not impact_val:
+        if request.headers.get("HX-Request"):
+            return HTMLResponse(
+                '<p class="kei-status-error" role="alert">Please choose how it affects you.</p>',
+                status_code=400,
+            )
+        return RedirectResponse("/updates?prompt=kei&error=invalid", status_code=303)
     anon_sid = validate_anon_session_id(session_id) if session_id else None
     response_row = KeiPollResponse(
         user_id=user.id if user else None,
@@ -792,6 +834,7 @@ async def kei_status_post(
     db.add(response_row)
     if user:
         user.kei_status = validated
+        user.kei_impact_slug = impact_val
     # Dual-write to poll_responses so admin Polls list and per-poll results stay in sync.
     poll_slug = get_campaign_config().poll_slug or "kei"
     campaign_poll = (
@@ -806,6 +849,18 @@ async def kei_status_post(
                 option_slug=validated,
             )
         )
+    impact_poll = (
+        await db.execute(select(Poll).where(Poll.slug == "kei_impact"))
+    ).scalar_one_or_none()
+    if impact_poll:
+        db.add(
+            PollResponse(
+                poll_id=impact_poll.id,
+                user_id=user.id if user else None,
+                session_id=anon_sid,
+                option_slug=impact_val,
+            )
+        )
     await db.commit()
     LOGGER.info(
         "Kei poll response id=%s user_id=%s kei_status=%s",
@@ -816,6 +871,7 @@ async def kei_status_post(
     if user:
         if request.headers.get("HX-Request"):
             results = await _get_kei_status_results(db)
+            impact_results = await _get_kei_impact_results(db)
             if poll_id == "home-kei-poll":
                 branch_slug = (
                     "owner" if validated in ("registered", "revoked", "denied") else validated
@@ -835,6 +891,9 @@ async def kei_status_post(
                         "kei_status_results": results,
                         "kei_status_options": KEI_STATUS_OPTIONS,
                         "kei_status_selected": validated,
+                        "kei_impact_selected": impact_val,
+                        "kei_impact_results": impact_results,
+                        "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
                         "kei_poll_initial_anon": False,
                         "poll_id": poll_id,
                     },
@@ -846,16 +905,21 @@ async def kei_status_post(
                     "kei_status_results": results,
                     "kei_status_options": KEI_STATUS_OPTIONS,
                     "kei_status_selected": validated,
+                    "kei_impact_selected": impact_val,
+                    "kei_impact_results": impact_results,
+                    "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
                     "poll_id": poll_id,
                 },
             )
         return RedirectResponse("/updates?prompt=kei&submitted=1", status_code=303)
     # Anonymous: set cookies for results/selection on next visit; return fragment or redirect
     results = await _get_kei_status_results(db)
+    impact_results = await _get_kei_impact_results(db)
     cookie_opts = {"max_age": KEI_POLL_VOTED_MAX_AGE, "path": "/", "samesite": "lax"}
     cookies_to_set = [
         {"key": KEI_POLL_VOTED_COOKIE, "value": "1", **cookie_opts},
         {"key": KEI_POLL_CHOICE_COOKIE, "value": validated, **cookie_opts},
+        {"key": KEI_IMPACT_SLUG_COOKIE, "value": impact_val, **cookie_opts},
     ]
     if request.headers.get("HX-Request"):
         if poll_id == "home-kei-poll":
@@ -875,6 +939,9 @@ async def kei_status_post(
                     "kei_status_results": results,
                     "kei_status_options": KEI_STATUS_OPTIONS,
                     "kei_status_selected": validated,
+                    "kei_impact_selected": impact_val,
+                    "kei_impact_results": impact_results,
+                    "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
                     "kei_poll_initial_anon": True,
                     "poll_id": poll_id,
                 },
@@ -887,6 +954,9 @@ async def kei_status_post(
                     "kei_status_results": results,
                     "kei_status_options": KEI_STATUS_OPTIONS,
                     "kei_status_selected": validated,
+                    "kei_impact_selected": impact_val,
+                    "kei_impact_results": impact_results,
+                    "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
                     "dev_available": cfg.DEV_MODE,
                     "poll_id": poll_id,
                 },

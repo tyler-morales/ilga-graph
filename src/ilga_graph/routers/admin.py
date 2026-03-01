@@ -837,6 +837,13 @@ async def admin_poll_results_page(
     all_responses["by_status"] = _fill_by_status_for_options(
         all_responses["by_status"], option_slugs
     )
+    impact_poll_id: int | None = None
+    if poll.slug == "kei":
+        impact_poll = (
+            await db.execute(select(Poll).where(Poll.slug == "kei_impact"))
+        ).scalar_one_or_none()
+        if impact_poll is not None:
+            impact_poll_id = impact_poll.id
     return templates.TemplateResponse(
         "admin_poll_results.html",
         {
@@ -845,6 +852,7 @@ async def admin_poll_results_page(
             "options": options,
             "verified": verified,
             "all_responses": all_responses,
+            "impact_poll_id": impact_poll_id,
         },
     )
 

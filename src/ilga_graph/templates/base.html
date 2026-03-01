@@ -198,6 +198,7 @@
             }
         })();
     </script>
+    <script src="/static/js/conversation.js"></script>
     <div class="container">
         {% include "_session_pill.html" %}
         <main id="main-content" role="main">
@@ -305,6 +306,7 @@
                     if (!branchBtns.length || !panels.length || !form) return;
                     wrap.setAttribute('data-kei-poll-branch-inited', '1');
                     if (isInline) {
+                        var step3Panel = wrap.querySelector('.wyc-inline-poll__step3');
                         function showBranchInline(branch) {
                             branchBtns.forEach(function (btn) {
                                 btn.setAttribute('aria-pressed', btn.getAttribute('data-branch') === branch ? 'true' : 'false');
@@ -314,6 +316,13 @@
                                 panel.classList.toggle('wyc-inline-poll__step2--hidden', hidden);
                                 panel.setAttribute('aria-hidden', hidden ? 'true' : 'false');
                             });
+                            if (step3Panel) {
+                                step3Panel.classList.add('wyc-inline-poll__step3--hidden');
+                                step3Panel.setAttribute('aria-hidden', 'true');
+                                wrap.querySelectorAll('input[name="kei_impact_radio"]').forEach(function (r) { r.checked = false; });
+                                var impactInput = form.querySelector('input[name="kei_impact_slug"]');
+                                if (impactInput) impactInput.value = '';
+                            }
                             form.querySelectorAll('input[name="kei_status"]').forEach(function (radio) { radio.checked = false; });
                             var submitBtn = wrap.querySelector('.wyc-inline-poll__submit');
                             if (submitBtn) submitBtn.disabled = true;
@@ -323,14 +332,32 @@
                                 submitWrap.removeAttribute('aria-hidden');
                             }
                         }
+                        function showStep3Inline() {
+                            if (step3Panel) {
+                                step3Panel.classList.remove('wyc-inline-poll__step3--hidden');
+                                step3Panel.setAttribute('aria-hidden', 'false');
+                            }
+                        }
                         function updateSubmitStateInline() {
                             var visiblePanel = wrap.querySelector('.wyc-inline-poll__step2:not(.wyc-inline-poll__step2--hidden)');
-                            var checked = wrap.querySelector('input[name="kei_status"]:checked');
+                            var statusChecked = wrap.querySelector('input[name="kei_status"]:checked');
+                            var impactInput = form.querySelector('input[name="kei_impact_slug"]');
+                            var impactSet = impactInput && impactInput.value;
                             var submitBtn = wrap.querySelector('.wyc-inline-poll__submit');
-                            if (submitBtn) submitBtn.disabled = !visiblePanel || !checked;
+                            if (submitBtn) submitBtn.disabled = !visiblePanel || !statusChecked || !impactSet;
                         }
                         form.addEventListener('change', function (ev) {
-                            if (ev.target && ev.target.name === 'kei_status') updateSubmitStateInline();
+                            if (ev.target && ev.target.name === 'kei_status') {
+                                showStep3Inline();
+                                var impactInput = form.querySelector('input[name="kei_impact_slug"]');
+                                if (impactInput) impactInput.value = '';
+                                wrap.querySelectorAll('input[name="kei_impact_radio"]').forEach(function (r) { r.checked = false; });
+                                updateSubmitStateInline();
+                            } else if (ev.target && ev.target.name === 'kei_impact_radio') {
+                                var impactInput = form.querySelector('input[name="kei_impact_slug"]');
+                                if (impactInput) impactInput.value = ev.target.value || '';
+                                updateSubmitStateInline();
+                            }
                         });
                         branchBtns.forEach(function (btn) {
                             btn.addEventListener('click', function () { showBranchInline(btn.getAttribute('data-branch')); });
@@ -339,6 +366,8 @@
                         return;
                     }
                     var headingPrefix = 'Poll: ';
+                    var step3Panel = wrap.querySelector('.kei-poll__step3-panel');
+                    var impactInput = form.querySelector('input[name="kei_impact_slug"]');
                     function setHeading(suffix) {
                         var h2 = wrap.querySelector('.kei-poll__heading');
                         if (h2) h2.textContent = headingPrefix + suffix;
@@ -351,8 +380,14 @@
                             var hidden = panel.getAttribute('data-branch') !== branch;
                             panel.classList.toggle('kei-poll__step2-panel--hidden', hidden);
                             panel.setAttribute('aria-hidden', hidden ? 'true' : 'false');
-                            if (!hidden) setHeading('Question 2 of 2');
+                            if (!hidden) setHeading('Question 2 of 3');
                         });
+                        if (step3Panel) {
+                            step3Panel.classList.add('kei-poll__step3-panel--hidden');
+                            step3Panel.setAttribute('aria-hidden', 'true');
+                            form.querySelectorAll('input[name="kei_impact_radio"]').forEach(function (r) { r.checked = false; });
+                            if (impactInput) impactInput.value = '';
+                        }
                         form.querySelectorAll('input[name="kei_status"]').forEach(function (radio) {
                             radio.checked = false;
                         });
@@ -362,21 +397,50 @@
                             progressSteps[0].removeAttribute('aria-current');
                             progressSteps[1].classList.add('kei-poll__progress-step--current');
                             progressSteps[1].setAttribute('aria-current', 'step');
+                            if (progressSteps[2]) {
+                                progressSteps[2].classList.remove('kei-poll__progress-step--current');
+                                progressSteps[2].removeAttribute('aria-current');
+                            }
                         }
                         var submitBtn = wrap.querySelector('.kei-poll__submit');
                         if (submitBtn) submitBtn.disabled = true;
                     }
+                    function showStep3() {
+                        if (step3Panel) {
+                            step3Panel.classList.remove('kei-poll__step3-panel--hidden');
+                            step3Panel.setAttribute('aria-hidden', 'false');
+                            setHeading('Question 3 of 3');
+                            var progressSteps = wrap.querySelectorAll('.kei-poll__progress-step');
+                            if (progressSteps.length >= 3) {
+                                progressSteps[0].classList.remove('kei-poll__progress-step--current');
+                                progressSteps[0].removeAttribute('aria-current');
+                                progressSteps[1].classList.remove('kei-poll__progress-step--current');
+                                progressSteps[1].removeAttribute('aria-current');
+                                progressSteps[2].classList.add('kei-poll__progress-step--current');
+                                progressSteps[2].setAttribute('aria-current', 'step');
+                            }
+                        }
+                    }
                     function updateSubmitState() {
                         var visiblePanel = wrap.querySelector('.kei-poll__step2-panel:not(.kei-poll__step2-panel--hidden)');
-                        var checked = wrap.querySelector('input[name="kei_status"]:checked');
+                        var statusChecked = wrap.querySelector('input[name="kei_status"]:checked');
+                        var impactChecked = wrap.querySelector('input[name="kei_impact_radio"]:checked');
                         var submitBtn = wrap.querySelector('.kei-poll__submit');
-                        if (submitBtn) submitBtn.disabled = !visiblePanel || !checked;
+                        if (submitBtn) submitBtn.disabled = !visiblePanel || !statusChecked || !impactChecked;
                     }
-                    setHeading('Question 1 of 2');
+                    setHeading('Question 1 of 3');
                     var submitBtn = wrap.querySelector('.kei-poll__submit');
                     if (submitBtn) submitBtn.disabled = true;
                     form.addEventListener('change', function (ev) {
-                        if (ev.target && ev.target.name === 'kei_status') updateSubmitState();
+                        if (ev.target && ev.target.name === 'kei_status') {
+                            showStep3();
+                            if (impactInput) impactInput.value = '';
+                            form.querySelectorAll('input[name="kei_impact_radio"]').forEach(function (r) { r.checked = false; });
+                            updateSubmitState();
+                        } else if (ev.target && ev.target.name === 'kei_impact_radio') {
+                            if (impactInput) impactInput.value = ev.target.value || '';
+                            updateSubmitState();
+                        }
                     });
                     branchBtns.forEach(function (btn) {
                         btn.addEventListener('click', function () {
@@ -504,6 +568,20 @@
             }
             document.body.addEventListener('htmx:afterSwap', function (ev) {
                 initPollSignin();
+            });
+        })();
+    </script>
+    {# Refresh sidebar poll when user votes in call drawer (HX-Trigger: pollVoted from /advocacy/personalize) #}
+    <script>
+        (function () {
+            document.body.addEventListener('pollVoted', function () {
+                var el = document.getElementById('sidebar-kei-poll-section');
+                if (el && typeof htmx !== 'undefined') {
+                    htmx.ajax('GET', '/updates/kei-poll-sidebar-fragment', {
+                        target: '#sidebar-kei-poll-section',
+                        swap: 'innerHTML'
+                    });
+                }
             });
         })();
     </script>

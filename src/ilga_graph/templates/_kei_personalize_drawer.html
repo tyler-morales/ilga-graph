@@ -1,0 +1,120 @@
+{# Pre-drawer step: iOS-style conversation to capture Kei status + impact + optional note. #}
+<div class="drawer-call-content drawer-personalize" id="kei-personalize-flow"
+    data-member-id="{{ member_id or '' }}" data-drawer-zip="{{ zip_code or '' }}"
+    data-is-constituent="{{ 'true' if is_constituent else 'false' }}"
+    data-photo-url="{{ photo_url or '' }}" data-target-type="{{ target_type or 'NON_COMMITTEE' }}">
+    <header class="drawer-call-header">
+        <div class="drawer-call-header-inner">
+            {% if photo_url %}
+            <img src="{{ photo_url }}" alt="" class="drawer-call-photo" loading="lazy">
+            {% else %}
+            <div class="drawer-call-photo drawer-call-photo-placeholder"></div>
+            {% endif %}
+            <p class="drawer-call-name">{{ legislator_name or 'Legislator' }}</p>
+        </div>
+        <p class="drawer-script-intro">Quick questions so your script fits you.</p>
+        <p class="drawer-personalize-skip-wrap">
+            <button type="submit" form="kei-personalize-skip-form" class="drawer-personalize-skip-btn" id="kei-personalize-skip-btn"
+                aria-label="Skip personalization and use default script">Skip personalization</button>
+        </p>
+    </header>
+
+    <form id="kei-personalize-form" class="kei-personalize-form" method="post" action="/advocacy/personalize"
+        hx-post="/advocacy/personalize" hx-target="#advocacy-drawer-body" hx-swap="innerHTML"
+        hx-indicator="#kei-personalize-indicator">
+        <input type="hidden" name="csrf_token" value="{{ (request.state.csrf_token or '') if request is defined else '' }}">
+        <input type="hidden" name="member_id" value="{{ member_id or '' }}">
+        <input type="hidden" name="zip_code" value="{{ zip_code or '' }}">
+        <input type="hidden" name="photo_url" value="{{ photo_url or '' }}">
+        <input type="hidden" name="target_type" value="{{ target_type or 'NON_COMMITTEE' }}">
+        <input type="hidden" name="kei_status" id="kei-personalize-kei-status" value="{{ kei_status_selected or '' }}">
+        <input type="hidden" name="kei_impact_slug" id="kei-personalize-impact" value="">
+        <input type="hidden" name="kei_personal_note" id="kei-personalize-note" value="">
+        <input type="hidden" name="skip" id="kei-personalize-skip" value="">
+        <input type="hidden" name="constituent" id="kei-personalize-constituent" value="{{ 'true' if is_constituent else 'false' }}">
+
+        <div class="drawer-chat drawer-personalize-chat" id="kei-personalize-chat" role="log" aria-live="polite">
+            {% if not kei_status_selected %}
+            {# Step 1: Do you have a Kei? — only two bubbles animate up #}
+            <div class="chat-bubble chat-them kei-step-bubble drawer-bubble-just-in" data-step="1" id="kei-step-1">
+                <span class="chat-label">App</span>
+                Do you have a Kei vehicle?
+            </div>
+            <div class="kei-step-options kei-options-animate" data-step="1" id="kei-options-1">
+                {% for slug, label in kei_first_options %}
+                <button type="button" class="chat-bubble chat-you kei-option-btn" data-option="kei_first" data-value="{{ slug }}"
+                    aria-label="Select: {{ label }}" aria-pressed="false">{{ label }}</button>
+                {% endfor %}
+            </div>
+
+            {# Step 2: Which best describes you? — dynamic 3 or 2 bubbles after first choice #}
+            <div class="chat-bubble chat-them kei-step-bubble" data-step="2" id="kei-step-2" hidden>
+                <span class="chat-label">App</span>
+                Which best describes you?
+            </div>
+            <div class="kei-step-options" data-step="2" id="kei-options-2" hidden>
+                {% for slug, label, first_key in kei_status_with_first %}
+                <button type="button" class="chat-bubble chat-you kei-option-btn" data-option="kei_status" data-value="{{ slug }}" data-kei-first="{{ first_key }}"
+                    aria-label="Select: {{ label }}" aria-pressed="false">{{ label }}</button>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {# Step 3: How does it affect you? #}
+            <div class="chat-bubble chat-them kei-step-bubble" data-step="3" id="kei-step-3"
+                {% if not kei_status_selected %}hidden{% endif %}>
+                <span class="chat-label">App</span>
+                How does this affect you?
+            </div>
+            <div class="kei-step-options" data-step="3" id="kei-options-3"
+                {% if not kei_status_selected %}hidden{% endif %}>
+                {% if kei_status_selected %}
+                {% for slug, label in kei_impact_options %}
+                <button type="button" class="chat-bubble chat-you kei-option-btn" data-option="kei_impact_slug" data-value="{{ slug }}"
+                    aria-label="Select: {{ label }}" aria-pressed="false">{{ label }}</button>
+                {% endfor %}
+                {% else %}
+                {% for status, opts in kei_impact_options_by_status.items() %}
+                {% for slug, label in opts %}
+                <button type="button" class="chat-bubble chat-you kei-option-btn" data-option="kei_impact_slug" data-value="{{ slug }}" data-kei-status="{{ status }}"
+                    aria-label="Select: {{ label }}" aria-pressed="false" hidden>{{ label }}</button>
+                {% endfor %}
+                {% endfor %}
+                {% endif %}
+            </div>
+
+            {# Step 4: Optional personal note #}
+            <div class="chat-bubble chat-them kei-step-bubble" data-step="4" id="kei-step-4" hidden>
+                <span class="chat-label">App</span>
+                Want to add something personal? Totally optional — but it makes calls land harder.
+            </div>
+            <div class="kei-step-options kei-step-note" data-step="4" id="kei-step-4-wrap" hidden>
+                <div class="kei-note-wrap">
+                    <label for="kei-personal-note-input" class="visually-hidden">Optional personal sentence for your script</label>
+                    <textarea id="kei-personal-note-input" name="kei_personal_note_visible" class="kei-note-input"
+                        placeholder="e.g. I've used mine for 3 years to commute to work."
+                        maxlength="200" rows="2" aria-describedby="kei-note-char-count"></textarea>
+                    <span id="kei-note-char-count" class="kei-note-char-count" aria-live="polite">0/200</span>
+                </div>
+                <button type="submit" class="kei-see-script-btn" id="kei-personalize-submit">
+                    See my script
+                </button>
+            </div>
+        </div>
+
+        <div id="kei-personalize-indicator" class="htmx-indicator" aria-hidden="true">Loading…</div>
+    </form>
+
+    <form id="kei-personalize-skip-form" method="post" action="/advocacy/personalize" class="visually-hidden"
+        hx-post="/advocacy/personalize" hx-target="#advocacy-drawer-body" hx-swap="innerHTML"
+        hx-indicator="#kei-personalize-indicator" aria-hidden="true">
+        <input type="hidden" name="csrf_token" value="{{ (request.state.csrf_token or '') if request is defined else '' }}">
+        <input type="hidden" name="member_id" value="{{ member_id or '' }}">
+        <input type="hidden" name="zip_code" value="{{ zip_code or '' }}">
+        <input type="hidden" name="photo_url" value="{{ photo_url or '' }}">
+        <input type="hidden" name="target_type" value="{{ target_type or 'NON_COMMITTEE' }}">
+        <input type="hidden" name="skip" value="1">
+        <input type="hidden" name="constituent" id="kei-personalize-skip-constituent" value="{{ 'true' if is_constituent else 'false' }}">
+    </form>
+</div>
+{# Personalize poll logic runs from index.html initKeiPersonalizeFlow() after HTMX swaps this partial into #advocacy-drawer-body (inline scripts in swapped HTML do not execute). #}

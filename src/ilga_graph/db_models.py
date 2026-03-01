@@ -24,6 +24,8 @@ class User(Base):
     zip_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
     wants_updates: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
     kei_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    kei_impact_slug: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    kei_personal_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     welcome_email_sent_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

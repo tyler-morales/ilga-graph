@@ -147,6 +147,14 @@
   animation: wyc-step2-in 0.2s ease;
 }
 
+.wyc-inline-poll__step3 {
+  margin-top: 0.5rem;
+}
+
+.wyc-inline-poll__step3--hidden {
+  display: none;
+}
+
 @keyframes wyc-step2-in {
   from {
     opacity: 0;

@@ -15,11 +15,15 @@
                 <div class="kei-poll-nudge-block__content">
                     <p class="kei-poll-nudge-block__copy">Your response isn&rsquo;t counted yet. Sign in to save your answer
                         to the results.</p>
-                    <button type="button" class="auth-strip-signin-btn kei-poll-nudge-block__signin-link"
+                    <button type="button" class="auth-strip-signin-btn btn btn--secondary kei-poll-nudge-block__signin-link"
                         id="poll-signin-btn" aria-expanded="false" aria-controls="poll-signin-inline-signin"
                         aria-label="Sign in to add your answer to the results">Sign in to save your answer</button>
                 </div>
             </div>
+            {% set _impact_opts = kei_impact_results.options if (kei_impact_results and kei_impact_results.get('options')) else (kei_impact_options or []) %}
+            {% if kei_impact_selected and _impact_opts %}
+            <p class="kei-impact-success" role="status">How it affects you: {% for slug, label in _impact_opts %}{% if slug == kei_impact_selected %}{{ label }}{% endif %}{% endfor %}</p>
+            {% endif %}
             {% if kei_status_results and kei_status_results.total_responses > 0 %}
             <div class="kei-poll-results" aria-label="Poll results from verified users">
                 {% from "_macros.html" import kei_poll_results_chart %}
@@ -28,6 +32,13 @@
             </div>
             {% else %}
             <p class="kei-poll-results__empty">No verified responses yet. Sign in and submit to be the first!</p>
+            {% endif %}
+            {% if kei_impact_results and kei_impact_results.total_responses > 0 and _impact_opts %}
+            <div class="kei-poll-results" aria-label="How it affects you — results from verified users">
+                <h4 class="kei-poll-chart__heading">How it affects you</h4>
+                {% from "_macros.html" import kei_poll_results_chart %}
+                {{ kei_poll_results_chart(kei_impact_results, _impact_opts, kei_impact_selected) }}
+            </div>
             {% endif %}
             <footer class="kei-poll__footer kei-poll__footer--results">
                 <span class="kei-poll__total">Total Votes: {{ kei_status_results.total_responses if kei_status_results
@@ -41,7 +52,7 @@
                     <div class="poll-signup-prompt__actions" role="group" aria-label="Subscribe to updates">
                         <button type="button" class="poll-signup-yes btn btn--primary"
                             aria-label="Yes, add me to the list">Yes</button>
-                        <button type="button" class="poll-signup-notyet link-style" aria-label="Not yet, close this">Not
+                        <button type="button" class="poll-signup-notyet btn btn--secondary" aria-label="Not yet, close this">Not
                             yet</button>
                     </div>
                     <div class="poll-signup-prompt__success" id="poll-signup-success" hidden role="status"></div>
@@ -49,7 +60,7 @@
             </div>
             <p class="kei-poll-story-cta">Sign in to share your story on our community wall.</p>
             <p class="kei-poll-change-wrap">
-                <button type="button" class="kei-poll-change-btn link-style"
+                <button type="button" class="kei-poll-change-btn"
                     hx-get="/updates/kei-poll-form?poll_id={{ poll_id|e }}" hx-target="#{{ poll_id|e }}-wrap"
                     hx-swap="outerHTML" aria-label="Change your kei status answer">Need to change your answer?</button>
             </p>

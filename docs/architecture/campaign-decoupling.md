@@ -19,9 +19,10 @@ All scrapers operate on generic Illinois General Assembly (ILGA) data:
 | Area | Status |
 |------|--------|
 | **OutreachEvent** | Generic: user_id, member_id, kind, campaign_id, notes, support_score. No campaign name in schema. |
-| **User** | One campaign-specific column: `kei_status` (e.g. "registered", "would_want"). For white-label this would be campaign-scoped (e.g. `campaign_interest` or JSON per campaign). |
+| **User** | Campaign-specific columns: `kei_status` (e.g. "registered", "would_want") and `kei_impact_slug` (how it affects you: support_cause, know_someone, civic_duty, other). For white-label these would be campaign-scoped. |
 | **Campaign, Update, AuthCode** | Generic. |
 | **KeiPollResponse** | Legacy table; new flow uses **Poll** + **PollResponse** (generic). KeiPollResponse kept for backfill/compat. |
+| **Polls** | Two seeded for Kei: `kei` (status: have/don't have → 5 options) and `kei_impact` (how it affects you: 4 options). Impact is stored on User and in PollResponse for the kei_impact poll. |
 | **KeiInterestStatement** | Kei-named; content is campaign-specific. Concept is generic; name could be generalized later. |
 
 No schema change is required for “set the stage.” When adding a second campaign or a formal campaign entity, consider `campaign_id` + `interest_slug` (or a generic name) for User and for statement-style tables.

@@ -5,7 +5,12 @@
   <header class="admin-poll-header">
     <h1 id="admin-poll-heading">{{ poll.title }} — Results</h1>
     {% include "_admin_nav.html" %}
-    <p><a href="/admin/polls/{{ poll.id }}/edit">Edit poll</a> · <a href="/admin/polls">Back to polls</a></p>
+    <p>
+      <a href="/admin/polls/{{ poll.id }}/edit">Edit poll</a> · <a href="/admin/polls">Back to polls</a>
+      {% if impact_poll_id %}
+      · <a href="/admin/polls/{{ impact_poll_id }}/results">View impact breakdown</a>
+      {% endif %}
+    </p>
   </header>
 
   <section class="admin-poll-section" aria-labelledby="admin-poll-verified-heading">

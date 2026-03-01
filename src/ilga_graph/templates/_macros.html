@@ -229,11 +229,11 @@
 </div>
 {% endmacro %}
 
-{% macro kei_poll(poll_id="footer-kei-poll", show_email=false, kei_status_total=none) %}
+{% macro kei_poll(poll_id="footer-kei-poll", show_email=false, kei_status_total=none, kei_impact_options=none) %}
 <div class="kei-poll kei-poll-card" id="{{ poll_id }}-wrap" aria-labelledby="{{ poll_id }}-heading"
     data-kei-poll-branch>
     <div class="kei-poll__header-strip">
-        <h2 id="{{ poll_id }}-heading" class="kei-poll__heading">Poll: Question 1 of 2</h2>
+        <h2 id="{{ poll_id }}-heading" class="kei-poll__heading">Poll: Question 1 of 3</h2>
     </div>
     <div class="kei-poll__body">
         <nav class="kei-poll__progress" aria-label="Progress">
@@ -242,6 +242,8 @@
                         class="kei-poll__progress-step-num" aria-hidden="true">1</span></li>
                 <li class="kei-poll__progress-step"><span class="kei-poll__progress-step-num"
                         aria-hidden="true">2</span></li>
+                <li class="kei-poll__progress-step"><span class="kei-poll__progress-step-num"
+                        aria-hidden="true">3</span></li>
             </ol>
         </nav>
         <p class="kei-poll__intro">Your input helps us explain to legislators who's really affected. Numbers speak louder than words.</p>
@@ -250,6 +252,7 @@
             aria-label="Your kei status">
             <input type="hidden" name="csrf_token" value="{{ (request.state.csrf_token or '') if request is defined else '' }}">
             <input type="hidden" name="poll_id" value="{{ poll_id }}">
+            <input type="hidden" name="kei_impact_slug" id="{{ poll_id }}-impact-input" value="">
             {% if show_email %}
             <label for="{{ poll_id }}-email" class="visually-hidden">Your email (optional if signed in)</label>
             <input type="email" id="{{ poll_id }}-email" name="email" class="kei-poll__email input"
@@ -285,6 +288,16 @@
                         wouldn't want one</label>
                 </fieldset>
             </div>
+            <div class="kei-poll__step3-panel kei-poll__step3-panel--hidden" id="{{ poll_id }}-panel-impact"
+                data-step-heading="How does this affect you?" aria-hidden="true">
+                <fieldset class="kei-poll__options" aria-label="How does this affect you?">
+                    <legend class="kei-poll__step-legend">How does this affect you?</legend>
+                    {% for slug, label in (kei_impact_options or []) %}
+                    <label class="kei-poll__option"><input type="radio" name="kei_impact_radio" value="{{ slug }}"
+                            data-kei-impact-slug>{{ label }}</label>
+                    {% endfor %}
+                </fieldset>
+            </div>
         </form>
         <footer class="kei-poll__footer">
             <span class="kei-poll__total">Total Votes: {{ kei_status_total if kei_status_total is not none else '—'
@@ -296,15 +309,16 @@
 </div>
 {% endmacro %}
 
-{# Inline variant for Why-you-care adventure flow: no card chrome, no progress dots. Question + Yes/No pills + sub-options.
+{# Inline variant for Why-you-care adventure flow: no card chrome, no progress dots. Question + Yes/No pills + sub-options + step 3 impact.
    swap_target_id: element id whose innerHTML is replaced on submit (e.g. why-you-care-flow). #}
-{% macro kei_poll_inline(poll_id="home-kei-poll", kei_status_total=none, swap_target_id="why-you-care-flow") %}
+{% macro kei_poll_inline(poll_id="home-kei-poll", kei_status_total=none, swap_target_id="why-you-care-flow", kei_impact_options=none) %}
 <div class="wyc-inline-poll" data-kei-poll-branch data-kei-poll-inline aria-labelledby="{{ poll_id }}-heading">
     <form id="{{ poll_id }}-form" action="/updates/kei-status" method="post" class="wyc-inline-poll__form"
         hx-post="/updates/kei-status" hx-target="#{{ swap_target_id }}" hx-swap="innerHTML"
         aria-label="Your kei status">
         <input type="hidden" name="csrf_token" value="{{ (request.state.csrf_token or '') if request is defined else '' }}">
         <input type="hidden" name="poll_id" value="{{ poll_id }}">
+        <input type="hidden" name="kei_impact_slug" id="{{ poll_id }}-impact-input" value="">
         <div class="wyc-inline-question" role="group" aria-label="Do you have a kei vehicle?">
             <p class="wyc-inline-question__label" id="{{ poll_id }}-heading">Do you have a kei vehicle?</p>
             <div class="wyc-inline-question__branch-btns" role="group">
@@ -334,6 +348,15 @@
                     want one</label>
                 <label class="wyc-inline-poll__option"><input type="radio" name="kei_status" value="would_not_want">No, I
                     wouldn't want one</label>
+            </div>
+        </div>
+        <div class="wyc-inline-poll__step3 wyc-inline-poll__step3--hidden" id="{{ poll_id }}-panel-impact" aria-hidden="true">
+            <p class="wyc-inline-poll__step2-legend">How does this affect you?</p>
+            <div class="wyc-inline-poll__options" role="group" aria-label="How does this affect you?">
+                {% for slug, label in (kei_impact_options or []) %}
+                <label class="wyc-inline-poll__option"><input type="radio" name="kei_impact_radio" value="{{ slug }}"
+                        data-kei-impact-slug>{{ label }}</label>
+                {% endfor %}
             </div>
         </div>
         <footer class="wyc-inline-poll__footer">
