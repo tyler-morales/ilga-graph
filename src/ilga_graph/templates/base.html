@@ -878,6 +878,10 @@
             document.addEventListener('click', function (e) {
                 if (e.target && e.target.classList && e.target.classList.contains('story-submit-trigger')) {
                     e.preventDefault();
+                    // #region agent log
+                    fetch('http://127.0.0.1:7529/ingest/11db6628-00c4-48fe-8d2c-13b9347e70f3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5f51b3'},body:JSON.stringify({sessionId:'5f51b3',location:'base.html:story-trigger-click',message:'Share story trigger clicked',data:{disabled:!!e.target.disabled},timestamp:Date.now(),hypothesisId:'H2'})}).catch(function(){});
+                    // #endregion
+                    if (e.target.disabled) return;
                     var type = e.target.getAttribute('data-marquee-type');
                     if (type === 'statement' && statementDialog) {
                         statementDialog.showModal();

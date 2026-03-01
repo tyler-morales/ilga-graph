@@ -1,13 +1,18 @@
 {# Branch view after poll submit (or initial load when already voted). Tailored headline, body, CTAs; results chart; share story. #}
+{# When anon: one sign-in nudge only; no disabled Share button or duplicate sign-in CTAs. When logged in: full CTAs + Share your story. #}
 <div class="wyc-branch-content" role="region" aria-live="polite">
-    <h3 class="wyc-branch-content__headline">{{ why_you_care_branch.headline }}</h3>
+    <h3 class="wyc-branch-content__headline wyc-branch-content__headline--pill">
+        {% from "_macros.html" import wyc_pill_icon %}
+        {{ wyc_pill_icon(wyc_pill_icon_slug | default('would_not_want')) }}
+        <span class="wyc-pill__text">{{ why_you_care_branch.headline }}</span>
+    </h3>
     <p class="wyc-branch-content__body">{{ why_you_care_branch.body }}</p>
     <div class="wyc-branch-content__ctas">
         <a href="{{ why_you_care_branch.primary_cta_href }}" class="btn btn--primary why-you-care-link" data-wyc-step="{% if why_you_care_branch.primary_cta_href == '/advocacy' %}wyc_clicked_to_advocacy{% else %}wyc_clicked_to_the_issue{% endif %}">
             <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
             {{ why_you_care_branch.primary_cta_label }}
         </a>
-        {% if why_you_care_branch.secondary_cta_label %}
+        {% if why_you_care_branch.secondary_cta_label and not kei_poll_initial_anon %}
         {% if why_you_care_branch.secondary_cta_modal_type %}
         <button type="button" class="story-submit-trigger wyc-branch-content__secondary btn btn--story" data-marquee-type="{{ why_you_care_branch.secondary_cta_modal_type }}" data-wyc-step="wyc_share_story_clicked" aria-label="Open form to share your story on the community wall">
             <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
@@ -28,10 +33,10 @@
             {{ icon_caution() }}
         </span>
         <div class="kei-poll-nudge-block__content">
-            <p class="kei-poll-nudge-block__copy">Your response isn&rsquo;t counted yet. Sign in to save your answer to the results.</p>
-            <button type="button" class="auth-strip-signin-btn btn btn--secondary kei-poll-nudge-block__signin-link" id="poll-signin-btn" aria-expanded="false" aria-controls="poll-signin-inline-signin" aria-label="Sign in to add your answer to the results">
+            <p class="kei-poll-nudge-block__copy">Sign in to save your answer and share your story.</p>
+            <button type="button" class="auth-strip-signin-btn btn btn--secondary kei-poll-nudge-block__signin-link" id="poll-signin-btn" aria-expanded="false" aria-controls="poll-signin-inline-signin" aria-label="Sign in to save your answer and share your story">
                 <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span>
-                Sign in to save your answer
+                Sign in
             </button>
         </div>
     </div>
@@ -65,7 +70,7 @@
     <footer class="wyc-branch-content__footer">
         <span class="wyc-branch-content__total">Total Votes: {{ kei_status_results.total_responses if kei_status_results else 0 }}</span>
     </footer>
-    {% if not why_you_care_branch.secondary_cta_modal_type %}
+    {% if not why_you_care_branch.secondary_cta_modal_type and not kei_poll_initial_anon %}
     <p class="wyc-branch-content__share">
         {% if kei_status_selected in ('registered', 'revoked', 'denied') %}
         <button type="button" class="story-submit-trigger btn btn--story kei-poll-story-cta__btn" data-marquee-type="story" data-wyc-step="wyc_share_story_clicked" aria-label="Open form to share your photo and story on the community wall">

@@ -32,6 +32,7 @@ from ..security import (
     validate_anon_session_id,
     validate_csrf_token,
 )
+from .updates import _create_unsubscribe_token
 
 LOGGER = logging.getLogger(__name__)
 
@@ -225,7 +226,9 @@ async def verify_code(
     # user gets it only when they click "Yes" to sign up for updates in the poll.
     if not from_poll and getattr(user, "welcome_email_sent_at", None) is None:
         try:
-            sent = await send_welcome_email(user.email)
+            base_url = (cfg.APP_BASE_URL or "").rstrip("/") or "https://landofkei.com"
+            unsub_url = f"{base_url}/updates/unsubscribe?token={_create_unsubscribe_token(user.id)}"
+            sent = await send_welcome_email(user.email, unsub_url=unsub_url)
             if sent:
                 user.welcome_email_sent_at = now
                 await db.commit()

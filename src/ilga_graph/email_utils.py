@@ -72,22 +72,40 @@ async def send_email(to: str, subject: str, plain: str, html: str) -> bool:
     return await send_message(msg)
 
 
-def _welcome_email_plain(site_name: str, advocacy_url: str, kei_poll_url: str) -> str:
+def _welcome_email_plain(
+    site_name: str,
+    advocacy_url: str,
+    kei_poll_url: str,
+    unsub_url: str | None = None,
+) -> str:
     """Plain text body for welcome email."""
-    return (
-        f"Thanks for signing in. You're now part of the effort to fix kei vehicle "
-        f"registration in Illinois.\n\n"
+    body = (
+        f"Hello! My name is Tyler and I'm the founder of Land of Kei. "
+        f"Whether you daydream of riding in a Honda Acty or are frustrated with the legal status of your kei vehicle, you're in the right place. \n\n"
+        f"Thanks for signing in. You're now part of the effort to fix kei vehicle registration in Illinois.\n\n"
         f"Next step: Enter your ZIP to see who represents you and get a 2-minute call "
         f"script and email template: {advocacy_url}\n\n"
         f"Your input helps us explain to legislators who's affected (numbers speak louder): "
         f"{kei_poll_url}\n\n"
         f"You're receiving this because you just signed in to {site_name}.\n"
     )
+    if unsub_url:
+        body += f"\nUnsubscribe: {unsub_url}\n"
+    body += "\n\nTyler Morales\nFounder of Land of Kei\n773-318-8539\n"
+    return body
 
 
-def _welcome_email_html(site_name: str, advocacy_url: str, kei_poll_url: str) -> str:
+def _welcome_email_html(
+    site_name: str,
+    advocacy_url: str,
+    kei_poll_url: str,
+    unsub_url: str | None = None,
+) -> str:
     """HTML body for welcome email."""
     s = html.escape(site_name)
+    unsub_block = ""
+    if unsub_url:
+        unsub_block = f'\n    <p style="font-size: 0.85em;"><a href="{html.escape(unsub_url)}">Unsubscribe</a></p>'
     return f"""<!DOCTYPE html>
 <html>
 <body style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
@@ -97,20 +115,25 @@ def _welcome_email_html(site_name: str, advocacy_url: str, kei_poll_url: str) ->
     <p><strong>Next step:</strong> <a href="{html.escape(advocacy_url)}">Enter your ZIP</a> to see who represents you and get a 2-minute call script and email template.</p>
     <p>Your input helps us explain to legislators who's affected — <a href="{html.escape(kei_poll_url)}">tell us your kei status</a> (one quick question). Numbers speak louder than words.</p>
     <hr style="border: none; border-top: 1px solid #eee; margin: 2em 0;">
-    <p style="font-size: 0.85em; color: #666;">You're receiving this because you just signed in to {s}.</p>
+    <p style="font-size: 0.85em; color: #666;">You're receiving this because you just signed in to {s}.</p>{unsub_block}
+    <p style="margin-top: 1.5em; font-size: 0.95em;">Tyler Morales<br>Founder of Land of Kei<br><a href="tel:+17733188539">773-318-8539</a></p>
 </body>
 </html>"""
 
 
-async def send_welcome_email(email: str, site_name: str | None = None) -> bool:
+async def send_welcome_email(
+    email: str,
+    site_name: str | None = None,
+    unsub_url: str | None = None,
+) -> bool:
     """Send welcome email to a newly signed-in user. Returns True if sent or dev mock."""
     base = (cfg.APP_BASE_URL or "").rstrip("/") or "https://landofkei.com"
     site = site_name or cfg.SITE_NAME or "Land of Kei"
     advocacy_url = f"{base}/advocacy"
     kei_poll_url = f"{base}/updates?prompt=kei"
     subject = f"Welcome to {site}"
-    plain = _welcome_email_plain(site, advocacy_url, kei_poll_url)
-    html_body = _welcome_email_html(site, advocacy_url, kei_poll_url)
+    plain = _welcome_email_plain(site, advocacy_url, kei_poll_url, unsub_url)
+    html_body = _welcome_email_html(site, advocacy_url, kei_poll_url, unsub_url)
     sent = await send_email(email, subject, plain, html_body)
     if sent:
         LOGGER.info("Welcome email sent to %s", email)

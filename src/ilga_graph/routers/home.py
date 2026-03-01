@@ -168,6 +168,9 @@ async def home(
         ctx["why_you_care_branch"] = WHY_YOU_CARE_BRANCHES.get(
             branch_slug, WHY_YOU_CARE_BRANCHES["would_not_want"]
         )
+        ctx["wyc_pill_icon_slug"] = (
+            slug if slug in ("registered", "revoked", "denied") else branch_slug
+        )
     if not ctx.get("kei_poll_done"):
         results = await _get_kei_status_results(db)
         ctx["kei_status_total"] = results["total_responses"]

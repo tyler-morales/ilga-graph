@@ -1530,6 +1530,51 @@ class TestUpdateImage:
         assert "Body</p>" in html
 
 
+class TestWelcomeEmailUnsubscribe:
+    """Welcome email includes unsubscribe link when unsub_url is provided."""
+
+    def test_welcome_email_includes_unsubscribe_link_when_unsub_url_provided(self) -> None:
+        """send_welcome_email(..., unsub_url=...) produces body with Unsubscribe link."""
+        import asyncio
+
+        from ilga_graph.email_utils import send_welcome_email
+
+        unsub_url = "https://example.com/updates/unsubscribe?token=abc123"
+        with patch(
+            "ilga_graph.email_utils.send_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_send:
+            asyncio.run(send_welcome_email("user@example.com", unsub_url=unsub_url))
+        mock_send.assert_called_once()
+        call = mock_send.call_args
+        assert call[0][0] == "user@example.com"
+        plain = call[0][2]
+        html = call[0][3]
+        assert "Unsubscribe" in plain
+        assert unsub_url in plain
+        assert "Unsubscribe" in html
+        assert unsub_url in html
+
+    def test_welcome_email_no_unsubscribe_when_unsub_url_omitted(self) -> None:
+        """send_welcome_email without unsub_url does not include Unsubscribe in body."""
+        import asyncio
+
+        from ilga_graph.email_utils import send_welcome_email
+
+        with patch(
+            "ilga_graph.email_utils.send_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_send:
+            asyncio.run(send_welcome_email("user@example.com"))
+        mock_send.assert_called_once()
+        plain = mock_send.call_args[0][2]
+        html = mock_send.call_args[0][3]
+        assert "Unsubscribe" not in plain
+        assert "Unsubscribe" not in html
+
+
 class TestEmailRobustness:
     """Edge cases: invalid recipients, blank user email, partial send still commits."""
 
