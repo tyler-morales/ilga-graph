@@ -307,6 +307,14 @@
   color: #222;
 }
 
+.hero-action-line {
+  font-family: var(--font-sans);
+  font-size: 0.9375em;
+  color: #555;
+  margin: 0 0 12px;
+  line-height: 1.45;
+}
+
 .hero-ticker {
   font-family: var(--font-sans);
   font-size: var(--font-size-base);
@@ -320,6 +328,12 @@
 
 .hero-ticker [aria-hidden="true"] {
   font-size: var(--font-size-h2);
+  color: var(--color-hero-cta);
+}
+
+.hero-ticker-number {
+  font-weight: 700;
+  font-size: 1.5em;
   color: var(--color-hero-cta);
 }
 

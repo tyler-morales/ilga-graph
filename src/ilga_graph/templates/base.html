@@ -226,6 +226,10 @@
                 <a href="/updates">Updates</a>
                 <span class="footer-nav-sep" aria-hidden="true"> · </span>
                 <a href="/timeline">Timeline</a>
+                {% if request.state.user %}
+                <span class="footer-nav-sep" aria-hidden="true"> · </span>
+                <a href="/account">Account</a>
+                {% endif %}
             </nav>
             <nav class="footer-nav footer-nav-secondary" aria-label="Legal and support">
                 {% if show_beta_banner %}

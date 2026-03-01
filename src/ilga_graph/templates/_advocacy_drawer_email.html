@@ -155,11 +155,11 @@
         {% endif %}
     </div>
 
-    {# ── Attachment bar ── #}
+    {# ── Attachment bar: single clear click target for one-pager (Ch 3) ── #}
     <div class="gmail-attachment-bar" id="gmail-attachment-bar">
         <a href="{{ brief_pdf_url | default('/advocacy/brief.pdf') }}"
-            download="{{ brief_pdf_download_name | default('IL_Kei_Vehicle_Registration_Fix_Brief.pdf') }}" rel="noopener" class="gmail-attachment"
-            id="gmail-attachment-link">
+            download="{{ brief_pdf_download_name | default('IL_Kei_Vehicle_Registration_Fix_Brief.pdf') }}" rel="noopener" class="gmail-attachment gmail-attachment--primary"
+            id="gmail-attachment-link" aria-label="Download one-pager for legislators (PDF)">
             <span class="gmail-attachment-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
@@ -171,8 +171,8 @@
                 </svg>
             </span>
             <span class="gmail-attachment-info">
-                <span class="gmail-attachment-name">{{ brief_pdf_download_name | default('IL_Kei_Vehicle_Registration_Fix_Brief.pdf') }}</span>
-                <span class="gmail-attachment-desc">One-pager to attach when you send</span>
+                <span class="gmail-attachment-name">Download one-pager (PDF)</span>
+                <span class="gmail-attachment-desc">Attach when you send — statute, fix, and which states have already done this</span>
             </span>
         </a>
     </div>
