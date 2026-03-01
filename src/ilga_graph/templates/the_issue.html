@@ -160,6 +160,7 @@
             {% include "_sidebar_kei_poll.html" %}
         </section>
         {{ share_buttons('sidebar', 'issue-share', 'constituent') }}
+        {% if not (request.state.user and request.state.user.wants_updates) %}
         <section class="legislator-brief-sidebar__stay-informed" id="issue-stay-informed" aria-labelledby="issue-stay-informed-heading">
             <h2 id="issue-stay-informed-heading" class="legislator-brief-sidebar__subtitle">Stay informed</h2>
             <p class="stay-informed-p">Get one email when the bill moves.</p>
@@ -167,6 +168,7 @@
                 {{ subscribe_form('issue-email-subscribe', '/updates/subscribe-email', 'inline') }}
             </div>
         </section>
+        {% endif %}
     </div>
 </aside>
 {% endblock %}

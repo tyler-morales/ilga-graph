@@ -215,7 +215,8 @@
                 <p class="drawer-draft-followup-recorded-msg" id="drawer-draft-followup-recorded-msg" hidden
                     aria-live="polite">Call recorded. You can draft an email anytime from this card.</p>
             </div>
-            {# Stay informed: email capture after call completion (no auth code). #}
+            {# Stay informed: email capture after call completion (no auth code). Hidden when user already subscribed. #}
+            {% if not (request.state.user and request.state.user.wants_updates) %}
             <div class="drawer-subscribe-wrap drawer-bubble-delayed" id="drawer-subscribe-wrap" {% if not call_completed %}hidden{% endif %}{% if call_completed %} class="drawer-bubble-just-in"{% endif %}>
                 <div class="chat-bubble chat-them">
                     <span class="chat-label">Stay informed</span>
@@ -224,6 +225,7 @@
                     {{ subscribe_form('drawer-subscribe', '/updates/subscribe-email', 'inline') }}
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
 

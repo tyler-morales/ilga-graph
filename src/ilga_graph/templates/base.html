@@ -225,12 +225,14 @@
                 {% endif %}
                 <a href="/terms">Terms</a>
             </nav>
+            {% if not (request.state.user and request.state.user.wants_updates) %}
             <div class="footer-get-updates" id="footer-email-subscribe-wrap"
                 aria-labelledby="footer-get-updates-heading">
                 <h2 id="footer-get-updates-heading" class="visually-hidden">Get updates</h2>
                 {% from "_macros.html" import subscribe_form %}
                 {{ subscribe_form('footer-email-subscribe', '/updates/subscribe-email', 'inline') }}
             </div>
+            {% endif %}
             <p class="footer-disclaimer">Not affiliated with the Illinois General Assembly. Information here is for
                 advocacy and educational purposes only.</p>
             <p class="footer-usage-notice">We use minimal usage data to improve the service. <a href="/privacy">Privacy

@@ -70,6 +70,7 @@
             district members.</p>
         <p class="drawer-done-for-member__broker-nudge" id="drawer-done-broker-nudge" hidden>Optional: call the Power
             Broker for extra impact.</p>
+        {% if not (request.state.user and request.state.user.wants_updates) %}
         <div class="drawer-done-subscribe" id="drawer-done-subscribe">
             <p class="drawer-done-subscribe-signed-in" id="drawer-done-subscribe-signed-in" hidden>You're on the list —
                 we'll send one email when the bill moves.</p>
@@ -85,6 +86,7 @@
                 </form>
             </div>
         </div>
+        {% endif %}
     </div>
 </template>
 
