@@ -357,11 +357,18 @@ DEFAULT_BILL_STATUS_URLS: list[str] = [
 
 
 def get_bill_status_urls() -> list[str]:
-    """Return bill status URLs from env or defaults.
+    """Return bill status URLs from campaign config, env, or defaults.
 
     Used by both the FastAPI lifespan and ``scripts/scrape.py`` so the same
-    bills are scraped for vote events **and** witness slips.
+    bills are scraped for vote events **and** witness slips. Order: campaign
+    config (bill_status_urls) if non-empty, else ILGA_VOTE_BILL_URLS, else
+    DEFAULT_BILL_STATUS_URLS.
     """
+    from .campaign_config import get_campaign_config
+
+    urls = get_campaign_config().bill_status_urls
+    if urls:
+        return list(urls)
     custom = _env("ILGA_VOTE_BILL_URLS").strip()
     if custom:
         return [u.strip() for u in custom.split(",") if u.strip()]

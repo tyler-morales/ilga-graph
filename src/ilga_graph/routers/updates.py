@@ -607,7 +607,8 @@ async def updates_page(
     else:
         ctx["priority_card_status"] = None
     q = request.query_params
-    ctx["prompt_kei"] = q.get("prompt") == "kei"
+    prompt_q = get_campaign_config().poll_prompt_query or "kei"
+    ctx["prompt_kei"] = q.get("prompt") == prompt_q
     ctx["kei_submitted"] = q.get("submitted") == "1"
     ctx["kei_error"] = q.get("error")
     poll_state = await get_kei_poll_initial_state(request, user, db)
@@ -787,6 +788,7 @@ async def kei_status_post(
     user: User | None = Depends(get_current_user_optional),
 ):
     """Set kei status and impact (Q3). Insert responses; set user fields if logged in."""
+    prompt_q = get_campaign_config().poll_prompt_query or "kei"
     token = csrf_token or request.headers.get("X-XSRF-TOKEN")
     cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
     if not validate_csrf_token(token, cookie_token):
@@ -796,7 +798,7 @@ async def kei_status_post(
                 "Reload the page and try again.</p>",
                 status_code=403,
             )
-        return RedirectResponse("/updates?prompt=kei&error=csrf", status_code=303)
+        return RedirectResponse(f"/updates?prompt={prompt_q}&error=csrf", status_code=303)
     if user is None:
         client_ip = _client_ip(request)
         if not rate_limit_kei_status(client_ip):
@@ -806,7 +808,7 @@ async def kei_status_post(
                     "device. Try again later.</p>",
                     status_code=429,
                 )
-            return RedirectResponse("/updates?prompt=kei&error=rate", status_code=303)
+            return RedirectResponse(f"/updates?prompt={prompt_q}&error=rate", status_code=303)
     if poll_id not in get_kei_poll_ids():
         poll_id = "footer-kei-poll"
     validated = _validate_kei_status(kei_status)
@@ -816,7 +818,7 @@ async def kei_status_post(
                 '<p class="kei-status-error" role="alert">Please choose an option.</p>',
                 status_code=400,
             )
-        return RedirectResponse("/updates?prompt=kei&error=invalid", status_code=303)
+        return RedirectResponse(f"/updates?prompt={prompt_q}&error=invalid", status_code=303)
     impact_val = _validate_kei_poll_impact((kei_impact_slug or "").strip() or None)
     if not impact_val:
         if request.headers.get("HX-Request"):
@@ -824,7 +826,7 @@ async def kei_status_post(
                 '<p class="kei-status-error" role="alert">Please choose how it affects you.</p>',
                 status_code=400,
             )
-        return RedirectResponse("/updates?prompt=kei&error=invalid", status_code=303)
+        return RedirectResponse(f"/updates?prompt={prompt_q}&error=invalid", status_code=303)
     anon_sid = validate_anon_session_id(session_id) if session_id else None
     response_row = KeiPollResponse(
         user_id=user.id if user else None,
@@ -911,7 +913,7 @@ async def kei_status_post(
                     "poll_id": poll_id,
                 },
             )
-        return RedirectResponse("/updates?prompt=kei&submitted=1", status_code=303)
+        return RedirectResponse(f"/updates?prompt={prompt_q}&submitted=1", status_code=303)
     # Anonymous: set cookies for results/selection on next visit; return fragment or redirect
     results = await _get_kei_status_results(db)
     impact_results = await _get_kei_impact_results(db)
@@ -964,7 +966,7 @@ async def kei_status_post(
         for params in cookies_to_set:
             resp.set_cookie(**params)
         return resp
-    redir = RedirectResponse("/updates?prompt=kei&submitted=1", status_code=303)
+    redir = RedirectResponse(f"/updates?prompt={prompt_q}&submitted=1", status_code=303)
     for params in cookies_to_set:
         redir.set_cookie(**params)
     return redir

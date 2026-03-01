@@ -493,17 +493,13 @@ class TestAccountPage:
         )
         assert resp.status_code == 401
 
-    def test_get_account_authenticated_returns_200(
-        self, authed_client: TestClient
-    ) -> None:
+    def test_get_account_authenticated_returns_200(self, authed_client: TestClient) -> None:
         resp = authed_client.get("/account", headers={"Accept": "text/html"})
         assert resp.status_code == 200
         assert b"Account" in resp.content
         assert b"subscriber@example.com" in resp.content
 
-    def test_post_account_requires_csrf(
-        self, authed_client: TestClient
-    ) -> None:
+    def test_post_account_requires_csrf(self, authed_client: TestClient) -> None:
         resp = authed_client.post(
             "/account",
             data={"zip_code": "", "wants_updates": "1"},

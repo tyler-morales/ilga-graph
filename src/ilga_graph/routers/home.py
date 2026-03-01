@@ -158,7 +158,7 @@ async def home(
         "calls_total": calls_total,
         "calls_this_week": calls_this_week,
         "zip": (cfg.DEV_MODE and DEFAULT_HERO_ZIP) or "",
-        "strategic_mission": STRATEGIC_MISSION,
+        "strategic_mission": get_campaign_config().strategic_mission or STRATEGIC_MISSION,
         "strategic_vision": STRATEGIC_VISION,
         "strategic_five_points": STRATEGIC_FIVE_POINTS,
         "strategic_states_tooltips": get_strategic_states_tooltips(),

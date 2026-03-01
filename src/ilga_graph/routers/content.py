@@ -613,7 +613,7 @@ async def the_issue_page(
         "brief_state_map_status_json": json.dumps(brief_state_map_status),
         "brief_aamva_fix_state_abbrs_json": json.dumps(aamva_fix_abbrs),
         "issue_sources": ISSUE_SOURCES,
-        "strategic_mission": STRATEGIC_MISSION,
+        "strategic_mission": get_campaign_config().strategic_mission or STRATEGIC_MISSION,
         "strategic_vision": STRATEGIC_VISION,
         "strategic_five_points": STRATEGIC_FIVE_POINTS,
     }

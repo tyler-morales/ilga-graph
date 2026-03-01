@@ -123,6 +123,8 @@ _campaign = get_campaign_config()
 templates.env.globals["campaign_name"] = _campaign.campaign_name or cfg.SITE_NAME
 templates.env.globals["primary_color"] = _campaign.primary_color or "#FF4500"
 templates.env.globals["issue_summary"] = _campaign.issue_summary
+templates.env.globals["strategic_mission"] = _campaign.strategic_mission
+templates.env.globals["mission_attribution"] = _campaign.mission_attribution
 templates.env.globals["og_image_url"] = cfg.OG_IMAGE_URL
 # Umami script only in prod (and only when website ID is set)
 templates.env.globals["umami_enabled"] = cfg.PROFILE == "prod" and bool(cfg.UMAMI_WEBSITE_ID)
@@ -274,8 +276,18 @@ KEI_VEHICLE_FACTS: tuple[dict[str, str | None], ...] = (
 
 
 def _error_page_context(request: Request) -> dict:
-    """Context for error pages (404, 500): request plus a random Kei vehicle fact."""
-    return {"request": request, "kei_fact": random.choice(KEI_VEHICLE_FACTS)}
+    """Context for error pages (404, 500): request plus a random fact from campaign or fallback."""
+    from .campaign_config import get_campaign_config
+
+    c = get_campaign_config()
+    facts = c.error_page_facts or list(KEI_VEHICLE_FACTS)
+    if not facts:
+        facts = list(KEI_VEHICLE_FACTS)
+    return {
+        "request": request,
+        "kei_fact": random.choice(facts),
+        "error_page_fact_label": c.error_page_fact_label or "Kei vehicles",
+    }
 
 
 def _404_context(request: Request) -> dict:

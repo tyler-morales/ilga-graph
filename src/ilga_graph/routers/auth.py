@@ -16,10 +16,9 @@ import secrets
 import sys
 from datetime import datetime, timedelta, timezone
 
-from pydantic import BaseModel
-
 from fastapi import APIRouter, Body, Depends, Form, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 

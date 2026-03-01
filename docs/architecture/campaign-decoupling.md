@@ -46,6 +46,8 @@ No schema change is required for “set the stage.” When adding a second campa
 
 Campaign config is loaded from `config/campaign.json` (or path in `ILGA_CAMPAIGN_CONFIG`). Swapping campaign = replace or point at a different JSON file; no code change in the advocacy router.
 
+**White-label keys (optional):** `poll_prompt_query` (query param for poll prompt; default `"kei"`), `welcome_email_intro`, `welcome_email_poll_link_text`, `strategic_mission`, `mission_attribution`, `error_page_facts` (list of `{text, image?, image_alt?, image_credit?}`), `error_page_fact_label`, `bill_status_urls` (for scrapers). See `docs/architecture/white-label-decoupling-gaps.md` for full list and remaining gaps.
+
 ## Provisioning a tenant (DB + campaign)
 
 To run the app for a different campaign/tenant (e.g. Kei vs. Tenants Union):

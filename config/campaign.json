@@ -33,5 +33,11 @@
     "The fix is a narrow clarifying amendment—no new regulatory framework.",
     "This affects real Illinois residents who own legal vehicles they can't register."
   ],
-  "poll_slug": "kei-status"
+  "poll_slug": "kei-status",
+  "poll_prompt_query": "kei",
+  "welcome_email_intro": "Thanks for signing in. You're now part of the effort to fix kei vehicle registration in Illinois.",
+  "welcome_email_poll_link_text": "tell us your kei status",
+  "strategic_mission": "Fix the statutory gap that prevents road-legal kei vehicles in Illinois.",
+  "mission_attribution": "Land of Kei Illinois advocacy group",
+  "error_page_fact_label": "Kei vehicles"
 }

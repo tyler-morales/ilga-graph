@@ -239,9 +239,7 @@ class TestPatchMe:
         resp = client.patch("/auth/me", json={"wants_updates": False})
         assert resp.status_code == 401
 
-    def test_patch_me_wants_updates(
-        self, client: TestClient, test_db_path: Path
-    ) -> None:
+    def test_patch_me_wants_updates(self, client: TestClient, test_db_path: Path) -> None:
         email = "patchme@example.com"
         known_code = "111222"
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
@@ -259,9 +257,7 @@ class TestPatchMe:
         me = client.get("/auth/me").json()
         assert me.get("wants_updates") is False
 
-    def test_patch_me_invalid_zip_returns_400(
-        self, client: TestClient, test_db_path: Path
-    ) -> None:
+    def test_patch_me_invalid_zip_returns_400(self, client: TestClient, test_db_path: Path) -> None:
         email = "patchzip@example.com"
         known_code = "333444"
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
@@ -570,10 +566,14 @@ class TestOutreachMyHistory:
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
             asyncio.run(_add_auth_code(email, code))
-        client.post(
-            "/auth/verify-code",
-            data=_data_with_csrf(client, {"email": email, "code": code}),
-        )
+        with patch(
+            "ilga_graph.routers.auth.rate_limit_verify_code",
+            return_value=True,
+        ):
+            client.post(
+                "/auth/verify-code",
+                data=_data_with_csrf(client, {"email": email, "code": code}),
+            )
         with patch(
             "ilga_graph.routers.outreach.find_member_by_id",
             return_value=object(),

@@ -59,10 +59,6 @@
         </div>
     </div>
     {% endif %}
-    {% set _impact_opts = kei_impact_results.options if (kei_impact_results and kei_impact_results.get('options')) else (kei_impact_options or []) %}
-    {% if kei_impact_selected and _impact_opts %}
-    <p class="wyc-branch-content__impact" role="status">How it affects you: {% for slug, label in _impact_opts %}{% if slug == kei_impact_selected %}{{ label }}{% endif %}{% endfor %}</p>
-    {% endif %}
     {% if kei_status_results and kei_status_results.total_responses > 0 %}
     <div class="wyc-branch-content__results" aria-label="Poll results from verified users">
         {% from "_macros.html" import kei_poll_results_chart %}
@@ -70,13 +66,6 @@
     </div>
     {% else %}
     <p class="wyc-branch-content__results-empty" role="status">Thanks for sharing. Results will appear here once others respond.</p>
-    {% endif %}
-    {% if kei_impact_results and kei_impact_results.total_responses > 0 and _impact_opts %}
-    <div class="wyc-branch-content__results wyc-branch-content__results--impact" aria-label="How it affects you — results from verified users">
-        <h4 class="kei-poll-chart__heading">How it affects you</h4>
-        {% from "_macros.html" import kei_poll_results_chart %}
-        {{ kei_poll_results_chart(kei_impact_results, _impact_opts, kei_impact_selected) }}
-    </div>
     {% endif %}
     <footer class="wyc-branch-content__footer">
         <span class="wyc-branch-content__total">Total Votes: {{ kei_status_results.total_responses if kei_status_results else 0 }}</span>

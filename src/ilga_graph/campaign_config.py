@@ -30,6 +30,11 @@ def _default_one_pager_points() -> list[str]:
     ]
 
 
+def _default_error_facts() -> list[dict]:
+    """Fallback when campaign config missing (empty = use app fallback in main)."""
+    return []
+
+
 @dataclass
 class CampaignConfig:
     """Campaign-specific copy and settings for advocacy (and optionally home)."""
@@ -63,6 +68,15 @@ class CampaignConfig:
     brief_pdf_url_path: str = "/advocacy/brief.pdf"
     one_pager_points: list[str] = field(default_factory=_default_one_pager_points)
     poll_slug: str = ""
+    # White-label: poll prompt + welcome email; when empty, code uses "kei" / issue_summary.
+    poll_prompt_query: str = "kei"
+    welcome_email_intro: str = ""
+    welcome_email_poll_link_text: str = ""
+    strategic_mission: str = ""
+    mission_attribution: str = ""
+    error_page_facts: list[dict] = field(default_factory=_default_error_facts)
+    error_page_fact_label: str = "Kei vehicles"
+    bill_status_urls: list[str] = field(default_factory=list)
 
 
 _cached: CampaignConfig | None = None
@@ -129,6 +143,18 @@ def get_campaign_config() -> CampaignConfig:
             brief_pdf_url_path=raw.get("brief_pdf_url_path", "/advocacy/brief.pdf"),
             one_pager_points=list(raw.get("one_pager_points", [])),
             poll_slug=raw.get("poll_slug", "").strip(),
+            poll_prompt_query=(raw.get("poll_prompt_query") or "kei").strip(),
+            welcome_email_intro=(raw.get("welcome_email_intro") or "").strip(),
+            welcome_email_poll_link_text=(raw.get("welcome_email_poll_link_text") or "").strip(),
+            strategic_mission=(raw.get("strategic_mission") or "").strip(),
+            mission_attribution=(raw.get("mission_attribution") or "").strip(),
+            error_page_facts=list(raw.get("error_page_facts", []))
+            if isinstance(raw.get("error_page_facts"), list)
+            else [],
+            error_page_fact_label=(raw.get("error_page_fact_label") or "Kei vehicles").strip(),
+            bill_status_urls=[u.strip() for u in raw.get("bill_status_urls", []) if u]
+            if isinstance(raw.get("bill_status_urls"), list)
+            else [],
         )
     except (TypeError, ValueError) as e:
         LOGGER.warning("Invalid campaign config: %s", e)
