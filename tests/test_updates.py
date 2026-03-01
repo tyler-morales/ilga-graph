@@ -11,12 +11,15 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import Response
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 import ilga_graph.config as cfg_mod
 import ilga_graph.db as db_mod
 import ilga_graph.dependencies as deps_mod
+from ilga_graph.db_models import User
 from ilga_graph.routers import admin as admin_router_mod
 from ilga_graph.routers import auth as auth_router_mod
 from ilga_graph.routers import stories as stories_router_mod
@@ -52,6 +55,27 @@ def _make_test_app(db_path: Path) -> FastAPI:
             secure=False,
         )
         return response
+
+    @app.middleware("http")
+    async def _user_for_html_middleware(request: Request, call_next) -> Response:
+        """Set request.state.user for HTML so templates hide subscribe when already subscribed."""
+        accept = request.headers.get("accept") or ""
+        if "text/html" in accept:
+            try:
+                async with db_mod.async_session_factory() as db:
+                    session_cookie = request.cookies.get(cfg_mod.AUTH_COOKIE_NAME)
+                    user_id = (
+                        deps_mod.decode_session_token(session_cookie) if session_cookie else None
+                    )
+                    if user_id is not None:
+                        result = await db.execute(select(User).where(User.id == user_id))
+                        user = result.scalar_one_or_none()
+                    else:
+                        user = None
+                    request.state.user = user  # type: ignore[attr-defined]
+            except Exception:
+                request.state.user = None  # type: ignore[attr-defined]
+        return await call_next(request)
 
     app.include_router(auth_router_mod.router)
     app.include_router(updates_router_mod.router)
@@ -429,6 +453,51 @@ class TestSubscribeUnsubscribe:
         resp = client.get("/updates/unsubscribe?token=invalid")
         assert resp.status_code == 200
         assert b"Invalid" in resp.content or b"expired" in resp.content.lower()
+
+
+class TestSubscribeComponentVisibility:
+    """Subscribed users (wants_updates=True) have subscribe components hidden site-wide."""
+
+    def test_footer_subscribe_shown_when_anonymous(self, client: TestClient) -> None:
+        """GET /updates without auth shows footer subscribe form."""
+        resp = client.get("/updates", headers={"Accept": "text/html"})
+        assert resp.status_code == 200
+        assert b"footer-email-subscribe-wrap" in resp.content
+
+    def test_footer_subscribe_hidden_when_subscribed(
+        self, authed_client: TestClient, test_db_path: Path
+    ) -> None:
+        """GET /updates as subscribed user does not show footer subscribe form."""
+        resp = authed_client.get("/updates", headers={"Accept": "text/html"})
+        assert resp.status_code == 200
+        assert b"footer-email-subscribe-wrap" not in resp.content
+
+    def test_footer_subscribe_shown_when_logged_in_but_unsubscribed(
+        self, authed_client: TestClient, test_db_path: Path
+    ) -> None:
+        """GET /updates as logged-in user with wants_updates=False shows footer subscribe form."""
+
+        async def set_unsubscribed():
+            async with db_mod.async_session_factory() as session:
+                r = await session.execute(
+                    select(User).where(User.email == "subscriber@example.com")
+                )
+                u = r.scalar_one_or_none()
+                if u:
+                    u.wants_updates = False
+                    await session.commit()
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(set_unsubscribed())
+
+        resp = authed_client.get("/updates", headers={"Accept": "text/html"})
+        assert resp.status_code == 200
+        assert b"footer-email-subscribe-wrap" in resp.content
+
+
+class TestSubscribeUnsubscribeEmail:
+    """Public subscribe-email endpoint (no auth)."""
 
     def test_subscribe_email_creates_user_and_redirects(
         self, client: TestClient, test_db_path: Path
@@ -1528,6 +1597,51 @@ class TestUpdateImage:
         )
         assert "<img" not in html
         assert "Body</p>" in html
+
+
+class TestWelcomeEmailUnsubscribe:
+    """Welcome email includes unsubscribe link when unsub_url is provided."""
+
+    def test_welcome_email_includes_unsubscribe_link_when_unsub_url_provided(self) -> None:
+        """send_welcome_email(..., unsub_url=...) produces body with Unsubscribe link."""
+        import asyncio
+
+        from ilga_graph.email_utils import send_welcome_email
+
+        unsub_url = "https://example.com/updates/unsubscribe?token=abc123"
+        with patch(
+            "ilga_graph.email_utils.send_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_send:
+            asyncio.run(send_welcome_email("user@example.com", unsub_url=unsub_url))
+        mock_send.assert_called_once()
+        call = mock_send.call_args
+        assert call[0][0] == "user@example.com"
+        plain = call[0][2]
+        html = call[0][3]
+        assert "Unsubscribe" in plain
+        assert unsub_url in plain
+        assert "Unsubscribe" in html
+        assert unsub_url in html
+
+    def test_welcome_email_no_unsubscribe_when_unsub_url_omitted(self) -> None:
+        """send_welcome_email without unsub_url does not include Unsubscribe in body."""
+        import asyncio
+
+        from ilga_graph.email_utils import send_welcome_email
+
+        with patch(
+            "ilga_graph.email_utils.send_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_send:
+            asyncio.run(send_welcome_email("user@example.com"))
+        mock_send.assert_called_once()
+        plain = mock_send.call_args[0][2]
+        html = mock_send.call_args[0][3]
+        assert "Unsubscribe" not in plain
+        assert "Unsubscribe" not in html
 
 
 class TestEmailRobustness:

@@ -5,6 +5,7 @@
         <a href="/advocacy" class="home-cta-btn">Start outreach</a>
         <p class="home-cta-caption">Ready to tell your legislators to fix the law?</p>
     </div>
+    {% if not (request.state.user and request.state.user.wants_updates) %}
     <p class="home-cta-divider" aria-hidden="true"><span class="home-cta-or">or</span></p>
     <div class="home-cta-subscribe" id="home-cta-subscribe">
         <p class="home-cta-subscribe-p">Not ready to call or email? Get one update when we move—no spam, only when it matters.</p>
@@ -13,4 +14,5 @@
             {{ subscribe_form('home-cta-subscribe', '/updates/subscribe-email', 'inline') }}
         </div>
     </div>
+    {% endif %}
 </section>

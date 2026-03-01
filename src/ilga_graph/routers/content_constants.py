@@ -63,6 +63,7 @@ WHY_YOU_CARE_DEFAULT_CARDS: list[dict[str, str]] = [
 ]
 
 # Branch slug -> { headline, body, primary_cta_label, primary_cta_href, secondary_cta_label?, secondary_cta_href? }
+# Pill icon is chosen by selection: registered | revoked | denied (owner branch) or would_want | would_not_want.
 WHY_YOU_CARE_BRANCHES: dict[str, dict[str, str]] = {
     "owner": {
         "headline": "You're living this.",

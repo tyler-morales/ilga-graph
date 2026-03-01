@@ -9,10 +9,13 @@ import time
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
+from sqlalchemy import select
 
 from . import config as cfg
 from .campaign_helpers import get_active_campaign
 from .db import async_session_factory
+from .db_models import User
+from .dependencies import decode_session_token
 from .security import (
     CSRF_COOKIE_NAME,
     CSRF_MAX_AGE_SECONDS,
@@ -56,15 +59,24 @@ def register_middleware(app: FastAPI) -> None:
 
     @app.middleware("http")
     async def current_action_campaign_middleware(request: Request, call_next) -> Response:
-        """Set request.state.current_action_campaign for HTML requests (base template top bar)."""
+        """Set request.state.current_action_campaign and request.state.user for HTML requests."""
         accept = request.headers.get("accept") or ""
         if "text/html" in accept and not request.url.path.startswith("/static"):
             try:
                 async with async_session_factory() as db:
                     campaign = await get_active_campaign(db)
                     request.state.current_action_campaign = campaign  # type: ignore[attr-defined]
+                    session_cookie = request.cookies.get(cfg.AUTH_COOKIE_NAME)
+                    user_id = decode_session_token(session_cookie) if session_cookie else None
+                    if user_id is not None:
+                        result = await db.execute(select(User).where(User.id == user_id))
+                        user = result.scalar_one_or_none()
+                    else:
+                        user = None
+                    request.state.user = user  # type: ignore[attr-defined]  # templates hide subscribe when user.wants_updates
             except Exception:
                 request.state.current_action_campaign = None  # type: ignore[attr-defined]
+                request.state.user = None  # type: ignore[attr-defined]
         return await call_next(request)
 
     @app.middleware("http")

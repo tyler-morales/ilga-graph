@@ -225,12 +225,14 @@
                 {% endif %}
                 <a href="/terms">Terms</a>
             </nav>
+            {% if not (request.state.user and request.state.user.wants_updates) %}
             <div class="footer-get-updates" id="footer-email-subscribe-wrap"
                 aria-labelledby="footer-get-updates-heading">
                 <h2 id="footer-get-updates-heading" class="visually-hidden">Get updates</h2>
                 {% from "_macros.html" import subscribe_form %}
                 {{ subscribe_form('footer-email-subscribe', '/updates/subscribe-email', 'inline') }}
             </div>
+            {% endif %}
             <p class="footer-disclaimer">Not affiliated with the Illinois General Assembly. Information here is for
                 advocacy and educational purposes only.</p>
             <p class="footer-usage-notice">We use minimal usage data to improve the service. <a href="/privacy">Privacy
@@ -878,6 +880,10 @@
             document.addEventListener('click', function (e) {
                 if (e.target && e.target.classList && e.target.classList.contains('story-submit-trigger')) {
                     e.preventDefault();
+                    // #region agent log
+                    fetch('http://127.0.0.1:7529/ingest/11db6628-00c4-48fe-8d2c-13b9347e70f3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5f51b3'},body:JSON.stringify({sessionId:'5f51b3',location:'base.html:story-trigger-click',message:'Share story trigger clicked',data:{disabled:!!e.target.disabled},timestamp:Date.now(),hypothesisId:'H2'})}).catch(function(){});
+                    // #endregion
+                    if (e.target.disabled) return;
                     var type = e.target.getAttribute('data-marquee-type');
                     if (type === 'statement' && statementDialog) {
                         statementDialog.showModal();

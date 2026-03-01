@@ -103,6 +103,12 @@
   outline: 2px solid var(--color-hero-cta-focus-ring, #333);
   outline-offset: 2px;
 }
+.btn--story:disabled,
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
 /* Success/confirm CTA: green (e.g. poll submit). */
 .btn--success {

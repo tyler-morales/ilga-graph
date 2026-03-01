@@ -647,7 +647,9 @@ async def subscribe_post(
     now = datetime.now(timezone.utc)
     if getattr(user, "welcome_email_sent_at", None) is None:
         try:
-            sent = await send_welcome_email(user.email)
+            base_url = (cfg.APP_BASE_URL or "").rstrip("/") or "https://landofkei.com"
+            unsub_url = f"{base_url}/updates/unsubscribe?token={_create_unsubscribe_token(user.id)}"
+            sent = await send_welcome_email(user.email, unsub_url=unsub_url)
             if sent:
                 user.welcome_email_sent_at = now
                 await db.commit()
@@ -813,11 +815,15 @@ async def kei_status_post(
                 why_you_care_branch = WHY_YOU_CARE_BRANCHES.get(
                     branch_slug, WHY_YOU_CARE_BRANCHES["would_not_want"]
                 )
+                wyc_pill_icon_slug = (
+                    validated if validated in ("registered", "revoked", "denied") else branch_slug
+                )
                 return templates.TemplateResponse(
                     request,
                     "_why_you_care_branch.html",
                     {
                         "why_you_care_branch": why_you_care_branch,
+                        "wyc_pill_icon_slug": wyc_pill_icon_slug,
                         "kei_status_results": results,
                         "kei_status_options": KEI_STATUS_OPTIONS,
                         "kei_status_selected": validated,
@@ -849,11 +855,15 @@ async def kei_status_post(
             why_you_care_branch = WHY_YOU_CARE_BRANCHES.get(
                 branch_slug, WHY_YOU_CARE_BRANCHES["would_not_want"]
             )
+            wyc_pill_icon_slug = (
+                validated if validated in ("registered", "revoked", "denied") else branch_slug
+            )
             resp = templates.TemplateResponse(
                 request,
                 "_why_you_care_branch.html",
                 {
                     "why_you_care_branch": why_you_care_branch,
+                    "wyc_pill_icon_slug": wyc_pill_icon_slug,
                     "kei_status_results": results,
                     "kei_status_options": KEI_STATUS_OPTIONS,
                     "kei_status_selected": validated,

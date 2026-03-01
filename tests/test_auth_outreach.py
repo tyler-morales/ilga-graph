@@ -207,7 +207,11 @@ class TestAuthVerifyRoundtrip:
             )
             assert resp.status_code == 200
             assert resp.json().get("ok") is True
-            mock_send.assert_called_once_with(email)
+            mock_send.assert_called_once()
+            assert mock_send.call_args[0][0] == email
+            call_kw = mock_send.call_args.kwargs
+            assert "/updates/unsubscribe" in (call_kw.get("unsub_url") or "")
+            assert "token=" in (call_kw.get("unsub_url") or "")
 
         async def check_user():
             with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
