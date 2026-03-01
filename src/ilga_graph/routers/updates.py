@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import advocacy_helpers as ah
 from .. import config as cfg
 from ..app_state import state
+from ..campaign_config import get_campaign_config
 from ..campaign_helpers import get_active_campaign
 from ..constants import CATEGORY_COMMITTEES, KEI_STATUS_OPTIONS
 from ..db import async_session_factory, get_db
@@ -95,6 +96,10 @@ templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
 templates.env.globals["dev_available"] = cfg.DEV_MODE
 templates.env.globals["app_base_url"] = cfg.APP_BASE_URL
 templates.env.globals["site_name"] = cfg.SITE_NAME
+_campaign = get_campaign_config()
+templates.env.globals["campaign_name"] = _campaign.campaign_name or cfg.SITE_NAME
+templates.env.globals["primary_color"] = _campaign.primary_color or "#FF4500"
+templates.env.globals["issue_summary"] = _campaign.issue_summary
 templates.env.globals["meta_description"] = cfg.META_DESCRIPTION
 templates.env.globals["og_image_url"] = cfg.OG_IMAGE_URL
 templates.env.globals["umami_enabled"] = cfg.PROFILE == "prod" and bool(cfg.UMAMI_WEBSITE_ID)
@@ -219,7 +224,7 @@ def _render_update_email_html(
     title: str, body_html: str, unsub_url: str, image_url: str | None = None
 ) -> str:
     """Render the update email HTML (header, optional image, body, footer with unsubscribe)."""
-    site = cfg.SITE_NAME or "The Land of Kei"
+    site = cfg.SITE_NAME
     updates_url = (cfg.APP_BASE_URL or "").rstrip("/") + "/updates"
     tmpl = templates.env.get_template("_update_email.html")
     return tmpl.render(
@@ -647,7 +652,7 @@ async def subscribe_post(
     now = datetime.now(timezone.utc)
     if getattr(user, "welcome_email_sent_at", None) is None:
         try:
-            base_url = (cfg.APP_BASE_URL or "").rstrip("/") or "https://landofkei.com"
+            base_url = (cfg.APP_BASE_URL or "").rstrip("/")
             unsub_url = f"{base_url}/updates/unsubscribe?token={_create_unsubscribe_token(user.id)}"
             sent = await send_welcome_email(user.email, unsub_url=unsub_url)
             if sent:
@@ -788,11 +793,14 @@ async def kei_status_post(
     if user:
         user.kei_status = validated
     # Dual-write to poll_responses so admin Polls list and per-poll results stay in sync.
-    kei_poll = (await db.execute(select(Poll).where(Poll.slug == "kei"))).scalar_one_or_none()
-    if kei_poll:
+    poll_slug = get_campaign_config().poll_slug or "kei"
+    campaign_poll = (
+        await db.execute(select(Poll).where(Poll.slug == poll_slug))
+    ).scalar_one_or_none()
+    if campaign_poll:
         db.add(
             PollResponse(
-                poll_id=kei_poll.id,
+                poll_id=campaign_poll.id,
                 user_id=user.id if user else None,
                 session_id=anon_sid,
                 option_slug=validated,

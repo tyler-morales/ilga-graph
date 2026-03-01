@@ -26,6 +26,14 @@
     <script defer src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>
     {% endif %}
     <link rel="stylesheet" href="/static/css/variables.css">
+    {% if primary_color %}
+    <style>
+      :root {
+        --color-hero-cta: {{ primary_color }};
+        --color-primary: {{ primary_color }};
+      }
+    </style>
+    {% endif %}
     <link rel="stylesheet" href="/static/css/components.css">
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/advocacy-form.css">
