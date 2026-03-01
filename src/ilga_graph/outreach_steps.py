@@ -38,10 +38,21 @@ EMAIL_STEPS = (
     "email_recorded",
 )
 
+# Why-you-care (WYC): making the case to the base; outcome-focused funnel
+WYC_STEPS = (
+    "wyc_poll_submitted",
+    "wyc_branch_viewed",
+    "wyc_clicked_to_advocacy",
+    "wyc_clicked_to_the_issue",
+    "wyc_share_story_clicked",
+    "wyc_change_answer_clicked",
+)
+
 # All valid (outreach_type -> allowed slugs)
 ALLOWED_STEPS: dict[str, tuple[str, ...]] = {
     "call": CALL_ANSWERED_STEPS + CALL_NO_ANSWER_STEPS,
     "email": EMAIL_STEPS,
+    "wyc": WYC_STEPS,
 }
 
 

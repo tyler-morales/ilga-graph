@@ -111,10 +111,11 @@ class OutreachEvent(Base):
 
 
 class OutreachStepEvent(Base):
-    """One row per checkpoint reached in call/email flow (funnel analytics).
+    """One row per checkpoint reached in call/email/WYC flow (funnel analytics).
 
-    outreach_type is 'call' or 'email'. step_slug comes from outreach_steps.py.
+    outreach_type is 'call', 'email', or 'wyc'. step_slug comes from outreach_steps.py.
     For anonymous funnel tracking: user_id can be NULL when session_id is set.
+    For WYC (why-you-care) steps: member_id is NULL (no legislator in that flow).
     No unique constraint: we allow multiple reached_at per (user/session, member, type, step)
     for repeat sessions; analytics can take max(reached_at) or count as needed.
     """
@@ -124,8 +125,8 @@ class OutreachStepEvent(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int | None] = mapped_column(nullable=True, index=True)
     session_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
-    member_id: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
-    outreach_type: Mapped[str] = mapped_column(String(16), nullable=False)  # call | email
+    member_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    outreach_type: Mapped[str] = mapped_column(String(16), nullable=False)  # call | email | wyc
     step_slug: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     reached_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 

@@ -187,7 +187,7 @@ async def record_outreach(
 @router.post("/step")
 async def record_outreach_step(
     request: Request,
-    member_id: str = Form(...),
+    member_id: str = Form(""),
     outreach_type: str = Form(...),
     step_slug: str = Form(...),
     session_id: str | None = Form(None),
@@ -195,10 +195,11 @@ async def record_outreach_step(
     user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ):
-    """Record a checkpoint step in the call/email funnel.
+    """Record a checkpoint step in the call/email or WYC funnel.
 
     Authenticated: store user_id, session_id not persisted.
     Anonymous: accepted when session_id is present and valid; stored with user_id=NULL.
+    For outreach_type=wyc, member_id is optional and stored as NULL.
     """
     cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
     if not validate_csrf_token(csrf_token, cookie_token):
@@ -208,19 +209,22 @@ async def record_outreach_step(
         )
 
     outreach_type = outreach_type.strip().lower()
-    if outreach_type not in ("call", "email"):
+    if outreach_type not in ("call", "email", "wyc"):
         return JSONResponse({"ok": False, "error": "Invalid outreach_type"}, status_code=400)
     if not is_valid_step(outreach_type, step_slug.strip()):
         return JSONResponse({"ok": False, "error": "Invalid step"}, status_code=400)
 
-    mid = member_id.strip()[:32]
-    if not mid:
-        return JSONResponse({"ok": False, "error": "Missing legislator"}, status_code=400)
-    if find_member_by_id(state, mid) is None:
-        return JSONResponse(
-            {"ok": False, "error": "Legislator not found. Please refresh and try again."},
-            status_code=400,
-        )
+    if outreach_type == "wyc":
+        mid: str | None = None
+    else:
+        mid = member_id.strip()[:32] if member_id else ""
+        if not mid:
+            return JSONResponse({"ok": False, "error": "Missing legislator"}, status_code=400)
+        if find_member_by_id(state, mid) is None:
+            return JSONResponse(
+                {"ok": False, "error": "Legislator not found. Please refresh and try again."},
+                status_code=400,
+            )
 
     if user is not None:
         db.add(

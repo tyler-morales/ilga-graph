@@ -404,12 +404,66 @@
                 if (target && target.id === 'why-you-care-flow') {
                     var branch = target.querySelector('.wyc-branch-content');
                     if (branch) {
+                        if (typeof window.recordWycStep === 'function') {
+                            window.recordWycStep('wyc_branch_viewed');
+                        }
                         var headline = branch.querySelector('.wyc-branch-content__headline');
                         if (headline) {
                             requestAnimationFrame(function () {
                                 headline.scrollIntoView({ behavior: 'smooth', block: 'start' });
                             });
                         }
+                    }
+                }
+            });
+        })();
+    </script>
+    {# WYC funnel: record steps for why-you-care section (relies on hero-auth-strip.js for getCsrfToken / getAnonSessionId). #}
+    <script>
+        (function () {
+            function recordWycStep(stepSlug) {
+                if (!stepSlug) return;
+                var body = new FormData();
+                body.append('member_id', '');
+                body.append('outreach_type', 'wyc');
+                body.append('step_slug', stepSlug);
+                if (typeof getCsrfToken === 'function') body.append('csrf_token', getCsrfToken());
+                if (!window._ilgaUserEmail && typeof getAnonSessionId === 'function') {
+                    var anonSid = getAnonSessionId();
+                    if (anonSid) body.append('session_id', anonSid);
+                }
+                fetch('/outreach/step', { method: 'POST', body: body, credentials: 'same-origin' })
+                    .then(function (r) { return r.json ? r.json() : {}; })
+                    .catch(function () { return undefined; });
+            }
+            window.recordWycStep = recordWycStep;
+
+            function initWycStepDelegation() {
+                var wyc = document.getElementById('why-you-care');
+                if (!wyc || wyc.getAttribute('data-wyc-step-delegation-inited')) return;
+                wyc.setAttribute('data-wyc-step-delegation-inited', '1');
+                wyc.addEventListener('click', function (ev) {
+                    var el = ev.target && ev.target.closest ? ev.target.closest('[data-wyc-step]') : null;
+                    if (el && typeof recordWycStep === 'function') {
+                        recordWycStep(el.getAttribute('data-wyc-step'));
+                    }
+                });
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initWycStepDelegation);
+            } else {
+                initWycStepDelegation();
+            }
+            document.body.addEventListener('htmx:afterSwap', function () {
+                initWycStepDelegation();
+            });
+
+            document.body.addEventListener('htmx:beforeRequest', function (ev) {
+                var path = ev.detail && ev.detail.pathInfo && ev.detail.pathInfo.requestPath;
+                var verb = ev.detail && ev.detail.verb;
+                if (path && path.indexOf('/updates/kei-status') !== -1 && verb === 'post') {
+                    if (typeof window.recordWycStep === 'function') {
+                        window.recordWycStep('wyc_poll_submitted');
                     }
                 }
             });
