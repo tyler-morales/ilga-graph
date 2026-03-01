@@ -19,6 +19,7 @@ import ilga_graph.db as db_mod
 import ilga_graph.dependencies as deps_mod
 from ilga_graph.routers import admin as admin_router_mod
 from ilga_graph.routers import auth as auth_router_mod
+from ilga_graph.routers import stories as stories_router_mod
 from ilga_graph.routers import updates as updates_router_mod
 from ilga_graph.security import (
     CSRF_COOKIE_NAME,
@@ -55,6 +56,7 @@ def _make_test_app(db_path: Path) -> FastAPI:
     app.include_router(auth_router_mod.router)
     app.include_router(updates_router_mod.router)
     app.include_router(admin_router_mod.router)
+    app.include_router(stories_router_mod.router)
     return app
 
 
@@ -102,6 +104,7 @@ def client(test_db_path: Path) -> TestClient:
         importlib.reload(deps_mod)
         importlib.reload(updates_router_mod)
         importlib.reload(auth_router_mod)
+        importlib.reload(stories_router_mod)
         app = _make_test_app(test_db_path)
         with TestClient(app, raise_server_exceptions=True) as c:
             c.get("/auth/me")
@@ -685,12 +688,418 @@ class TestAdminGate:
         assert b"Compose" in resp.content or b"draft" in resp.content.lower()
 
     def test_admin_poll_returns_200(self, admin_client: TestClient) -> None:
-        """GET /admin/poll returns 200 and shows verified/all sections."""
+        """GET /admin/poll redirects to polls list or kei results; final page shows poll content."""
         resp = admin_client.get("/admin/poll")
+        assert resp.status_code in (200, 302)
+        content = resp.content if resp.status_code == 200 else b""
+        if resp.status_code == 302:
+            content = admin_client.get(resp.headers["Location"]).content
+        assert b"poll" in content.lower()
+        assert (
+            b"Verified" in content
+            or b"verified" in content
+            or b"Polls" in content
+            or b"Create poll" in content
+        )
+
+
+# Minimal JPEG for story image upload (same as TestUpdateImage).
+_MINI_JPEG = (
+    b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
+    b"\xff\xdb\x00C\x00\x08\x06\x06\x07\x06\x05\x08\x07\x07\x07\t\t\x08\n\x0c\x14\r\x0c\x0b\x0b\x0c\x19"
+    b"\x12\x13\x0f\x14\x1d\x1a\x1f\x1e\x1d\x1a\x1c\x1c $.' \",#\x1c\x1c(7),01444"
+    b"\x1f'9=82<.342"
+    b"\xff\xc0\x00\x0b\x08\x00\x01\x00\x01\x01\x01\x11\x00\xff\xc4\x00\x1f\x00\x00\x01\x05\x01\x01\x01"
+    b"\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b"
+    b"\xff\xda\x00\x08\x01\x01\x00\x00?\x00\xfe\x02\x1e\xf3\xcf\xff\xd9"
+)
+
+
+async def _set_user_kei_status(db_path: Path, email: str, kei_status: str) -> None:
+    """Set kei_status for user by email (for story/statement tests)."""
+    from sqlalchemy import update
+
+    from ilga_graph.db_models import User
+
+    async with db_mod.async_session_factory() as session:
+        await session.execute(update(User).where(User.email == email).values(kei_status=kei_status))
+        await session.commit()
+
+
+class TestCommunityStories:
+    """Community story submit and admin review."""
+
+    def test_post_without_auth_returns_401(self, client: TestClient) -> None:
+        resp = client.post(
+            "/community-stories",
+            data=_data_with_csrf(
+                client, {"name": "A", "location": "B", "story": "C", "consent": "on"}
+            ),
+            files={"image": ("x.jpg", io.BytesIO(_MINI_JPEG), "image/jpeg")},
+        )
+        assert resp.status_code == 401
+
+    def test_post_without_csrf_returns_403(
+        self, authed_client: TestClient, test_db_path: Path
+    ) -> None:
+        """POST without valid CSRF token is rejected."""
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(_set_user_kei_status(test_db_path, "subscriber@example.com", "registered"))
+        resp = authed_client.post(
+            "/community-stories",
+            data={"name": "X", "location": "Y", "story": "Z", "consent": "on"},  # no csrf_token
+            files={"image": ("p.jpg", io.BytesIO(_MINI_JPEG), "image/jpeg")},
+        )
+        assert resp.status_code == 403
+
+    def test_post_without_consent_returns_400(
+        self, authed_client: TestClient, test_db_path: Path
+    ) -> None:
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(_set_user_kei_status(test_db_path, "subscriber@example.com", "registered"))
+        resp = authed_client.post(
+            "/community-stories",
+            data=_data_with_csrf(
+                authed_client, {"name": "Jane", "location": "Chicago", "story": "My story."}
+            ),
+            files={"image": ("p.jpg", io.BytesIO(_MINI_JPEG), "image/jpeg")},
+        )
+        assert resp.status_code == 400
+        assert b"consent" in resp.content.lower() or b"agree" in resp.content.lower()
+
+    def test_post_valid_creates_pending_story(
+        self, authed_client: TestClient, test_db_path: Path
+    ) -> None:
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(_set_user_kei_status(test_db_path, "subscriber@example.com", "registered"))
+        resp = authed_client.post(
+            "/community-stories",
+            data=_data_with_csrf(
+                authed_client,
+                {
+                    "name": "Jane Doe",
+                    "location": "Chicago, IL",
+                    "story": "I have a kei truck.",
+                    "consent": "on",
+                },
+            ),
+            files={"image": ("photo.jpg", io.BytesIO(_MINI_JPEG), "image/jpeg")},
+        )
         assert resp.status_code == 200
-        assert b"Kei poll" in resp.content or b"poll" in resp.content.lower()
-        assert b"Verified" in resp.content or b"verified" in resp.content
-        assert b"Pie" in resp.content or b"Table" in resp.content
+
+        async def check():
+            from sqlalchemy import select
+
+            from ilga_graph.db_models import CommunityStory
+
+            async with db_mod.async_session_factory() as session:
+                r = await session.execute(
+                    select(CommunityStory).where(CommunityStory.name == "Jane Doe")
+                )
+                row = r.scalar_one_or_none()
+                assert row is not None
+                assert row.status == "pending"
+                assert "stories/" in row.image_path
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(check())
+
+    def test_admin_stories_list_returns_200(self, admin_client: TestClient) -> None:
+        resp = admin_client.get("/admin/stories")
+        assert resp.status_code == 200
+        assert b"pending" in resp.content.lower() or b"stories" in resp.content.lower()
+
+    def test_admin_story_review_approve_redirects_and_updates(
+        self, client: TestClient, authed_client: TestClient, test_db_path: Path
+    ) -> None:
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(_set_user_kei_status(test_db_path, "subscriber@example.com", "registered"))
+        authed_client.post(
+            "/community-stories",
+            data=_data_with_csrf(
+                authed_client,
+                {"name": "Approve Me", "location": "IL", "story": "Story.", "consent": "on"},
+            ),
+            files={"image": ("p.jpg", io.BytesIO(_MINI_JPEG), "image/jpeg")},
+        )
+
+        async def get_story_id():
+            from sqlalchemy import select
+
+            from ilga_graph.db_models import CommunityStory
+
+            async with db_mod.async_session_factory() as session:
+                r = await session.execute(
+                    select(CommunityStory).where(CommunityStory.name == "Approve Me")
+                )
+                row = r.scalar_one_or_none()
+                return row.id if row else None
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            story_id = asyncio.run(get_story_id())
+        assert story_id is not None
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(_add_auth_code("admin@example.com", "654321"))
+        client.post(
+            "/auth/verify-code",
+            data=_data_with_csrf(client, {"email": "admin@example.com", "code": "654321"}),
+        )
+        with patch.object(stories_router_mod, "send_story_review_email", new_callable=AsyncMock):
+            resp = client.post(
+                f"/admin/stories/{story_id}/review",
+                data=_data_with_csrf(client, {"action": "approve"}),
+                follow_redirects=False,
+            )
+        assert resp.status_code == 303
+        assert "flash=approved" in resp.headers.get("location", "")
+
+        async def check():
+            from sqlalchemy import select
+
+            from ilga_graph.db_models import CommunityStory
+
+            async with db_mod.async_session_factory() as session:
+                r = await session.execute(
+                    select(CommunityStory).where(CommunityStory.id == story_id)
+                )
+                row = r.scalar_one_or_none()
+                assert row is not None
+                assert row.status == "approved"
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(check())
+
+    def test_admin_story_review_already_reviewed_redirects_with_flash(
+        self, client: TestClient, authed_client: TestClient, test_db_path: Path
+    ) -> None:
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(_set_user_kei_status(test_db_path, "subscriber@example.com", "registered"))
+        authed_client.post(
+            "/community-stories",
+            data=_data_with_csrf(
+                authed_client,
+                {"name": "Already Reviewed", "location": "IL", "story": "Story.", "consent": "on"},
+            ),
+            files={"image": ("p.jpg", io.BytesIO(_MINI_JPEG), "image/jpeg")},
+        )
+
+        async def get_story_id():
+            from sqlalchemy import select
+
+            from ilga_graph.db_models import CommunityStory
+
+            async with db_mod.async_session_factory() as session:
+                r = await session.execute(
+                    select(CommunityStory).where(CommunityStory.name == "Already Reviewed")
+                )
+                row = r.scalar_one_or_none()
+                return row.id if row else None
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            story_id = asyncio.run(get_story_id())
+        assert story_id is not None
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(_add_auth_code("admin@example.com", "654321"))
+        client.post(
+            "/auth/verify-code",
+            data=_data_with_csrf(client, {"email": "admin@example.com", "code": "654321"}),
+        )
+        with patch.object(stories_router_mod, "send_story_review_email", new_callable=AsyncMock):
+            client.post(
+                f"/admin/stories/{story_id}/review",
+                data=_data_with_csrf(client, {"action": "approve"}),
+            )
+        resp = client.post(
+            f"/admin/stories/{story_id}/review",
+            data=_data_with_csrf(client, {"action": "approve"}),
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        assert "already_reviewed" in resp.headers.get("location", "")
+
+
+class TestCommunityStatements:
+    """Interest statement submit (non-owners) and admin review."""
+
+    def test_post_with_owner_kei_status_returns_403(
+        self, authed_client: TestClient, test_db_path: Path
+    ) -> None:
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(_set_user_kei_status(test_db_path, "subscriber@example.com", "registered"))
+        resp = authed_client.post(
+            "/community-statements",
+            data=_data_with_csrf(
+                authed_client,
+                {
+                    "name": "Jane",
+                    "location": "Chicago",
+                    "statement": "I would buy one.",
+                    "consent": "on",
+                },
+            ),
+        )
+        assert resp.status_code == 403
+
+    def test_post_with_non_owner_creates_pending_statement(
+        self, authed_client: TestClient, test_db_path: Path
+    ) -> None:
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(_set_user_kei_status(test_db_path, "subscriber@example.com", "would_want"))
+        resp = authed_client.post(
+            "/community-statements",
+            data=_data_with_csrf(
+                authed_client,
+                {
+                    "name": "Jordan",
+                    "location": "Peoria, IL",
+                    "statement": "I would buy a kei truck if it were legal.",
+                    "consent": "on",
+                },
+            ),
+        )
+        assert resp.status_code == 200
+
+        async def check():
+            from sqlalchemy import select
+
+            from ilga_graph.db_models import KeiInterestStatement
+
+            async with db_mod.async_session_factory() as session:
+                r = await session.execute(
+                    select(KeiInterestStatement).where(KeiInterestStatement.name == "Jordan")
+                )
+                row = r.scalar_one_or_none()
+                assert row is not None
+                assert row.status == "pending"
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(check())
+
+    def test_admin_statements_list_returns_200(self, admin_client: TestClient) -> None:
+        resp = admin_client.get("/admin/statements")
+        assert resp.status_code == 200
+        assert b"statement" in resp.content.lower() or b"pending" in resp.content.lower()
+
+    def test_admin_statement_review_approve_redirects(
+        self, client: TestClient, authed_client: TestClient, test_db_path: Path
+    ) -> None:
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(_set_user_kei_status(test_db_path, "subscriber@example.com", "would_want"))
+        authed_client.post(
+            "/community-statements",
+            data=_data_with_csrf(
+                authed_client,
+                {
+                    "name": "Stmt Approve",
+                    "location": "IL",
+                    "statement": "I want one.",
+                    "consent": "on",
+                },
+            ),
+        )
+
+        async def get_stmt_id():
+            from sqlalchemy import select
+
+            from ilga_graph.db_models import KeiInterestStatement
+
+            async with db_mod.async_session_factory() as session:
+                r = await session.execute(
+                    select(KeiInterestStatement).where(KeiInterestStatement.name == "Stmt Approve")
+                )
+                row = r.scalar_one_or_none()
+                return row.id if row else None
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            stmt_id = asyncio.run(get_stmt_id())
+        assert stmt_id is not None
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(_add_auth_code("admin@example.com", "654321"))
+        client.post(
+            "/auth/verify-code",
+            data=_data_with_csrf(client, {"email": "admin@example.com", "code": "654321"}),
+        )
+        with patch.object(
+            stories_router_mod, "send_statement_review_email", new_callable=AsyncMock
+        ):
+            resp = client.post(
+                f"/admin/statements/{stmt_id}/review",
+                data=_data_with_csrf(client, {"action": "approve"}),
+                follow_redirects=False,
+            )
+        assert resp.status_code == 303
+        assert "flash=approved" in resp.headers.get("location", "")
+
+
+class TestAdminPollsEdgeCases:
+    """Poll create/update/results edge cases."""
+
+    def test_create_poll_duplicate_slug_returns_400(
+        self, admin_client: TestClient, test_db_path: Path
+    ) -> None:
+        """Create a poll, then create another with same slug → 400 and error message."""
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+        admin_client.post(
+            "/admin/polls",
+            data={
+                "title": "First Poll",
+                "slug": "dup",
+                "placement": "",
+                "option_slug": ["a"],
+                "option_label": ["Option A"],
+            },
+            follow_redirects=False,
+        )
+        resp = admin_client.post(
+            "/admin/polls",
+            data={
+                "title": "Second Poll",
+                "slug": "dup",
+                "placement": "",
+                "option_slug": ["x"],
+                "option_label": ["Option X"],
+            },
+            follow_redirects=False,
+        )
+        assert resp.status_code == 400
+        assert b"already exists" in resp.content.lower() or b"slug" in resp.content.lower()
+
+    def test_create_poll_no_options_returns_400(self, admin_client: TestClient) -> None:
+        resp = admin_client.post(
+            "/admin/polls",
+            data={"title": "No Options", "slug": "noopts", "placement": ""},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 400
+        assert b"at least one option" in resp.content.lower() or b"option" in resp.content.lower()
+
+    def test_poll_results_invalid_id_redirects_to_list(
+        self, admin_client: TestClient, test_db_path: Path
+    ) -> None:
+        resp = admin_client.get("/admin/polls/99999/results", follow_redirects=False)
+        assert resp.status_code == 302
+        assert resp.headers.get("location", "").rstrip("/").endswith("/admin/polls")
 
 
 class TestAdminCreateAndSend:

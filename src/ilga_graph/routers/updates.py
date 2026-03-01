@@ -33,7 +33,7 @@ from ..app_state import state
 from ..campaign_helpers import get_active_campaign
 from ..constants import CATEGORY_COMMITTEES, KEI_STATUS_OPTIONS
 from ..db import async_session_factory, get_db
-from ..db_models import KeiPollResponse, OutreachEvent, Update, User
+from ..db_models import KeiPollResponse, OutreachEvent, Poll, PollResponse, Update, User
 from ..dependencies import get_current_user_optional, require_admin, require_user
 from ..email_utils import send_email, send_welcome_email
 from ..kei_poll_context import (
@@ -51,6 +51,8 @@ from ..routers.content import (
     PROGRESS_ACHIEVED_COUNT,
     PROGRESS_CHECKPOINTS,
     STRATEGIC_FIVE_POINTS,
+    WHY_YOU_CARE_BRANCHES,
+    WHY_YOU_CARE_DEFAULT_CARDS,
 )
 from ..security import validate_anon_session_id
 from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
@@ -670,6 +672,23 @@ async def kei_poll_form(
     )
 
 
+@router.get("/updates/why-you-care-flow", include_in_schema=False)
+async def why_you_care_flow(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return ambient Why-you-care flow HTML for HTMX swap into #why-you-care-flow."""
+    results = await _get_kei_status_results(db)
+    return templates.TemplateResponse(
+        request,
+        "_why_you_care_flow_ambient.html",
+        {
+            "why_you_care_default_cards": WHY_YOU_CARE_DEFAULT_CARDS,
+            "kei_status_total": results["total_responses"],
+        },
+    )
+
+
 @router.get("/updates/kei-poll-results", include_in_schema=False)
 async def kei_poll_results(
     request: Request,
@@ -723,6 +742,17 @@ async def kei_status_post(
     db.add(response_row)
     if user:
         user.kei_status = validated
+    # Dual-write to poll_responses so admin Polls list and per-poll results stay in sync.
+    kei_poll = (await db.execute(select(Poll).where(Poll.slug == "kei"))).scalar_one_or_none()
+    if kei_poll:
+        db.add(
+            PollResponse(
+                poll_id=kei_poll.id,
+                user_id=user.id if user else None,
+                session_id=anon_sid,
+                option_slug=validated,
+            )
+        )
     await db.commit()
     LOGGER.info(
         "Kei poll response id=%s user_id=%s kei_status=%s",
@@ -733,6 +763,25 @@ async def kei_status_post(
     if user:
         if request.headers.get("HX-Request"):
             results = await _get_kei_status_results(db)
+            if poll_id == "home-kei-poll":
+                branch_slug = (
+                    "owner" if validated in ("registered", "revoked", "denied") else validated
+                )
+                why_you_care_branch = WHY_YOU_CARE_BRANCHES.get(
+                    branch_slug, WHY_YOU_CARE_BRANCHES["would_not_want"]
+                )
+                return templates.TemplateResponse(
+                    request,
+                    "_why_you_care_branch.html",
+                    {
+                        "why_you_care_branch": why_you_care_branch,
+                        "kei_status_results": results,
+                        "kei_status_options": KEI_STATUS_OPTIONS,
+                        "kei_status_selected": validated,
+                        "kei_poll_initial_anon": False,
+                        "poll_id": poll_id,
+                    },
+                )
             return templates.TemplateResponse(
                 request,
                 "_kei_poll_logged_in_success.html",
@@ -752,17 +801,35 @@ async def kei_status_post(
         {"key": KEI_POLL_CHOICE_COOKIE, "value": validated, **cookie_opts},
     ]
     if request.headers.get("HX-Request"):
-        resp = templates.TemplateResponse(
-            request,
-            "_kei_poll_anonymous_success.html",
-            {
-                "kei_status_results": results,
-                "kei_status_options": KEI_STATUS_OPTIONS,
-                "kei_status_selected": validated,
-                "dev_available": cfg.DEV_MODE,
-                "poll_id": poll_id,
-            },
-        )
+        if poll_id == "home-kei-poll":
+            branch_slug = "owner" if validated in ("registered", "revoked", "denied") else validated
+            why_you_care_branch = WHY_YOU_CARE_BRANCHES.get(
+                branch_slug, WHY_YOU_CARE_BRANCHES["would_not_want"]
+            )
+            resp = templates.TemplateResponse(
+                request,
+                "_why_you_care_branch.html",
+                {
+                    "why_you_care_branch": why_you_care_branch,
+                    "kei_status_results": results,
+                    "kei_status_options": KEI_STATUS_OPTIONS,
+                    "kei_status_selected": validated,
+                    "kei_poll_initial_anon": True,
+                    "poll_id": poll_id,
+                },
+            )
+        else:
+            resp = templates.TemplateResponse(
+                request,
+                "_kei_poll_anonymous_success.html",
+                {
+                    "kei_status_results": results,
+                    "kei_status_options": KEI_STATUS_OPTIONS,
+                    "kei_status_selected": validated,
+                    "dev_available": cfg.DEV_MODE,
+                    "poll_id": poll_id,
+                },
+            )
         for params in cookies_to_set:
             resp.set_cookie(**params)
         return resp

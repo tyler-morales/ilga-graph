@@ -1,5 +1,6 @@
-{# Renders pie chart + table toggle for a single dataset (verified or all). Expects: data (by_status, total_responses), kei_status_options, view_id (unique id for this block). #}
+{# Renders pie chart + table toggle for a single dataset (verified or all). Expects: data (by_status, total_responses), options (list of (slug, label)), view_id (unique id for this block). #}
 {% set total = data.total_responses %}
+{% set poll_options = options|default(kei_status_options|default([])) %}
 <div class="admin-poll-view" id="admin-poll-view-{{ view_id }}" data-view="pie" role="group" aria-label="View as pie chart or table">
   <div class="admin-poll-view-toggle">
     <button type="button" class="admin-poll-view-btn admin-poll-view-btn--active" data-view="pie" aria-pressed="true" aria-controls="admin-poll-pie-{{ view_id }} admin-poll-table-{{ view_id }}">Pie</button>
@@ -7,12 +8,12 @@
   </div>
 
   <div class="admin-poll-panel admin-poll-panel--pie" id="admin-poll-pie-{{ view_id }}" role="region" aria-label="Pie chart">
-    {% if total and total > 0 %}
+    {% if total and total > 0 and poll_options %}
     {% set segment_colors = ['#4f46e5', '#059669', '#d97706', '#dc2626', '#6b7280'] %}
     <div class="admin-poll-pie-wrap" role="img" aria-label="Pie chart of poll results by option">
       <div class="admin-poll-pie" style="background: conic-gradient(
         {% set ns = namespace(cum=0) %}
-        {% for slug, label in kei_status_options %}
+        {% for slug, label in poll_options %}
           {% set count = data.by_status.get(slug, 0) %}
           {% set pct = (count / total * 100)|round(1) if total else 0 %}
           {{ segment_colors[loop.index0 % 5] }} {{ (ns.cum * 3.6)|round(1) }}deg {{ ((ns.cum + pct) * 3.6)|round(1) }}deg{% if not loop.last %}, {% endif %}
@@ -21,7 +22,7 @@
       );"></div>
     </div>
     <ul class="admin-poll-legend" role="list" aria-label="Poll results by option">
-      {% for slug, label in kei_status_options %}
+      {% for slug, label in poll_options %}
         {% set count = data.by_status.get(slug, 0) %}
         {% set pct = (count / total * 100)|round(1) if total else 0 %}
         <li class="admin-poll-legend-item">
@@ -38,7 +39,7 @@
   </div>
 
   <div class="admin-poll-panel admin-poll-panel--table" id="admin-poll-table-{{ view_id }}" role="region" aria-label="Table view" hidden>
-    {% if total and total > 0 %}
+    {% if total and total > 0 and poll_options %}
     <div class="admin-poll-table-wrap">
       <table class="admin-poll-table">
         <thead>
@@ -49,7 +50,7 @@
           </tr>
         </thead>
         <tbody>
-          {% for slug, label in kei_status_options %}
+          {% for slug, label in poll_options %}
             {% set count = data.by_status.get(slug, 0) %}
             {% set pct = (count / total * 100)|round(1) if total else 0 %}
           <tr>

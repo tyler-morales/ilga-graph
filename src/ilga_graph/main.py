@@ -33,6 +33,7 @@ from .routers.feedback import router as _feedback_router
 from .routers.home import router as _home_router
 from .routers.intelligence import router as _intelligence_router
 from .routers.outreach import router as _outreach_router
+from .routers.stories import router as _stories_router
 from .routers.updates import router as _updates_router
 from .session_schedule import get_milestone_by_id, get_next_deadline_safe
 
@@ -334,6 +335,7 @@ app.include_router(_dev_router, prefix="/dev")
 app.include_router(_advocacy_router, prefix="/advocacy")
 app.include_router(_auth_router)
 app.include_router(_content_router)
+app.include_router(_stories_router)
 app.include_router(_updates_router)
 app.include_router(_feedback_router)
 app.include_router(_bills_router, prefix="/api")

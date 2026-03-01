@@ -7,11 +7,12 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import String, cast, delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from .. import advocacy_helpers as ah
 from .. import config as cfg
@@ -24,7 +25,16 @@ from ..constants import (
     KEI_STATUS_SLUGS,
 )
 from ..db import get_db
-from ..db_models import KeiPollResponse, OutreachEvent, OutreachStepEvent, Update, User
+from ..db_models import (
+    KeiPollResponse,
+    OutreachEvent,
+    OutreachStepEvent,
+    Poll,
+    PollOption,
+    PollResponse,
+    Update,
+    User,
+)
 from ..dependencies import get_current_user_optional, require_admin
 from ..member_lookup import find_member_by_district, find_member_by_id
 from ..routers.content import STRATEGIC_FIVE_POINTS
@@ -216,6 +226,8 @@ async def admin_dashboard(
             {"member_id": mid, "count": cnt, "name": member.name if member else None}
         )
 
+    polls_summary = await _get_active_polls_summary(db)
+
     return templates.TemplateResponse(
         "admin_dashboard.html",
         {
@@ -234,6 +246,7 @@ async def admin_dashboard(
             "subscriber_rate_pct": subscriber_rate_pct,
             "active_campaign": active_campaign,
             "active_campaign_actions": active_campaign_actions,
+            "polls_summary": polls_summary,
             "top_members_by_contacts": top_members_by_contacts,
         },
     )
@@ -497,22 +510,305 @@ async def _get_kei_poll_all_responses(db: AsyncSession) -> dict[str, Any]:
     }
 
 
+# --- Poll (Poll/PollOption/PollResponse) helpers ---
+
+POLL_PLACEMENT_CHOICES: list[tuple[str, str]] = [
+    ("", "None"),
+    ("home", "Home"),
+    ("sidebar", "Sidebar"),
+    ("updates", "Updates page"),
+]
+
+
+async def _get_poll_by_id(db: AsyncSession, poll_id: int) -> Poll | None:
+    """Return Poll by id with options eagerly loaded."""
+    r = await db.execute(select(Poll).where(Poll.id == poll_id).options(selectinload(Poll.options)))
+    return r.scalar_one_or_none()
+
+
+async def _get_poll_results_verified(db: AsyncSession, poll_id: int) -> dict[str, Any]:
+    """Verified-only counts for a poll (PollResponse with user who has last_login_at)."""
+    result = await db.execute(
+        select(PollResponse.option_slug, func.count())
+        .join(User, PollResponse.user_id == User.id)
+        .where(PollResponse.poll_id == poll_id)
+        .where(User.last_login_at.isnot(None))
+        .group_by(PollResponse.option_slug)
+    )
+    by_slug: dict[str, int] = {row[0]: row[1] for row in result.all()}
+    total = sum(by_slug.values())
+    return {"by_status": by_slug, "total_responses": total}
+
+
+async def _get_poll_results_all(db: AsyncSession, poll_id: int) -> dict[str, Any]:
+    """All response counts for a poll."""
+    result = await db.execute(
+        select(PollResponse.option_slug, func.count())
+        .where(PollResponse.poll_id == poll_id)
+        .group_by(PollResponse.option_slug)
+    )
+    by_slug: dict[str, int] = {row[0]: row[1] for row in result.all()}
+    total = sum(by_slug.values())
+    return {"by_status": by_slug, "total_responses": total}
+
+
+async def _list_polls_with_counts(db: AsyncSession) -> list[dict[str, Any]]:
+    """List all polls with response count per poll."""
+    r = await db.execute(select(Poll).order_by(Poll.created_at.desc()))
+    polls = list(r.scalars().all())
+    out: list[dict[str, Any]] = []
+    for p in polls:
+        cnt = await db.execute(
+            select(func.count()).select_from(PollResponse).where(PollResponse.poll_id == p.id)
+        )
+        total = cnt.scalar() or 0
+        out.append(
+            {
+                "id": p.id,
+                "slug": p.slug,
+                "title": p.title,
+                "is_active": p.is_active,
+                "placement": p.placement,
+                "created_at": p.created_at,
+                "response_count": total,
+            }
+        )
+    return out
+
+
+async def _get_active_polls_summary(db: AsyncSession) -> dict[str, Any]:
+    """Count of active polls and total responses across them (for dashboard)."""
+    r = await db.execute(select(Poll).where(Poll.is_active.is_(True)))
+    active = list(r.scalars().all())
+    total_responses = 0
+    for p in active:
+        cnt = await db.execute(
+            select(func.count()).select_from(PollResponse).where(PollResponse.poll_id == p.id)
+        )
+        total_responses += cnt.scalar() or 0
+    return {
+        "active_count": len(active),
+        "total_responses": total_responses,
+        "polls": [{"id": p.id, "title": p.title} for p in active],
+    }
+
+
+def _poll_options_for_display(poll: Poll) -> list[tuple[str, str]]:
+    """Return (slug, label) list for a poll from poll.options."""
+    return [(o.slug, o.label) for o in (poll.options or [])]
+
+
+def _fill_by_status_for_options(
+    by_status: dict[str, int], option_slugs: list[str]
+) -> dict[str, int]:
+    """Ensure every option slug has an entry (0 if missing)."""
+    return {slug: by_status.get(slug, 0) for slug in option_slugs}
+
+
 @router.get("/admin/poll", include_in_schema=False)
-async def admin_poll_page(
+async def admin_poll_redirect(
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+):
+    """Legacy: redirect to kei poll results if it exists, else polls list."""
+    r = await db.execute(select(Poll).where(Poll.slug == "kei"))
+    kei = r.scalar_one_or_none()
+    if kei:
+        return RedirectResponse(url=f"/admin/polls/{kei.id}/results", status_code=302)
+    return RedirectResponse(url="/admin/polls", status_code=302)
+
+
+@router.get("/admin/polls", include_in_schema=False)
+async def admin_polls_list(
     request: Request,
     db: AsyncSession = Depends(get_db),
     admin_user: User = Depends(require_admin),
 ):
-    """Kei poll results: verified users and all responses; pie chart + table toggle."""
-    verified = await _get_kei_poll_results(db)
-    all_responses = await _get_kei_poll_all_responses(db)
+    """List all polls with response counts. Link to create, edit, results."""
+    polls_data = await _list_polls_with_counts(db)
     return templates.TemplateResponse(
-        "admin_poll.html",
+        "admin_polls.html",
+        {"request": request, "polls": polls_data},
+    )
+
+
+@router.get("/admin/polls/new", include_in_schema=False)
+async def admin_poll_new_form(
+    request: Request,
+    admin_user: User = Depends(require_admin),
+):
+    """Form to create a new poll."""
+    return templates.TemplateResponse(
+        "admin_poll_form.html",
         {
             "request": request,
+            "poll": None,
+            "placement_choices": POLL_PLACEMENT_CHOICES,
+        },
+    )
+
+
+@router.post("/admin/polls", include_in_schema=False)
+async def admin_poll_create(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+    title: str = Form(..., max_length=200),
+    slug: str = Form(..., max_length=64),
+    placement: str = Form(""),
+):
+    """Create poll and options. Options from form getlist option_slug / option_label."""
+    form = await request.form()
+    is_active = form.get("is_active") in ("1", "on", "true")
+    slug = (slug or "").strip().lower().replace(" ", "_") or "poll"
+    existing = await db.execute(select(Poll).where(Poll.slug == slug))
+    if existing.scalar_one_or_none():
+        return templates.TemplateResponse(
+            request,
+            "admin_poll_form.html",
+            {
+                "request": request,
+                "poll": None,
+                "placement_choices": POLL_PLACEMENT_CHOICES,
+                "error": "A poll with this slug already exists.",
+            },
+            status_code=400,
+        )
+    slugs = form.getlist("option_slug")
+    labels = form.getlist("option_label")
+    options = [(s.strip(), lab.strip()) for s, lab in zip(slugs, labels) if s and lab]
+    if not options:
+        return templates.TemplateResponse(
+            request,
+            "admin_poll_form.html",
+            {
+                "request": request,
+                "poll": None,
+                "placement_choices": POLL_PLACEMENT_CHOICES,
+                "error": "Add at least one option (slug and label).",
+            },
+            status_code=400,
+        )
+    poll = Poll(
+        slug=slug,
+        title=title.strip(),
+        is_active=is_active,
+        placement=placement.strip() or None,
+    )
+    db.add(poll)
+    await db.flush()
+    for i, (opt_slug, opt_label) in enumerate(options):
+        db.add(PollOption(poll_id=poll.id, slug=opt_slug, label=opt_label, sort_order=i))
+    await db.commit()
+    return RedirectResponse(url=f"/admin/polls?created={poll.id}", status_code=303)
+
+
+@router.get("/admin/polls/{poll_id}/edit", include_in_schema=False)
+async def admin_poll_edit_form(
+    request: Request,
+    poll_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+):
+    """Edit form for a poll."""
+    poll = await _get_poll_by_id(db, poll_id)
+    if poll is None:
+        return RedirectResponse(url="/admin/polls", status_code=302)
+    return templates.TemplateResponse(
+        "admin_poll_form.html",
+        {
+            "request": request,
+            "poll": poll,
+            "placement_choices": POLL_PLACEMENT_CHOICES,
+        },
+    )
+
+
+@router.post("/admin/polls/{poll_id}", include_in_schema=False)
+async def admin_poll_update(
+    request: Request,
+    poll_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+    title: str = Form(..., max_length=200),
+    slug: str = Form(..., max_length=64),
+    placement: str = Form(""),
+):
+    """Update poll and replace options."""
+    poll = await db.execute(select(Poll).where(Poll.id == poll_id))
+    p = poll.scalar_one_or_none()
+    if p is None:
+        return RedirectResponse(url="/admin/polls", status_code=302)
+    form = await request.form()
+    is_active = form.get("is_active") in ("1", "on", "true")
+    slugs = form.getlist("option_slug")
+    labels = form.getlist("option_label")
+    options = [(s.strip(), lab.strip()) for s, lab in zip(slugs, labels) if s and lab]
+    if not options:
+        p_with_opts = await _get_poll_by_id(db, poll_id)
+        return templates.TemplateResponse(
+            "admin_poll_form.html",
+            {
+                "request": request,
+                "poll": p_with_opts,
+                "placement_choices": POLL_PLACEMENT_CHOICES,
+                "error": "Add at least one option (slug and label).",
+            },
+            status_code=400,
+        )
+    slug_clean = (slug or "").strip().lower().replace(" ", "_") or "poll"
+    if slug_clean != p.slug:
+        existing = await db.execute(select(Poll).where(Poll.slug == slug_clean))
+        if existing.scalar_one_or_none():
+            p_with_opts = await _get_poll_by_id(db, poll_id)
+            return templates.TemplateResponse(
+                "admin_poll_form.html",
+                {
+                    "request": request,
+                    "poll": p_with_opts,
+                    "placement_choices": POLL_PLACEMENT_CHOICES,
+                    "error": "A poll with this slug already exists.",
+                },
+                status_code=400,
+            )
+    p.title = title.strip()
+    p.slug = slug_clean
+    p.is_active = is_active
+    p.placement = placement.strip() or None
+    await db.execute(delete(PollOption).where(PollOption.poll_id == poll_id))
+    for i, (opt_slug, opt_label) in enumerate(options):
+        db.add(PollOption(poll_id=poll_id, slug=opt_slug, label=opt_label, sort_order=i))
+    await db.commit()
+    return RedirectResponse(url=f"/admin/polls?updated={poll_id}", status_code=303)
+
+
+@router.get("/admin/polls/{poll_id}/results", include_in_schema=False)
+async def admin_poll_results_page(
+    request: Request,
+    poll_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+):
+    """Per-poll results: verified and all-responses pie/table."""
+    poll = await _get_poll_by_id(db, poll_id)
+    if poll is None:
+        return RedirectResponse(url="/admin/polls", status_code=302)
+    options = _poll_options_for_display(poll)
+    option_slugs = [o[0] for o in options]
+    verified = await _get_poll_results_verified(db, poll_id)
+    all_responses = await _get_poll_results_all(db, poll_id)
+    verified["by_status"] = _fill_by_status_for_options(verified["by_status"], option_slugs)
+    all_responses["by_status"] = _fill_by_status_for_options(
+        all_responses["by_status"], option_slugs
+    )
+    return templates.TemplateResponse(
+        "admin_poll_results.html",
+        {
+            "request": request,
+            "poll": poll,
+            "options": options,
             "verified": verified,
             "all_responses": all_responses,
-            "kei_status_options": KEI_STATUS_OPTIONS,
         },
     )
 

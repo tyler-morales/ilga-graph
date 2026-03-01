@@ -115,3 +115,97 @@ async def send_welcome_email(email: str, site_name: str | None = None) -> bool:
     if sent:
         LOGGER.info("Welcome email sent to %s", email)
     return sent
+
+
+def _story_review_plain(approved: bool, site_name: str, admin_message: str | None) -> str:
+    """Plain text for community story approval/denial email."""
+    site = site_name or "Land of Kei"
+    if approved:
+        line = "Your story is now live on the site."
+        if admin_message and admin_message.strip():
+            line += f"\n\n{admin_message.strip()}"
+    else:
+        line = "Thanks for submitting. We weren't able to include your story at this time."
+        if admin_message and admin_message.strip():
+            line += f"\n\n{admin_message.strip()}"
+    return f"{line}\n\n— {site}\n"
+
+
+def _story_review_html(approved: bool, site_name: str, admin_message: str | None) -> str:
+    """HTML body for community story approval/denial email."""
+    site = html.escape(site_name or "Land of Kei")
+    if approved:
+        line = "<p>Your story is now live on the site.</p>"
+        if admin_message and admin_message.strip():
+            line += f"<p>{html.escape(admin_message.strip())}</p>"
+    else:
+        line = "<p>Thanks for submitting. We weren't able to include your story at this time.</p>"
+        if admin_message and admin_message.strip():
+            line += f"<p>{html.escape(admin_message.strip())}</p>"
+    return f"""<!DOCTYPE html><html><body style="font-family: sans-serif; max-width: 600px;">
+    <p style="color: #666;">{site}</p>
+    {line}
+    <p style="font-size: 0.85em; color: #666;">— {site}</p>
+</body></html>"""
+
+
+async def send_story_review_email(
+    to: str, approved: bool, admin_message: str | None = None
+) -> bool:
+    """Notify user after admin approves or denies their community story submission."""
+    site = cfg.SITE_NAME or "Land of Kei"
+    subject = "Your community story — update" if approved else "Your community story submission"
+    plain = _story_review_plain(approved, site, admin_message)
+    html_body = _story_review_html(approved, site, admin_message)
+    sent = await send_email(to, subject, plain, html_body)
+    if sent:
+        LOGGER.info("Story review email sent to %s (approved=%s)", to, approved)
+    return sent
+
+
+def _statement_review_plain(approved: bool, site_name: str, admin_message: str | None) -> str:
+    """Plain text for interest statement approval/denial email."""
+    site = site_name or "Land of Kei"
+    if approved:
+        line = "Your statement is now live on the site."
+        if admin_message and admin_message.strip():
+            line += f"\n\n{admin_message.strip()}"
+    else:
+        line = "Thanks for submitting. We weren't able to include your statement at this time."
+        if admin_message and admin_message.strip():
+            line += f"\n\n{admin_message.strip()}"
+    return f"{line}\n\n— {site}\n"
+
+
+def _statement_review_html(approved: bool, site_name: str, admin_message: str | None) -> str:
+    """HTML body for interest statement approval/denial email."""
+    site = html.escape(site_name or "Land of Kei")
+    if approved:
+        line = "<p>Your statement is now live on the site.</p>"
+        if admin_message and admin_message.strip():
+            line += f"<p>{html.escape(admin_message.strip())}</p>"
+    else:
+        line = (
+            "<p>Thanks for submitting. We weren't able to include your statement at this time.</p>"
+        )
+        if admin_message and admin_message.strip():
+            line += f"<p>{html.escape(admin_message.strip())}</p>"
+    return f"""<!DOCTYPE html><html><body style="font-family: sans-serif; max-width: 600px;">
+    <p style="color: #666;">{site}</p>
+    {line}
+    <p style="font-size: 0.85em; color: #666;">— {site}</p>
+</body></html>"""
+
+
+async def send_statement_review_email(
+    to: str, approved: bool, admin_message: str | None = None
+) -> bool:
+    """Notify user after admin approves or denies their interest statement submission."""
+    site = cfg.SITE_NAME or "Land of Kei"
+    subject = "Your statement — update" if approved else "Your statement submission"
+    plain = _statement_review_plain(approved, site, admin_message)
+    html_body = _statement_review_html(approved, site, admin_message)
+    sent = await send_email(to, subject, plain, html_body)
+    if sent:
+        LOGGER.info("Statement review email sent to %s (approved=%s)", to, approved)
+    return sent

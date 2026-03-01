@@ -21,63 +21,345 @@
   margin-right: auto;
 }
 
-/* Home: two-column layout — poll (left) and 1,2,3 reasons (right). Stacks on narrow viewports. */
-.why-you-care--two-col .why-you-care-header {
-  max-width: min(900px, 95vw);
+/* Home + poll: adventure flow — single column, cards then inline question then CTAs. */
+.why-you-care--flow .why-you-care-header {
+  max-width: min(720px, 95vw);
 }
 
-/* Home + poll: mobile order = reasons → marquee → poll. Desktop = grid: poll | reasons, then marquee full width. */
-.why-you-care-home-grid {
+.why-you-care-flow {
+  margin-top: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: var(--space-xl, 1.25rem);
-  margin-top: 3rem;
+  align-items: center;
+  text-align: center;
+}
+
+/* Default state: three insight cards (ambient). Full width within centered flow. */
+.wyc-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg, 1rem);
+  list-style: none;
+  margin: 0 0 1.5rem 0;
+  padding: 0;
+  width: 100%;
 }
 
 @media (min-width: 640px) {
-  .why-you-care-home-grid {
+  .wyc-cards {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
-    gap: 3rem;
-    align-items: start;
-    justify-items: center;
-  }
-
-  .why-you-care-home-grid .why-you-care-col {
-    padding-top: 0;
-  }
-
-  .why-you-care-home-grid .why-you-care-col--poll {
-    grid-column: 1;
-    grid-row: 1;
-    width: 100%;
-    max-width: 360px;
-    align-self: center;
-  }
-
-  .why-you-care-home-grid .why-you-care-col--reasons {
-    grid-column: 2;
-    grid-row: 1;
-    min-width: 0;
-    width: 100%;
-    max-width: 360px;
-    align-self: center;
-  }
-
-  .why-you-care-home-grid .why-you-care-marquee--in-grid {
-    grid-column: 1 / -1;
-    grid-row: 2;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-xl, 1.25rem);
+    margin-bottom: 2rem;
   }
 }
 
-.why-you-care-home-grid .why-you-care-col {
-  min-width: 0;
-  padding-top: 0;
+.wyc-card {
+  padding: var(--space-md, 12px) var(--space-lg, 16px);
+  background: var(--color-bg-card, #fafafa);
+  border: 1px solid var(--color-border-light, #e5e5e5);
+  border-radius: 8px;
 }
 
-.why-you-care-home-grid .why-you-care-col--poll {
-  align-self: center;
+.wyc-card__headline {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text, #222);
+  margin: 0 0 0.5rem 0;
+  line-height: 1.3;
+}
+
+.wyc-card__body {
+  font-size: var(--font-size-body, 1rem);
+  color: var(--color-text-secondary, #555);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Short line above poll: why we ask. */
+.wyc-poll-intro {
+  font-size: var(--font-size-body, 1rem);
+  color: var(--color-text-secondary, #555);
+  margin: 0 0 1rem 0;
+  max-width: 42ch;
+}
+
+/* Inline poll: question + Yes/No pills + sub-options, no card chrome. */
+.wyc-inline-poll {
+  margin-bottom: 1.25rem;
+  width: 100%;
+  max-width: 360px;
+}
+
+.wyc-inline-question__label {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text, #222);
+  margin: 0 0 0.75rem 0;
+}
+
+.wyc-inline-question__branch-btns {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.wyc-inline-question__btn {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--color-text, #222);
+  background: var(--color-bg-card, #fff);
+  border: 1px solid var(--color-border, #ccc);
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.wyc-inline-question__btn:hover {
+  background: var(--color-bg-hover, #f0f0f0);
+  border-color: var(--color-border, #999);
+}
+
+.wyc-inline-question__btn:focus-visible {
+  outline: 2px solid var(--color-border-focus, #333);
+  outline-offset: 2px;
+}
+
+.wyc-inline-question__btn[aria-pressed="true"] {
+  background: var(--color-primary, #0645ad);
+  border-color: var(--color-primary, #0645ad);
+  color: #fff;
+}
+
+.wyc-inline-poll__step2 {
+  margin-top: 1rem;
+  overflow: visible;
+  /* so focus outline (2px + 1px offset) on options is not clipped */
+}
+
+.wyc-inline-poll__step2--hidden {
+  display: none;
+}
+
+.wyc-inline-poll__step2:not(.wyc-inline-poll__step2--hidden) {
+  animation: wyc-step2-in 0.2s ease;
+}
+
+@keyframes wyc-step2-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wyc-inline-poll__step2-legend {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-text-secondary, #555);
+  margin: 0 0 0.5rem 0;
+}
+
+.wyc-inline-poll__options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  /* Horizontal padding so focus outline (2px + 1px offset) is not clipped */
+  padding: 0 3px;
+}
+
+.wyc-inline-poll__option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.9375rem;
+  color: var(--color-text, #222);
+  background: var(--color-bg-card, #fff);
+  border: 1px solid var(--color-border-light, #e5e5e5);
+  border-radius: 6px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.wyc-inline-poll__option:hover {
+  background: #e3f2fd;
+  border-color: #90caf9;
+}
+
+.wyc-inline-poll__option:focus-within {
+  outline: 2px solid #1976d2;
+  outline-offset: 1px;
+}
+
+.wyc-inline-poll__option input {
+  margin-right: 0.5rem;
+}
+
+.wyc-inline-poll__footer {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.wyc-inline-poll__total {
+  font-size: var(--font-size-xs, 0.8125rem);
+  color: var(--color-text-muted, #777);
+}
+
+.wyc-inline-poll__submit-wrap--hidden {
+  display: none;
+}
+
+.wyc-inline-poll__submit {
+  margin: 0;
+}
+
+.wyc-cta {
+  margin: 1.25rem 0 0 0;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.25rem;
+}
+
+.wyc-cta .btn {
+  margin: 0;
+}
+
+.wyc-cta__sep {
+  color: var(--color-text-secondary, #555);
+  font-weight: 400;
+}
+
+/* Branch view (after poll submit): tailored headline, body, CTAs, results. */
+.wyc-branch-content {
+  animation: wyc-branch-in 0.4s ease;
+}
+
+@keyframes wyc-branch-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wyc-branch-content__headline {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text, #222);
+  margin: 0 0 0.5rem 0;
+  line-height: 1.3;
+}
+
+.wyc-branch-content__body {
+  font-size: var(--font-size-body, 1rem);
+  color: var(--color-text-secondary, #555);
+  line-height: 1.6;
+  margin: 0 0 1.25rem 0;
+}
+
+.wyc-branch-content__ctas {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.wyc-branch-content__ctas .btn {
+  margin: 0;
+}
+
+/* Start outreach: blue CTA with white text (primary action in branch). */
+.wyc-branch-content__ctas .btn.btn--primary {
+  background: var(--color-link-action, #1a73e8);
+  border-color: var(--color-link-action, #1a73e8);
+  color: #fff;
+}
+
+.wyc-branch-content__ctas .btn.btn--primary:hover {
+  background: var(--color-link-action-hover, #1765cc);
+  border-color: var(--color-link-action-hover, #1765cc);
+  color: #fff;
+}
+
+.wyc-branch-content__ctas .btn.btn--primary.why-you-care-link {
+  color: #fff;
+  text-decoration: none;
+}
+
+.wyc-branch-content__secondary {
+  margin: 0;
+}
+
+.wyc-branch-content__nudge {
+  margin-bottom: 1rem;
+}
+
+.wyc-branch-content__results {
+  margin-bottom: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: var(--color-bg-card, #fafafa);
+  border: 1px solid var(--color-border-light, #e5e5e5);
+  border-radius: 8px;
+}
+
+.wyc-branch-content__results-empty {
+  font-size: var(--font-size-body, 1rem);
+  color: var(--color-text-secondary, #555);
+  margin: 0 0 0.75rem 0;
+}
+
+.wyc-branch-content__footer {
+  margin: 0 0 1rem 0;
+  font-size: var(--font-size-xs, 0.8125rem);
+  color: var(--color-text-muted, #777);
+}
+
+.wyc-branch-content__share {
+  margin: 0 0 0.75rem 0;
+}
+
+.wyc-branch-content__share .kei-poll-story-cta__hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--color-text-muted, #777);
+}
+
+.wyc-branch-content__change {
+  margin: 0;
+}
+
+.wyc-branch-content__change .kei-poll-change-btn {
+  font-size: 0.9375rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wyc-inline-poll__step2:not(.wyc-inline-poll__step2--hidden) {
+    animation: none;
+  }
+
+  .wyc-branch-content {
+    animation: none;
+  }
 }
 
 .why-you-care-two-col-inner {
@@ -237,10 +519,6 @@
   position: relative;
 }
 
-.why-you-care-marquee--in-grid {
-  margin-top: 0;
-}
-
 /* Pause on hover (mouse) and when paused via control (keyboard/screen reader). */
 .why-you-care-marquee:hover .why-you-care-marquee-track,
 .why-you-care-marquee.why-you-care-marquee--paused .why-you-care-marquee-track {
@@ -275,6 +553,35 @@
   height: 187px;
   object-fit: cover;
   vertical-align: middle;
+}
+
+/* Text-only marquee card (e.g. would buy if legal statement). Same width as image cards. */
+.why-you-care-marquee-item--text {
+  display: flex;
+  flex-direction: column;
+  min-height: 187px;
+  padding: var(--space-md, 12px);
+  background: var(--color-bg-card, #fff);
+  border: 1px solid var(--color-border-light, #e5e5e5);
+  border-radius: 8px;
+}
+
+.why-you-care-marquee-item--text .why-you-care-marquee-item__statement {
+  flex: 1;
+  margin: 0 0 var(--space-sm, 8px);
+  font-size: var(--font-size-xs, 0.8125rem);
+  line-height: 1.4;
+  color: var(--color-text, #222);
+}
+
+.why-you-care-marquee-item--text .why-you-care-marquee-caption {
+  padding: 0;
+}
+
+@media (min-width: 640px) {
+  .why-you-care-marquee-item--text {
+    min-height: 213px;
+  }
 }
 
 .why-you-care-marquee-caption {

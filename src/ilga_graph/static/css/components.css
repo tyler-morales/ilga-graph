@@ -48,11 +48,19 @@
 
 /* Button base */
 .btn {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
   padding: var(--space-sm) var(--space-lg);
   border-radius: var(--radius-md);
   font-weight: 600;
+  cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.btn:focus-visible {
+  outline: 2px solid var(--color-border-focus, #333);
+  outline-offset: 2px;
 }
 .btn--primary {
   background: var(--color-cta-primary);
@@ -79,6 +87,52 @@
 }
 .btn--ghost:hover {
   background: var(--color-bg-muted);
+}
+
+/* Story/accent CTA: orange (community story, photo share). */
+.btn--story {
+  background: var(--color-hero-cta, #ed7a0a);
+  border: 1px solid var(--color-hero-cta, #ed7a0a);
+  color: #fff;
+}
+.btn--story:hover {
+  background: var(--color-hero-cta-hover, #c96608);
+  border-color: var(--color-hero-cta-hover, #c96608);
+}
+.btn--story:focus-visible {
+  outline: 2px solid var(--color-hero-cta-focus-ring, #333);
+  outline-offset: 2px;
+}
+
+/* Success/confirm CTA: green (e.g. poll submit). */
+.btn--success {
+  background: #2e7d32;
+  border: 1px solid #2e7d32;
+  color: #fff;
+}
+.btn--success:hover:not(:disabled) {
+  background: #1b5e20;
+  border-color: #1b5e20;
+}
+.btn--success:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.btn--success:focus-visible {
+  outline: 2px solid #2e7d32;
+  outline-offset: 2px;
+}
+
+/* Button icon (inside .btn). */
+.btn-icon {
+  flex-shrink: 0;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+.btn-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 /* Input base */

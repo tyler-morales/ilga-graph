@@ -1,0 +1,91 @@
+{# Branch view after poll submit (or initial load when already voted). Tailored headline, body, CTAs; results chart; share story. #}
+<div class="wyc-branch-content" role="region" aria-live="polite">
+    <h3 class="wyc-branch-content__headline">{{ why_you_care_branch.headline }}</h3>
+    <p class="wyc-branch-content__body">{{ why_you_care_branch.body }}</p>
+    <div class="wyc-branch-content__ctas">
+        <a href="{{ why_you_care_branch.primary_cta_href }}" class="btn btn--primary why-you-care-link">
+            <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
+            {{ why_you_care_branch.primary_cta_label }}
+        </a>
+        {% if why_you_care_branch.secondary_cta_label %}
+        {% if why_you_care_branch.secondary_cta_modal_type %}
+        <button type="button" class="story-submit-trigger wyc-branch-content__secondary btn btn--story" data-marquee-type="{{ why_you_care_branch.secondary_cta_modal_type }}" aria-label="Open form to share your story on the community wall">
+            <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
+            {{ why_you_care_branch.secondary_cta_label }}
+        </button>
+        {% else %}
+        <a href="{{ why_you_care_branch.secondary_cta_href }}" class="btn btn--secondary wyc-branch-content__secondary">
+            <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
+            {{ why_you_care_branch.secondary_cta_label }}
+        </a>
+        {% endif %}
+        {% endif %}
+    </div>
+    {% if kei_poll_initial_anon %}
+    <div class="kei-poll-nudge-block wyc-branch-content__nudge" role="status" aria-live="polite">
+        <span class="kei-poll-nudge-block__icon" aria-hidden="true">
+            {% from "_macros.html" import icon_caution %}
+            {{ icon_caution() }}
+        </span>
+        <div class="kei-poll-nudge-block__content">
+            <p class="kei-poll-nudge-block__copy">Your response isn&rsquo;t counted yet. Sign in to save your answer to the results.</p>
+            <button type="button" class="auth-strip-signin-btn btn btn--secondary kei-poll-nudge-block__signin-link" id="poll-signin-btn" aria-expanded="false" aria-controls="poll-signin-inline-signin" aria-label="Sign in to add your answer to the results">
+                <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span>
+                Sign in to save your answer
+            </button>
+        </div>
+    </div>
+    <div id="poll-signin-wrap" class="kei-poll-signin-wrap" data-poll-signin-init>
+        {% from "_macros.html" import inline_signin %}
+        {{ inline_signin('poll-signin', dev_available) }}
+        <div class="poll-signup-prompt" id="poll-signup-prompt" hidden aria-live="polite" aria-label="Sign up for campaign updates">
+            <p class="poll-signup-prompt__copy">Get one update when we move?</p>
+            <div class="poll-signup-prompt__actions" role="group" aria-label="Subscribe to updates">
+                <button type="button" class="poll-signup-yes btn btn--primary" aria-label="Yes, add me to the list">
+                    <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                    Yes
+                </button>
+                <button type="button" class="poll-signup-notyet btn btn--secondary" aria-label="Not yet, close this">
+                    <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+                    Not yet
+                </button>
+            </div>
+            <div class="poll-signup-prompt__success" id="poll-signup-success" hidden role="status"></div>
+        </div>
+    </div>
+    {% endif %}
+    {% if kei_status_results and kei_status_results.total_responses > 0 %}
+    <div class="wyc-branch-content__results" aria-label="Poll results from verified users">
+        {% from "_macros.html" import kei_poll_results_chart %}
+        {{ kei_poll_results_chart(kei_status_results, kei_status_options, kei_status_selected, offer_save_choice=kei_poll_initial_anon|default(false)) }}
+    </div>
+    {% else %}
+    <p class="wyc-branch-content__results-empty" role="status">Thanks for sharing. Results will appear here once others respond.</p>
+    {% endif %}
+    <footer class="wyc-branch-content__footer">
+        <span class="wyc-branch-content__total">Total Votes: {{ kei_status_results.total_responses if kei_status_results else 0 }}</span>
+    </footer>
+    {% if not why_you_care_branch.secondary_cta_modal_type %}
+    <p class="wyc-branch-content__share">
+        {% if kei_status_selected in ('registered', 'revoked', 'denied') %}
+        <button type="button" class="story-submit-trigger btn btn--story kei-poll-story-cta__btn" data-marquee-type="story" aria-label="Open form to share your photo and story on the community wall">
+            <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
+            Share your story
+        </button>
+        <span class="kei-poll-story-cta__hint">Add your photo to our community wall.</span>
+        {% else %}
+        <button type="button" class="story-submit-trigger btn btn--story kei-poll-story-cta__btn" data-marquee-type="statement" aria-label="Open form to share your interest on the community wall">
+            <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
+            Share your story
+        </button>
+        <span class="kei-poll-story-cta__hint">Share that you&rsquo;d buy one if it were legal—we&rsquo;ll add it to the wall.</span>
+        {% endif %}
+    </p>
+    {% endif %}
+    <p class="wyc-branch-content__change">
+        <button type="button" class="kei-poll-change-btn btn btn--secondary" data-wyc-reset-flow aria-label="Change your kei status answer">
+            <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></span>
+            Need to change your answer?
+        </button>
+    </p>
+</div>

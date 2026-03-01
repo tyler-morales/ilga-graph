@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 def _utcnow() -> datetime:
@@ -167,8 +167,63 @@ class CommunityMemberEmail(Base):
     )
 
 
+class Poll(Base):
+    """Admin-created poll. placement controls where it appears (home, sidebar, updates)."""
+
+    __tablename__ = "polls"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    slug: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    placement: Mapped[str | None] = mapped_column(
+        String(32), nullable=True
+    )  # home | sidebar | updates
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+    options: Mapped[list[PollOption]] = relationship(
+        "PollOption", back_populates="poll", order_by="PollOption.sort_order", lazy="selectin"
+    )
+
+
+class PollOption(Base):
+    """One choice for a poll. Unique (poll_id, slug)."""
+
+    __tablename__ = "poll_options"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    poll_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("polls.id"), nullable=False, index=True
+    )
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    label: Mapped[str] = mapped_column(String(256), nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+
+    poll: Mapped[Poll] = relationship("Poll", back_populates="options")
+
+    __table_args__ = (Index("ix_poll_options_poll_slug", "poll_id", "slug", unique=True),)
+
+
+class PollResponse(Base):
+    """One row per poll submission. Logged-in: user_id set; anon: session_id optional."""
+
+    __tablename__ = "poll_responses"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    poll_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("polls.id"), nullable=False, index=True
+    )
+    user_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=True, index=True
+    )
+    session_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    option_slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
 class KeiPollResponse(Base):
-    """One row per kei poll. Logged-in: user_id set; anon: user_id NULL, session_id optional."""
+    """One row per kei poll. Logged-in: user_id set; anon: user_id NULL, session_id optional.
+    Legacy; new data uses PollResponse. Kept for migration backfill and backward compat."""
 
     __tablename__ = "kei_poll_responses"
 
@@ -178,6 +233,47 @@ class KeiPollResponse(Base):
     )
     session_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     kei_status: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class CommunityStory(Base):
+    """User-submitted photo + story for the home page marquee. Requires admin approval."""
+
+    __tablename__ = "community_stories"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
+    location: Mapped[str] = mapped_column(String(100), nullable=False)
+    story: Mapped[str] = mapped_column(Text, nullable=False)
+    image_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    consent: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending", index=True)
+    admin_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class KeiInterestStatement(Base):
+    """User-submitted text-only statement (e.g. would buy if legal) for marquee. Non-owners only."""
+
+    __tablename__ = "kei_interest_statements"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
+    location: Mapped[str] = mapped_column(String(100), nullable=False)
+    statement: Mapped[str] = mapped_column(Text, nullable=False)
+    consent: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending", index=True)
+    admin_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 

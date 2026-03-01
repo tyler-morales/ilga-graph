@@ -59,7 +59,9 @@ Using the glossary when writing copy or code avoids mixing these meanings.
 | **Goal** | The user’s outreach task list: contact district legislators (4 actions), then Power Broker (2 actions). “Your goal” / “This week’s goal” in the sidebar. *Not* the advocacy objective (statutory fix). |
 | **Drawer** | The slide-out panel for call scripts and email templates. Opens from “Reach out” on a legislator card. |
 | **Funnel** | The user journey from page visit to completed outreach. Measured for conversion (e.g. % who opened drawer and completed at least one call/email). |
-| **State of kei** | User self-report: do they have a kei (registered / revoked / denied) or not (would want / would not want). Each submission in `kei_poll_responses`; logged-in also `User.kei_status`. Admin /admin/poll: verified + all-responses (pie + table). Collected via poll: first “Do you have a kei vehicle?” (Yes/No), then either registration status or “Would you want one?”. Footer and home poll, /updates?prompt=kei; welcome email links to the poll. |
+| **State of kei** | User self-report: do they have a kei (registered / revoked / denied) or not (would want / would not want). Each submission in `kei_poll_responses`; logged-in also `User.kei_status`. Admin /admin/poll: verified + all-responses (pie + table). Collected via poll: first "Do you have a kei vehicle?" (Yes/No), then either registration status or "Would you want one?". Footer and home poll, /updates?prompt=kei; welcome email links to the poll. |
+| **Community story** | A user-submitted photo and short story (name, location, consent) for the home-page marquee. **Share your story** is shown to every user who completes the Kei poll; owners (registered / revoked / denied) open the photo+story modal; non-owners open a text-only **interest statement** modal. Stories are stored as `CommunityStory` (status: pending); admins approve or deny at /admin/stories. Approved items appear in the marquee via `get_marquee_items(db)`; text-only statements at /admin/statements. |
+
 
 ---
 

@@ -10,12 +10,13 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import config as cfg
 from ..constants import KEI_STATUS_OPTIONS
 from ..db import get_db
-from ..db_models import User
+from ..db_models import CommunityStory, KeiInterestStatement, User
 from ..dependencies import get_current_user_optional
 from ..session_schedule import get_all_deadlines, session_label
 from .content_constants import (
@@ -39,6 +40,7 @@ from .content_constants import (
     HERO_URGENCY_THIS_SESSION,
     ISSUE_SOURCES,
     KEI_GLOSSARY,
+    KEI_POLL_WHY_WE_ASK,
     LEGISLATOR_BRIEF_PATH,
     MARQUEE_IMAGES,
     PROGRESS_ACHIEVED_COUNT,
@@ -54,6 +56,8 @@ from .content_constants import (
     WHY_SHOULD_YOU_CARE_TEASER_HEADING,
     WHY_SHOULD_YOU_CARE_TEASER_ITEMS,
     WHY_SHOULD_YOU_CARE_VOICE,
+    WHY_YOU_CARE_BRANCHES,
+    WHY_YOU_CARE_DEFAULT_CARDS,
 )
 
 # Re-exports for advocacy, home, updates, etc.
@@ -78,6 +82,7 @@ __all__ = [
     "HERO_URGENCY_THIS_SESSION",
     "ISSUE_SOURCES",
     "KEI_GLOSSARY",
+    "KEI_POLL_WHY_WE_ASK",
     "LEGISLATOR_BRIEF_PATH",
     "MARQUEE_IMAGES",
     "PROGRESS_ACHIEVED_COUNT",
@@ -93,6 +98,8 @@ __all__ = [
     "WHY_SHOULD_YOU_CARE_TEASER_HEADING",
     "WHY_SHOULD_YOU_CARE_TEASER_ITEMS",
     "WHY_SHOULD_YOU_CARE_VOICE",
+    "WHY_YOU_CARE_BRANCHES",
+    "WHY_YOU_CARE_DEFAULT_CARDS",
 ]
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -241,17 +248,72 @@ templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
 templates.env.globals["features"] = cfg.get_client_features()
-templates.env.globals["marquee_images"] = MARQUEE_IMAGES
+templates.env.globals["marquee_images"] = MARQUEE_IMAGES  # Overridden per-request when db available
 templates.env.globals["why_should_you_care_heading"] = WHY_SHOULD_YOU_CARE_HEADING
 templates.env.globals["why_should_you_care_teaser_heading"] = WHY_SHOULD_YOU_CARE_TEASER_HEADING
 templates.env.globals["why_should_you_care_intro"] = WHY_SHOULD_YOU_CARE_INTRO
 templates.env.globals["why_should_you_care_voice"] = WHY_SHOULD_YOU_CARE_VOICE
 templates.env.globals["why_should_you_care_teaser_items"] = WHY_SHOULD_YOU_CARE_TEASER_ITEMS
+templates.env.globals["why_you_care_default_cards"] = WHY_YOU_CARE_DEFAULT_CARDS
+templates.env.globals["why_you_care_branches"] = WHY_YOU_CARE_BRANCHES
+templates.env.globals["kei_poll_why_we_ask"] = KEI_POLL_WHY_WE_ASK
 
 from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
 
 templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
 templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
+
+
+async def get_marquee_images(db: AsyncSession) -> list[dict[str, str]]:
+    """Return MARQUEE_IMAGES plus approved community story submissions (image-only). Legacy; prefer get_marquee_items."""
+    items = await get_marquee_items(db)
+    return [x for x in items if x.get("type") == "image" and "src" in x]
+
+
+async def get_marquee_items(db: AsyncSession) -> list[dict]:
+    """Return unified marquee items: type=image (MARQUEE_IMAGES + approved CommunityStory) and type=text (approved KeiInterestStatement)."""
+    image_items: list[dict] = [
+        {
+            "type": "image",
+            "src": m["src"],
+            "alt": m.get("alt", ""),
+            "name": m.get("name", ""),
+            "caption": m.get("caption", ""),
+            "location": m.get("location", ""),
+        }
+        for m in MARQUEE_IMAGES
+    ]
+    result = await db.execute(
+        select(CommunityStory)
+        .where(CommunityStory.status == "approved")
+        .order_by(CommunityStory.reviewed_at)
+    )
+    for s in result.scalars().all():
+        image_items.append(
+            {
+                "type": "image",
+                "src": f"/static/{s.image_path}",
+                "alt": f"{s.name}, kei vehicle owner",
+                "name": s.name,
+                "caption": s.story,
+                "location": s.location or "",
+            }
+        )
+    result = await db.execute(
+        select(KeiInterestStatement)
+        .where(KeiInterestStatement.status == "approved")
+        .order_by(KeiInterestStatement.reviewed_at)
+    )
+    text_items: list[dict] = [
+        {
+            "type": "text",
+            "name": s.name,
+            "statement": s.statement,
+            "location": s.location or "",
+        }
+        for s in result.scalars().all()
+    ]
+    return image_items + text_items
 
 
 def get_strategic_states_tooltips() -> dict[str, dict[str, str]]:
@@ -543,6 +605,7 @@ async def the_issue_page(
         "strategic_five_points": STRATEGIC_FIVE_POINTS,
     }
     ctx.update(await get_kei_poll_sidebar_context(request, user, db))
+    ctx["marquee_items"] = await get_marquee_items(db)
     return templates.TemplateResponse("the_issue.html", ctx)
 
 

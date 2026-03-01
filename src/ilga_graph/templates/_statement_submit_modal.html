@@ -1,0 +1,69 @@
+{# Text-only statement submission for non-owners (e.g. would buy if legal). No photo. #}
+<dialog id="statement-submit-dialog" class="story-submit-dialog statement-submit-dialog"
+  aria-labelledby="statement-submit-dialog-title" aria-describedby="statement-submit-dialog-desc">
+  <div class="story-submit-dialog__backdrop" aria-hidden="true"></div>
+  <div class="story-submit-dialog__wrap statement-submit-dialog__wrap">
+    <h2 id="statement-submit-dialog-title" class="story-submit-dialog__title">Share your interest</h2>
+    <p id="statement-submit-dialog-desc" class="story-submit-dialog__intro">Share that you&rsquo;d buy a kei vehicle if
+      it were legal to register in Illinois. Your name, location, and statement may be shown on the home page to help
+      others see who supports the change.</p>
+    <form action="/community-statements" method="post" class="story-submit-form statement-submit-form"
+      id="statement-submit-form" hx-post="/community-statements" hx-target=".statement-submit-dialog__wrap"
+      hx-swap="innerHTML">
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token or '' }}">
+      <div class="story-submit-form__field">
+        <label for="statement-submit-name" class="story-submit-form__label">Your name</label>
+        <input type="text" id="statement-submit-name" name="name" required maxlength="120"
+          class="story-submit-form__input" placeholder="e.g. Jordan Smith" {% if user and user.email
+          %}autocomplete="name" {% endif %}>
+      </div>
+      <div class="story-submit-form__field">
+        <label for="statement-submit-location" class="story-submit-form__label">Location (city, state)</label>
+        <input type="text" id="statement-submit-location" name="location" required maxlength="100"
+          class="story-submit-form__input" placeholder="e.g. Chicago, IL">
+      </div>
+      <div class="story-submit-form__field">
+        <label for="statement-submit-statement" class="story-submit-form__label">Your statement</label>
+        <textarea id="statement-submit-statement" name="statement" required maxlength="500" rows="4"
+          class="story-submit-form__textarea"
+          placeholder="e.g. I&rsquo;d buy a kei truck if it was legal to register in Illinois."></textarea>
+        <span class="story-submit-form__counter" id="statement-submit-counter" aria-live="polite">0 / 500</span>
+      </div>
+      {% if user and user.email %}
+      <p class="story-submit-form__email">We&rsquo;ll email you at <strong>{{ user.email }}</strong> when your statement
+        is reviewed.</p>
+      {% endif %}
+      <div class="story-submit-form__field story-submit-form__field--consent">
+        <label class="story-submit-form__checkbox-wrap">
+          <input type="checkbox" id="statement-submit-consent" name="consent" value="on" required
+            class="story-submit-form__checkbox" aria-describedby="statement-submit-consent-desc">
+          <span id="statement-submit-consent-desc" class="story-submit-form__consent-text">I agree that my name,
+            location, and statement may be displayed publicly on this website to support kei vehicle advocacy in
+            Illinois.</span>
+        </label>
+      </div>
+      <div class="story-submit-form__actions">
+        <button type="button" class="btn btn--secondary story-submit-form__btn story-submit-form__btn--cancel"
+          id="statement-submit-cancel">
+          <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg></span>
+          Cancel
+        </button>
+        <button type="submit" class="btn btn--story story-submit-form__btn story-submit-form__btn--submit"
+          id="statement-submit-submit" disabled>
+          <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg></span>
+          Submit
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>
