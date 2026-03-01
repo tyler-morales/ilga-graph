@@ -37,10 +37,20 @@ from ..db_models import (
 )
 from ..dependencies import get_current_user_optional, require_admin
 from ..member_lookup import find_member_by_district, find_member_by_id
+from ..outreach_steps import (
+    CALL_ANSWERED_STEPS,
+    CALL_NO_ANSWER_STEPS,
+    EMAIL_STEPS,
+    WYC_STEPS,
+)
 from ..routers.content import STRATEGIC_FIVE_POINTS
 from ..run_log import get_log_path, load_recent_runs
 from ..security import validate_photo_url_for_drawer
 from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
+from .content_constants import (
+    WHY_YOU_CARE_BRANCHES,
+    WHY_YOU_CARE_DEFAULT_CARDS,
+)
 
 router = APIRouter()
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -248,6 +258,26 @@ async def admin_dashboard(
             "active_campaign_actions": active_campaign_actions,
             "polls_summary": polls_summary,
             "top_members_by_contacts": top_members_by_contacts,
+        },
+    )
+
+
+@router.get("/admin/flows", include_in_schema=False)
+async def admin_flows_page(
+    request: Request,
+    admin_user: User = Depends(require_admin),
+):
+    """Flow definitions: drawer step slugs and why-you-care steps/branches. Read-only from code."""
+    return templates.TemplateResponse(
+        "admin_flows.html",
+        {
+            "request": request,
+            "call_answered_steps": CALL_ANSWERED_STEPS,
+            "call_no_answer_steps": CALL_NO_ANSWER_STEPS,
+            "email_steps": EMAIL_STEPS,
+            "wyc_steps": WYC_STEPS,
+            "why_you_care_branches": WHY_YOU_CARE_BRANCHES,
+            "why_you_care_default_cards": WHY_YOU_CARE_DEFAULT_CARDS,
         },
     )
 

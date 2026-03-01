@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Flow definitions — Admin — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="admin-flows-page">
+  <header class="admin-flows-header">
+    <h1 id="admin-flows-heading">Flow definitions</h1>
+    {% include "_admin_nav.html" %}
+    <p class="admin-flows-intro">Step slugs and content used for funnel analytics and the why-you-care adventure flow. Source: <code>outreach_steps.py</code>, <code>content_constants.py</code>.</p>
+  </header>
+
+  <section class="admin-flows-section" aria-labelledby="admin-drawer-flows-heading">
+    <h2 id="admin-drawer-flows-heading" class="admin-flows-section-heading">Drawer flows (advocacy)</h2>
+
+    <h3 id="admin-call-answered-heading" class="admin-flows-subheading">Call (answered)</h3>
+    <ol class="admin-flows-step-list" aria-labelledby="admin-call-answered-heading">
+      {% for step in call_answered_steps %}
+      <li><code>{{ step }}</code></li>
+      {% endfor %}
+    </ol>
+
+    <h3 id="admin-call-no-answer-heading" class="admin-flows-subheading">Call (no-answer)</h3>
+    <ol class="admin-flows-step-list" aria-labelledby="admin-call-no-answer-heading">
+      {% for step in call_no_answer_steps %}
+      <li><code>{{ step }}</code></li>
+      {% endfor %}
+    </ol>
+
+    <h3 id="admin-email-steps-heading" class="admin-flows-subheading">Email</h3>
+    <ol class="admin-flows-step-list" aria-labelledby="admin-email-steps-heading">
+      {% for step in email_steps %}
+      <li><code>{{ step }}</code></li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  <section class="admin-flows-section" aria-labelledby="admin-wyc-heading">
+    <h2 id="admin-wyc-heading" class="admin-flows-section-heading">Why-you-care (WYC)</h2>
+
+    <h3 id="admin-wyc-steps-heading" class="admin-flows-subheading">Funnel steps</h3>
+    <ol class="admin-flows-step-list" aria-labelledby="admin-wyc-steps-heading">
+      {% for step in wyc_steps %}
+      <li><code>{{ step }}</code></li>
+      {% endfor %}
+    </ol>
+
+    <h3 id="admin-wyc-default-cards-heading" class="admin-flows-subheading">Default cards (ambient state)</h3>
+    <ul class="admin-flows-card-list" aria-labelledby="admin-wyc-default-cards-heading">
+      {% for card in why_you_care_default_cards %}
+      <li class="admin-flows-card-item">
+        <strong>{{ card.headline }}</strong>
+        <p>{{ card.body }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+
+    <h3 id="admin-wyc-branches-heading" class="admin-flows-subheading">Branches (after poll)</h3>
+    <div class="admin-flows-table-wrap">
+      <table class="admin-flows-table" aria-labelledby="admin-wyc-branches-heading">
+        <thead>
+          <tr>
+            <th scope="col">Slug</th>
+            <th scope="col">Headline</th>
+            <th scope="col">Body (excerpt)</th>
+            <th scope="col">Primary CTA</th>
+            <th scope="col">Secondary CTA</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for slug, branch in why_you_care_branches.items() %}
+          <tr>
+            <td><code>{{ slug }}</code></td>
+            <td>{{ branch.headline }}</td>
+            <td>{{ (branch.body[:120] ~ '…') if branch.body|length > 120 else branch.body }}</td>
+            <td>{{ branch.primary_cta_label }} → {{ branch.primary_cta_href }}</td>
+            <td>{% if branch.secondary_cta_label %}{{ branch.secondary_cta_label }}{% if branch.secondary_cta_href %} → {{ branch.secondary_cta_href }}{% endif %}{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
