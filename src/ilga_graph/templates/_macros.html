@@ -299,11 +299,13 @@
                 </fieldset>
             </div>
             {% if turnstile_site_key %}
-            <div id="{{ poll_id }}-turnstile-container" class="kei-poll__turnstile-wrap kei-poll__turnstile-wrap--hidden"
-                data-sitekey="{{ turnstile_site_key }}" aria-describedby="{{ poll_id }}-turnstile-hint" aria-live="polite">
+            <div id="{{ poll_id }}-turnstile-wrap" class="kei-poll__turnstile-wrap kei-poll__turnstile-wrap--hidden">
+                <div id="{{ poll_id }}-turnstile-container"
+                    data-sitekey="{{ turnstile_site_key }}" aria-describedby="{{ poll_id }}-turnstile-hint" aria-live="polite">
+                </div>
+                <span id="{{ poll_id }}-turnstile-hint" class="visually-hidden">Security check so your vote counts.</span>
+                <p class="kei-poll__turnstile-hint">This check helps us count real responses.</p>
             </div>
-            <span id="{{ poll_id }}-turnstile-hint" class="visually-hidden">Security check so your vote counts.</span>
-            <p class="kei-poll__turnstile-hint">This check helps us count real responses.</p>
             {% endif %}
         </form>
         <footer class="kei-poll__footer">
@@ -377,11 +379,13 @@
             </div>
         </div>
         {% if turnstile_site_key %}
-        <div id="{{ poll_id }}-turnstile-container" class="wyc-inline-poll__turnstile-wrap kei-poll__turnstile-wrap--hidden"
-            data-sitekey="{{ turnstile_site_key }}" aria-describedby="{{ poll_id }}-turnstile-hint" aria-live="polite">
+        <div id="{{ poll_id }}-turnstile-wrap" class="wyc-inline-poll__turnstile-wrap kei-poll__turnstile-wrap kei-poll__turnstile-wrap--hidden">
+            <div id="{{ poll_id }}-turnstile-container"
+                data-sitekey="{{ turnstile_site_key }}" aria-describedby="{{ poll_id }}-turnstile-hint" aria-live="polite">
+            </div>
+            <span id="{{ poll_id }}-turnstile-hint" class="visually-hidden">Security check so your vote counts.</span>
+            <p class="kei-poll__turnstile-hint">This check helps us count real responses.</p>
         </div>
-        <span id="{{ poll_id }}-turnstile-hint" class="visually-hidden">Security check so your vote counts.</span>
-        <p class="kei-poll__turnstile-hint">This check helps us count real responses.</p>
         {% endif %}
         <footer class="wyc-inline-poll__footer">
             {% if kei_poll_goal is not none and kei_poll_goal > 0 %}

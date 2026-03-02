@@ -310,6 +310,35 @@ async def admin_stories_review(
     return RedirectResponse(f"/admin/stories?flash={flash}", status_code=303)
 
 
+@router.post("/admin/stories/purge-orphan-images", include_in_schema=False)
+async def admin_stories_purge_orphan_images(
+    request: Request,
+    csrf_token: str | None = Form(None),
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+):
+    """Delete story image files that are not referenced by any CommunityStory (orphans)."""
+    cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
+    if not validate_csrf_token(csrf_token, cookie_token):
+        return RedirectResponse("/admin/stories?flash=csrf", status_code=303)
+    result = await db.execute(select(CommunityStory.image_path))
+    ref_basenames = {Path(p).name for p in result.scalars().all() if p}
+    upload_dir = _STATIC_DIR / cfg.STORY_IMAGE_UPLOAD_DIR
+    deleted = 0
+    if upload_dir.exists():
+        for f in upload_dir.iterdir():
+            if f.is_file() and f.name != ".gitkeep" and f.name not in ref_basenames:
+                try:
+                    f.unlink()
+                    deleted += 1
+                except OSError as e:
+                    LOGGER.warning("Could not delete orphan story image %s: %s", f, e)
+    return RedirectResponse(
+        f"/admin/stories?flash=purged&count={deleted}",
+        status_code=303,
+    )
+
+
 @router.get("/admin/statements", include_in_schema=False)
 async def admin_statements_list(
     request: Request,

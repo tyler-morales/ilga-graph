@@ -316,7 +316,8 @@
                         if (!pollId) return;
                         var container = document.getElementById(pollId + '-turnstile-container');
                         if (!container || !container.getAttribute('data-sitekey')) return;
-                        container.classList.remove('kei-poll__turnstile-wrap--hidden');
+                        var turnstileWrap = document.getElementById(pollId + '-turnstile-wrap');
+                        (turnstileWrap || container).classList.remove('kei-poll__turnstile-wrap--hidden');
                         if (container.getAttribute('data-turnstile-rendered')) return;
                         container.setAttribute('data-turnstile-rendered', '1');
                         var sitekey = container.getAttribute('data-sitekey');
@@ -347,8 +348,9 @@
                                 var impactInput = form.querySelector('input[name="kei_impact_slug"]');
                                 if (impactInput) impactInput.value = '';
                             }
+                            var tw = form.id && document.getElementById(form.id.replace(/-form$/, '') + '-turnstile-wrap');
                             var tc = form.id && document.getElementById(form.id.replace(/-form$/, '') + '-turnstile-container');
-                            if (tc) tc.classList.add('kei-poll__turnstile-wrap--hidden');
+                            if (tw || tc) (tw || tc).classList.add('kei-poll__turnstile-wrap--hidden');
                             form.querySelectorAll('input[name="kei_status"]').forEach(function (radio) { radio.checked = false; });
                             var submitBtn = wrap.querySelector('.wyc-inline-poll__submit');
                             if (submitBtn) submitBtn.disabled = true;
@@ -415,8 +417,9 @@
                             form.querySelectorAll('input[name="kei_impact_radio"]').forEach(function (r) { r.checked = false; });
                             if (impactInput) impactInput.value = '';
                         }
+                        var tw = form.id && document.getElementById(form.id.replace(/-form$/, '') + '-turnstile-wrap');
                         var tc = form.id && document.getElementById(form.id.replace(/-form$/, '') + '-turnstile-container');
-                        if (tc) tc.classList.add('kei-poll__turnstile-wrap--hidden');
+                        if (tw || tc) (tw || tc).classList.add('kei-poll__turnstile-wrap--hidden');
                         form.querySelectorAll('input[name="kei_status"]').forEach(function (radio) {
                             radio.checked = false;
                         });

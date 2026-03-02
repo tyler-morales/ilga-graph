@@ -8,14 +8,14 @@ from fastapi import Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .campaign_config import get_kei_poll_goal
+from .campaign_config import get_campaign_config, get_kei_poll_goal
 from .constants import (
     KEI_IMPACT_ALL_OPTIONS,
     KEI_IMPACT_SLUG_COOKIE,
     KEI_POLL_IMPACT_SLUGS,
     KEI_STATUS_SLUGS,
 )
-from .db_models import KeiPollResponse, Poll, PollResponse, User
+from .db_models import Poll, PollResponse, User
 
 SIDEBAR_KEI_POLL_ID = "sidebar-kei-poll"
 _KEI_POLL_IDS = frozenset(
@@ -41,11 +41,20 @@ def _validate_kei_poll_impact(slug: str | None) -> str | None:
 
 
 async def _get_kei_status_results(db: AsyncSession) -> dict[str, Any]:
-    """Aggregate kei_status counts from KeiPollResponse (all votes: anonymous + logged-in)."""
+    """Aggregate kei_status counts from PollResponse for the campaign poll
+    (Turnstile-verified only). Single source of truth so admin list, admin
+    results, and public UI show the same count."""
+    poll_slug = get_campaign_config().poll_slug or "kei"
+    poll = (await db.execute(select(Poll).where(Poll.slug == poll_slug))).scalar_one_or_none()
+    if not poll:
+        return {
+            "by_status": {slug: 0 for slug in KEI_STATUS_SLUGS},
+            "total_responses": 0,
+        }
     result = await db.execute(
-        select(KeiPollResponse.kei_status, func.count())
-        .where(KeiPollResponse.kei_status.isnot(None))
-        .group_by(KeiPollResponse.kei_status)
+        select(PollResponse.option_slug, func.count())
+        .where(PollResponse.poll_id == poll.id)
+        .group_by(PollResponse.option_slug)
     )
     by_status: dict[str, int] = {row[0]: row[1] for row in result.all()}
     total = sum(by_status.values())

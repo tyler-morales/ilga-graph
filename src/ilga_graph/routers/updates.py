@@ -887,27 +887,29 @@ async def kei_status_post(
                     status_code=429,
                 )
             return RedirectResponse(f"/updates?prompt={prompt_q}&error=rate", status_code=303)
-        if not await _verify_turnstile(cf_turnstile_response, client_ip):
-            if request.headers.get("HX-Request") and poll_id == "home-kei-poll":
-                results = await _get_kei_status_results(db)
-                resp = templates.TemplateResponse(
+    # Require Turnstile for everyone so a response is only counted after verification.
+    client_ip = _client_ip(request)
+    if not await _verify_turnstile(cf_turnstile_response, client_ip):
+        if request.headers.get("HX-Request") and poll_id == "home-kei-poll":
+            results = await _get_kei_status_results(db)
+            resp = templates.TemplateResponse(
+                request,
+                "_why_you_care_flow_ambient.html",
+                _why_you_care_flow_ctx(
                     request,
-                    "_why_you_care_flow_ambient.html",
-                    _why_you_care_flow_ctx(
-                        request,
-                        results["total_responses"],
-                        "Verification failed. Complete the security check and try again.",
-                    ),
-                )
-                resp.status_code = 400
-                return resp
-            if request.headers.get("HX-Request"):
-                return HTMLResponse(
-                    '<p class="kei-status-error" role="alert">Verification failed. Complete the '
-                    "security check and try again.</p>",
-                    status_code=400,
-                )
-            return RedirectResponse(f"/updates?prompt={prompt_q}&error=verify", status_code=303)
+                    results["total_responses"],
+                    "Verification failed. Complete the security check and try again.",
+                ),
+            )
+            resp.status_code = 400
+            return resp
+        if request.headers.get("HX-Request"):
+            return HTMLResponse(
+                '<p class="kei-status-error" role="alert">Verification failed. Complete the '
+                "security check and try again.</p>",
+                status_code=400,
+            )
+        return RedirectResponse(f"/updates?prompt={prompt_q}&error=verify", status_code=303)
     if poll_id not in get_kei_poll_ids():
         poll_id = "footer-kei-poll"
     validated = _validate_kei_status(kei_status)

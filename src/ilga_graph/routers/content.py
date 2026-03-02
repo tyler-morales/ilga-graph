@@ -295,6 +295,14 @@ async def get_marquee_images(db: AsyncSession) -> list[dict[str, str]]:
     return [x for x in items if x.get("type") == "image" and "src" in x]
 
 
+def _story_image_path_exists(image_path: str) -> bool:
+    """True if the story image file exists under static (avoids showing broken images in marquee)."""
+    if not image_path:
+        return False
+    static_dir = Path(__file__).resolve().parent.parent / "static"
+    return (static_dir / image_path).exists()
+
+
 async def get_marquee_items(db: AsyncSession) -> list[dict]:
     """Return unified marquee items: type=image (MARQUEE_IMAGES + approved CommunityStory) and type=text (approved KeiInterestStatement)."""
     image_items: list[dict] = [
@@ -314,6 +322,8 @@ async def get_marquee_items(db: AsyncSession) -> list[dict]:
         .order_by(CommunityStory.reviewed_at)
     )
     for s in result.scalars().all():
+        if not _story_image_path_exists(s.image_path):
+            continue
         image_items.append(
             {
                 "type": "image",

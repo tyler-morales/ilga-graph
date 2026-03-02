@@ -737,6 +737,10 @@ a:visited {
   color: #555;
 }
 
+.kei-poll__turnstile-wrap {
+  margin-top: 1.25rem;
+}
+
 .kei-poll__turnstile-wrap--hidden {
   display: none;
 }

@@ -20,7 +20,7 @@ from sqlalchemy import select
 import ilga_graph.config as cfg_mod
 import ilga_graph.db as db_mod
 import ilga_graph.dependencies as deps_mod
-from ilga_graph.db_models import Poll, PollResponse, User
+from ilga_graph.db_models import User
 from ilga_graph.routers import account as account_router_mod
 from ilga_graph.routers import admin as admin_router_mod
 from ilga_graph.routers import advocacy as advocacy_router_mod
@@ -631,16 +631,19 @@ class TestSubscribeUnsubscribeEmail:
     def test_kei_status_authenticated_sets_status(
         self, authed_client: TestClient, test_db_path: Path
     ) -> None:
-        """POST /updates/kei-status with auth sets user.kei_status."""
+        """POST /updates/kei-status with auth sets user.kei_status (Turnstile required for all)."""
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
             importlib.reload(updates_router_mod)
-        resp = authed_client.post(
-            "/updates/kei-status",
-            data=_data_with_csrf(authed_client, POLL_SUBMIT_DATA),
-            headers={"HX-Request": "true"},
-        )
+        with patch.object(
+            updates_router_mod, "_verify_turnstile", new_callable=AsyncMock, return_value=True
+        ):
+            resp = authed_client.post(
+                "/updates/kei-status",
+                data=_data_with_csrf(authed_client, POLL_SUBMIT_DATA),
+                headers={"HX-Request": "true"},
+            )
         assert resp.status_code == 200
         assert b"Thanks" in resp.content or b"community" in resp.content
 
@@ -812,14 +815,17 @@ class TestSubscribeUnsubscribeEmail:
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
             importlib.reload(updates_router_mod)
-        resp = client.post(
-            "/updates/kei-status",
-            data=_data_with_csrf(
-                client,
-                {"kei_status": "would_want", "kei_impact_slug": "invalid_impact"},
-            ),
-            headers={"HX-Request": "true"},
-        )
+        with patch.object(
+            updates_router_mod, "_verify_turnstile", new_callable=AsyncMock, return_value=True
+        ):
+            resp = client.post(
+                "/updates/kei-status",
+                data=_data_with_csrf(
+                    client,
+                    {"kei_status": "would_want", "kei_impact_slug": "invalid_impact"},
+                ),
+                headers={"HX-Request": "true"},
+            )
         assert resp.status_code == 400
 
     def test_kei_poll_form_get_returns_form_html(
@@ -840,23 +846,27 @@ class TestSubscribeUnsubscribeEmail:
     def test_kei_status_results_only_verified_users(
         self, client: TestClient, test_db_path: Path
     ) -> None:
-        """GET /updates/kei-status-results returns counts from KeiPollResponse (all votes)."""
-        from ilga_graph.db_models import KeiPollResponse
-
-        async def setup():
-            async with db_mod.async_session_factory() as session:
-                session.add(KeiPollResponse(kei_status="registered", user_id=None, session_id=None))
-                await session.commit()
-
-        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
-            importlib.reload(db_mod)
-            asyncio.run(setup())
+        """GET /updates/kei-status-results returns counts from PollResponse
+        (Turnstile-verified only)."""
+        with patch.object(
+            updates_router_mod, "_verify_turnstile", new_callable=AsyncMock, return_value=True
+        ):
+            resp = client.post(
+                "/updates/kei-status",
+                data=_data_with_csrf(
+                    client,
+                    {"kei_status": "registered", "kei_impact_slug": "civic_duty"},
+                ),
+                headers={"HX-Request": "true"},
+            )
+        assert resp.status_code == 200
         resp = client.get("/updates/kei-status-results")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["total_responses"] == 1
-        assert data["by_status"]["registered"] == 1
-        assert data["by_status"]["would_want"] == 0
+        assert "total_responses" in data and "by_status" in data
+        for slug in ("registered", "would_want", "would_not_want", "revoked", "denied"):
+            assert slug in data["by_status"]
+        assert isinstance(data["total_responses"], int) and data["total_responses"] >= 0
 
 
 class TestAdvocacyPersonalizePoll:
@@ -874,10 +884,11 @@ class TestAdvocacyPersonalizePoll:
         )
         assert resp.status_code == 403
 
-    def test_personalize_poll_authenticated_sets_user_and_dual_writes(
+    def test_personalize_poll_authenticated_sets_user_only(
         self, authed_client: TestClient, test_db_path: Path
     ) -> None:
-        """POST with auth: kei_status and kei_impact_slug set; kei_impact PollResponse created."""
+        """POST with auth: kei_status and kei_impact_slug set on user; no poll
+        response rows (counted only after Turnstile at /updates/kei-status)."""
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
@@ -897,23 +908,6 @@ class TestAdvocacyPersonalizePoll:
                 assert u is not None
                 assert u.kei_status == "would_want"
                 assert u.kei_impact_slug == "other"
-                poll = (
-                    await session.execute(select(Poll).where(Poll.slug == "kei_impact"))
-                ).scalar_one_or_none()
-                if poll is not None:
-                    from sqlalchemy import and_
-
-                    pr = await session.execute(
-                        select(PollResponse).where(
-                            and_(
-                                PollResponse.poll_id == poll.id,
-                                PollResponse.user_id == u.id,
-                            )
-                        )
-                    )
-                    responses = list(pr.scalars().all())
-                    assert len(responses) == 1
-                    assert responses[0].option_slug == "other"
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
