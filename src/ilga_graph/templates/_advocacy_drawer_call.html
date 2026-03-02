@@ -23,6 +23,13 @@
         <p class="drawer-script-intro" id="drawer-script-intro">Call this number. Here's the script. Takes 2 min.</p>
     </header>
 
+    <div class="drawer-script-length-toggle" role="group" aria-label="Script length">
+        <button type="button" class="drawer-script-length-btn drawer-script-length-full" id="drawer-script-length-full-btn"
+            aria-pressed="true" data-mode="full">Full script</button>
+        <button type="button" class="drawer-script-length-btn drawer-script-length-short" id="drawer-script-length-short-btn"
+            aria-pressed="false" data-mode="short">Short pitch</button>
+    </div>
+
     <div class="drawer-no-answer-hint" role="status" aria-live="polite">
         <span class="drawer-no-answer-hint-text">No answer?</span>
         <button type="button" class="drawer-no-answer-hint-btn" id="drawer-voicemail-toggle-btn" aria-pressed="false">
@@ -31,6 +38,7 @@
     </div>
 
     <div class="drawer-chat" id="drawer-chat">
+        <div class="drawer-script-full" id="drawer-script-full">
         <div class="chat-divider"><span>Opening (about 30 seconds, then ask for email)</span></div>
         <div class="chat-bubble chat-you" id="drawer-intro-bubble">
             <span class="chat-label">You</span>
@@ -115,36 +123,6 @@
             {% endif %}
         </div>
 
-        <div class="drawer-email-capture-wrap">
-            <input type="email" id="drawer-email-capture"
-                class="drawer-email-capture drawer-capture-input drawer-capture-pulse" placeholder="Email of the office"
-                autocomplete="email" inputmode="email">
-            <div class="drawer-email-saved" aria-hidden="true" title="Tap to edit">
-                <span class="drawer-email-saved-pill"><span class="drawer-email-saved-check"
-                        aria-hidden="true">✓</span><span class="drawer-email-saved-text"></span></span>
-            </div>
-            {% if email_source is defined and email_source == 'community' and member_public_email %}
-            <p class="drawer-email-capture-attribution" role="status" aria-live="polite">
-                From a previous caller — another constituent shared this email.
-            </p>
-            {% endif %}
-        </div>
-
-        <div class="drawer-name-capture-wrap">
-            <input type="text" id="drawer-name-capture" class="drawer-name-capture drawer-capture-input"
-                placeholder="Their name (e.g. the staffer you talked to)" autocomplete="name"
-                value="{{ call_contact_name|default('', true) }}">
-            <div class="drawer-name-saved" aria-hidden="true" title="Tap to edit">
-                <div class="drawer-contact-card">
-                    <span class="drawer-contact-card-icon" aria-hidden="true">👤</span>
-                    <div class="drawer-contact-card-body">
-                        <span class="drawer-contact-card-label">Contact</span>
-                        <span class="drawer-contact-card-name"></span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <div class="chat-divider"><span>IF THEY PUSH BACK (short responses)</span></div>
         <div class="chat-bubble chat-them chat-branch">
             <span class="chat-label">Only if they push back</span>
@@ -175,6 +153,64 @@
             (2) The fix is simple: one line of Illinois law clarified, not a new vehicle class or a big exemption.<br>
             (3) The one-pager shows which states have already fixed their Kei bans — Illinois can do the same.</p>
             {% endif %}
+        </div>
+        </div>
+
+        <div class="drawer-script-short" id="drawer-script-short" hidden>
+        <div class="chat-divider"><span>Short pitch (about 30 sec)</span></div>
+        <div class="chat-bubble chat-you" id="drawer-intro-bubble-short">
+            <span class="chat-label">You</span>
+            {% if script_sections and script_sections.opening %}
+            {{ script_sections.opening }}
+            {% else %}
+            My name is <strong>[CALLER_NAME]</strong>. <span id="drawer-intro-location-phrase-short">I'm a
+                constituent</span> — I'd like to leave a quick message for <strong>{{ title_label }} {{ legislator_last
+                }}</strong>. It's about an issue that's affecting people in the district.
+            {% endif %}
+        </div>
+        <div class="chat-bubble chat-them">
+            <span class="chat-label">Staffer</span>
+            They'll say yes or transfer — then continue below.
+        </div>
+        <div class="chat-bubble chat-you">
+            <span class="chat-label">You</span>
+            {% if script_sections and script_sections.short_pitch %}
+            {{ script_sections.short_pitch }}
+            {% else %}
+            People in your district have had Kei registration denied. I'm asking the office to be aware — I can email a
+            one-pager with the statute and which states have already fixed their Kei bans. Could I get the best email to send that to?
+            {% endif %}
+        </div>
+        </div>
+
+        <div class="drawer-email-capture-wrap">
+            <input type="email" id="drawer-email-capture"
+                class="drawer-email-capture drawer-capture-input drawer-capture-pulse" placeholder="Email of the office"
+                autocomplete="email" inputmode="email">
+            <div class="drawer-email-saved" aria-hidden="true" title="Tap to edit">
+                <span class="drawer-email-saved-pill"><span class="drawer-email-saved-check"
+                        aria-hidden="true">✓</span><span class="drawer-email-saved-text"></span></span>
+            </div>
+            {% if email_source is defined and email_source == 'community' and member_public_email %}
+            <p class="drawer-email-capture-attribution" role="status" aria-live="polite">
+                From a previous caller — another constituent shared this email.
+            </p>
+            {% endif %}
+        </div>
+
+        <div class="drawer-name-capture-wrap">
+            <input type="text" id="drawer-name-capture" class="drawer-name-capture drawer-capture-input"
+                placeholder="Their name (e.g. the staffer you talked to)" autocomplete="name"
+                value="{{ call_contact_name|default('', true) }}">
+            <div class="drawer-name-saved" aria-hidden="true" title="Tap to edit">
+                <div class="drawer-contact-card">
+                    <span class="drawer-contact-card-icon" aria-hidden="true">👤</span>
+                    <div class="drawer-contact-card-body">
+                        <span class="drawer-contact-card-label">Contact</span>
+                        <span class="drawer-contact-card-name"></span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         {% if not call_completed %}

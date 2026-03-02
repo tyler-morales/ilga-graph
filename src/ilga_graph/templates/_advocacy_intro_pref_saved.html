@@ -1,10 +1,26 @@
 {# HTMX innerHTML swap: client targets #advocacy-intro-pref-section and replaces with this content. #}
-<div class="intro-card__pref-section intro-card__pref-section--saved" aria-live="polite" {% if pref == 'no' %}data-pref="email-only"{% endif %}>
+{% if pref == 'no' %}
+<div class="intro-card__pref-section intro-card__pref-section--saved" aria-live="polite" data-pref="email-only">
+{% elif pref == 'yes' %}
+<div class="intro-card__pref-section intro-card__pref-section--saved" aria-live="polite" data-pref="call-and-email">
+{% elif pref == 'call_only' %}
+<div class="intro-card__pref-section intro-card__pref-section--saved" aria-live="polite" data-pref="call-only">
+{% elif pref == 'elevator' %}
+<div class="intro-card__pref-section intro-card__pref-section--saved" aria-live="polite" data-pref="elevator">
+{% else %}
+<div class="intro-card__pref-section intro-card__pref-section--saved" aria-live="polite">
+{% endif %}
     <p class="intro-card__saved-msg">
         {% if pref == 'no' %}
         Got it — email only. One-click send.
+        {% elif pref == 'yes' %}
+        Script ready. Call and email. Let's go.
+        {% elif pref == 'call_only' %}
+        Got it — we'll show you who to call.
+        {% elif pref == 'elevator' %}
+        Got it — 30-second script (coming soon). We'll show you who to call.
         {% else %}
-        Script ready. Let's go.
+        Let's go.
         {% endif %}
     </p>
     <button type="button" class="intro-card__cta btn btn--primary outreach-phone" id="intro-card-lets-go" aria-label="Scroll to first legislator">

@@ -26,7 +26,8 @@ class User(Base):
     kei_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
     kei_impact_slug: Mapped[str | None] = mapped_column(String(32), nullable=True)
     kei_personal_note: Mapped[str | None] = mapped_column(Text, nullable=True)
-    call_pref: Mapped[str | None] = mapped_column(String(8), nullable=True)  # "yes" | "no"
+    # no | yes | call_only | elevator
+    call_pref: Mapped[str | None] = mapped_column(String(16), nullable=True)
     welcome_email_sent_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

@@ -2,7 +2,7 @@
 
 **State of the system**
 
-- **Guided advocacy funnel:** Intro card (first carousel slide) explains goal and asks call preference; call preference saved as cookie (anon) and `User.call_pref` (logged in); on signup/login cookie is merged into user; `adv_call_pref` cookie + user record; only members with email and/or phone shown; **email-only:** members with no email on file are excluded from the carousel (backend members_for_carousel filter); when user switches to "Email only" in-session, set_call_pref returns HX-Trigger: refreshResults so client re-fetches results and carousel shows only members with email; email-only users see only email actions and complete on email; next member locked until current complete; refreshAdvocacyCarouselLocks in initMemberCarousel and after setOutreachDone. (Mobile sticky next-step bar removed; goal "Now:" link in sidebar remains.) **Goal state on load/refresh:** Server-rendered `_ilgaUserEmail` when user is logged in so goal bar and truck reflect DB state; anonymous progress from localStorage applied via initGoalBlockFromStorage (after results load and after HTMX swap); refreshAdvocacyResults and htmx:afterSwap both call initGoalBlockFromStorage + refreshAdvocacyCarouselLocks so truck, bar, "Now" link, and carousel locks stay in sync.
+- **Guided advocacy funnel:** Intro card (first carousel slide) uses a **decision tree** for outreach preference: "Are you okay sending one-click emails?" → "Can you make a 2-minute scripted call?" → "What about a 30-second script?" (elevator scaffold). Pref values: no (email only), yes (call and email), call_only, elevator (scaffold; same as call_only for now). Call preference saved as cookie (anon) and `User.call_pref` (logged in); on signup/login cookie is merged into user; `adv_call_pref` cookie + user record; members filtered by pref (email-only → has_email; call_only/elevator → has_phone; yes → has_phone or has_email); set_call_pref returns HX-Trigger: refreshResults; next member locked until current complete; refreshAdvocacyCarouselLocks in initMemberCarousel and after setOutreachDone. **Goal state on load/refresh:** Server-rendered `_ilgaUserEmail` when user is logged in so goal bar and truck reflect DB state; anonymous progress from localStorage applied via initGoalBlockFromStorage (after results load and after HTMX swap); refreshAdvocacyResults and htmx:afterSwap both call initGoalBlockFromStorage + refreshAdvocacyCarouselLocks so truck, bar, "Now" link, and carousel locks stay in sync.
 - Modularity roadmap 1–5 done: ETL in `etl.py`, `ILGA_LOAD_ONLY=1`, scorecards/Moneyball cached, GraphQL batch loaders, `ILGA_PROFILE=dev|prod`
 - Home at `/` (dedicated home hero, stacked links to /the-issue and /legislator-brief); Advocacy at `/advocacy` (dedicated centered hero); content pages /the-issue, /legislator-brief; Moneyball v2 (shell bill filter, institutional bonus, chair-first Power Broker)
 - GraphQL `search` query (members, bills, committees); Committee Power Dashboard; Institutional Power Badges; Power Card redesign
@@ -15,6 +15,8 @@
 
 | Date       | Area                    | Summary |
 |------------|-------------------------|--------|
+| 2026-03-02 | Call script: full vs short pitch toggle | **Feature:** Call drawer offers a script-length toggle: "Full script" (~2 min) or "Short pitch" (~30 sec elevator version). Short script is derived from full (opening, staffer line, one short_pitch bubble); content from script_sections.short_pitch in advocacy_helpers (SCRIPT_SHORT_PITCH / SCRIPT_SHORT_PITCH_BROKER). Template: _advocacy_drawer_call.html — toggle above no-answer hint, .drawer-script-full (opening through three points), .drawer-script-short (hidden by default). JS: initDrawerScriptLengthToggle in index.html; constituent checkbox updates #drawer-intro-location-phrase-short. CSS: advocacy-drawer.css .drawer-script-length-toggle, .drawer-script-full[hidden], .drawer-script-short[hidden]. Docs: app-overview.md. |
+| 2026-03-02 | Advocacy: outreach preference decision tree | **Feature:** Intro card replaced binary "Prefer to call" / "Email only" with a step-by-step decision tree (email ok? → 2-min call? → 30-sec elevator?). Pref values: no, yes, call_only, elevator (elevator = scaffold, same behavior as call_only). Backend: constants.ADV_CALL_PREF_VALUES; users.call_pref String(16); migration 20260302110000; set_call_pref and auth merge accept all four values; _visible_steps and members_for_carousel filter by pref (call_only/elevator → call steps only, phone-only members). **Deleted/consolidated:** Binary pref card and email-only dialog removed; tree + _advocacy_intro_pref_saved.html with data-pref (email-only, call-and-email, call-only, elevator). _advocacy_intro_card.html (tree steps), index.html (tree click handler, afterSwap for call-only/elevator copy), _results_partial.html (outreach_complete, goal dots for new prefs). Tests: _visible_steps call_only/elevator. |
 | 2026-03-02 | Advocacy: preferences card redesign | **Copy:** Intro card title → "How would you like to outreach your legislators?"; visible subcopy "Call: word-for-word script. Email: one-click send." (reassurance, minimal). Saved state: "Script ready. Let's go." / "Got it — email only. One-click send." Email-only dialog shortened to one line: "Calls get noticed; we give you a word-for-word script. Prefer email? One-click send." _advocacy_intro_card.html, _advocacy_intro_pref_saved.html. |
 | 2026-03-02 | Poll: Turnstile only after last choice | **UX:** Turnstile widget now renders only after the user selects their impact choice (step 3). Card and inline poll use a hidden container; base.html initKeiPollBranch calls showAndRenderTurnstile() when kei_impact_radio is selected; Cloudflare script loaded with ?render=explicit; report_bug uses explicit render on load. _macros.html (container + hidden class), base.html (explicit API + render on impact), report_bug.html (explicit render), base.css .kei-poll__turnstile-wrap--hidden. |
 | 2026-03-02 | Advocacy: mobile next-step bar removed | **Deleted:** Sticky bottom bar "Next: Call your Senator" no longer shown on mobile; `.mobile-next-bar` hidden via `display: none`. Goal "Now:" link in main content remains. advocacy-form.css. |
@@ -559,6 +561,22 @@
 | 5 | Use `GET /health` for readiness (`ready` when members loaded). |
 
 **Pre-launch:** Confirm `reference/session_schedule.json` matches the session you are running for. Create at least one campaign with a **session milestone** (End at session milestone in admin) and verify banner/priority callout show "Contact before [milestone]". See [Production deployment](docs/features/app-overview.md#production-deployment) for env vars and feature flags.
+
+---
+
+## Pre-merge / prod readiness (advocacy branch)
+
+Before merging advocacy changes to `main` so prod is set:
+
+| # | Check | Status |
+|---|--------|--------|
+| 1 | **Migration** — `alembic/versions/20260302110000_user_call_pref_string_length.py` widens `users.call_pref` to String(16) for values `call_only`, `elevator`. On deploy, `init_db()` runs Alembic on startup so migration applies automatically after restart. | Migration in repo; no deploy script change needed. |
+| 2 | **No new env vars** — Call pref is cookie + DB only; no new `ILGA_*` required for advocacy. | — |
+| 3 | **Tests** — `tests/test_advocacy_goal_steps.py` covers `_visible_steps` for no/yes/call_only/elevator and email-only step filtering. CI runs pytest on push/PR. | In place. |
+| 4 | **Docs** — app-overview Advocacy row and user-guide/advocacy-test-mode.md describe flow; env vars and Production checklist unchanged. | app-overview updated below. |
+| 5 | **Smoke** — After merge, smoke-test `/advocacy`: ZIP → intro card (decision tree) → set pref → carousel (goal bar, truck, member cards, drawer). | Manual pre/post deploy. |
+
+**Follow-up (non-blocking):** TODOS Refactor row "Goals + member cards, contact prefs" — Updates page CTA: align district_steps with email availability if we add effective-email to that context.
 
 ---
 

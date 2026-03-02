@@ -535,28 +535,47 @@
         }
     });
 
-    /* Pref card slide-out: add exiting class so current card slides left before HTMX swap (call path uses delay:300ms; email path we trigger after 300ms) */
+    /* Pref decision tree: next step or submit */
     document.body.addEventListener('click', function (e) {
-        var section = document.getElementById('advocacy-intro-pref-section');
-        if (!section || !section.closest('.member-carousel__slide--intro')) return;
-        if (e.target.closest && e.target.closest('.intro-card__pref-btn--phone')) {
-            section.classList.add('intro-card__pref-section--exiting');
+        var btn = e.target.closest && e.target.closest('.intro-card__pref-tree-btn');
+        if (!btn || !btn.closest('#advocacy-pref-tree')) return;
+        var nextStepId = btn.getAttribute('data-next-step');
+        var prefValue = btn.getAttribute('data-pref-value');
+        if (nextStepId) {
+            var tree = document.getElementById('advocacy-pref-tree');
+            if (!tree) return;
+            var current = tree.querySelector('.intro-card__pref-step--current');
+            var next = document.getElementById(nextStepId);
+            if (current && next) {
+                current.classList.remove('intro-card__pref-step--current');
+                current.setAttribute('hidden', '');
+                next.removeAttribute('hidden');
+                next.classList.add('intro-card__pref-step--current');
+            }
             return;
         }
-        if (e.target.id === 'email-only-pref-dialog-confirm-btn' || e.target.closest('#email-only-pref-dialog-confirm-btn')) {
-            e.preventDefault();
+        if (prefValue) {
+            var section = document.getElementById('advocacy-intro-pref-section');
+            if (!section) return;
             section.classList.add('intro-card__pref-section--exiting');
-            var dialog = document.getElementById('email-only-pref-dialog');
-            if (dialog && dialog.close) dialog.close();
             setTimeout(function () {
                 if (typeof htmx !== 'undefined') {
                     htmx.ajax('POST', '/advocacy/set-call-pref', {
                         target: '#advocacy-intro-pref-section',
                         swap: 'innerHTML',
-                        values: { pref: 'no' }
+                        values: { pref: prefValue }
                     });
                 }
             }, 300);
+        }
+    });
+
+    /* Pref card slide-out: add exiting for legacy pref-btn--phone (e.g. if tree not present) */
+    document.body.addEventListener('click', function (e) {
+        var section = document.getElementById('advocacy-intro-pref-section');
+        if (!section || !section.closest('.member-carousel__slide--intro')) return;
+        if (e.target.closest && e.target.closest('.intro-card__pref-btn--phone') && !e.target.closest('.intro-card__pref-tree-btn')) {
+            section.classList.add('intro-card__pref-section--exiting');
         }
     });
 
@@ -682,6 +701,7 @@
                 ConversationUI.initDrawerEndCall(body);
                 initDrawerConstituentCheckbox(body);
                 initDrawerVoicemailToggle(body);
+                initDrawerScriptLengthToggle(body);
                 if (view === 'call_wrapup') showWrapupWithMockPoll(body);
                 else restoreDrawerWrapupState(body);
                 var currentStep = body.querySelector('.drawer-no-email-content') ? 'email' : (body.querySelector('.drawer-call-content') ? 'call' : (body.querySelector('.gmail-compose') ? 'email' : null));
@@ -992,6 +1012,7 @@
         var content = container && container.querySelector('.drawer-call-content');
         var checkbox = document.getElementById('advocacy-drawer-constituent-checkbox');
         var introPhrase = container && container.querySelector('#drawer-intro-location-phrase');
+        var introPhraseShort = container && container.querySelector('#drawer-intro-location-phrase-short');
         var vmPhrase = container && container.querySelector('#drawer-voicemail-location-phrase');
         if (!content || !checkbox || !introPhrase) return;
 
@@ -1009,9 +1030,11 @@
             var isConstituent = checkbox.checked;
             if (isConstituent) {
                 introPhrase.textContent = 'I\'m a constituent';
+                if (introPhraseShort) introPhraseShort.textContent = 'I\'m a constituent';
                 if (vmPhrase) vmPhrase.textContent = 'a constituent';
             } else {
                 introPhrase.innerHTML = 'I\'m calling from <strong>[CALLER_CITY] [CALLER_ZIP]</strong>';
+                if (introPhraseShort) introPhraseShort.innerHTML = 'I\'m calling from <strong>[CALLER_CITY] [CALLER_ZIP]</strong>';
                 if (vmPhrase) vmPhrase.innerHTML = 'calling from <strong>[CALLER_CITY] [CALLER_ZIP]</strong>';
             }
         }
@@ -1137,6 +1160,44 @@
         }
         if (inlineBtnCal) inlineBtnCal.addEventListener('click', doInlineCalendar);
         if (inlineBtnCopy) inlineBtnCopy.addEventListener('click', doInlineCopy);
+    }
+
+    function initDrawerScriptLengthToggle(container) {
+        if (!container) container = document.getElementById('advocacy-drawer-body');
+        var fullBtn = container && container.querySelector('#drawer-script-length-full-btn');
+        var shortBtn = container && container.querySelector('#drawer-script-length-short-btn');
+        var fullBlock = container && container.querySelector('#drawer-script-full');
+        var shortBlock = container && container.querySelector('#drawer-script-short');
+        var intro = container && container.querySelector('#drawer-script-intro');
+        if (!fullBtn || !shortBtn || !fullBlock || !shortBlock) return;
+
+        var introFull = "Call this number. Here's the script. Takes 2 min.";
+        var introShort = "Short pitch. About 30 sec.";
+
+        function setScriptLength(isShort) {
+            if (isShort) {
+                fullBlock.setAttribute('hidden', '');
+                shortBlock.removeAttribute('hidden');
+                if (intro) intro.textContent = introShort;
+                fullBtn.setAttribute('aria-pressed', 'false');
+                shortBtn.setAttribute('aria-pressed', 'true');
+            } else {
+                fullBlock.removeAttribute('hidden');
+                shortBlock.setAttribute('hidden', '');
+                if (intro) intro.textContent = introFull;
+                fullBtn.setAttribute('aria-pressed', 'true');
+                shortBtn.setAttribute('aria-pressed', 'false');
+            }
+        }
+
+        fullBtn.addEventListener('click', function () {
+            if (fullBtn.getAttribute('aria-pressed') === 'true') return;
+            setScriptLength(false);
+        });
+        shortBtn.addEventListener('click', function () {
+            if (shortBtn.getAttribute('aria-pressed') === 'true') return;
+            setScriptLength(true);
+        });
     }
 
     function initDrawerCapturePulse(container) {
@@ -3057,6 +3118,7 @@
                     initDrawerCapturePulse(body);
                     ConversationUI.initDrawerEndCall(body);
                     initDrawerVoicemailToggle(body);
+                    initDrawerScriptLengthToggle(body);
                 }
                 updateDrawerStepStrip('email');
                 if (typeof refreshAdvocacyResults === 'function') refreshAdvocacyResults();
@@ -3079,13 +3141,16 @@
         if (e.detail.target && e.detail.target.id === 'advocacy-intro-pref-section') {
             e.detail.target.removeAttribute('data-call-pref-section');
             if (typeof refreshAdvocacyCarouselLocks === 'function') refreshAdvocacyCarouselLocks();
-            if (e.detail.target.querySelector('[data-pref="email-only"]')) {
+            var prefEl = e.detail.target.querySelector('[data-pref]');
+            var sectionDesc = document.querySelector('.member-carousel-heading + .section-desc, #member-carousel-heading + .section-desc');
+            if (prefEl && prefEl.getAttribute('data-pref') === 'email-only') {
                 var carousel = document.getElementById('member-carousel');
-                var sectionDesc = document.querySelector('.member-carousel-heading + .section-desc, #member-carousel-heading + .section-desc');
                 if (carousel) carousel.classList.add('pref-email-only');
                 if (sectionDesc) sectionDesc.textContent = 'One target at a time. Email each to advance.';
                 var hints = document.querySelectorAll('#member-carousel .member-carousel__slide:not(.member-carousel__slide--intro) .outreach-row-hint');
                 hints.forEach(function (h) { h.textContent = 'Email to advance.'; });
+            } else if (prefEl && (prefEl.getAttribute('data-pref') === 'call-only' || prefEl.getAttribute('data-pref') === 'elevator') && sectionDesc) {
+                sectionDesc.textContent = 'One target at a time. Call to advance.';
             }
         }
     });
@@ -3115,6 +3180,7 @@
                 ConversationUI.initDrawerEndCall(body);
                 initDrawerConstituentCheckbox(body);
                 initDrawerVoicemailToggle(body);
+                initDrawerScriptLengthToggle(body);
                 restoreDrawerWrapupState(body);
             }
             if (body.querySelector('#kei-personalize-flow')) ConversationUI.initKeiPersonalizeFlow();

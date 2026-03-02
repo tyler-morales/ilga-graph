@@ -43,13 +43,25 @@ def test_email_only_senator_no_email_visible_steps_exclude_senator_email() -> No
 
 
 def test_visible_steps_call_pref_returns_all_steps() -> None:
-    """When user allows calls, _visible_steps returns all steps unchanged."""
+    """When user allows calls (yes), _visible_steps returns all steps unchanged."""
     steps = [
         {"member_id": "1", "role_label": "Senator", "action": "call", "done": False},
         {"member_id": "1", "role_label": "Senator", "action": "email", "done": False},
     ]
     assert _visible_steps(steps, "yes") == steps
     assert _visible_steps(steps, None) == steps
+
+
+def test_visible_steps_call_only_elevator_return_only_call_steps() -> None:
+    """call_only and elevator prefs see only call steps (no email steps)."""
+    steps = [
+        {"member_id": "1", "role_label": "Senator", "action": "call", "done": False},
+        {"member_id": "1", "role_label": "Senator", "action": "email", "done": False},
+    ]
+    for pref in ("call_only", "elevator"):
+        visible = _visible_steps(steps, pref)
+        assert len(visible) == 1
+        assert visible[0]["action"] == "call"
 
 
 def test_visible_steps_email_only_filters_out_call() -> None:

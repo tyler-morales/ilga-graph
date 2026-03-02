@@ -25,6 +25,7 @@ from ..config import DEV_MODE
 from ..constants import (
     ADV_CALL_PREF_COOKIE,
     ADV_CALL_PREF_MAX_AGE,
+    ADV_CALL_PREF_VALUES,
     CATEGORY_CHOICES,
     CATEGORY_COMMITTEES,
     GENERAL_COMMITTEE_CODES,
@@ -70,10 +71,12 @@ DEFAULT_HERO_ZIP = "60007"
 
 
 def _visible_steps(steps: list[dict[str, Any]], user_call_pref: str | None) -> list[dict[str, Any]]:
-    """Filter steps by contact preference: email-only users see only email steps."""
-    if user_call_pref != "no":
-        return steps
-    return [s for s in steps if s["action"] != "call"]
+    """Filter by pref: email-only see email steps; call_only/elevator see call steps."""
+    if user_call_pref == "no":
+        return [s for s in steps if s["action"] != "call"]
+    if user_call_pref in ("call_only", "elevator"):
+        return [s for s in steps if s["action"] != "email"]
+    return steps
 
 
 def _build_district_steps(
@@ -296,11 +299,11 @@ async def _build_search_results_context(
     """Build context for the results partial. Assumes zip_code is in state.zip_to_district."""
     caller = _caller_profile_from_request(request, user)
     user_call_pref: str | None = None
-    if user and (p := getattr(user, "call_pref", None)) and p in ("yes", "no"):
+    if user and (p := getattr(user, "call_pref", None)) and p in ADV_CALL_PREF_VALUES:
         user_call_pref = p
     if user_call_pref is None:
         user_call_pref = request.cookies.get(ADV_CALL_PREF_COOKIE)
-        if user_call_pref not in ("yes", "no"):
+        if user_call_pref not in ADV_CALL_PREF_VALUES:
             user_call_pref = None
     district_info = state.zip_to_district[zip_code]
     senate_district = district_info.il_senate
@@ -617,6 +620,7 @@ async def _build_search_results_context(
 
     # Carousel order: higher Moneyball district legislator first, then other, then Power Broker.
     members_for_carousel = []
+    call_only_or_elevator = user_call_pref in ("call_only", "elevator")
     for item in your_legislators:
         card = item["card"]
         has_email = bool((card.get("email") or "").strip())
@@ -624,12 +628,17 @@ async def _build_search_results_context(
         if user_call_pref == "no":
             if not has_email:
                 continue
+        elif call_only_or_elevator:
+            if not has_phone:
+                continue
         else:
             if not has_phone and not has_email:
                 continue
         mid = str(card["id"])
         if user_call_pref == "no":
             completed = mid in user_emailed_member_ids
+        elif call_only_or_elevator:
+            completed = mid in user_called_member_ids
         else:
             completed = mid in user_called_member_ids and mid in user_emailed_member_ids
         members_for_carousel.append(
@@ -652,6 +661,17 @@ async def _build_search_results_context(
                         "role_label": "Power Broker",
                         "role_class": "role-broker",
                         "completed": mid in user_emailed_member_ids,
+                    }
+                )
+        elif call_only_or_elevator:
+            if has_phone:
+                mid = str(broker_card["id"])
+                members_for_carousel.append(
+                    {
+                        "card": broker_card,
+                        "role_label": "Power Broker",
+                        "role_class": "role-broker",
+                        "completed": mid in user_called_member_ids,
                     }
                 )
         elif has_phone or has_email:
@@ -895,9 +915,12 @@ async def set_call_pref(
     user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ):
-    """Set call preference (yes | no). Cookie always; DB when logged in. Returns HTMX fragment."""
-    if pref not in ("yes", "no"):
-        raise HTTPException(status_code=422, detail="pref must be 'yes' or 'no'")
+    """Set call preference. Cookie always; DB when logged in. Returns HTMX fragment."""
+    if pref not in ADV_CALL_PREF_VALUES:
+        raise HTTPException(
+            status_code=422,
+            detail="pref must be one of: no, yes, call_only, elevator",
+        )
     if user:
         user.call_pref = pref
         await db.commit()

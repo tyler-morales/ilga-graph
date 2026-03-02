@@ -123,9 +123,11 @@ KEI_IMPACT_ALL_OPTIONS: list[tuple[str, str]] = [
     ("other", "Other"),
 ]
 
-# Advocacy intro: "I'll call" vs "Email only". Cookie + User.call_pref; merged on signup.
+# Advocacy intro: outreach preference. Cookie + User.call_pref; merged on signup.
+# Values: no (email only), yes (call and email), call_only, elevator (30-sec script scaffold).
 ADV_CALL_PREF_COOKIE = "adv_call_pref"
 ADV_CALL_PREF_MAX_AGE = 365 * 24 * 60 * 60  # 1 year
+ADV_CALL_PREF_VALUES = ("no", "yes", "call_only", "elevator")
 
 CATEGORY_CHOICES: list[tuple[str, str]] = [
     ("", "All categories"),

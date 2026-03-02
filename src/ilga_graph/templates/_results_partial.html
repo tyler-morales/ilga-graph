@@ -24,10 +24,11 @@ user_emailed_member_ids=none, outreach_heat=none, user_call_pref=none) %}
 {% set member_id_str = member.id|string %}
 {% set user_called = user_called_member_ids is not none and member_id_str in user_called_member_ids %}
 {% set user_emailed = user_emailed_member_ids is not none and member_id_str in user_emailed_member_ids %}
-{% set outreach_complete = (user_call_pref == 'no' and user_emailed) or (user_called and user_emailed) %}
+{% set call_only_or_elevator = user_call_pref in ['call_only', 'elevator'] %}
+{% set outreach_complete = (user_call_pref == 'no' and user_emailed) or (call_only_or_elevator and user_called) or (user_call_pref == 'yes' and user_called and user_emailed) %}
 {% set heat_count = outreach_heat.get(member_id_str, 0) if outreach_heat else 0 %}
 <div class="card {% if role_class in ['role-senator', 'role-rep'] %}card-your-legislator{% endif %}{% if outreach_complete %} card-outreach-complete{% endif %}"
-    id="card-{{ member.id }}" {% if outreach_complete %} aria-label="You called and emailed this legislator" {% endif
+    id="card-{{ member.id }}" {% if outreach_complete %} aria-label="You contacted this legislator" {% endif
     %}>
     {# Fire pill (corner): data-driven from outreach_events — COUNT(DISTINCT user_id) per member; see
     docs/development/db-and-outreach.md #}
@@ -757,7 +758,7 @@ user_emailed_member_ids=none, outreach_heat=none, user_call_pref=none) %}
                         </div>
                         <div class="outreach-goal__bar-dots" aria-hidden="true">
                             {% for step in district_steps %}
-                            {% if user_call_pref != 'no' or step.action != 'call' %}
+                            {% if (user_call_pref == 'no' and step.action == 'email') or (user_call_pref == 'yes') or (user_call_pref in ['call_only', 'elevator'] and step.action == 'call') %}
                             <span
                                 class="outreach-goal__bar-dot{% if step.done %} outreach-goal__bar-dot--done{% endif %}"
                                 data-goal-member="{{ step.member_id }}" data-goal-kind="{{ step.action }}"
@@ -804,7 +805,7 @@ user_emailed_member_ids=none, outreach_heat=none, user_call_pref=none) %}
                         </div>
                         <div class="outreach-goal__bar-dots" aria-hidden="true">
                             {% for step in broker_goal_steps|default([]) %}
-                            {% if user_call_pref != 'no' or step.action != 'call' %}
+                            {% if (user_call_pref == 'no' and step.action == 'email') or (user_call_pref == 'yes') or (user_call_pref in ['call_only', 'elevator'] and step.action == 'call') %}
                             <span
                                 class="outreach-goal__bar-dot{% if step.done %} outreach-goal__bar-dot--done{% endif %}"
                                 data-goal-member="{{ step.member_id }}" data-goal-kind="{{ step.action }}"

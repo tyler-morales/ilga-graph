@@ -24,7 +24,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import config as cfg
 from ..app_state import state
-from ..constants import ADV_CALL_PREF_COOKIE, ADV_CALL_PREF_MAX_AGE
+from ..constants import (
+    ADV_CALL_PREF_COOKIE,
+    ADV_CALL_PREF_MAX_AGE,
+    ADV_CALL_PREF_VALUES,
+)
 from ..db import get_db
 from ..db_models import AuthCode, OutreachStepEvent, User
 from ..dependencies import create_session_token, get_current_user_optional, require_user
@@ -236,7 +240,7 @@ async def verify_code(
 
     # Merge anonymous call preference into user so it persists after signup/login.
     cookie_pref = request.cookies.get(ADV_CALL_PREF_COOKIE)
-    if cookie_pref in ("yes", "no") and getattr(user, "call_pref", None) is None:
+    if cookie_pref in ADV_CALL_PREF_VALUES and getattr(user, "call_pref", None) is None:
         user.call_pref = cookie_pref
         await db.commit()
 
@@ -263,7 +267,7 @@ async def verify_code(
         samesite="lax",
         secure=cfg.PROFILE == "prod",
     )
-    if getattr(user, "call_pref", None) in ("yes", "no"):
+    if getattr(user, "call_pref", None) in ADV_CALL_PREF_VALUES:
         response.set_cookie(
             key=ADV_CALL_PREF_COOKIE,
             value=user.call_pref,
