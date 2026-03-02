@@ -69,10 +69,9 @@
         </div>
         <input type="hidden" name="page_url" id="page_url" value="">
         {% if turnstile_site_key %}
-        <div class="report-bug-turnstile" aria-describedby="turnstile-hint">
-            <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-theme="light"></div>
-            <span id="turnstile-hint" class="report-bug-hint">Security check to reduce spam.</span>
-        </div>
+        <div id="report-bug-turnstile-container" class="report-bug-turnstile" data-sitekey="{{ turnstile_site_key }}"
+            aria-describedby="turnstile-hint"></div>
+        <span id="turnstile-hint" class="report-bug-hint">Security check to reduce spam.</span>
         {% endif %}
         <button type="submit" class="report-bug-submit">Submit report</button>
     </form>
@@ -80,7 +79,26 @@
     {% endif %}
 </div>
 {% if turnstile_site_key %}
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<script>
+    (function() {
+        var container = document.getElementById('report-bug-turnstile-container');
+        if (!container) return;
+        var sitekey = container.getAttribute('data-sitekey');
+        if (!sitekey) return;
+        function render() {
+            if (typeof turnstile !== 'undefined') {
+                turnstile.render(container, { sitekey: sitekey, theme: 'light' });
+            } else {
+                setTimeout(render, 50);
+            }
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', render);
+        } else {
+            render();
+        }
+    })();
+</script>
 {% endif %}
 <script>
     (function() {

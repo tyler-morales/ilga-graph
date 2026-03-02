@@ -229,7 +229,7 @@
 </div>
 {% endmacro %}
 
-{% macro kei_poll(poll_id="footer-kei-poll", show_email=false, kei_status_total=none, kei_impact_options=none) %}
+{% macro kei_poll(poll_id="footer-kei-poll", show_email=false, kei_status_total=none, kei_impact_options=none, kei_poll_goal=none) %}
 <div class="kei-poll kei-poll-card" id="{{ poll_id }}-wrap" aria-labelledby="{{ poll_id }}-heading"
     data-kei-poll-branch>
     <div class="kei-poll__header-strip">
@@ -298,10 +298,27 @@
                     {% endfor %}
                 </fieldset>
             </div>
+            {% if turnstile_site_key %}
+            <div id="{{ poll_id }}-turnstile-container" class="kei-poll__turnstile-wrap kei-poll__turnstile-wrap--hidden"
+                data-sitekey="{{ turnstile_site_key }}" aria-describedby="{{ poll_id }}-turnstile-hint" aria-live="polite">
+            </div>
+            <span id="{{ poll_id }}-turnstile-hint" class="visually-hidden">Security check so your vote counts.</span>
+            <p class="kei-poll__turnstile-hint">This check helps us count real responses.</p>
+            {% endif %}
         </form>
         <footer class="kei-poll__footer">
-            <span class="kei-poll__total">Total Votes: {{ kei_status_total if kei_status_total is not none else '—'
-                }}</span>
+            {% if kei_poll_goal is not none and kei_poll_goal > 0 %}
+            <div class="kei-poll-goal" role="status" aria-live="polite">
+                <p class="kei-poll-goal__label" id="{{ poll_id }}-goal-label">{{ (kei_status_total or 0) }} of {{ kei_poll_goal }} responses</p>
+                <div class="kei-poll-goal__bar" role="progressbar" id="{{ poll_id }}-goal-bar"
+                    aria-valuenow="{{ kei_status_total or 0 }}" aria-valuemin="0" aria-valuemax="{{ kei_poll_goal }}"
+                    aria-labelledby="{{ poll_id }}-goal-label">
+                    <div class="kei-poll-goal__bar-fill" style="width: {{ [((kei_status_total or 0) / kei_poll_goal * 100)|round(1), 100]|min }}%;"></div>
+                </div>
+            </div>
+            {% else %}
+            <span class="kei-poll__total">Total Votes: {{ kei_status_total if kei_status_total is not none else '—' }}</span>
+            {% endif %}
             <button type="submit" form="{{ poll_id }}-form" class="kei-poll__submit btn btn--primary"
                 aria-label="Submit and see results" disabled>Submit and see results</button>
         </footer>
@@ -311,7 +328,7 @@
 
 {# Inline variant for Why-you-care adventure flow: no card chrome, no progress dots. Question + Yes/No pills + sub-options + step 3 impact.
    swap_target_id: element id whose innerHTML is replaced on submit (e.g. why-you-care-flow). #}
-{% macro kei_poll_inline(poll_id="home-kei-poll", kei_status_total=none, swap_target_id="why-you-care-flow", kei_impact_options=none) %}
+{% macro kei_poll_inline(poll_id="home-kei-poll", kei_status_total=none, swap_target_id="why-you-care-flow", kei_impact_options=none, kei_poll_goal=none) %}
 <div class="wyc-inline-poll" data-kei-poll-branch data-kei-poll-inline aria-labelledby="{{ poll_id }}-heading">
     <form id="{{ poll_id }}-form" action="/updates/kei-status" method="post" class="wyc-inline-poll__form"
         hx-post="/updates/kei-status" hx-target="#{{ swap_target_id }}" hx-swap="innerHTML"
@@ -359,8 +376,26 @@
                 {% endfor %}
             </div>
         </div>
+        {% if turnstile_site_key %}
+        <div id="{{ poll_id }}-turnstile-container" class="wyc-inline-poll__turnstile-wrap kei-poll__turnstile-wrap--hidden"
+            data-sitekey="{{ turnstile_site_key }}" aria-describedby="{{ poll_id }}-turnstile-hint" aria-live="polite">
+        </div>
+        <span id="{{ poll_id }}-turnstile-hint" class="visually-hidden">Security check so your vote counts.</span>
+        <p class="kei-poll__turnstile-hint">This check helps us count real responses.</p>
+        {% endif %}
         <footer class="wyc-inline-poll__footer">
+            {% if kei_poll_goal is not none and kei_poll_goal > 0 %}
+            <div class="kei-poll-goal wyc-inline-poll__goal" role="status" aria-live="polite">
+                <p class="kei-poll-goal__label" id="{{ poll_id }}-goal-label">{{ (kei_status_total or 0) }} of {{ kei_poll_goal }} responses</p>
+                <div class="kei-poll-goal__bar" role="progressbar" id="{{ poll_id }}-goal-bar"
+                    aria-valuenow="{{ kei_status_total or 0 }}" aria-valuemin="0" aria-valuemax="{{ kei_poll_goal }}"
+                    aria-labelledby="{{ poll_id }}-goal-label">
+                    <div class="kei-poll-goal__bar-fill" style="width: {{ [((kei_status_total or 0) / kei_poll_goal * 100)|round(1), 100]|min }}%;"></div>
+                </div>
+            </div>
+            {% else %}
             <span class="wyc-inline-poll__total" aria-hidden="true">Total Votes: {{ kei_status_total if kei_status_total is not none else '—' }}</span>
+            {% endif %}
             <span class="wyc-inline-poll__submit-wrap wyc-inline-poll__submit-wrap--hidden" aria-hidden="true">
                 <button type="submit" class="wyc-inline-poll__submit btn btn--success" aria-label="Submit and see results"
                     disabled>Submit and see results</button>
@@ -371,8 +406,7 @@
 {% endmacro %}
 
 {% macro kei_poll_results_chart(kei_status_results, kei_status_options, selected_slug=none, offer_save_choice=false) %}
-{# Horizontal bar chart: X% Label, bar (green=highest, blue=others). Selected: "Verified" (signed in) or "Your choice"
-dimmed (anonymous until sign-in). #}
+{# Horizontal bar chart: X% Label, bar (green=highest, blue=others). Selected: "Verified" or "Your choice" to the right of percent. #}
 {% set _counts = kei_status_results.by_status.values()|list %}
 {% set _max_count = _counts|max if _counts else 0 %}
 <div class="kei-poll-chart" aria-label="Poll results by option">
@@ -386,6 +420,7 @@ dimmed (anonymous until sign-in). #}
         <li class="kei-poll-chart__row" {% if is_selected %} aria-current="true" {% endif %}>
             <div class="kei-poll-chart__label" role="presentation">
                 <span class="kei-poll-chart__pct-wrap">
+                    <span class="kei-poll-chart__pct" aria-hidden="true">{{ pct }}%</span>
                     {% if is_selected %}
                     {% if offer_save_choice %}
                     <span class="kei-poll-chart__verified-badge kei-poll-chart__verified-badge--pending"
@@ -418,7 +453,6 @@ dimmed (anonymous until sign-in). #}
                     </span>
                     {% endif %}
                     {% endif %}
-                    <span class="kei-poll-chart__pct" aria-hidden="true">{{ pct }}%</span>
                 </span>
                 <span class="kei-poll-chart__label-text">{{ label }}</span>
             </div>

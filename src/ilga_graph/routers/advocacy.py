@@ -23,6 +23,9 @@ from ..campaign_helpers import get_active_campaign, is_campaign_visible_to_zip
 from ..community_email import get_effective_email_for_member
 from ..config import DEV_MODE
 from ..constants import (
+    ADV_CALL_PREF_COOKIE,
+    ADV_CALL_PREF_MAX_AGE,
+    ADV_CALL_PREF_VALUES,
     CATEGORY_CHOICES,
     CATEGORY_COMMITTEES,
     GENERAL_COMMITTEE_CODES,
@@ -51,6 +54,7 @@ from ..member_lookup import (
 from ..routers.content import (
     HERO_CLARITY_LINE,
     HERO_URGENCY_LINE,
+    INTRO_CARD_WHY_CALL,
     STRATEGIC_FIVE_POINTS,
 )
 from ..routers.outreach import get_outreach_aggregate, get_outreach_count_for_member
@@ -64,6 +68,47 @@ from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
 _ZIP_RE = re.compile(r"^\d{5}$")
 # Pre-fill hero ZIP in dev/mocks; must exist in state.zip_to_district.
 DEFAULT_HERO_ZIP = "60007"
+
+
+def _visible_steps(steps: list[dict[str, Any]], user_call_pref: str | None) -> list[dict[str, Any]]:
+    """Filter by pref: email-only see email steps; call_only/elevator see call steps."""
+    if user_call_pref == "no":
+        return [s for s in steps if s["action"] != "call"]
+    if user_call_pref in ("call_only", "elevator"):
+        return [s for s in steps if s["action"] != "email"]
+    return steps
+
+
+def _build_district_steps(
+    your_legislators: list[dict[str, Any]],
+    user_called_member_ids: set[str],
+    user_emailed_member_ids: set[str],
+) -> list[dict[str, Any]]:
+    """Build district goal steps (call + email only when member has effective email)."""
+    district_steps: list[dict[str, Any]] = []
+    for item in your_legislators:
+        card = item["card"]
+        mid = str(card["id"])
+        role_short = "Senator" if "Senator" in item["role_label"] else "Rep"
+        has_email = bool((card.get("email") or "").strip())
+        district_steps.append(
+            {
+                "member_id": mid,
+                "role_label": role_short,
+                "action": "call",
+                "done": mid in user_called_member_ids,
+            }
+        )
+        if has_email:
+            district_steps.append(
+                {
+                    "member_id": mid,
+                    "role_label": role_short,
+                    "action": "email",
+                    "done": mid in user_emailed_member_ids,
+                }
+            )
+    return district_steps
 
 
 async def _dual_write_kei_poll(
@@ -204,6 +249,7 @@ templates.env.globals["get_current_action_campaign"] = get_current_action_campai
 templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
+templates.env.globals["turnstile_site_key"] = cfg.TURNSTILE_SITE_KEY or ""
 
 
 def _hero_context() -> dict[str, Any]:
@@ -252,6 +298,13 @@ async def _build_search_results_context(
 ) -> dict[str, Any]:
     """Build context for the results partial. Assumes zip_code is in state.zip_to_district."""
     caller = _caller_profile_from_request(request, user)
+    user_call_pref: str | None = None
+    if user and (p := getattr(user, "call_pref", None)) and p in ADV_CALL_PREF_VALUES:
+        user_call_pref = p
+    if user_call_pref is None:
+        user_call_pref = request.cookies.get(ADV_CALL_PREF_COOKIE)
+        if user_call_pref not in ADV_CALL_PREF_VALUES:
+            user_call_pref = None
     district_info = state.zip_to_district[zip_code]
     senate_district = district_info.il_senate
     house_district = district_info.il_house
@@ -331,6 +384,7 @@ async def _build_search_results_context(
             "representative not in current data (dev/seed mode has limited members)."
         )
 
+    # District legislators in Moneyball order (higher first) so progress bar and carousel match.
     your_legislators: list[dict[str, Any]] = []
     for card, role_label, role_class in [
         (senator_card, "Your Senator", "role-senator"),
@@ -340,7 +394,7 @@ async def _build_search_results_context(
             continue
         your_legislators.append({"card": card, "role_label": role_label, "role_class": role_class})
     your_legislators.sort(
-        key=lambda x: x["card"].get("moneyball_score") or 0,
+        key=lambda x: float(x["card"].get("moneyball_score") or 0),
         reverse=True,
     )
 
@@ -381,6 +435,16 @@ async def _build_search_results_context(
             caller=caller,
         )
 
+    # Resolve effective email (public + community) per card so template shows correct lock state.
+    for card, member in [
+        (senator_card, senator_member),
+        (rep_card, rep_member),
+        (broker_card, broker_member),
+    ]:
+        if card is not None and member is not None:
+            effective_email, _, _ = await get_effective_email_for_member(state, db, str(member.id))
+            card["email"] = effective_email or ""
+
     error = "; ".join(warnings) if warnings else None
     result_member_ids: list[str] = []
     for item in your_legislators:
@@ -414,13 +478,6 @@ async def _build_search_results_context(
     senator_emailed = senator_id is not None and senator_id in user_emailed_member_ids
     rep_emailed = rep_id is not None and rep_id in user_emailed_member_ids
     district_called_count = (1 if senator_called else 0) + (1 if rep_called else 0)
-    district_goal_done = (
-        (1 if senator_called else 0)
-        + (1 if senator_emailed else 0)
-        + (1 if rep_called else 0)
-        + (1 if rep_emailed else 0)
-    )
-    district_goal_total = 2 * (1 if senator_card else 0) + 2 * (1 if rep_card else 0)
     both_district_members_called = (senator_card is None or senator_called) and (
         rep_card is None or rep_called
     )
@@ -428,50 +485,99 @@ async def _build_search_results_context(
     broker_id = str(broker_card["id"]) if broker_card else None
     broker_called = broker_id is not None and broker_id in user_called_member_ids
     broker_emailed = broker_id is not None and broker_id in user_emailed_member_ids
-    broker_goal_done = (1 if broker_called else 0) + (1 if broker_emailed else 0)
-    broker_goal_total = 2 if broker_card else 0
-    district_goal_complete = district_goal_done == district_goal_total and district_goal_total > 0
-    in_broker_phase = district_goal_complete and broker_card is not None
 
-    # District steps (for phase 1 or for "completed goals" in phase 2).
-    district_steps: list[dict[str, Any]] = []
-    for item in your_legislators:
-        card = item["card"]
-        mid = str(card["id"])
-        role_short = "Senator" if "Senator" in item["role_label"] else "Rep"
-        district_steps.append(
-            {
-                "member_id": mid,
-                "role_label": role_short,
-                "action": "call",
-                "done": mid in user_called_member_ids,
-            }
-        )
-        district_steps.append(
-            {
-                "member_id": mid,
-                "role_label": role_short,
-                "action": "email",
-                "done": mid in user_emailed_member_ids,
-            }
-        )
+    # District steps (for phase 1 or for "completed goals" in phase 2). Goal steps must iterate
+    # your_legislators in the same Moneyball order as members_for_carousel so goals and cards align.
+    district_steps = _build_district_steps(
+        your_legislators, user_called_member_ids, user_emailed_member_ids
+    )
+    district_goal_done = sum(1 for s in district_steps if s["done"])
+    district_goal_total = len(district_steps)
 
     broker_goal_steps: list[dict[str, Any]] = []
     if broker_card:
-        broker_goal_steps = [
+        broker_goal_steps.append(
             {
                 "member_id": broker_id,
                 "role_label": "Power Broker",
                 "action": "call",
                 "done": broker_called,
-            },
-            {
-                "member_id": broker_id,
-                "role_label": "Power Broker",
-                "action": "email",
-                "done": broker_emailed,
-            },
-        ]
+            }
+        )
+        if bool((broker_card.get("email") or "").strip()):
+            broker_goal_steps.append(
+                {
+                    "member_id": broker_id,
+                    "role_label": "Power Broker",
+                    "action": "email",
+                    "done": broker_emailed,
+                }
+            )
+
+    broker_goal_done = sum(1 for s in broker_goal_steps if s["done"])
+    broker_goal_total = len(broker_goal_steps)
+
+    # Visible steps: same filter as template (dots); used for bar position and "Now" next step.
+    visible_district_steps = _visible_steps(district_steps, user_call_pref)
+    visible_district_done = sum(1 for s in visible_district_steps if s["done"])
+    visible_district_total = len(visible_district_steps)
+    visible_broker_steps = _visible_steps(broker_goal_steps, user_call_pref)
+    visible_broker_done = sum(1 for s in visible_broker_steps if s["done"])
+    visible_broker_total = len(visible_broker_steps)
+
+    # District phase complete when all visible steps are done (email-only: 2 steps; call+email: 4).
+    district_goal_complete = (
+        visible_district_done == visible_district_total and visible_district_total > 0
+    )
+    in_broker_phase = district_goal_complete and broker_card is not None
+
+    def _checkpoint_fill_pct(done: int, total: int) -> float:
+        """Fill width so bar extends to the last completed step."""
+        if total <= 1:
+            return 100.0 if done else 0.0
+        idx = min(done, total - 1)
+        return round(100.0 * idx / (total - 1), 1)
+
+    def _truck_on_checkpoint_pct(done: int, total: int) -> float:
+        """Truck on next checkpoint (upcoming action); moves to next dot once a goal completes."""
+        if total <= 1:
+            return 100.0 if done else 0.0
+        if done >= total:
+            return 100.0
+        idx = min(done, total - 1)  # next action index (0-based)
+        return round(100.0 * idx / (total - 1), 1)
+
+    district_fill_pct = _checkpoint_fill_pct(visible_district_done, visible_district_total)
+    district_truck_pct = _truck_on_checkpoint_pct(visible_district_done, visible_district_total)
+    broker_fill_pct = _checkpoint_fill_pct(visible_broker_done, visible_broker_total)
+    broker_truck_pct = _truck_on_checkpoint_pct(visible_broker_done, visible_broker_total)
+
+    # District-phase goal label: dynamic count by contact preference.
+    # Email-only: legislators with email; phone: both district members (caller can ask for email).
+    if user_call_pref == "no":
+        district_legislator_count = sum(
+            1
+            for card in (senator_card, rep_card)
+            if card is not None and bool((card.get("email") or "").strip())
+        )
+    else:
+        district_legislator_count = (1 if senator_card else 0) + (1 if rep_card else 0)
+    if user_call_pref == "no":
+        district_goal_label = (
+            "Email 1 legislator"
+            if district_legislator_count == 1
+            else "Email 2 legislators"
+            if district_legislator_count >= 2
+            else "Email your district legislators"
+        )
+    else:
+        district_goal_label = (
+            "Contact 1 legislator"
+            if district_legislator_count == 1
+            else "Contact 2 legislators"
+            if district_legislator_count >= 2
+            else "Contact your district legislators"
+        )
 
     if in_broker_phase:
         goal_phase = "broker"
@@ -480,16 +586,18 @@ async def _build_search_results_context(
         goal_done = broker_goal_done
         goal_total = broker_goal_total
         completed_goal_steps = [{**s, "done": True} for s in district_steps]
+        visible_goal_steps = visible_broker_steps
     else:
         goal_phase = "district"
-        current_goal_label = "Contact your district legislators"
+        current_goal_label = district_goal_label
         goal_steps = district_steps
         goal_done = district_goal_done
         goal_total = district_goal_total
         completed_goal_steps = []
+        visible_goal_steps = visible_district_steps
 
     goal_next_step: dict[str, Any] | None = None
-    for s in goal_steps:
+    for s in visible_goal_steps:
         if not s["done"]:
             goal_next_step = {
                 "action": s["action"],
@@ -499,6 +607,7 @@ async def _build_search_results_context(
             break
 
     outreach_heat: dict[str, int] = {}
+    total_advocates = 0
     if result_member_ids_str:
         heat_result = await db.execute(
             select(OutreachEvent.member_id, func.count(func.distinct(OutreachEvent.user_id)))
@@ -507,6 +616,77 @@ async def _build_search_results_context(
             .group_by(OutreachEvent.member_id)
         )
         outreach_heat = {str(mid): int(cnt) for mid, cnt in heat_result.all()}
+        total_advocates = sum(outreach_heat.values())
+
+    # Carousel order: higher Moneyball district legislator first, then other, then Power Broker.
+    members_for_carousel = []
+    call_only_or_elevator = user_call_pref in ("call_only", "elevator")
+    for item in your_legislators:
+        card = item["card"]
+        has_email = bool((card.get("email") or "").strip())
+        has_phone = bool((card.get("phone") or "").strip())
+        if user_call_pref == "no":
+            if not has_email:
+                continue
+        elif call_only_or_elevator:
+            if not has_phone:
+                continue
+        else:
+            if not has_phone and not has_email:
+                continue
+        mid = str(card["id"])
+        if user_call_pref == "no":
+            completed = mid in user_emailed_member_ids
+        elif call_only_or_elevator:
+            completed = mid in user_called_member_ids
+        else:
+            completed = mid in user_called_member_ids and mid in user_emailed_member_ids
+        members_for_carousel.append(
+            {
+                "card": card,
+                "role_label": item["role_label"],
+                "role_class": item["role_class"],
+                "completed": completed,
+            }
+        )
+    if broker_card is not None:
+        has_email = bool((broker_card.get("email") or "").strip())
+        has_phone = bool((broker_card.get("phone") or "").strip())
+        if user_call_pref == "no":
+            if has_email:
+                mid = str(broker_card["id"])
+                members_for_carousel.append(
+                    {
+                        "card": broker_card,
+                        "role_label": "Power Broker",
+                        "role_class": "role-broker",
+                        "completed": mid in user_emailed_member_ids,
+                    }
+                )
+        elif call_only_or_elevator:
+            if has_phone:
+                mid = str(broker_card["id"])
+                members_for_carousel.append(
+                    {
+                        "card": broker_card,
+                        "role_label": "Power Broker",
+                        "role_class": "role-broker",
+                        "completed": mid in user_called_member_ids,
+                    }
+                )
+        elif has_phone or has_email:
+            mid = str(broker_card["id"])
+            members_for_carousel.append(
+                {
+                    "card": broker_card,
+                    "role_label": "Power Broker",
+                    "role_class": "role-broker",
+                    "completed": mid in user_called_member_ids and mid in user_emailed_member_ids,
+                }
+            )
+
+    # Completed members at the back so the next actionable card is first.
+    members_for_carousel.sort(key=lambda m: m["completed"])
 
     outreach_sidebar: list[dict[str, Any]] = []
     outreach_calls_count = 0
@@ -562,6 +742,7 @@ async def _build_search_results_context(
         "senator": senator_card,
         "representative": rep_card,
         "broker": broker_card,
+        "members": members_for_carousel,
         "error": error,
         "user_called_member_ids": user_called_member_ids,
         "user_emailed_member_ids": user_emailed_member_ids,
@@ -572,6 +753,10 @@ async def _build_search_results_context(
         "district_called_count": district_called_count,
         "district_goal_done": district_goal_done,
         "district_goal_total": district_goal_total,
+        "district_fill_pct": district_fill_pct,
+        "district_truck_pct": district_truck_pct,
+        "visible_district_done": visible_district_done,
+        "visible_district_total": visible_district_total,
         "both_district_members_called": both_district_members_called,
         "broker_id": broker_id,
         "broker_called": broker_called,
@@ -580,17 +765,24 @@ async def _build_search_results_context(
         "current_goal_label": current_goal_label,
         "goal_done": goal_done,
         "goal_total": goal_total,
+        "broker_fill_pct": broker_fill_pct,
+        "broker_truck_pct": broker_truck_pct,
+        "visible_broker_done": visible_broker_done,
+        "visible_broker_total": visible_broker_total,
         "completed_goal_steps": completed_goal_steps,
         "district_steps": district_steps,
         "broker_goal_steps": broker_goal_steps,
         "goal_steps": goal_steps,
         "goal_next_step": goal_next_step,
         "outreach_heat": outreach_heat,
+        "total_advocates": total_advocates,
         "outreach_sidebar": outreach_sidebar,
         "outreach_calls_count": outreach_calls_count,
         "outreach_emails_count": outreach_emails_count,
         "show_my_outreach": user is not None,
         "calls_total": calls_total,
+        "user_call_pref": user_call_pref,
+        "intro_card_why_call": INTRO_CARD_WHY_CALL,
     }
 
 
@@ -626,6 +818,7 @@ async def advocacy_index(
     ctx: dict[str, Any] = {
         "request": request,
         "title": cfg.SITE_NAME,
+        "user": user,
         **hero_ctx,
         "categories": CATEGORY_CHOICES,
         "member_count": member_count,
@@ -715,6 +908,37 @@ async def advocacy_letter_template_pdf():
     )
 
 
+@router.post("/set-call-pref")
+async def set_call_pref(
+    request: Request,
+    pref: str = Form(...),
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
+    """Set call preference. Cookie always; DB when logged in. Returns HTMX fragment."""
+    if pref not in ADV_CALL_PREF_VALUES:
+        raise HTTPException(
+            status_code=422,
+            detail="pref must be one of: no, yes, call_only, elevator",
+        )
+    if user:
+        user.call_pref = pref
+        await db.commit()
+    res = templates.TemplateResponse(
+        "_advocacy_intro_pref_saved.html",
+        {"request": request, "pref": pref},
+    )
+    res.set_cookie(
+        ADV_CALL_PREF_COOKIE,
+        pref,
+        max_age=ADV_CALL_PREF_MAX_AGE,
+        httponly=True,
+        samesite="lax",
+    )
+    res.headers["HX-Trigger"] = "refreshResults"
+    return res
+
+
 def _serve_brief_pdf() -> FileResponse | JSONResponse:
     """Serve legislator brief PDF from campaign config path."""
     path = _brief_pdf_path()
@@ -797,6 +1021,15 @@ async def advocacy_drawer(
     )
 
     if view == "email":
+        if not has_public_email:
+            return templates.TemplateResponse(
+                "_advocacy_drawer_no_email.html",
+                {
+                    "request": request,
+                    "member_id": member_id_stripped,
+                    "zip_code": zip_code,
+                },
+            )
         show_call_nudge = True
         if user and member_id:
             r = await db.execute(
@@ -1269,7 +1502,6 @@ async def advocacy_call_wrapup(
     zip_code = raw_zip if _ZIP_RE.match(raw_zip) else ""
     staffer_name = (form.get("staffer_name") or "").strip()
     email_address = (form.get("email_address") or "").strip()
-    next_step = (form.get("next_step") or "").strip()
     member_id = call_id.strip()
     member = find_member_by_id(state, member_id) if member_id else None
     legislator_name = member.name if member else ""
@@ -1361,34 +1593,11 @@ async def advocacy_call_wrapup(
         )
 
     return templates.TemplateResponse(
-        "_advocacy_drawer_email.html",
+        "_advocacy_drawer_no_email.html",
         {
             "request": request,
-            "drawer_view": "after_call",
-            "legislator_name": legislator_name,
-            "legislator_display_name": legislator_display_name,
-            "recipient_email": "",
-            "contact_name": contact_name,
-            "has_public_email": False,
-            "email_source": None,
-            "community_verification": None,
-            "subject": subject_constituent,
-            "subject_constituent": subject_constituent,
-            "subject_general": subject_general,
-            "body": body,
-            "body_followup": body,
-            "body_first": body_first,
-            "instructions": next_step,
-            "show_call_nudge": False,
-            "show_go_to_call": True,
-            "copy_only_mode": True,
+            "member_id": member_id,
             "zip_code": zip_code,
-            "is_constituent": is_constituent,
-            "party_abbr": party_abbr,
-            "current_member_role_label": wrapup_role_label,
-            "current_member_already_called": True,
-            "brief_pdf_url": c.brief_pdf_url_path,
-            "brief_pdf_download_name": c.brief_pdf_filename,
         },
     )
 

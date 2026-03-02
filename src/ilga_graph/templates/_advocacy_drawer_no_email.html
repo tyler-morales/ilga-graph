@@ -1,0 +1,15 @@
+{# Partial: drawer body when member has no email and user can't act (e.g. after call, no email from office). Keep them moving. #}
+<div class="drawer-no-email-content" data-member-id="{{ member_id or '' }}" data-drawer-zip="{{ zip_code or '' }}">
+    <div class="drawer-no-email-card">
+        <p class="drawer-no-email-headline">No email on file for this office.</p>
+        <p class="drawer-no-email-text">You're all set — mark done and move to the next legislator.</p>
+    </div>
+    <div class="drawer-no-email-actions">
+        <button type="button" class="drawer-btn drawer-btn-primary drawer-no-email-cta"
+            data-member-id="{{ member_id or '' }}" data-drawer-zip="{{ zip_code or '' }}"
+            aria-label="Mark done and move to next legislator"
+            onclick="typeof handleNoEmailDone === 'function' && handleNoEmailDone(this.getAttribute('data-member-id'), this.getAttribute('data-drawer-zip'))">
+            Done — next legislator
+        </button>
+    </div>
+</div>

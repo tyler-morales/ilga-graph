@@ -667,6 +667,18 @@ SCRIPT_ELEVATOR_THREE: tuple[str, ...] = (
     "The one-pager shows which states have already fixed their Kei bans — Illinois can do the same.",
 )
 
+# Short call script (elevator pitch): problem + ask + get email. Used when caller toggles to "Short pitch."
+SCRIPT_SHORT_PITCH = (
+    "People in your district have had Kei registration denied. "
+    "I'm asking the office to be aware — I can email a one-pager with the statute and which states "
+    "have already fixed their Kei bans. Could I get the best email to send that to?"
+)
+SCRIPT_SHORT_PITCH_BROKER = (
+    "People across the state have had Kei registration denied. "
+    "I'm asking the office to be aware — I can email a one-pager with the statute and which states "
+    "have already fixed their Kei bans. Could I get the best email to send that to?"
+)
+
 
 # Show "One of N Illinois residents" only when N = unique people who've done ≥1 outreach is ≥ this.
 SOCIAL_PROOF_MIN_PEOPLE = 100
@@ -738,6 +750,7 @@ def build_script_sections_senator(
         "easy_yes_close": ("Could I get your name and the best email to send that one-pager to?"),
         "closing": "Thanks so much for your time.",
         "conclusions": SCRIPT_ELEVATOR_THREE,
+        "short_pitch": SCRIPT_SHORT_PITCH,
     }
 
 
@@ -788,6 +801,7 @@ def build_script_sections_rep(
         "easy_yes_close": ("Could I get your name and the best email to send that one-pager to?"),
         "closing": "Thanks so much for your time.",
         "conclusions": SCRIPT_ELEVATOR_THREE,
+        "short_pitch": SCRIPT_SHORT_PITCH,
     }
 
 
@@ -847,6 +861,7 @@ def build_script_sections_broker(
         "easy_yes_close": ("Could I get your name and the best email to send that one-pager to?"),
         "closing": "Thanks for your time.",
         "conclusions": SCRIPT_ELEVATOR_THREE,
+        "short_pitch": SCRIPT_SHORT_PITCH_BROKER,
     }
 
 

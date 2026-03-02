@@ -23,6 +23,13 @@
         <p class="drawer-script-intro" id="drawer-script-intro">Call this number. Here's the script. Takes 2 min.</p>
     </header>
 
+    <div class="drawer-script-length-toggle" role="group" aria-label="Script length">
+        <button type="button" class="drawer-script-length-btn drawer-script-length-full" id="drawer-script-length-full-btn"
+            aria-pressed="true" data-mode="full">Full script</button>
+        <button type="button" class="drawer-script-length-btn drawer-script-length-short" id="drawer-script-length-short-btn"
+            aria-pressed="false" data-mode="short">Short pitch</button>
+    </div>
+
     <div class="drawer-no-answer-hint" role="status" aria-live="polite">
         <span class="drawer-no-answer-hint-text">No answer?</span>
         <button type="button" class="drawer-no-answer-hint-btn" id="drawer-voicemail-toggle-btn" aria-pressed="false">
@@ -31,6 +38,7 @@
     </div>
 
     <div class="drawer-chat" id="drawer-chat">
+        <div class="drawer-script-full" id="drawer-script-full">
         <div class="chat-divider"><span>Opening (about 30 seconds, then ask for email)</span></div>
         <div class="chat-bubble chat-you" id="drawer-intro-bubble">
             <span class="chat-label">You</span>
@@ -115,6 +123,66 @@
             {% endif %}
         </div>
 
+        <div class="chat-divider"><span>IF THEY PUSH BACK (short responses)</span></div>
+        <div class="chat-bubble chat-them chat-branch">
+            <span class="chat-label">Only if they push back</span>
+            Pick the response that fits.
+        </div>
+        <div class="chat-bubble chat-you chat-optional">
+            <span class="chat-label">You</span>
+            <p><strong>"They're not highway vehicles / don't meet federal standards."</strong> — I get that — that's
+                why we're asking for a state clarification with restrictions. Federal import rules are one thing;
+                we're just asking Illinois to set clear rules for registration.</p>
+            <p><strong>"We need more info."</strong> — No problem — I'll email a one-pager with the statute and
+                which states have already fixed their Kei bans.</p>
+            <p><strong>"Just send me something."</strong> — I'll send the one-pager to your email — what's the best
+                address? It has the statute, the fix, and which states have already done this.</p>
+            <p><strong>"Call back later."</strong> — Sure — I'll follow up with an email now so you have the
+                one-pager, and I can call again next week. What's the best email?</p>
+            <p><strong>"We can't commit."</strong> — That's totally fine — could you point me to the right staffer
+                for transportation or vehicle policy, and the best email to send the one-pager?</p>
+        </div>
+
+        <div class="chat-divider"><span>Three points to remember (if they want more)</span></div>
+        <div class="chat-bubble chat-you chat-optional">
+            <span class="chat-label">You (if you have time)</span>
+            {% if script_sections and script_sections.conclusions %}
+            <p>{% for point in script_sections.conclusions %}({{ loop.index }}) {{ point }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
+            {% else %}
+            <p>(1) It's a real issue in your district — people have had legal vehicles denied registration.<br>
+            (2) The fix is simple: one line of Illinois law clarified, not a new vehicle class or a big exemption.<br>
+            (3) The one-pager shows which states have already fixed their Kei bans — Illinois can do the same.</p>
+            {% endif %}
+        </div>
+        </div>
+
+        <div class="drawer-script-short" id="drawer-script-short" hidden>
+        <div class="chat-divider"><span>Short pitch (about 30 sec)</span></div>
+        <div class="chat-bubble chat-you" id="drawer-intro-bubble-short">
+            <span class="chat-label">You</span>
+            {% if script_sections and script_sections.opening %}
+            {{ script_sections.opening }}
+            {% else %}
+            My name is <strong>[CALLER_NAME]</strong>. <span id="drawer-intro-location-phrase-short">I'm a
+                constituent</span> — I'd like to leave a quick message for <strong>{{ title_label }} {{ legislator_last
+                }}</strong>. It's about an issue that's affecting people in the district.
+            {% endif %}
+        </div>
+        <div class="chat-bubble chat-them">
+            <span class="chat-label">Staffer</span>
+            They'll say yes or transfer — then continue below.
+        </div>
+        <div class="chat-bubble chat-you">
+            <span class="chat-label">You</span>
+            {% if script_sections and script_sections.short_pitch %}
+            {{ script_sections.short_pitch }}
+            {% else %}
+            People in your district have had Kei registration denied. I'm asking the office to be aware — I can email a
+            one-pager with the statute and which states have already fixed their Kei bans. Could I get the best email to send that to?
+            {% endif %}
+        </div>
+        </div>
+
         <div class="drawer-email-capture-wrap">
             <input type="email" id="drawer-email-capture"
                 class="drawer-email-capture drawer-capture-input drawer-capture-pulse" placeholder="Email of the office"
@@ -143,34 +211,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="chat-divider"><span>IF THEY PUSH BACK (short responses)</span></div>
-        <div class="chat-bubble chat-them chat-branch">
-            <span class="chat-label">Only if they push back</span>
-            Pick the response that fits.
-        </div>
-        <div class="chat-bubble chat-you chat-optional">
-            <span class="chat-label">You</span>
-            <p><strong>"They're not highway vehicles / don't meet federal standards."</strong> — I get that — that's
-                why we're asking for a state clarification with restrictions. Federal import rules are one thing;
-                we're just asking Illinois to set clear rules for registration.</p>
-            <p><strong>"We need more info."</strong> — No problem — I'll email a one-pager with the statute and
-                which states have already fixed their Kei bans.</p>
-            <p><strong>"We can't commit."</strong> — That's totally fine — could you point me to the right staffer
-                for transportation or vehicle policy, and the best email to send the one-pager?</p>
-        </div>
-
-        <div class="chat-divider"><span>Three points to remember (if they want more)</span></div>
-        <div class="chat-bubble chat-you chat-optional">
-            <span class="chat-label">You (if you have time)</span>
-            {% if script_sections and script_sections.conclusions %}
-            <p>{% for point in script_sections.conclusions %}({{ loop.index }}) {{ point }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
-            {% else %}
-            <p>(1) It's a real issue in your district — people have had legal vehicles denied registration.<br>
-            (2) The fix is simple: one line of Illinois law clarified, not a new vehicle class or a big exemption.<br>
-            (3) The one-pager shows which states have already fixed their Kei bans — Illinois can do the same.</p>
-            {% endif %}
         </div>
 
         {% if not call_completed %}

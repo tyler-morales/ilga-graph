@@ -25,6 +25,8 @@ All scrapers operate on generic Illinois General Assembly (ILGA) data:
 | **Polls** | Two seeded for Kei: `kei` (status: have/don't have → 5 options) and `kei_impact` (how it affects you: 4 options). Impact is stored on User and in PollResponse for the kei_impact poll. |
 | **KeiInterestStatement** | Kei-named; content is campaign-specific. Concept is generic; name could be generalized later. |
 
+**User profile:** A single read/edit surface at GET/POST `/account` shows and updates User fields (email read-only, ZIP, newsletter toggle, "Your answers" from kei_status/kei_impact_slug/kei_personal_note). Campaign-specific columns are displayed as "your answers" and will be scoped by campaign when we add multi-campaign.
+
 No schema change is required for “set the stage.” When adding a second campaign or a formal campaign entity, consider `campaign_id` + `interest_slug` (or a generic name) for User and for statement-style tables.
 
 ## Advocacy router: logic generic; copy and defaults from campaign config
@@ -43,6 +45,8 @@ No schema change is required for “set the stage.” When adding a second campa
 - One-pager points (strategic bullets for scripts and email).
 
 Campaign config is loaded from `config/campaign.json` (or path in `ILGA_CAMPAIGN_CONFIG`). Swapping campaign = replace or point at a different JSON file; no code change in the advocacy router.
+
+**White-label keys (optional):** `poll_prompt_query` (query param for poll prompt; default `"kei"`), `welcome_email_intro`, `welcome_email_poll_link_text`, `strategic_mission`, `mission_attribution`, `error_page_facts` (list of `{text, image?, image_alt?, image_credit?}`), `error_page_fact_label`, `bill_status_urls` (for scrapers). See `docs/architecture/white-label-decoupling-gaps.md` for full list and remaining gaps.
 
 ## Provisioning a tenant (DB + campaign)
 

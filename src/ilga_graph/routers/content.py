@@ -44,9 +44,11 @@ from .content_constants import (
     HERO_CLARITY_LINE,
     HERO_URGENCY_LINE,
     HERO_URGENCY_THIS_SESSION,
+    INTRO_CARD_WHY_CALL,
     ISSUE_SOURCES,
     KEI_GLOSSARY,
     KEI_POLL_WHY_WE_ASK,
+    KEI_POLL_WIDE_NET_LINE,
     LEGISLATOR_BRIEF_PATH,
     MARQUEE_IMAGES,
     PROGRESS_ACHIEVED_COUNT,
@@ -63,7 +65,9 @@ from .content_constants import (
     WHY_SHOULD_YOU_CARE_TEASER_ITEMS,
     WHY_SHOULD_YOU_CARE_VOICE,
     WHY_YOU_CARE_BRANCHES,
+    WHY_YOU_CARE_CTA_NUDGE,
     WHY_YOU_CARE_DEFAULT_CARDS,
+    WHY_YOU_CARE_PRE_POLL_LINE,
 )
 
 # Re-exports for advocacy, home, updates, etc.
@@ -86,9 +90,11 @@ __all__ = [
     "HERO_CLARITY_LINE",
     "HERO_URGENCY_LINE",
     "HERO_URGENCY_THIS_SESSION",
+    "INTRO_CARD_WHY_CALL",
     "ISSUE_SOURCES",
     "KEI_GLOSSARY",
     "KEI_POLL_WHY_WE_ASK",
+    "KEI_POLL_WIDE_NET_LINE",
     "LEGISLATOR_BRIEF_PATH",
     "MARQUEE_IMAGES",
     "PROGRESS_ACHIEVED_COUNT",
@@ -106,6 +112,8 @@ __all__ = [
     "WHY_SHOULD_YOU_CARE_VOICE",
     "WHY_YOU_CARE_BRANCHES",
     "WHY_YOU_CARE_DEFAULT_CARDS",
+    "WHY_YOU_CARE_PRE_POLL_LINE",
+    "WHY_YOU_CARE_CTA_NUDGE",
 ]
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -265,8 +273,11 @@ templates.env.globals["why_should_you_care_intro"] = WHY_SHOULD_YOU_CARE_INTRO
 templates.env.globals["why_should_you_care_voice"] = WHY_SHOULD_YOU_CARE_VOICE
 templates.env.globals["why_should_you_care_teaser_items"] = WHY_SHOULD_YOU_CARE_TEASER_ITEMS
 templates.env.globals["why_you_care_default_cards"] = WHY_YOU_CARE_DEFAULT_CARDS
+templates.env.globals["why_you_care_pre_poll_line"] = WHY_YOU_CARE_PRE_POLL_LINE
+templates.env.globals["why_you_care_cta_nudge"] = WHY_YOU_CARE_CTA_NUDGE
 templates.env.globals["why_you_care_branches"] = WHY_YOU_CARE_BRANCHES
 templates.env.globals["kei_poll_why_we_ask"] = KEI_POLL_WHY_WE_ASK
+templates.env.globals["kei_poll_wide_net_line"] = KEI_POLL_WIDE_NET_LINE
 
 from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
 
@@ -275,6 +286,7 @@ templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 templates.env.globals["kei_impact_options"] = KEI_POLL_IMPACT_OPTIONS
+templates.env.globals["turnstile_site_key"] = cfg.TURNSTILE_SITE_KEY or ""
 
 
 async def get_marquee_images(db: AsyncSession) -> list[dict[str, str]]:
@@ -613,7 +625,7 @@ async def the_issue_page(
         "brief_state_map_status_json": json.dumps(brief_state_map_status),
         "brief_aamva_fix_state_abbrs_json": json.dumps(aamva_fix_abbrs),
         "issue_sources": ISSUE_SOURCES,
-        "strategic_mission": STRATEGIC_MISSION,
+        "strategic_mission": get_campaign_config().strategic_mission or STRATEGIC_MISSION,
         "strategic_vision": STRATEGIC_VISION,
         "strategic_five_points": STRATEGIC_FIVE_POINTS,
     }

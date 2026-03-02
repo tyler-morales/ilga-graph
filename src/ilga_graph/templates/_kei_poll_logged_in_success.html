@@ -7,10 +7,6 @@
     <div class="kei-poll-drawer__panel">
     <div class="kei-poll__body">
     <p class="kei-status-success" role="status">Thanks for sharing.</p>
-    {% set _impact_opts = kei_impact_results.options if (kei_impact_results and kei_impact_results.get('options')) else (kei_impact_options or []) %}
-    {% if kei_impact_selected and _impact_opts %}
-    <p class="kei-impact-success" role="status">How it affects you: {% for slug, label in _impact_opts %}{% if slug == kei_impact_selected %}{{ label }}{% endif %}{% endfor %}</p>
-    {% endif %}
     {% if kei_status_results and kei_status_results.total_responses > 0 %}
     <div class="kei-poll-results" aria-label="Poll results from verified users">
         {% from "_macros.html" import kei_poll_results_chart %}
@@ -19,15 +15,12 @@
     {% else %}
     <p class="kei-status-success" role="status">Thanks for sharing. Results will appear here once others respond.</p>
     {% endif %}
-    {% if kei_impact_results and kei_impact_results.total_responses > 0 and _impact_opts %}
-    <div class="kei-poll-results" aria-label="How it affects you — results from verified users">
-        <h4 class="kei-poll-chart__heading">How it affects you</h4>
-        {% from "_macros.html" import kei_poll_results_chart %}
-        {{ kei_poll_results_chart(kei_impact_results, _impact_opts, kei_impact_selected) }}
-    </div>
-    {% endif %}
     <footer class="kei-poll__footer kei-poll__footer--results">
+        {% if kei_poll_goal is defined and kei_poll_goal is not none and kei_poll_goal > 0 %}
+        <p class="kei-poll-goal__label" role="status">{{ (kei_status_results.total_responses if kei_status_results else 0) }} of {{ kei_poll_goal }} responses</p>
+        {% else %}
         <span class="kei-poll__total">Total Votes: {{ kei_status_results.total_responses if kei_status_results else 0 }}</span>
+        {% endif %}
     </footer>
     <p class="kei-poll-story-cta">
         {% if kei_status_selected in ('registered', 'revoked', 'denied') %}

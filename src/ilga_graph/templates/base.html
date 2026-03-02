@@ -66,6 +66,8 @@
         crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.0.0/dist/iconify-icon.min.js" async
         crossorigin="anonymous"></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer
+        crossorigin="anonymous"></script>
 </head>
 
 <body class="{% block body_class %}{% endblock %}">
@@ -226,6 +228,10 @@
                 <a href="/updates">Updates</a>
                 <span class="footer-nav-sep" aria-hidden="true"> · </span>
                 <a href="/timeline">Timeline</a>
+                {% if request.state.user %}
+                <span class="footer-nav-sep" aria-hidden="true"> · </span>
+                <a href="/account">Account</a>
+                {% endif %}
             </nav>
             <nav class="footer-nav footer-nav-secondary" aria-label="Legal and support">
                 {% if show_beta_banner %}
@@ -305,6 +311,24 @@
                     var form = wrap.querySelector('form');
                     if (!branchBtns.length || !panels.length || !form) return;
                     wrap.setAttribute('data-kei-poll-branch-inited', '1');
+                    function showAndRenderTurnstile() {
+                        var pollId = form.id && form.id.replace(/-form$/, '');
+                        if (!pollId) return;
+                        var container = document.getElementById(pollId + '-turnstile-container');
+                        if (!container || !container.getAttribute('data-sitekey')) return;
+                        container.classList.remove('kei-poll__turnstile-wrap--hidden');
+                        if (container.getAttribute('data-turnstile-rendered')) return;
+                        container.setAttribute('data-turnstile-rendered', '1');
+                        var sitekey = container.getAttribute('data-sitekey');
+                        function doRender() {
+                            if (typeof turnstile !== 'undefined') {
+                                turnstile.render(container, { sitekey: sitekey, theme: 'light' });
+                            } else {
+                                setTimeout(doRender, 50);
+                            }
+                        }
+                        doRender();
+                    }
                     if (isInline) {
                         var step3Panel = wrap.querySelector('.wyc-inline-poll__step3');
                         function showBranchInline(branch) {
@@ -323,6 +347,8 @@
                                 var impactInput = form.querySelector('input[name="kei_impact_slug"]');
                                 if (impactInput) impactInput.value = '';
                             }
+                            var tc = form.id && document.getElementById(form.id.replace(/-form$/, '') + '-turnstile-container');
+                            if (tc) tc.classList.add('kei-poll__turnstile-wrap--hidden');
                             form.querySelectorAll('input[name="kei_status"]').forEach(function (radio) { radio.checked = false; });
                             var submitBtn = wrap.querySelector('.wyc-inline-poll__submit');
                             if (submitBtn) submitBtn.disabled = true;
@@ -357,6 +383,7 @@
                                 var impactInput = form.querySelector('input[name="kei_impact_slug"]');
                                 if (impactInput) impactInput.value = ev.target.value || '';
                                 updateSubmitStateInline();
+                                showAndRenderTurnstile();
                             }
                         });
                         branchBtns.forEach(function (btn) {
@@ -388,6 +415,8 @@
                             form.querySelectorAll('input[name="kei_impact_radio"]').forEach(function (r) { r.checked = false; });
                             if (impactInput) impactInput.value = '';
                         }
+                        var tc = form.id && document.getElementById(form.id.replace(/-form$/, '') + '-turnstile-container');
+                        if (tc) tc.classList.add('kei-poll__turnstile-wrap--hidden');
                         form.querySelectorAll('input[name="kei_status"]').forEach(function (radio) {
                             radio.checked = false;
                         });
@@ -440,6 +469,7 @@
                         } else if (ev.target && ev.target.name === 'kei_impact_radio') {
                             if (impactInput) impactInput.value = ev.target.value || '';
                             updateSubmitState();
+                            showAndRenderTurnstile();
                         }
                     });
                     branchBtns.forEach(function (btn) {
@@ -999,6 +1029,11 @@
                 if (counter) counter.textContent = '0 / 500';
                 var submitBtn = document.getElementById('statement-submit-submit');
                 if (submitBtn) submitBtn.disabled = true;
+            });
+            document.addEventListener('click', function (e) {
+                if (e.target && e.target.nodeName === 'DIALOG' && e.target.hasAttribute('open')) {
+                    e.target.close();
+                }
             });
             function updateStatementState() {
                 var form = document.getElementById('statement-submit-form');

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import html
 import logging
 import re
@@ -11,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import markdown
+import requests
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -30,7 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import advocacy_helpers as ah
 from .. import config as cfg
 from ..app_state import state
-from ..campaign_config import get_campaign_config
+from ..campaign_config import get_campaign_config, get_kei_poll_goal
 from ..campaign_helpers import get_active_campaign
 from ..constants import (
     CATEGORY_COMMITTEES,
@@ -58,11 +60,14 @@ from ..kei_poll_context import (
 from ..member_lookup import find_member_by_district
 from ..routers.content import (
     CAMPAIGN_STATUS,
+    KEI_POLL_WIDE_NET_LINE,
     PROGRESS_ACHIEVED_COUNT,
     PROGRESS_CHECKPOINTS,
     STRATEGIC_FIVE_POINTS,
     WHY_YOU_CARE_BRANCHES,
+    WHY_YOU_CARE_CTA_NUDGE,
     WHY_YOU_CARE_DEFAULT_CARDS,
+    WHY_YOU_CARE_PRE_POLL_LINE,
 )
 from ..security import (
     CSRF_COOKIE_NAME,
@@ -75,6 +80,8 @@ from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
 
 LOGGER = logging.getLogger(__name__)
 
+_TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+
 # Email validation for public subscribe (no auth code). Max length matches User.email.
 _EMAIL_MAX_LEN = 320
 _EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", re.IGNORECASE)
@@ -86,6 +93,34 @@ def _client_ip(request: Request) -> str:
     if forwarded:
         return forwarded.split(",")[0].strip()
     return request.client.host if request.client else ""
+
+
+def _verify_turnstile_sync(token: str, remote_ip: str) -> bool:
+    """Blocking Turnstile verification for poll; run via run_in_executor from async."""
+    try:
+        resp = requests.post(
+            _TURNSTILE_VERIFY_URL,
+            data={
+                "secret": cfg.TURNSTILE_SECRET_KEY,
+                "response": token,
+                "remoteip": remote_ip,
+            },
+            timeout=10,
+        )
+        return resp.json().get("success") is True
+    except Exception:
+        LOGGER.exception("Turnstile siteverify failed")
+        return False
+
+
+async def _verify_turnstile(token: str | None, remote_ip: str) -> bool:
+    """Verify Turnstile token for anonymous poll submission. If secret not set, allow."""
+    if not cfg.TURNSTILE_SECRET_KEY:
+        return True
+    if not token or not token.strip():
+        return False
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _verify_turnstile_sync, token.strip(), remote_ip)
 
 
 def _normalize_and_validate_subscribe_email(raw: str) -> str | None:
@@ -127,6 +162,7 @@ templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 templates.env.globals["kei_impact_options"] = KEI_POLL_IMPACT_OPTIONS
+templates.env.globals["turnstile_site_key"] = cfg.TURNSTILE_SITE_KEY or ""
 
 # Email update types: slug -> display label. Default for new drafts is "other".
 UPDATE_TYPES = [("major", "Major"), ("minor", "Minor"), ("other", "Other")]
@@ -607,7 +643,8 @@ async def updates_page(
     else:
         ctx["priority_card_status"] = None
     q = request.query_params
-    ctx["prompt_kei"] = q.get("prompt") == "kei"
+    prompt_q = get_campaign_config().poll_prompt_query or "kei"
+    ctx["prompt_kei"] = q.get("prompt") == prompt_q
     ctx["kei_submitted"] = q.get("submitted") == "1"
     ctx["kei_error"] = q.get("error")
     poll_state = await get_kei_poll_initial_state(request, user, db)
@@ -722,11 +759,29 @@ async def kei_poll_form(
             "poll_id": poll_id,
             "show_email": show_email,
             "kei_status_total": results["total_responses"],
+            "kei_poll_goal": get_kei_poll_goal(),
             "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
             "kei_status_selected": state.get("kei_status_selected"),
             "kei_impact_selected": state.get("kei_impact_selected"),
         },
     )
+
+
+def _why_you_care_flow_ctx(
+    request: Request, kei_status_total: int, kei_error_message: str | None = None
+) -> dict[str, Any]:
+    """Context for _why_you_care_flow_ambient.html (initial load or error re-render)."""
+    ctx: dict[str, Any] = {
+        "request": request,
+        "why_you_care_default_cards": WHY_YOU_CARE_DEFAULT_CARDS,
+        "why_you_care_pre_poll_line": WHY_YOU_CARE_PRE_POLL_LINE,
+        "kei_status_total": kei_status_total,
+        "kei_poll_goal": get_kei_poll_goal(),
+        "kei_poll_wide_net_line": KEI_POLL_WIDE_NET_LINE,
+    }
+    if kei_error_message:
+        ctx["kei_error_message"] = kei_error_message
+    return ctx
 
 
 @router.get("/updates/why-you-care-flow", include_in_schema=False)
@@ -739,11 +794,7 @@ async def why_you_care_flow(
     return templates.TemplateResponse(
         request,
         "_why_you_care_flow_ambient.html",
-        {
-            "request": request,
-            "why_you_care_default_cards": WHY_YOU_CARE_DEFAULT_CARDS,
-            "kei_status_total": results["total_responses"],
-        },
+        _why_you_care_flow_ctx(request, results["total_responses"]),
     )
 
 
@@ -769,6 +820,7 @@ async def kei_poll_results(
             "kei_impact_selected": user.kei_impact_slug,
             "kei_impact_results": impact_results,
             "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
+            "kei_poll_goal": get_kei_poll_goal(),
             "poll_id": poll_id,
         },
     )
@@ -783,48 +835,121 @@ async def kei_status_post(
     poll_id: str = Form("footer-kei-poll", max_length=64),
     session_id: str | None = Form(None, max_length=64),
     csrf_token: str | None = Form(None),
+    cf_turnstile_response: str | None = Form(None, alias="cf-turnstile-response"),
     db: AsyncSession = Depends(get_db),
     user: User | None = Depends(get_current_user_optional),
 ):
     """Set kei status and impact (Q3). Insert responses; set user fields if logged in."""
+    prompt_q = get_campaign_config().poll_prompt_query or "kei"
     token = csrf_token or request.headers.get("X-XSRF-TOKEN")
     cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
     if not validate_csrf_token(token, cookie_token):
+        if request.headers.get("HX-Request") and poll_id == "home-kei-poll":
+            results = await _get_kei_status_results(db)
+            resp = templates.TemplateResponse(
+                request,
+                "_why_you_care_flow_ambient.html",
+                _why_you_care_flow_ctx(
+                    request,
+                    results["total_responses"],
+                    "Invalid or expired security token. Reload the page and try again.",
+                ),
+            )
+            resp.status_code = 403
+            return resp
         if request.headers.get("HX-Request"):
             return HTMLResponse(
                 '<p class="kei-status-error" role="alert">Invalid or expired security token. '
                 "Reload the page and try again.</p>",
                 status_code=403,
             )
-        return RedirectResponse("/updates?prompt=kei&error=csrf", status_code=303)
+        return RedirectResponse(f"/updates?prompt={prompt_q}&error=csrf", status_code=303)
     if user is None:
         client_ip = _client_ip(request)
         if not rate_limit_kei_status(client_ip):
+            if request.headers.get("HX-Request") and poll_id == "home-kei-poll":
+                results = await _get_kei_status_results(db)
+                resp = templates.TemplateResponse(
+                    request,
+                    "_why_you_care_flow_ambient.html",
+                    _why_you_care_flow_ctx(
+                        request,
+                        results["total_responses"],
+                        "Too many responses from this device. Try again later.",
+                    ),
+                )
+                resp.status_code = 429
+                return resp
             if request.headers.get("HX-Request"):
                 return HTMLResponse(
                     '<p class="kei-status-error" role="alert">Too many responses from this '
                     "device. Try again later.</p>",
                     status_code=429,
                 )
-            return RedirectResponse("/updates?prompt=kei&error=rate", status_code=303)
+            return RedirectResponse(f"/updates?prompt={prompt_q}&error=rate", status_code=303)
+        if not await _verify_turnstile(cf_turnstile_response, client_ip):
+            if request.headers.get("HX-Request") and poll_id == "home-kei-poll":
+                results = await _get_kei_status_results(db)
+                resp = templates.TemplateResponse(
+                    request,
+                    "_why_you_care_flow_ambient.html",
+                    _why_you_care_flow_ctx(
+                        request,
+                        results["total_responses"],
+                        "Verification failed. Complete the security check and try again.",
+                    ),
+                )
+                resp.status_code = 400
+                return resp
+            if request.headers.get("HX-Request"):
+                return HTMLResponse(
+                    '<p class="kei-status-error" role="alert">Verification failed. Complete the '
+                    "security check and try again.</p>",
+                    status_code=400,
+                )
+            return RedirectResponse(f"/updates?prompt={prompt_q}&error=verify", status_code=303)
     if poll_id not in get_kei_poll_ids():
         poll_id = "footer-kei-poll"
     validated = _validate_kei_status(kei_status)
     if not validated:
+        if request.headers.get("HX-Request") and poll_id == "home-kei-poll":
+            results = await _get_kei_status_results(db)
+            resp = templates.TemplateResponse(
+                request,
+                "_why_you_care_flow_ambient.html",
+                _why_you_care_flow_ctx(
+                    request, results["total_responses"], "Please choose an option."
+                ),
+            )
+            resp.status_code = 400
+            return resp
         if request.headers.get("HX-Request"):
             return HTMLResponse(
                 '<p class="kei-status-error" role="alert">Please choose an option.</p>',
                 status_code=400,
             )
-        return RedirectResponse("/updates?prompt=kei&error=invalid", status_code=303)
+        return RedirectResponse(f"/updates?prompt={prompt_q}&error=invalid", status_code=303)
     impact_val = _validate_kei_poll_impact((kei_impact_slug or "").strip() or None)
     if not impact_val:
+        if request.headers.get("HX-Request") and poll_id == "home-kei-poll":
+            results = await _get_kei_status_results(db)
+            resp = templates.TemplateResponse(
+                request,
+                "_why_you_care_flow_ambient.html",
+                _why_you_care_flow_ctx(
+                    request,
+                    results["total_responses"],
+                    "Please choose how it affects you.",
+                ),
+            )
+            resp.status_code = 400
+            return resp
         if request.headers.get("HX-Request"):
             return HTMLResponse(
                 '<p class="kei-status-error" role="alert">Please choose how it affects you.</p>',
                 status_code=400,
             )
-        return RedirectResponse("/updates?prompt=kei&error=invalid", status_code=303)
+        return RedirectResponse(f"/updates?prompt={prompt_q}&error=invalid", status_code=303)
     anon_sid = validate_anon_session_id(session_id) if session_id else None
     response_row = KeiPollResponse(
         user_id=user.id if user else None,
@@ -887,6 +1012,7 @@ async def kei_status_post(
                     "_why_you_care_branch.html",
                     {
                         "why_you_care_branch": why_you_care_branch,
+                        "why_you_care_cta_nudge": WHY_YOU_CARE_CTA_NUDGE,
                         "wyc_pill_icon_slug": wyc_pill_icon_slug,
                         "kei_status_results": results,
                         "kei_status_options": KEI_STATUS_OPTIONS,
@@ -894,6 +1020,7 @@ async def kei_status_post(
                         "kei_impact_selected": impact_val,
                         "kei_impact_results": impact_results,
                         "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
+                        "kei_poll_goal": get_kei_poll_goal(),
                         "kei_poll_initial_anon": False,
                         "poll_id": poll_id,
                     },
@@ -908,10 +1035,11 @@ async def kei_status_post(
                     "kei_impact_selected": impact_val,
                     "kei_impact_results": impact_results,
                     "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
+                    "kei_poll_goal": get_kei_poll_goal(),
                     "poll_id": poll_id,
                 },
             )
-        return RedirectResponse("/updates?prompt=kei&submitted=1", status_code=303)
+        return RedirectResponse(f"/updates?prompt={prompt_q}&submitted=1", status_code=303)
     # Anonymous: set cookies for results/selection on next visit; return fragment or redirect
     results = await _get_kei_status_results(db)
     impact_results = await _get_kei_impact_results(db)
@@ -935,6 +1063,7 @@ async def kei_status_post(
                 "_why_you_care_branch.html",
                 {
                     "why_you_care_branch": why_you_care_branch,
+                    "why_you_care_cta_nudge": WHY_YOU_CARE_CTA_NUDGE,
                     "wyc_pill_icon_slug": wyc_pill_icon_slug,
                     "kei_status_results": results,
                     "kei_status_options": KEI_STATUS_OPTIONS,
@@ -942,6 +1071,7 @@ async def kei_status_post(
                     "kei_impact_selected": impact_val,
                     "kei_impact_results": impact_results,
                     "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
+                    "kei_poll_goal": get_kei_poll_goal(),
                     "kei_poll_initial_anon": True,
                     "poll_id": poll_id,
                 },
@@ -957,6 +1087,7 @@ async def kei_status_post(
                     "kei_impact_selected": impact_val,
                     "kei_impact_results": impact_results,
                     "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
+                    "kei_poll_goal": get_kei_poll_goal(),
                     "dev_available": cfg.DEV_MODE,
                     "poll_id": poll_id,
                 },
@@ -964,7 +1095,7 @@ async def kei_status_post(
         for params in cookies_to_set:
             resp.set_cookie(**params)
         return resp
-    redir = RedirectResponse("/updates?prompt=kei&submitted=1", status_code=303)
+    redir = RedirectResponse(f"/updates?prompt={prompt_q}&submitted=1", status_code=303)
     for params in cookies_to_set:
         redir.set_cookie(**params)
     return redir

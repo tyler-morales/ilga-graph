@@ -20,9 +20,10 @@
             </div>
             <div class="hero-action">
                 <p class="hero-subhead">{{ hero_subhead }}</p>
+                <p class="hero-action-line">Your call or email matters — we'll give you the script.</p>
                 <p class="hero-ticker" aria-live="polite">
                     {% if calls_total|default(0) > 0 %}
-                    Illinois constituents are taking action.
+                    Illinois constituents have made <span class="hero-ticker-number">{{ calls_total }}</span> outreach action{{ calls_total != 1 and 's' or '' }} so far.
                     {% else %}
                     Join others. Enter your ZIP to start.
                     {% endif %}

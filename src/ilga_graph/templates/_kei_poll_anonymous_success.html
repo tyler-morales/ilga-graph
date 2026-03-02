@@ -13,17 +13,12 @@
                     {{ icon_caution() }}
                 </span>
                 <div class="kei-poll-nudge-block__content">
-                    <p class="kei-poll-nudge-block__copy">Your response isn&rsquo;t counted yet. Sign in to save your answer
-                        to the results.</p>
+                    <p class="kei-poll-nudge-block__copy">Your vote is saved. Sign in to track your impact and add your answer to your account.</p>
                     <button type="button" class="auth-strip-signin-btn btn btn--secondary kei-poll-nudge-block__signin-link"
                         id="poll-signin-btn" aria-expanded="false" aria-controls="poll-signin-inline-signin"
-                        aria-label="Sign in to add your answer to the results">Sign in to save your answer</button>
+                        aria-label="Sign in to track your impact">Sign in to save your answer</button>
                 </div>
             </div>
-            {% set _impact_opts = kei_impact_results.options if (kei_impact_results and kei_impact_results.get('options')) else (kei_impact_options or []) %}
-            {% if kei_impact_selected and _impact_opts %}
-            <p class="kei-impact-success" role="status">How it affects you: {% for slug, label in _impact_opts %}{% if slug == kei_impact_selected %}{{ label }}{% endif %}{% endfor %}</p>
-            {% endif %}
             {% if kei_status_results and kei_status_results.total_responses > 0 %}
             <div class="kei-poll-results" aria-label="Poll results from verified users">
                 {% from "_macros.html" import kei_poll_results_chart %}
@@ -31,18 +26,14 @@
                 offer_save_choice=true) }}
             </div>
             {% else %}
-            <p class="kei-poll-results__empty">No verified responses yet. Sign in and submit to be the first!</p>
-            {% endif %}
-            {% if kei_impact_results and kei_impact_results.total_responses > 0 and _impact_opts %}
-            <div class="kei-poll-results" aria-label="How it affects you — results from verified users">
-                <h4 class="kei-poll-chart__heading">How it affects you</h4>
-                {% from "_macros.html" import kei_poll_results_chart %}
-                {{ kei_poll_results_chart(kei_impact_results, _impact_opts, kei_impact_selected) }}
-            </div>
+            <p class="kei-poll-results__empty">No responses yet. Be the first!</p>
             {% endif %}
             <footer class="kei-poll__footer kei-poll__footer--results">
-                <span class="kei-poll__total">Total Votes: {{ kei_status_results.total_responses if kei_status_results
-                    else 0 }}</span>
+                {% if kei_poll_goal is defined and kei_poll_goal is not none and kei_poll_goal > 0 %}
+                <p class="kei-poll-goal__label" role="status">{{ (kei_status_results.total_responses if kei_status_results else 0) }} of {{ kei_poll_goal }} responses</p>
+                {% else %}
+                <span class="kei-poll__total">Total Votes: {{ kei_status_results.total_responses if kei_status_results else 0 }}</span>
+                {% endif %}
             </footer>
             <div id="poll-signin-wrap" class="kei-poll-signin-wrap" data-poll-signin-init>
                 {{ inline_signin('poll-signin', dev_available) }}

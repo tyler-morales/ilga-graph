@@ -627,6 +627,69 @@
 }
 
 /* Minimal no-answer hint: below header, above script — visible but not alarming */
+/* Script length: Full script vs Short pitch toggle */
+.drawer-script-length-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 8px 24px;
+    margin: 0 -24px;
+    background: #f2f2f7;
+    border-bottom: 1px solid #e5e5ea;
+    font-size: var(--font-size-sm);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.drawer-script-length-btn {
+    padding: 6px 14px;
+    background: transparent;
+    border: 1px solid #c6c6c8;
+    font-size: inherit;
+    font-family: inherit;
+    color: #6d6d72;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.drawer-script-length-btn:first-child {
+    border-radius: 6px 0 0 6px;
+    border-right-width: 0;
+}
+
+.drawer-script-length-btn:last-child {
+    border-radius: 0 6px 6px 0;
+}
+
+.drawer-script-length-btn:hover {
+    color: #1c1c1e;
+    background: #e5e5ea;
+}
+
+.drawer-script-length-btn[aria-pressed="true"] {
+    background: #248a3d;
+    color: #fff;
+    border-color: #248a3d;
+}
+
+.drawer-script-length-btn:focus-visible {
+    outline: 2px solid #248a3d;
+    outline-offset: 2px;
+}
+
+.drawer-script-full[hidden],
+.drawer-script-short[hidden] {
+    display: none !important;
+}
+
+/* Flex column so .chat-you align-self: flex-end works (right-align) and gap between bubbles */
+.drawer-script-full,
+.drawer-script-short {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 .drawer-no-answer-hint {
     display: flex;
     align-items: center;
@@ -713,6 +776,12 @@
 
 .drawer-voicemail[hidden] {
     display: none !important;
+}
+
+.drawer-voicemail {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .drawer-voicemail-single {
@@ -1684,6 +1753,54 @@ a.chat-bubble {
     padding: 12px 20px;
     border-radius: 12px;
     font-size: var(--font-size-body);
+}
+
+/* No-email screen (call pref, member has no email, user didn't get one — keep them moving) */
+.drawer-no-email-content {
+    padding: 8px 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.drawer-no-email-card {
+    padding: 16px;
+    background: #fff;
+    border: 1px solid #c6c6c8;
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    margin-bottom: 16px;
+}
+
+.drawer-no-email-headline {
+    margin: 0 0 8px;
+    font-size: var(--font-size-body);
+    font-weight: 600;
+    color: #1c1c1e;
+}
+
+.drawer-no-email-text {
+    margin: 0;
+    font-size: var(--font-size-label);
+    line-height: 1.5;
+    color: #3c3c43;
+}
+
+.drawer-no-email-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.drawer-no-email-cta {
+    width: 100%;
+    padding: 14px 20px;
+    border-radius: 12px;
+    font-size: 1em;
+    font-weight: 600;
+}
+
+.drawer-no-email-cta:focus-visible {
+    outline: 2px solid var(--bubble-you-bg);
+    outline-offset: 2px;
 }
 
 /* Fade in/out blue border to indicate "type here" — only one field pulses at a time (see JS) */

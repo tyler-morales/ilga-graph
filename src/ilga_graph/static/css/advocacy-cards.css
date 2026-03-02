@@ -1081,6 +1081,7 @@ padding-bottom: 4px;
 .card .card-bio-text.card-bio-truncated {
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -1541,16 +1542,241 @@ a.vote-bill:visited {
   }
 }
 
+/* ── One-at-a-time member carousel (scroll-snap) ── */
+.member-carousel {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  gap: 1rem;
+  margin-top: 12px;
+  padding-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.member-carousel__slide {
+  flex: 0 0 calc(100% - 80px);
+  min-width: 0;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+/* Mobile: stacked full-width cards, no horizontal scroll — breakpoint aligned with tablet block below (768px) */
+@media (max-width: 768px) {
+  .member-carousel {
+    flex-direction: column;
+    overflow-x: visible;
+    overflow-y: visible;
+    scroll-snap-type: none;
+    padding-bottom: 0;
+    width: 100%;
+  }
+
+  .member-carousel__slide {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    scroll-snap-align: none;
+    scroll-snap-stop: auto;
+  }
+}
+
+.member-carousel__slide--done {
+  opacity: 0.4;
+}
+
+/* Intro slide: same flex basis as member slides so it matches their width on desktop. */
+.member-carousel__slide--intro {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 calc(100% - 80px);
+  min-height: 0;
+}
+
+/* Intro card: distinct from member cards — warm background, left accent, no photo frame. */
+.card-intro.card-intro--explain {
+  margin: 14px 0;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #fdfbf7;
+  border: 1px solid #d4c4a0;
+  border-left: 4px solid #b8860b;
+  box-shadow: 0 1px 3px rgba(184, 134, 11, 0.12);
+}
+
+.card-intro.card-intro--explain.card-your-legislator {
+  border-color: #d4c4a0;
+  border-left-color: #b8860b;
+}
+
+.card-intro__role {
+  display: block;
+  margin-bottom: 4px;
+  font-size: var(--font-size-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #555;
+}
+
+.card-header--intro {
+  display: block;
+}
+
+.card-header--intro .card-header-col {
+  margin: 0;
+}
+
+/* Goal echo: subordinate so headline remains primary (advocacy goal visibility). */
+.intro-card__goal {
+  margin: 0 0 8px 0;
+  font-size: var(--font-size-sm);
+  color: #555;
+  line-height: 1.4;
+}
+
+.intro-card__why-call {
+  margin-top: 6px;
+}
+
+.card-intro__copy {
+  margin-top: 10px;
+  margin-bottom: 0;
+  font-size: var(--font-size-label);
+  color: #444;
+  line-height: 1.45;
+}
+
+/* Pref area: fills remaining card height; viewport clips for slide transition */
+.card-intro__pref {
+  margin-top: 14px;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.intro-card__pref-viewport {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Pref section (choice or saved state): full height panel, slide transition */
+.intro-card__pref-section {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 200px;
+  padding: 1.25rem 1rem;
+  background: rgba(255, 251, 247, 0.6);
+  border-radius: 8px;
+  border: 1px solid rgba(212, 196, 160, 0.5);
+  transition: transform 0.3s ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-card__pref-section {
+    transition: none;
+  }
+}
+
+.intro-card__pref-section--exiting {
+  transform: translateX(-100%);
+}
+
+.intro-card__pref-section--entering {
+  transform: translateX(100%);
+}
+
+.intro-card__pref-section--entered {
+  transform: translateX(0);
+}
+
+/* Locked slide: overlay blocks interaction until previous is complete */
+.member-carousel__slide--locked {
+  position: relative;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.member-carousel__slide--locked .card {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* When user chose "Email only", hide phone options on member cards (intro slide unchanged) */
+.member-carousel.pref-email-only .member-carousel__slide:not(.member-carousel__slide--intro) .outreach-phone {
+  display: none;
+}
+
+.member-carousel__slide--locked .slide-lock-overlay {
+  display: flex;
+}
+
+.member-carousel__slide .slide-lock-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  z-index: 2;
+}
+
+.slide-lock-overlay__icon {
+  font-size: 2rem;
+}
+
+.slide-lock-overlay__msg {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #374151;
+  text-align: center;
+}
+
+.slide-lock-overlay__msg--pref {
+  display: none;
+}
+
+.member-carousel__slide--pref-required .slide-lock-overlay__msg--prev {
+  display: none;
+}
+
+.member-carousel__slide--pref-required .slide-lock-overlay__msg--pref {
+  display: block;
+}
+
+.carousel-progress {
+  margin: 0.75rem 0 0;
+  font-size: var(--font-size-sm);
+  color: #6b7280;
+}
+
+.carousel-progress__current {
+  font-weight: 600;
+}
+
 /* ── Advocacy sidebar poll (Kei status) ── */
 .results-aside__poll {
   margin-top: 1rem;
 }
 
-/* ── Your goal (sidebar) ── */
+/* ── Your goal (sidebar) — prominent so users recognize the checklist. ── */
 .outreach-goal {
   margin-bottom: 16px;
   padding: 10px 12px;
   border: 1px solid #ccd;
+  border-left: 4px solid #4a6fa5;
   background: #f8f9fc;
   font-size: var(--font-size-label);
 }
@@ -1571,12 +1797,6 @@ a.vote-bill:visited {
   color: #335;
 }
 
-.outreach-goal__copy {
-  margin: 0 0 8px 0;
-  line-height: 1.4;
-  color: #444;
-}
-
 .outreach-goal__progress {
   margin: 0 0 4px 0;
   font-size: 0.9375rem;
@@ -1595,14 +1815,17 @@ a.vote-bill:visited {
 }
 
 .outreach-goal__bar {
+  position: relative;
   height: 10px;
+  padding: 0 6px;
+  box-sizing: border-box;
   background: #e0e4ec;
   border-radius: 5px;
   overflow: visible;
+  --truck-pct: 0;
 }
 
 .outreach-goal__bar-fill {
-  position: relative;
   height: 100%;
   min-width: 0;
   border-radius: 5px;
@@ -1610,14 +1833,16 @@ a.vote-bill:visited {
   transition: width 0.25s ease-out;
 }
 
+/* Truck: base (when inside .outreach-goal__bar). Horizontal layout moves truck to bar-track so it sits above dots. */
 .outreach-goal__bar-truck {
   position: absolute;
-  right: 0;
+  left: calc(var(--truck-pct) * 1%);
   bottom: 50%;
-  transform: translate(30%, 45%) scaleX(-1);
+  transform: translate(-50%, 45%) scaleX(-1);
   font-size: 40px;
   line-height: 1;
   pointer-events: none;
+  transition: left 0.4s ease-out;
 }
 
 .outreach-goal__actions {
@@ -1773,7 +1998,7 @@ a.vote-bill:visited {
   text-decoration: line-through;
 }
 
-.outreach-goal__completed-title + .outreach-goal__completed-summary {
+.outreach-goal__completed-title+.outreach-goal__completed-summary {
   margin-top: 4px;
 }
 
@@ -1814,6 +2039,128 @@ a.vote-bill:visited {
   font-size: 0.875rem;
   line-height: 1.45;
   color: #555;
+}
+
+/* ── Goal section in main (horizontal progress bar + checkpoint dots) ── */
+.outreach-goal--horizontal {
+  margin-bottom: 1rem;
+  padding: 14px 16px;
+  border-left-width: 4px;
+}
+
+.outreach-goal--horizontal .outreach-goal__head-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 10px;
+}
+
+.outreach-goal--horizontal .outreach-goal__head-label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.outreach-goal--horizontal .outreach-goal__bar-wrap {
+  margin-bottom: 12px;
+}
+
+.outreach-goal--horizontal .outreach-goal__bar-label {
+  margin-bottom: 8px;
+}
+
+.outreach-goal--horizontal .outreach-goal__bar-track {
+  position: relative;
+  min-height: 22px;
+  overflow: visible;
+}
+
+/* Dots centered on the 10px bar: bar center is 5px from top of track. */
+.outreach-goal--horizontal .outreach-goal__bar-dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 5px;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 6px;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 1;
+}
+
+/* Same style for all: circle with border; completed = green fill, incomplete = white fill. */
+.outreach-goal--horizontal .outreach-goal__bar-dot {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #c8ccd4;
+  background: #fff;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.outreach-goal--horizontal .outreach-goal__bar-dot--done {
+  background: #4a7c59;
+  border-color: #4a7c59;
+}
+
+@keyframes outreach-goal-dot-celebration {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .outreach-goal--horizontal .outreach-goal__bar-dot--done {
+    animation: outreach-goal-dot-celebration 0.3s ease-out;
+  }
+}
+
+/* Truck centered on bar so it fully covers the current checkpoint dot. */
+.outreach-goal--horizontal .outreach-goal__bar-track .outreach-goal__bar-truck {
+  position: absolute;
+  left: calc(var(--truck-pct) * 1%);
+  top: -11px;
+  font-size: 45px;
+  transform: translate(-50%, -50%) scaleX(-1);
+  z-index: 5;
+  line-height: 1;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .outreach-goal__bar-truck {
+    transition: none;
+  }
+}
+
+.outreach-goal--horizontal .outreach-goal__next {
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
+.outreach-goal--horizontal .outreach-goal__phase--broker .outreach-goal__next {
+  margin-top: 8px;
+}
+
+.outreach-goal--horizontal .outreach-goal__completed-title {
+  margin-top: 10px;
+}
+
+.outreach-goal--horizontal .outreach-goal__power-broker-details {
+  margin-top: 12px;
 }
 
 /* ── Outreach sidebar (My Outreach cards) ── */
@@ -1971,6 +2318,14 @@ a.vote-bill:visited {
 
   .results-main {
     order: -1;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .outreach-goal {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .results-aside {

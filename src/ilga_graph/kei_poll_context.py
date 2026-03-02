@@ -8,13 +8,14 @@ from fastapi import Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from .campaign_config import get_kei_poll_goal
 from .constants import (
     KEI_IMPACT_ALL_OPTIONS,
     KEI_IMPACT_SLUG_COOKIE,
     KEI_POLL_IMPACT_SLUGS,
     KEI_STATUS_SLUGS,
 )
-from .db_models import Poll, PollResponse, User
+from .db_models import KeiPollResponse, Poll, PollResponse, User
 
 SIDEBAR_KEI_POLL_ID = "sidebar-kei-poll"
 _KEI_POLL_IDS = frozenset(
@@ -40,12 +41,11 @@ def _validate_kei_poll_impact(slug: str | None) -> str | None:
 
 
 async def _get_kei_status_results(db: AsyncSession) -> dict[str, Any]:
-    """Aggregate kei_status counts for verified users only (last_login_at IS NOT NULL)."""
+    """Aggregate kei_status counts from KeiPollResponse (all votes: anonymous + logged-in)."""
     result = await db.execute(
-        select(User.kei_status, func.count())
-        .where(User.kei_status.isnot(None))
-        .where(User.last_login_at.isnot(None))
-        .group_by(User.kei_status)
+        select(KeiPollResponse.kei_status, func.count())
+        .where(KeiPollResponse.kei_status.isnot(None))
+        .group_by(KeiPollResponse.kei_status)
     )
     by_status: dict[str, int] = {row[0]: row[1] for row in result.all()}
     total = sum(by_status.values())
@@ -96,7 +96,7 @@ async def get_kei_poll_initial_state(
     logged_in_voted = user is not None and getattr(user, "kei_status", None) is not None
     show_results = logged_in_voted or voted_cookie
     if not show_results:
-        return {"kei_poll_done": False}
+        return {"kei_poll_done": False, "kei_poll_goal": get_kei_poll_goal()}
     results = await _get_kei_status_results(db)
     selected = user.kei_status if user else None
     if not selected and voted_cookie:
@@ -114,6 +114,7 @@ async def get_kei_poll_initial_state(
         "kei_impact_selected": impact_selected,
         "kei_impact_results": impact_results,
         "kei_poll_initial_anon": not logged_in_voted,
+        "kei_poll_goal": get_kei_poll_goal(),
     }
 
 

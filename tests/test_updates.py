@@ -13,6 +13,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi import FastAPI, Request
 from fastapi.responses import Response
+from fastapi.templating import Jinja2Templates
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
@@ -20,6 +21,7 @@ import ilga_graph.config as cfg_mod
 import ilga_graph.db as db_mod
 import ilga_graph.dependencies as deps_mod
 from ilga_graph.db_models import Poll, PollResponse, User
+from ilga_graph.routers import account as account_router_mod
 from ilga_graph.routers import admin as admin_router_mod
 from ilga_graph.routers import advocacy as advocacy_router_mod
 from ilga_graph.routers import auth as auth_router_mod
@@ -78,7 +80,21 @@ def _make_test_app(db_path: Path) -> FastAPI:
                 request.state.user = None  # type: ignore[attr-defined]
         return await call_next(request)
 
+    _template_dir = Path(__file__).resolve().parent.parent / "src" / "ilga_graph" / "templates"
+    templates = Jinja2Templates(directory=str(_template_dir))
+    templates.env.globals["features"] = {}
+    templates.env.globals["site_name"] = "Test"
+    templates.env.globals["meta_description"] = ""
+    templates.env.globals["strategic_five_points"] = []
+    templates.env.globals["app_base_url"] = "http://testserver"
+    templates.env.globals["og_image_url"] = ""
+    templates.env.globals["primary_color"] = "#FF4500"
+    templates.env.globals["show_beta_banner"] = False
+    templates.env.globals["footer_last_updated"] = None
+    templates.env.globals["get_current_action_campaign"] = lambda r: None
+    app.state.templates = templates
     app.include_router(auth_router_mod.router)
+    app.include_router(account_router_mod.router)
     app.include_router(advocacy_router_mod.router, prefix="/advocacy")
     app.include_router(updates_router_mod.router)
     app.include_router(admin_router_mod.router)
@@ -137,6 +153,7 @@ def client(test_db_path: Path) -> TestClient:
         importlib.reload(advocacy_router_mod)
         importlib.reload(updates_router_mod)
         importlib.reload(auth_router_mod)
+        importlib.reload(account_router_mod)
         importlib.reload(stories_router_mod)
         app = _make_test_app(test_db_path)
         with TestClient(app, raise_server_exceptions=True) as c:
@@ -464,6 +481,61 @@ class TestSubscribeUnsubscribe:
         assert b"Invalid" in resp.content or b"expired" in resp.content.lower()
 
 
+class TestAccountPage:
+    """GET /account and POST /account: profile page and update zip/newsletter."""
+
+    def test_get_account_anonymous_returns_401(self, client: TestClient) -> None:
+        """Unauthenticated GET /account returns 401 (main app redirects to home via handler)."""
+        resp = client.get(
+            "/account",
+            headers={"Accept": "text/html"},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 401
+
+    def test_get_account_authenticated_returns_200(self, authed_client: TestClient) -> None:
+        resp = authed_client.get("/account", headers={"Accept": "text/html"})
+        assert resp.status_code == 200
+        assert b"Account" in resp.content
+        assert b"subscriber@example.com" in resp.content
+
+    def test_post_account_requires_csrf(self, authed_client: TestClient) -> None:
+        resp = authed_client.post(
+            "/account",
+            data={"zip_code": "", "wants_updates": "1"},
+            headers={"Accept": "text/html"},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        assert "error=csrf" in resp.headers.get("location", "")
+
+    def test_post_account_saves_wants_updates(
+        self, authed_client: TestClient, test_db_path: Path
+    ) -> None:
+        data = _data_with_csrf(authed_client, {"zip_code": "", "wants_updates": ""})
+        resp = authed_client.post(
+            "/account",
+            data=data,
+            headers={"Accept": "text/html"},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        assert "saved=1" in resp.headers.get("location", "")
+
+        async def check_unsubscribed():
+            async with db_mod.async_session_factory() as session:
+                r = await session.execute(
+                    select(User).where(User.email == "subscriber@example.com")
+                )
+                u = r.scalar_one_or_none()
+                assert u is not None
+                assert u.wants_updates is False
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            asyncio.run(check_unsubscribed())
+
+
 class TestSubscribeComponentVisibility:
     """Subscribed users (wants_updates=True) have subscribe components hidden site-wide."""
 
@@ -603,15 +675,18 @@ class TestSubscribeUnsubscribeEmail:
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
             importlib.reload(updates_router_mod)
-        resp = client.post(
-            "/updates/kei-status",
-            data=_data_with_csrf(
-                client, {"kei_status": "registered", "kei_impact_slug": "civic_duty"}
-            ),
-            headers={"HX-Request": "true"},
-        )
+        with patch.object(
+            updates_router_mod, "_verify_turnstile", new_callable=AsyncMock, return_value=True
+        ):
+            resp = client.post(
+                "/updates/kei-status",
+                data=_data_with_csrf(
+                    client, {"kei_status": "registered", "kei_impact_slug": "civic_duty"}
+                ),
+                headers={"HX-Request": "true"},
+            )
         assert resp.status_code == 200
-        assert b"isn" in resp.content and (b"counted" in resp.content or b"Sign in" in resp.content)
+        assert b"Sign in" in resp.content and (b"vote" in resp.content or b"save" in resp.content)
 
         async def check():
             from sqlalchemy import select
@@ -642,11 +717,16 @@ class TestSubscribeUnsubscribeEmail:
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
             importlib.reload(updates_router_mod)
-        resp = client.post(
-            "/updates/kei-status",
-            data=_data_with_csrf(client, {"kei_status": "registered", "kei_impact_slug": "other"}),
-            headers={"HX-Request": "true"},
-        )
+        with patch.object(
+            updates_router_mod, "_verify_turnstile", new_callable=AsyncMock, return_value=True
+        ):
+            resp = client.post(
+                "/updates/kei-status",
+                data=_data_with_csrf(
+                    client, {"kei_status": "registered", "kei_impact_slug": "other"}
+                ),
+                headers={"HX-Request": "true"},
+            )
         assert resp.status_code == 200
         assert KEI_POLL_VOTED_COOKIE in resp.cookies
         assert resp.cookies[KEI_POLL_VOTED_COOKIE] == "1"
@@ -713,11 +793,14 @@ class TestSubscribeUnsubscribeEmail:
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
             importlib.reload(updates_router_mod)
-        resp = client.post(
-            "/updates/kei-status",
-            data=_data_with_csrf(client, {"kei_status": "would_want"}),
-            headers={"HX-Request": "true"},
-        )
+        with patch.object(
+            updates_router_mod, "_verify_turnstile", new_callable=AsyncMock, return_value=True
+        ):
+            resp = client.post(
+                "/updates/kei-status",
+                data=_data_with_csrf(client, {"kei_status": "would_want"}),
+                headers={"HX-Request": "true"},
+            )
         assert resp.status_code == 400
         assert b"affect" in resp.content.lower() or b"choose" in resp.content.lower()
 
@@ -757,25 +840,12 @@ class TestSubscribeUnsubscribeEmail:
     def test_kei_status_results_only_verified_users(
         self, client: TestClient, test_db_path: Path
     ) -> None:
-        """GET /updates/kei-status-results counts only users with last_login_at set."""
-        from datetime import datetime, timezone
-
-        from ilga_graph.db_models import User
+        """GET /updates/kei-status-results returns counts from KeiPollResponse (all votes)."""
+        from ilga_graph.db_models import KeiPollResponse
 
         async def setup():
             async with db_mod.async_session_factory() as session:
-                verified = User(
-                    email="verified@example.com",
-                    kei_status="registered",
-                    last_login_at=datetime.now(timezone.utc),
-                )
-                unverified = User(
-                    email="unverified@example.com",
-                    kei_status="would_want",
-                    last_login_at=None,
-                )
-                session.add(verified)
-                session.add(unverified)
+                session.add(KeiPollResponse(kei_status="registered", user_id=None, session_id=None))
                 await session.commit()
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):

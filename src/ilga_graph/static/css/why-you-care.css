@@ -76,12 +76,61 @@
   margin: 0;
 }
 
+/* Section explainer: directly under "Why should you care?" heading. */
+.why-you-care-section-intro {
+  font-size: var(--font-size-body, 1rem);
+  color: var(--color-text, #222);
+  margin: 0 auto 1.25rem;
+  max-width: 42ch;
+  line-height: 1.5;
+  text-align: center;
+}
+
 /* Short line above poll: why we ask. */
 .wyc-poll-intro {
   font-size: var(--font-size-body, 1rem);
   color: var(--color-text-secondary, #555);
   margin: 0 0 1rem 0;
   max-width: 42ch;
+}
+
+/* Line under poll progress bar: breadth-of-support / outreach context. */
+.wyc-poll-under-goal {
+  font-size: 0.9375rem;
+  color: var(--color-text-secondary, #555);
+  margin: 0.75rem 0 0;
+  max-width: 42ch;
+}
+
+/* Poll goal: X of Y responses + progress bar. */
+.kei-poll-goal {
+  margin-bottom: 0.75rem;
+  width: 100%;
+}
+
+.kei-poll-goal__label {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-text-secondary, #555);
+  margin: 0 0 0.375rem 0;
+}
+
+.kei-poll-goal__bar {
+  height: 6px;
+  background: var(--color-border-light, #e5e5e5);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.kei-poll-goal__bar-fill {
+  height: 100%;
+  background: var(--color-primary, #0645ad);
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.wyc-inline-poll__goal .kei-poll-goal__label {
+  margin-bottom: 0.25rem;
 }
 
 /* Inline poll: question + Yes/No pills + sub-options, no card chrome. */
@@ -434,6 +483,14 @@
   margin: 0 0 1.25rem 0;
 }
 
+.wyc-branch-content__cta-nudge {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text, #222);
+  margin: 0 0 0.75rem 0;
+  line-height: 1.4;
+}
+
 .wyc-branch-content__ctas {
   display: flex;
   flex-wrap: wrap;
@@ -444,6 +501,12 @@
 
 .wyc-branch-content__ctas .btn {
   margin: 0;
+}
+
+/* Primary CTA is the dominant next step (slightly larger, clearer target). */
+.wyc-branch-content__cta-primary {
+  font-size: 1.0625rem;
+  padding: 0.6rem 1.25rem;
 }
 
 /* Branch CTAs: outline style (light bg, colored text/border). Start outreach = orange, Share your story = blue. */

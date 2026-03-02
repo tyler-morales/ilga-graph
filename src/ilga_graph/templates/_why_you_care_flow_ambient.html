@@ -1,12 +1,10 @@
-{# Ambient state for #why-you-care-flow: cards + inline poll + generic CTAs. Returned by GET /updates/why-you-care-flow for "Change your answer". #}
-<div class="wyc-cards" role="list">
-    {% for card in (why_you_care_default_cards|default([])) %}
-    <div class="wyc-card" role="listitem">
-        <h3 class="wyc-card__headline">{{ card.headline }}</h3>
-        <p class="wyc-card__body">{{ card.body }}</p>
-    </div>
-    {% endfor %}
-</div>
+{# Ambient state for #why-you-care-flow: poll intro + inline poll. Section explainer lives in parent; wide-net line under progress bar. #}
+{% if kei_error_message is defined and kei_error_message %}
+<p class="kei-status-error" role="alert">{{ kei_error_message }}</p>
+{% endif %}
 <p class="wyc-poll-intro">{{ kei_poll_why_we_ask }}</p>
 {% from "_macros.html" import kei_poll_inline %}
-{{ kei_poll_inline('home-kei-poll', kei_status_total|default(none), 'why-you-care-flow', kei_impact_options) }}
+{{ kei_poll_inline('home-kei-poll', kei_status_total|default(none), 'why-you-care-flow', kei_impact_options, kei_poll_goal|default(none)) }}
+{% if kei_poll_wide_net_line is defined and kei_poll_wide_net_line %}
+<p class="wyc-poll-under-goal">{{ kei_poll_wide_net_line }}</p>
+{% endif %}
