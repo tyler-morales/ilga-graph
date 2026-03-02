@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import config as cfg
 from ..app_state import state
+from ..constants import ADV_CALL_PREF_COOKIE, ADV_CALL_PREF_MAX_AGE
 from ..db import get_db
 from ..db_models import AuthCode, OutreachStepEvent, User
 from ..dependencies import create_session_token, get_current_user_optional, require_user
@@ -233,6 +234,12 @@ async def verify_code(
 
     await db.commit()
 
+    # Merge anonymous call preference into user so it persists after signup/login.
+    cookie_pref = request.cookies.get(ADV_CALL_PREF_COOKIE)
+    if cookie_pref in ("yes", "no") and getattr(user, "call_pref", None) is None:
+        user.call_pref = cookie_pref
+        await db.commit()
+
     # Send welcome email on first sign-in (when not yet sent). Defer if from_poll so
     # user gets it only when they click "Yes" to sign up for updates in the poll.
     if not from_poll and getattr(user, "welcome_email_sent_at", None) is None:
@@ -256,6 +263,15 @@ async def verify_code(
         samesite="lax",
         secure=cfg.PROFILE == "prod",
     )
+    if getattr(user, "call_pref", None) in ("yes", "no"):
+        response.set_cookie(
+            key=ADV_CALL_PREF_COOKIE,
+            value=user.call_pref,
+            max_age=ADV_CALL_PREF_MAX_AGE,
+            httponly=True,
+            samesite="lax",
+            secure=cfg.PROFILE == "prod",
+        )
     LOGGER.info("User authenticated: %s (id=%d)", user.email, user.id)
     return response
 
@@ -281,6 +297,7 @@ async def me(user: User | None = Depends(get_current_user_optional)):
         "kei_impact_slug": getattr(user, "kei_impact_slug", None),
         "zip_code": getattr(user, "zip_code", None),
         "wants_updates": getattr(user, "wants_updates", True),
+        "call_pref": getattr(user, "call_pref", None),
         "created_at": created_at.isoformat() if created_at else None,
     }
 

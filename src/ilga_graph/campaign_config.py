@@ -68,6 +68,8 @@ class CampaignConfig:
     brief_pdf_url_path: str = "/advocacy/brief.pdf"
     one_pager_points: list[str] = field(default_factory=_default_one_pager_points)
     poll_slug: str = ""
+    # Poll goal (e.g. 1000). When 0, use content_constants.KEI_POLL_GOAL_RESPONSES.
+    poll_goal_responses: int = 0
     # White-label: poll prompt + welcome email; when empty, code uses "kei" / issue_summary.
     poll_prompt_query: str = "kei"
     welcome_email_intro: str = ""
@@ -143,6 +145,7 @@ def get_campaign_config() -> CampaignConfig:
             brief_pdf_url_path=raw.get("brief_pdf_url_path", "/advocacy/brief.pdf"),
             one_pager_points=list(raw.get("one_pager_points", [])),
             poll_slug=raw.get("poll_slug", "").strip(),
+            poll_goal_responses=int(raw.get("poll_goal_responses", 0) or 0),
             poll_prompt_query=(raw.get("poll_prompt_query") or "kei").strip(),
             welcome_email_intro=(raw.get("welcome_email_intro") or "").strip(),
             welcome_email_poll_link_text=(raw.get("welcome_email_poll_link_text") or "").strip(),
@@ -160,3 +163,11 @@ def get_campaign_config() -> CampaignConfig:
         LOGGER.warning("Invalid campaign config: %s", e)
         _cached = CampaignConfig()
     return _cached
+
+
+def get_kei_poll_goal() -> int:
+    """Return poll goal (e.g. 1000). From campaign config or content_constants default."""
+    from .routers.content_constants import KEI_POLL_GOAL_RESPONSES
+
+    c = get_campaign_config()
+    return c.poll_goal_responses or KEI_POLL_GOAL_RESPONSES

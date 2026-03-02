@@ -1,0 +1,77 @@
+{# First slide: how to outreach (call/email), minimal reassurance (script + one-click), then choice. #}
+<div class="card card-intro card-intro--explain" aria-labelledby="intro-card-heading"
+    aria-describedby="intro-card-desc">
+    <div class="card-header card-header--intro">
+        <div class="card-header-col">
+            <h2 id="intro-card-heading" class="intro-card__headline">How would you like to outreach your legislators?</h2>
+        </div>
+    </div>
+    <p id="intro-card-desc" class="intro-card__copy card-intro__copy visually-hidden">Call: word-for-word script. Email: one-click send.</p>
+
+    <div id="advocacy-intro-pref-wrapper" class="card-intro__pref">
+        <div class="intro-card__pref-viewport" aria-hidden="false">
+        {% if user_call_pref is none %}
+        <div id="advocacy-intro-pref-section" class="intro-card__pref-section" data-call-pref-section
+            aria-labelledby="intro-card-heading">
+            <div class="intro-card__pref-buttons" role="group" aria-label="Call or email">
+                <form action="/advocacy/set-call-pref" method="post" class="intro-card__pref-form"
+                    id="intro-pref-form-yes" hx-post="/advocacy/set-call-pref" hx-target="#advocacy-intro-pref-section"
+                    hx-swap="innerHTML" hx-include="[name='pref']"
+                    hx-trigger="click from:.intro-card__pref-btn--phone delay:300ms">
+                    <input type="hidden" name="pref" value="yes">
+                    <button type="button" id="intro-pref-btn-call"
+                        class="btn btn--primary outreach-phone intro-card__pref-btn intro-card__pref-btn--phone"
+                        aria-label="Prefer to call — we'll show you a script and number">
+                        <svg class="intro-card__phone-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            aria-hidden="true">
+                            <path
+                                d="M22 16.92v3a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                        </svg>
+                        Prefer to call
+                    </button>
+                    <p class="intro-card__pref-hint">Word-for-word script.</p>
+                </form>
+                <form action="/advocacy/set-call-pref" method="post"
+                    class="intro-card__pref-form intro-card__pref-form--link" id="intro-pref-form-no"
+                    hx-post="/advocacy/set-call-pref" hx-target="#advocacy-intro-pref-section" hx-swap="innerHTML"
+                    hx-include="[name='pref']">
+                    <input type="hidden" name="pref" value="no">
+                </form>
+                <p class="intro-card__alt-line" aria-label="Other options">
+                    <button type="button" class="intro-card__pref-link outreach-email" id="intro-card-email-only-btn"
+                        aria-label="Use email only" data-opens-dialog="email-only-pref-dialog">Email only</button>
+                    <span class="intro-card__pref-hint">One-click send.</span>
+                </p>
+            </div>
+        </div>
+        {% else %}
+        <div id="advocacy-intro-pref-section" class="intro-card__pref-section intro-card__pref-section--saved"
+            aria-live="polite">
+            <p class="intro-card__saved-msg">{% if user_call_pref == 'no' %}Got it — email only. One-click send.{% else %}Script ready. Let's go.{% endif %}
+            </p>
+            <button type="button" class="btn btn--primary outreach-phone intro-card__cta" id="intro-card-lets-go"
+                aria-label="Scroll to first legislator">Let's go →</button>
+        </div>
+        {% endif %}
+        </div>
+        <dialog id="email-only-pref-dialog" class="app-modal email-only-pref-dialog"
+            aria-labelledby="email-only-pref-dialog-title" aria-describedby="email-only-pref-dialog-desc">
+            <h2 id="email-only-pref-dialog-title" class="email-only-pref-dialog__title">Call or email</h2>
+            <p id="email-only-pref-dialog-desc" class="email-only-pref-dialog__msg">
+                Calls get noticed; we give you a word-for-word script. Prefer email? One-click send.
+            </p>
+            <div class="email-only-pref-dialog__actions">
+                <button type="button" class="btn btn--primary email-only-pref-dialog__call"
+                    id="email-only-pref-dialog-call-btn"
+                    aria-label="Prefer to call — we'll show you a script and number">
+                    Prefer to call
+                </button>
+                <button type="button" id="email-only-pref-dialog-confirm-btn" class="btn btn--secondary email-only-pref-dialog__email"
+                    aria-label="Use email only">
+                    Email only
+                </button>
+            </div>
+        </dialog>
+    </div>
+</div>

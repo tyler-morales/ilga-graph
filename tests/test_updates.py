@@ -675,15 +675,18 @@ class TestSubscribeUnsubscribeEmail:
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
             importlib.reload(updates_router_mod)
-        resp = client.post(
-            "/updates/kei-status",
-            data=_data_with_csrf(
-                client, {"kei_status": "registered", "kei_impact_slug": "civic_duty"}
-            ),
-            headers={"HX-Request": "true"},
-        )
+        with patch.object(
+            updates_router_mod, "_verify_turnstile", new_callable=AsyncMock, return_value=True
+        ):
+            resp = client.post(
+                "/updates/kei-status",
+                data=_data_with_csrf(
+                    client, {"kei_status": "registered", "kei_impact_slug": "civic_duty"}
+                ),
+                headers={"HX-Request": "true"},
+            )
         assert resp.status_code == 200
-        assert b"isn" in resp.content and (b"counted" in resp.content or b"Sign in" in resp.content)
+        assert b"Sign in" in resp.content and (b"vote" in resp.content or b"save" in resp.content)
 
         async def check():
             from sqlalchemy import select
@@ -714,11 +717,16 @@ class TestSubscribeUnsubscribeEmail:
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
             importlib.reload(updates_router_mod)
-        resp = client.post(
-            "/updates/kei-status",
-            data=_data_with_csrf(client, {"kei_status": "registered", "kei_impact_slug": "other"}),
-            headers={"HX-Request": "true"},
-        )
+        with patch.object(
+            updates_router_mod, "_verify_turnstile", new_callable=AsyncMock, return_value=True
+        ):
+            resp = client.post(
+                "/updates/kei-status",
+                data=_data_with_csrf(
+                    client, {"kei_status": "registered", "kei_impact_slug": "other"}
+                ),
+                headers={"HX-Request": "true"},
+            )
         assert resp.status_code == 200
         assert KEI_POLL_VOTED_COOKIE in resp.cookies
         assert resp.cookies[KEI_POLL_VOTED_COOKIE] == "1"
@@ -785,11 +793,14 @@ class TestSubscribeUnsubscribeEmail:
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
             importlib.reload(updates_router_mod)
-        resp = client.post(
-            "/updates/kei-status",
-            data=_data_with_csrf(client, {"kei_status": "would_want"}),
-            headers={"HX-Request": "true"},
-        )
+        with patch.object(
+            updates_router_mod, "_verify_turnstile", new_callable=AsyncMock, return_value=True
+        ):
+            resp = client.post(
+                "/updates/kei-status",
+                data=_data_with_csrf(client, {"kei_status": "would_want"}),
+                headers={"HX-Request": "true"},
+            )
         assert resp.status_code == 400
         assert b"affect" in resp.content.lower() or b"choose" in resp.content.lower()
 
@@ -829,25 +840,12 @@ class TestSubscribeUnsubscribeEmail:
     def test_kei_status_results_only_verified_users(
         self, client: TestClient, test_db_path: Path
     ) -> None:
-        """GET /updates/kei-status-results counts only users with last_login_at set."""
-        from datetime import datetime, timezone
-
-        from ilga_graph.db_models import User
+        """GET /updates/kei-status-results returns counts from KeiPollResponse (all votes)."""
+        from ilga_graph.db_models import KeiPollResponse
 
         async def setup():
             async with db_mod.async_session_factory() as session:
-                verified = User(
-                    email="verified@example.com",
-                    kei_status="registered",
-                    last_login_at=datetime.now(timezone.utc),
-                )
-                unverified = User(
-                    email="unverified@example.com",
-                    kei_status="would_want",
-                    last_login_at=None,
-                )
-                session.add(verified)
-                session.add(unverified)
+                session.add(KeiPollResponse(kei_status="registered", user_id=None, session_id=None))
                 await session.commit()
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):

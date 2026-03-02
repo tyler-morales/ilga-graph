@@ -7,6 +7,15 @@
     data-drawer-zip="{{ zip_code or '' }}"
     data-email-mode="{% if drawer_view == 'after_call' %}followup{% else %}first{% endif %}">
 
+    {% if not recipient_email %}
+    <div class="gmail-banner gmail-banner-warning gmail-banner-no-recipient" role="alert">
+        <span class="gmail-banner-icon" aria-hidden="true">&#8505;</span>
+        <div class="gmail-banner-text">
+            <strong>No email on file.</strong> Add one from your call (ask for the best email for constituent mail) or paste an address in the To field below.
+        </div>
+    </div>
+    {% endif %}
+
     {# ── Toolbar: New Message (left); dots + step label (right-aligned) ── #}
     <div class="gmail-toolbar">
         <span class="gmail-toolbar-title">New Message</span>

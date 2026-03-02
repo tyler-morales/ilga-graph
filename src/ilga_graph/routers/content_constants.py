@@ -21,6 +21,9 @@ STRATEGIC_FIVE_POINTS: list[str] = [
     "This affects real Illinois residents who own legal vehicles they can't register.",
 ]
 
+# Intro card confidence line (canonical: from FAQ_ADVOCACY adv3).
+INTRO_CARD_WHY_CALL = "Your contact helps put the issue on the map."
+
 # Why should you care (Hardball Ch7: who benefits, why your voice matters). Canonical copy from constituent brief + FAQ_ADVOCACY + STRATEGIC_FIVE_POINTS.
 WHY_SHOULD_YOU_CARE_HEADING = "Why should you care?"
 WHY_SHOULD_YOU_CARE_TEASER_HEADING = "Three reasons"
@@ -40,12 +43,22 @@ WHY_SHOULD_YOU_CARE_TEASER_ITEMS: list[str] = [
     "Your voice helps legislators see the issue deserves a fix.",
 ]
 
-# Short line above the kei poll explaining why we collect this (Hardball: making the case to legislators).
+# Short line above the kei poll explaining why we collect this (Hardball: making the case to legislators). Minimal—drives poll completion.
 KEI_POLL_WHY_WE_ASK = (
-    "We use responses to show legislators how many people are affected and who supports the fix."
+    "Your response helps us show legislators who's affected and who supports the fix."
 )
 
-# Why-you-care adventure flow: default cards (ambient state) and branch-specific content (after poll).
+# Poll goal: visible target (e.g. 1,000 responses). Wide net early; dial in outreach later.
+KEI_POLL_GOAL_RESPONSES = 1000
+KEI_POLL_WIDE_NET_LINE = "Every response helps show breadth of support."
+
+# Single line above the poll: problem in few words + why answering matters (Founding Sales narrative; minimal copy).
+WHY_YOU_CARE_PRE_POLL_LINE = "Unclear law blocks kei registration in Illinois. Your answer helps us show legislators who's affected and who supports a fix."
+
+# Optional nudge above primary CTA in branch view (ties reason to one clear next step).
+WHY_YOU_CARE_CTA_NUDGE = "Based on your answer — one more step:"
+
+# Why-you-care adventure flow: default cards (legacy/fallback) and branch-specific content (after poll).
 # All copy from WHY_SHOULD_YOU_CARE_* and STRATEGIC_FIVE_POINTS; CTAs are paths/labels only.
 WHY_YOU_CARE_DEFAULT_CARDS: list[dict[str, str]] = [
     {
@@ -63,14 +76,12 @@ WHY_YOU_CARE_DEFAULT_CARDS: list[dict[str, str]] = [
 ]
 
 # Branch slug -> { headline, body, primary_cta_label, primary_cta_href, secondary_cta_label?, secondary_cta_href? }
-# Pill icon is chosen by selection: registered | revoked | denied (owner branch) or would_want | would_not_want.
+# Pill icon by selection: registered | revoked | denied (owner) or would_want | would_not_want. Bodies kept short so CTAs lead.
 WHY_YOU_CARE_BRANCHES: dict[str, dict[str, str]] = {
     "owner": {
         "headline": "You're living this.",
         "body": (
-            "Clear law protects residents. When statutory language is ambiguous, regular people absorb the consequences. "
-            "This affects real Illinois residents who own legal vehicles they can't register—registrations denied or revoked, "
-            "titles branded 'Not Eligible for Registration,' plates surrendered."
+            "Registrations denied or revoked, titles branded—your voice helps us show legislators who's affected."
         ),
         "primary_cta_label": "Start outreach",
         "primary_cta_href": "/advocacy",
@@ -81,8 +92,7 @@ WHY_YOU_CARE_BRANCHES: dict[str, dict[str, str]] = {
     "would_want": {
         "headline": "You can't buy what other states already allow.",
         "body": (
-            "Even if you don't own one, it's about fair and consistent application of the law. "
-            "21+ states already allow registration—Illinois is the outlier. Your voice helps legislators see the issue deserves a fix."
+            "21+ states allow registration; Illinois is the outlier. Your voice helps show legislators who supports the fix."
         ),
         "primary_cta_label": "Learn about the issue",
         "primary_cta_href": "/the-issue",
@@ -93,8 +103,7 @@ WHY_YOU_CARE_BRANCHES: dict[str, dict[str, str]] = {
     "would_not_want": {
         "headline": "It's about clear, consistent law.",
         "body": (
-            "Even if you don't want one, ambiguous law affects everyone. "
-            "Your voice helps legislators see the issue deserves a fix."
+            "Ambiguous law affects everyone. Your voice helps show legislators who supports the fix."
         ),
         "primary_cta_label": "Read about the issue",
         "primary_cta_href": "/the-issue",
