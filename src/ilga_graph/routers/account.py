@@ -91,8 +91,6 @@ async def account_update(
     else:
         user.zip_code = None
     wants_true = ("1", "true", "on", "yes")
-    user.wants_updates = (
-        wants_updates is not None and wants_updates.lower() in wants_true
-    )
+    user.wants_updates = wants_updates is not None and wants_updates.lower() in wants_true
     await db.commit()
     return RedirectResponse("/account?saved=1", status_code=303)
