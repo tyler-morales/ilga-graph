@@ -8,23 +8,18 @@
         <{{ why_you_care_heading_tag|default('h2') }} class="why-you-care-title why-you-care-title--section"
             id="why-you-care-heading">{{ why_should_you_care_heading }}</{{ why_you_care_heading_tag|default('h2') }}>
         {% if kei_status_options is defined and kei_status_options %}
-        {# Adventure flow: single column. Swap target why-you-care-flow gets either ambient (cards + poll + CTAs) or
-        branch partial. #}
+        <p class="why-you-care-section-intro" id="why-you-care-intro">{{ why_you_care_pre_poll_line | default('Your voice helps legislators see the issue deserves a fix.') }}</p>
+        {# Adventure flow: single column. Swap target why-you-care-flow gets either ambient (poll + CTAs) or branch partial. #}
         <div id="why-you-care-flow" class="why-you-care-flow" aria-live="polite">
             {% if kei_poll_done and why_you_care_branch %}
             {% include "_why_you_care_branch.html" %}
             {% else %}
-            <div class="wyc-cards" role="list">
-                {% for card in (why_you_care_default_cards|default([])) %}
-                <div class="wyc-card" role="listitem">
-                    <h3 class="wyc-card__headline">{{ card.headline }}</h3>
-                    <p class="wyc-card__body">{{ card.body }}</p>
-                </div>
-                {% endfor %}
-            </div>
             <p class="wyc-poll-intro">{{ kei_poll_why_we_ask }}</p>
             {% from "_macros.html" import kei_poll_inline %}
-            {{ kei_poll_inline('home-kei-poll', kei_status_total|default(none), 'why-you-care-flow', kei_impact_options) }}
+            {{ kei_poll_inline('home-kei-poll', kei_status_total|default(none), 'why-you-care-flow', kei_impact_options, kei_poll_goal|default(none)) }}
+            {% if kei_poll_wide_net_line is defined and kei_poll_wide_net_line %}
+            <p class="wyc-poll-under-goal">{{ kei_poll_wide_net_line }}</p>
+            {% endif %}
             {% endif %}
         </div>
         {% else %}

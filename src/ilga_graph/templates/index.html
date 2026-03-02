@@ -6,6 +6,9 @@
 <script type="application/json" id="ilga-features-json">{{ (features or { }) | tojson }}</script>
 <script type="application/json"
     id="ilga-active-campaign-json">{{ { "id": active_campaign.id } if active_campaign else {} | tojson }}</script>
+{% if user %}
+<script>window._ilgaUserEmail = {{ user.email | tojson }};</script>
+{% endif %}
 <script>
     (function () {
         var el = document.getElementById('ilga-features-json');
@@ -79,7 +82,8 @@
                 <form action="/updates/subscribe-email" method="post" class="drawer-subscribe-form subscribe-form"
                     hx-post="/updates/subscribe-email" hx-target="this" hx-swap="outerHTML"
                     aria-label="Subscribe to campaign updates">
-                    <input type="hidden" name="csrf_token" value="{{ (request.state.csrf_token or '') if request is defined else '' }}">
+                    <input type="hidden" name="csrf_token"
+                        value="{{ (request.state.csrf_token or '') if request is defined else '' }}">
                     <input type="email" name="email" class="drawer-subscribe-input subscribe-input"
                         placeholder="Your email" required autocomplete="email" inputmode="email" maxlength="320">
                     <button type="submit" class="drawer-subscribe-btn subscribe-btn">Subscribe</button>
@@ -334,11 +338,15 @@
             applyCardBioOverflow();
             initRecommendationChipTooltips();
             initGoalBlockFromStorage();
+            var resultsEl = document.getElementById('results');
+            if (resultsEl && typeof initMemberCarousel === 'function') initMemberCarousel(resultsEl);
         });
     } else {
         applyCardBioOverflow();
         initRecommendationChipTooltips();
         initGoalBlockFromStorage();
+        var resultsEl = document.getElementById('results');
+        if (resultsEl && typeof initMemberCarousel === 'function') initMemberCarousel(resultsEl);
     }
 
     /* ── Keep URL in sync with ZIP when user searches (shareable, bookmarkable links) ── */
@@ -355,10 +363,120 @@
         }
     });
 
+    /** Re-fetch results when email-only preference is set so carousel shows only members with email. */
+    document.body.addEventListener('refreshResults', function () {
+        if (typeof refreshAdvocacyResults === 'function') refreshAdvocacyResults();
+    });
+
+    /** Refresh #results from server (e.g. after wrapup or "I sent it!") so completed members move to end of carousel. */
+    function refreshAdvocacyResults() {
+        var zipInput = document.getElementById('zip_code');
+        var zip = (zipInput && zipInput.value && zipInput.value.trim()) || '';
+        var url = new URL(window.location.href);
+        if (!zip && url.searchParams.get('zip')) zip = url.searchParams.get('zip');
+        if (!zip || !/^\d{5}$/.test(zip)) return;
+        var form = document.getElementById('advocacy-form');
+        var catInput = form && form.querySelector('input[name="category"]');
+        var category = (catInput && catInput.value) || '';
+        var formData = new FormData();
+        formData.append('zip', zip);
+        formData.append('category', category);
+        fetch('/advocacy/search', {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin',
+            headers: { 'HX-Request': 'true', 'Accept': 'text/html' }
+        }).then(function (r) { return r.ok ? r.text() : null; }).then(function (html) {
+            if (!html) return;
+            var resultsEl = document.getElementById('results');
+            if (!resultsEl) return;
+            resultsEl.innerHTML = html;
+            if (window.htmx && window.htmx.process) window.htmx.process(resultsEl);
+            if (typeof initMemberCarousel === 'function') initMemberCarousel(resultsEl);
+            if (typeof applyCardEnterAnimation === 'function') applyCardEnterAnimation(resultsEl);
+            if (typeof initRecommendationChipTooltips === 'function') initRecommendationChipTooltips(resultsEl);
+            var zipForGoal = (document.getElementById('zip_code') && document.getElementById('zip_code').value.trim()) || (resultsEl.querySelector('.outreach-goal') && resultsEl.querySelector('.outreach-goal').getAttribute('data-goal-zip'));
+            if (zipForGoal && typeof initGoalBlockFromStorage === 'function') initGoalBlockFromStorage();
+            if (typeof refreshAdvocacyCarouselLocks === 'function') refreshAdvocacyCarouselLocks();
+        });
+    }
+
+    /** Update carousel progress counter, lock overlays, and mobile next bar.
+     * Pref gate: member cards are locked (pref-required) only until user chooses call vs email.
+     * After choice, first incomplete member card is enabled; rest stay locked until previous complete. */
+    function refreshAdvocacyCarouselLocks() {
+        var container = document.getElementById('results');
+        var carousel = container && container.querySelector('#member-carousel');
+        if (!carousel) return;
+        var introSlide = carousel.querySelector('.member-carousel__slide--intro');
+        var prefNotSet = introSlide && introSlide.querySelector('[data-call-pref-section]');
+        var slides = carousel.querySelectorAll('.member-carousel__slide:not(.member-carousel__slide--intro)');
+        if (prefNotSet) {
+            slides.forEach(function (slide) {
+                slide.classList.add('member-carousel__slide--locked', 'member-carousel__slide--pref-required');
+                slide.setAttribute('aria-disabled', 'true');
+            });
+        } else {
+            slides.forEach(function (slide) {
+                slide.classList.remove('member-carousel__slide--pref-required');
+            });
+            var foundIncomplete = false;
+            slides.forEach(function (slide) {
+                var done = slide.getAttribute('data-completed') === 'true';
+                if (!foundIncomplete && !done) {
+                    foundIncomplete = true;
+                    slide.classList.remove('member-carousel__slide--locked');
+                    slide.removeAttribute('aria-disabled');
+                } else {
+                    slide.classList.add('member-carousel__slide--locked');
+                    slide.setAttribute('aria-disabled', 'true');
+                }
+            });
+        }
+        var bar = document.getElementById('mobile-next-bar');
+        var action = document.getElementById('mobile-next-bar-action');
+        if (bar && action && container) {
+            var nextLink = container.querySelector('.outreach-goal__next-link');
+            if (nextLink) {
+                bar.removeAttribute('hidden');
+                action.textContent = 'Next: ' + nextLink.textContent.trim();
+                action.href = '#';
+                action.onclick = function (e) { e.preventDefault(); nextLink.click(); };
+            } else {
+                bar.setAttribute('hidden', '');
+            }
+        }
+    }
+
+    /** Update carousel progress counter and reorder completed slides client-side when present. */
+    function initMemberCarousel(container) {
+        if (!container) return;
+        var carousel = container.querySelector('#member-carousel');
+        var progressEl = container.querySelector('#carousel-progress-current');
+        if (!carousel || !progressEl) return;
+        var slides = carousel.querySelectorAll('.member-carousel__slide');
+        var total = slides.length;
+        function updateProgress() {
+            var scrollLeft = carousel.scrollLeft;
+            var firstSlide = slides[0];
+            var slideWidth = firstSlide ? firstSlide.offsetWidth + (parseFloat(getComputedStyle(carousel).gap) || 16) : carousel.clientWidth;
+            var index = slideWidth > 0 ? Math.round(scrollLeft / slideWidth) : 0;
+            index = Math.min(Math.max(0, index), total - 1);
+            progressEl.textContent = String(index + 1);
+        }
+        carousel.addEventListener('scroll', updateProgress);
+        updateProgress();
+        if (typeof refreshAdvocacyCarouselLocks === 'function') refreshAdvocacyCarouselLocks();
+    }
+
     /* ── Scroll to results after htmx swap ── */
     document.body.addEventListener('htmx:afterSwap', function (e) {
         if (e.detail.target && e.detail.target.id === 'results') {
             applyCardEnterAnimation(e.detail.target);
+            initMemberCarousel(e.detail.target);
+            var zipForGoal = (document.getElementById('zip_code') && document.getElementById('zip_code').value.trim()) || (e.detail.target.querySelector('.outreach-goal') && e.detail.target.querySelector('.outreach-goal').getAttribute('data-goal-zip'));
+            if (zipForGoal && typeof initGoalBlockFromStorage === 'function') initGoalBlockFromStorage();
+            if (typeof refreshAdvocacyCarouselLocks === 'function') refreshAdvocacyCarouselLocks();
             setTimeout(function () {
                 applyCardBioOverflow();
                 initRecommendationChipTooltips(e.detail.target);
@@ -366,6 +484,79 @@
                 if ((drawer && drawer.classList.contains('open')) || shouldSkipResultsScroll()) return;
                 e.detail.target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
+        }
+        /* After user sets outreach preference (call or email): slide-in new content, then slide first member into view, remove intro. */
+        if (e.detail.target && e.detail.target.id === 'advocacy-intro-pref-section') {
+            var target = e.detail.target;
+            target.classList.remove('intro-card__pref-section--exiting');
+            target.classList.add('intro-card__pref-section--entering');
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    target.classList.remove('intro-card__pref-section--entering');
+                    target.classList.add('intro-card__pref-section--entered');
+                });
+            });
+            var savedBlock = target.querySelector && target.querySelector('.intro-card__pref-section--saved');
+            if (!savedBlock) return;
+            var carousel = document.getElementById('member-carousel');
+            var introSlide = carousel && carousel.querySelector('.member-carousel__slide--intro');
+            if (introSlide && introSlide.parentNode && typeof window.scrollToMemberSlide === 'function') {
+                var targetIndex = typeof window.indexOfFirstIncompleteMember === 'function' ? window.indexOfFirstIncompleteMember() : 1;
+                window.scrollToMemberSlide(targetIndex);
+                var resultsEl = document.getElementById('results');
+                if (resultsEl && resultsEl.scrollIntoView) resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                setTimeout(function () {
+                    if (!introSlide.parentNode || !carousel) return;
+                    introSlide.parentNode.removeChild(introSlide);
+                    carousel.scrollLeft = 0;
+                    var totalEl = document.getElementById('carousel-progress-total');
+                    if (totalEl) totalEl.textContent = carousel.querySelectorAll('.member-carousel__slide').length;
+                }, 450);
+            }
+            if (typeof refreshAdvocacyCarouselLocks === 'function') refreshAdvocacyCarouselLocks();
+            if (savedBlock.getAttribute('data-pref') === 'email-only') {
+                setTimeout(function () {
+                    var container = document.getElementById('results');
+                    var carousel = container && container.querySelector('#member-carousel');
+                    if (!carousel) return;
+                    var firstMemberSlide = carousel.querySelector('.member-carousel__slide[data-member-id]');
+                    if (!firstMemberSlide) return;
+                    var emailBtn = firstMemberSlide.querySelector('.outreach-email:not(.outreach-done):not(.outreach-btn--locked)');
+                    if (!emailBtn || emailBtn.hasAttribute('data-no-email')) return;
+                    var mid = emailBtn.getAttribute('data-member-id');
+                    var zip = emailBtn.getAttribute('data-zip') || '';
+                    var photo = emailBtn.getAttribute('data-photo-url') || '';
+                    var targetType = emailBtn.getAttribute('data-target-type') || '';
+                    if (mid && typeof openAdvocacyDrawer === 'function') {
+                        openAdvocacyDrawer('email', mid, zip, photo, targetType);
+                    }
+                }, 500);
+            }
+        }
+    });
+
+    /* Pref card slide-out: add exiting class so current card slides left before HTMX swap (call path uses delay:300ms; email path we trigger after 300ms) */
+    document.body.addEventListener('click', function (e) {
+        var section = document.getElementById('advocacy-intro-pref-section');
+        if (!section || !section.closest('.member-carousel__slide--intro')) return;
+        if (e.target.closest && e.target.closest('.intro-card__pref-btn--phone')) {
+            section.classList.add('intro-card__pref-section--exiting');
+            return;
+        }
+        if (e.target.id === 'email-only-pref-dialog-confirm-btn' || e.target.closest('#email-only-pref-dialog-confirm-btn')) {
+            e.preventDefault();
+            section.classList.add('intro-card__pref-section--exiting');
+            var dialog = document.getElementById('email-only-pref-dialog');
+            if (dialog && dialog.close) dialog.close();
+            setTimeout(function () {
+                if (typeof htmx !== 'undefined') {
+                    htmx.ajax('POST', '/advocacy/set-call-pref', {
+                        target: '#advocacy-intro-pref-section',
+                        swap: 'innerHTML',
+                        values: { pref: 'no' }
+                    });
+                }
+            }, 300);
         }
     });
 
@@ -493,7 +684,7 @@
                 initDrawerVoicemailToggle(body);
                 if (view === 'call_wrapup') showWrapupWithMockPoll(body);
                 else restoreDrawerWrapupState(body);
-                var currentStep = body.querySelector('.drawer-call-content') ? 'call' : (body.querySelector('.gmail-compose') ? 'email' : null);
+                var currentStep = body.querySelector('.drawer-no-email-content') ? 'email' : (body.querySelector('.drawer-call-content') ? 'call' : (body.querySelector('.gmail-compose') ? 'email' : null));
                 if (currentStep) updateDrawerStepStrip(currentStep);
                 var memberId = drawer.getAttribute('data-member-id') || '';
                 if (memberId && currentStep && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, currentStep, 'drawer_opened');
@@ -1506,6 +1697,38 @@
         if (after && after.nodeType === Node.TEXT_NODE) after.textContent = ' ' + label;
         else btn.appendChild(document.createTextNode(' ' + label));
         setTimeout(function () { btn.classList.remove('outreach-done-just-in'); }, 500);
+        var slide = card.closest('.member-carousel__slide');
+        if (slide) {
+            var callDone = !!card.querySelector('.outreach-phone.outreach-done');
+            var emailDone = !!card.querySelector('.outreach-email.outreach-done');
+            var emailOnly = !card.querySelector('.outreach-phone');
+            if ((emailOnly && emailDone) || (callDone && emailDone)) {
+                slide.setAttribute('data-completed', 'true');
+                slide.classList.add('member-carousel__slide--done');
+                card.classList.add('card-outreach-complete');
+                var carousel = slide.parentElement;
+                if (carousel && carousel.id === 'member-carousel') {
+                    carousel.appendChild(slide);
+                }
+                if (typeof refreshAdvocacyCarouselLocks === 'function') refreshAdvocacyCarouselLocks();
+            }
+        }
+    }
+
+    /** No-email drawer: member has no email, user didn't get one during call — mark done and move on. */
+    function handleNoEmailDone(memberId, zipCode) {
+        if (!memberId) return;
+        var zip = (zipCode || '').trim() || (typeof getConstituentZip === 'function' ? getConstituentZip() : '');
+        if (window._ilgaUserEmail) {
+            recordOutreach(memberId, 'email', zip, 'skipped_no_email', '', '', '', '', '').then(function () {
+                if (typeof closeAdvocacyDrawer === 'function') closeAdvocacyDrawer();
+            });
+        } else {
+            if (zip && typeof setGoalActionDone === 'function') setGoalActionDone(zip, memberId, 'email');
+            if (typeof setOutreachDone === 'function') setOutreachDone(memberId, 'email');
+            if (typeof refreshAdvocacyResults === 'function') refreshAdvocacyResults();
+            if (typeof closeAdvocacyDrawer === 'function') closeAdvocacyDrawer();
+        }
     }
 
     var GOAL_STORAGE_PREFIX = 'ilga:goal:';
@@ -1553,9 +1776,8 @@
         var results = document.getElementById('results');
         var block = results && results.querySelector('.outreach-goal');
         if (!block) return false;
-        var status = block.querySelector('.outreach-goal__action-status[data-goal-member="' + memberId + '"][data-goal-kind="call"]');
-        var row = status && status.closest('.outreach-goal__action');
-        return !!(row && row.classList.contains('outreach-goal__action--done'));
+        var dot = block.querySelector('.outreach-goal__bar-dot[data-goal-member="' + memberId + '"][data-goal-kind="call"]');
+        return !!(dot && dot.classList.contains('outreach-goal__bar-dot--done'));
     }
 
     function setGoalActionDone(zip, memberId, kind) {
@@ -1587,25 +1809,13 @@
         var done = 0;
         var total = 0;
         function setAction(memberId, kind, doneVal) {
-            var status = block.querySelector('.outreach-goal__action-status[data-goal-member="' + memberId + '"][data-goal-kind="' + kind + '"]');
-            if (!status) return;
+            var dot = block.querySelector('.outreach-goal__phase--district .outreach-goal__bar-dot[data-goal-member="' + memberId + '"][data-goal-kind="' + kind + '"]');
+            if (!dot) return;
             total++;
             if (doneVal) done++;
             var label = kind === 'call' ? (doneVal ? 'Called' : 'Not yet called') : (doneVal ? 'Emailed' : 'Not yet emailed');
-            status.setAttribute('aria-label', label);
-            status.innerHTML = '';
-            var row = status.closest('.outreach-goal__action');
-            if (row) {
-                if (doneVal) {
-                    row.classList.add('outreach-goal__action--done');
-                    var link = row.querySelector('.outreach-goal__action-link');
-                    if (link) link.setAttribute('aria-disabled', 'true');
-                } else {
-                    row.classList.remove('outreach-goal__action--done');
-                    var link = row.querySelector('.outreach-goal__action-link');
-                    if (link) link.removeAttribute('aria-disabled');
-                }
-            }
+            dot.setAttribute('aria-label', label);
+            if (doneVal) dot.classList.add('outreach-goal__bar-dot--done'); else dot.classList.remove('outreach-goal__bar-dot--done');
         }
         if (senatorId) {
             var s = stored[senatorId];
@@ -1621,26 +1831,63 @@
         var bar = block.querySelector('#outreach-goal-bar');
         var fill = block.querySelector('#outreach-goal-bar-fill');
         var labelEl = block.querySelector('#outreach-goal-bar-label');
+        var districtDots = block.querySelectorAll('.outreach-goal__phase--district .outreach-goal__bar-dot');
+        var visibleTotal = districtDots.length || total;
+        function checkpointPct(d, t) {
+            if (t <= 1) return d ? 100 : 0;
+            var idx = Math.min(d, t - 1);
+            return Math.round(100 * idx / (t - 1) * 10) / 10;
+        }
+        function truckOnCheckpointPct(d, t) {
+            if (t <= 1) return d ? 100 : 0;
+            if (d >= t) return 100;
+            var idx = Math.min(d, t - 1);
+            return Math.round(100 * idx / (t - 1) * 10) / 10;
+        }
+        var fillPct = checkpointPct(done, visibleTotal);
+        var truckPct = truckOnCheckpointPct(done, visibleTotal);
         if (bar) {
             bar.setAttribute('aria-valuenow', String(done));
-            bar.setAttribute('aria-valuemax', String(total));
+            bar.setAttribute('aria-valuemax', String(visibleTotal));
+            var barTrack = bar.closest('.outreach-goal__bar-track');
+            if (barTrack) barTrack.style.setProperty('--truck-pct', String(truckPct));
         }
-        if (fill) fill.style.width = (total ? Math.round((done / total) * 100) : 0) + '%';
-        if (labelEl) labelEl.textContent = done + ' of ' + total + ' actions complete';
+        if (fill) fill.style.width = fillPct + '%';
+        if (labelEl) labelEl.textContent = done + ' of ' + visibleTotal + ' actions complete';
         var nextBlock = block.querySelector('#outreach-goal-next');
         if (nextBlock) {
-            var firstIncomplete = block.querySelector('.outreach-goal__phase--district .outreach-goal__action:not(.outreach-goal__action--done)');
-            var link = firstIncomplete ? firstIncomplete.querySelector('.outreach-goal__action-link') : null;
-            if (link) {
-                var labelEl2 = firstIncomplete.querySelector('.outreach-goal__action-label');
-                var rolePart = labelEl2 ? labelEl2.textContent.replace(/^(Call|Email)\s+/, '').trim() : '';
-                var actionVerb = link.getAttribute('data-action') === 'call' ? 'Call' : 'Email';
+            var senatorLabel = block.getAttribute('data-goal-senator-label') || 'Senator';
+            var repLabel = block.getAttribute('data-goal-rep-label') || 'Rep';
+            var emailOnly = block.getAttribute('data-goal-email-only') === 'true';
+            var districtSteps = [];
+            districtDots.forEach(function (dot) {
+                var mid = dot.getAttribute('data-goal-member');
+                var kind = dot.getAttribute('data-goal-kind');
+                if (!mid || !kind) return;
+                var label = mid === senatorId ? senatorLabel : repLabel;
+                districtSteps.push({ memberId: mid, kind: kind, label: label });
+            });
+            var firstIncomplete = null;
+            for (var i = 0; i < districtSteps.length; i++) {
+                var step = districtSteps[i];
+                if (!stored[step.memberId] || !stored[step.memberId][step.kind]) {
+                    firstIncomplete = step;
+                    break;
+                }
+            }
+            if (firstIncomplete) {
+                var actionVerb = (emailOnly || firstIncomplete.kind === 'email') ? 'Email' : 'Call';
+                var linkText = actionVerb + ' your ' + firstIncomplete.label;
                 nextBlock.textContent = '';
                 nextBlock.appendChild(document.createTextNode('Now: '));
-                var nextLink = link.cloneNode(true);
-                nextLink.textContent = actionVerb + ' your ' + rolePart;
-                nextLink.setAttribute('aria-label', actionVerb + ' your ' + rolePart);
-                nextLink.classList.add('outreach-goal__next-link');
+                var nextLink = document.createElement('a');
+                nextLink.href = '#';
+                nextLink.className = 'outreach-goal__action-link outreach-goal__next-link';
+                nextLink.setAttribute('data-action', firstIncomplete.kind);
+                nextLink.setAttribute('data-member-id', firstIncomplete.memberId);
+                nextLink.setAttribute('data-zip', z);
+                nextLink.setAttribute('aria-label', linkText);
+                nextLink.textContent = linkText;
                 nextBlock.appendChild(nextLink);
                 nextBlock.removeAttribute('hidden');
                 nextBlock.removeAttribute('aria-hidden');
@@ -1649,8 +1896,10 @@
                 nextBlock.setAttribute('aria-hidden', 'true');
             }
         }
-        /* When district 4/4 complete and broker exists, switch to broker phase and update broker bar + Next */
-        if (done === 4 && total === 4 && brokerId) {
+        /* When district phase complete and broker exists, switch to broker phase (4/4 call+email or 2/2 email-only). */
+        var emailOnly = block.getAttribute('data-goal-email-only') === 'true';
+        var districtComplete = emailOnly ? (done === 2 && visibleTotal === 2) : (done === 4 && total === 4);
+        if (districtComplete && brokerId) {
             block.classList.add('outreach-goal--phase-broker');
             var currentLabelEl = block.querySelector('#outreach-goal-current-label');
             if (currentLabelEl) {
@@ -1661,49 +1910,54 @@
             var brokerDone = (brokerStored.call ? 1 : 0) + (brokerStored.email ? 1 : 0);
             var brokerTotal = 2;
             function setBrokerAction(memberId, kind, doneVal) {
-                var status = block.querySelector('.outreach-goal__action-status[data-goal-member="' + memberId + '"][data-goal-kind="' + kind + '"]');
-                if (!status) return;
+                var dot = block.querySelector('.outreach-goal__phase--broker .outreach-goal__bar-dot[data-goal-member="' + memberId + '"][data-goal-kind="' + kind + '"]');
+                if (!dot) return;
                 var label = kind === 'call' ? (doneVal ? 'Called' : 'Not yet called') : (doneVal ? 'Emailed' : 'Not yet emailed');
-                status.setAttribute('aria-label', label);
-                status.innerHTML = '';
-                var row = status.closest('.outreach-goal__action');
-                if (row) {
-                    if (doneVal) {
-                        row.classList.add('outreach-goal__action--done');
-                        var lnk = row.querySelector('.outreach-goal__action-link');
-                        if (lnk) lnk.setAttribute('aria-disabled', 'true');
-                    } else {
-                        row.classList.remove('outreach-goal__action--done');
-                        var lnk = row.querySelector('.outreach-goal__action-link');
-                        if (lnk) lnk.removeAttribute('aria-disabled');
-                    }
-                }
+                dot.setAttribute('aria-label', label);
+                if (doneVal) dot.classList.add('outreach-goal__bar-dot--done'); else dot.classList.remove('outreach-goal__bar-dot--done');
             }
             setBrokerAction(brokerId, 'call', !!(brokerStored.call));
             setBrokerAction(brokerId, 'email', !!(brokerStored.email));
             var brokerBar = block.querySelector('#outreach-goal-bar-broker');
             var brokerFill = block.querySelector('#outreach-goal-bar-fill-broker');
             var brokerLabelEl = block.querySelector('#outreach-goal-bar-label-broker');
+            var brokerDots = block.querySelectorAll('.outreach-goal__phase--broker .outreach-goal__bar-dot');
+            var brokerVisibleTotal = brokerDots.length || brokerTotal;
+            var brokerFillPct = checkpointPct(brokerDone, brokerVisibleTotal);
+            var brokerTruckPct = truckOnCheckpointPct(brokerDone, brokerVisibleTotal);
             if (brokerBar) {
                 brokerBar.setAttribute('aria-valuenow', String(brokerDone));
                 brokerBar.setAttribute('aria-valuemax', String(brokerTotal));
+                var brokerTrack = brokerBar.closest('.outreach-goal__bar-track');
+                if (brokerTrack) brokerTrack.style.setProperty('--truck-pct', String(brokerTruckPct));
             }
-            if (brokerFill) brokerFill.style.width = (brokerTotal ? Math.round((brokerDone / brokerTotal) * 100) : 0) + '%';
+            if (brokerFill) brokerFill.style.width = brokerFillPct + '%';
             if (brokerLabelEl) brokerLabelEl.textContent = brokerDone + ' of ' + brokerTotal + ' actions complete';
             var nextBrokerBlock = block.querySelector('#outreach-goal-next-broker');
             if (nextBrokerBlock) {
-                var firstIncompleteBroker = block.querySelector('.outreach-goal__phase--broker .outreach-goal__action:not(.outreach-goal__action--done)');
-                var brokerLink = firstIncompleteBroker ? firstIncompleteBroker.querySelector('.outreach-goal__action-link') : null;
-                if (brokerLink) {
-                    var brokerLabelEl2 = firstIncompleteBroker.querySelector('.outreach-goal__action-label');
-                    var brokerRolePart = brokerLabelEl2 ? brokerLabelEl2.textContent.replace(/^(Call|Email)\s+/, '').trim() : 'Power Broker';
-                    var brokerActionVerb = brokerLink.getAttribute('data-action') === 'call' ? 'Call' : 'Email';
+                var brokerSteps = [{ memberId: brokerId, kind: 'call' }, { memberId: brokerId, kind: 'email' }];
+                var firstBrokerIncomplete = null;
+                for (var j = 0; j < brokerSteps.length; j++) {
+                    var bStep = brokerSteps[j];
+                    var bDot = block.querySelector('.outreach-goal__phase--broker .outreach-goal__bar-dot[data-goal-member="' + bStep.memberId + '"][data-goal-kind="' + bStep.kind + '"]');
+                    if (bDot && (!stored[bStep.memberId] || !stored[bStep.memberId][bStep.kind])) {
+                        firstBrokerIncomplete = bStep;
+                        break;
+                    }
+                }
+                if (firstBrokerIncomplete) {
+                    var brokerActionVerb = firstBrokerIncomplete.kind === 'call' ? 'Call' : 'Email';
+                    var brokerLinkText = brokerActionVerb + ' your Power Broker';
                     nextBrokerBlock.textContent = '';
                     nextBrokerBlock.appendChild(document.createTextNode('Now: '));
-                    var nextBrokerLink = brokerLink.cloneNode(true);
-                    nextBrokerLink.textContent = brokerActionVerb + ' your ' + brokerRolePart;
-                    nextBrokerLink.setAttribute('aria-label', brokerActionVerb + ' your ' + brokerRolePart);
-                    nextBrokerLink.classList.add('outreach-goal__next-link');
+                    var nextBrokerLink = document.createElement('a');
+                    nextBrokerLink.href = '#';
+                    nextBrokerLink.className = 'outreach-goal__action-link outreach-goal__next-link';
+                    nextBrokerLink.setAttribute('data-action', firstBrokerIncomplete.kind);
+                    nextBrokerLink.setAttribute('data-member-id', firstBrokerIncomplete.memberId);
+                    nextBrokerLink.setAttribute('data-zip', z);
+                    nextBrokerLink.setAttribute('aria-label', brokerLinkText);
+                    nextBrokerLink.textContent = brokerLinkText;
                     nextBrokerBlock.appendChild(nextBrokerLink);
                     nextBrokerBlock.removeAttribute('hidden');
                     nextBrokerBlock.removeAttribute('aria-hidden');
@@ -2426,6 +2680,7 @@
                         sentBtn.classList.add('sent-done');
                         if (span) span.textContent = 'Sent!';
                         guide.complete();
+                        if (typeof refreshAdvocacyResults === 'function') refreshAdvocacyResults();
                         var mailtoBtn = wrap.querySelector('#gmail-mailto-btn');
                         if (mailtoBtn) mailtoBtn.setAttribute('hidden', '');
                         var ctx = typeof getDrawerDoneContext === 'function' ? getDrawerDoneContext(true) : null;
@@ -2804,6 +3059,7 @@
                     initDrawerVoicemailToggle(body);
                 }
                 updateDrawerStepStrip('email');
+                if (typeof refreshAdvocacyResults === 'function') refreshAdvocacyResults();
             })
             .catch(showWrapupError);
     });
@@ -2816,6 +3072,22 @@
         var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
         if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'call', 'wrapup_skipped');
         if (typeof closeAdvocacyDrawer === 'function') closeAdvocacyDrawer();
+    });
+
+    /* When user sets call/email preference on intro card: refresh locks (unlock first member), optionally switch to email-only UI */
+    document.body.addEventListener('htmx:afterSwap', function (e) {
+        if (e.detail.target && e.detail.target.id === 'advocacy-intro-pref-section') {
+            e.detail.target.removeAttribute('data-call-pref-section');
+            if (typeof refreshAdvocacyCarouselLocks === 'function') refreshAdvocacyCarouselLocks();
+            if (e.detail.target.querySelector('[data-pref="email-only"]')) {
+                var carousel = document.getElementById('member-carousel');
+                var sectionDesc = document.querySelector('.member-carousel-heading + .section-desc, #member-carousel-heading + .section-desc');
+                if (carousel) carousel.classList.add('pref-email-only');
+                if (sectionDesc) sectionDesc.textContent = 'One target at a time. Email each to advance.';
+                var hints = document.querySelectorAll('#member-carousel .member-carousel__slide:not(.member-carousel__slide--intro) .outreach-row-hint');
+                hints.forEach(function (h) { h.textContent = 'Email to advance.'; });
+            }
+        }
     });
 
     document.body.addEventListener('htmx:afterSwap', function (e) {

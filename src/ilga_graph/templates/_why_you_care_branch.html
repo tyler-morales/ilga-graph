@@ -7,8 +7,11 @@
         <span class="wyc-pill__text">{{ why_you_care_branch.headline }}</span>
     </h3>
     <p class="wyc-branch-content__body">{{ why_you_care_branch.body }}</p>
+    {% if why_you_care_cta_nudge is defined and why_you_care_cta_nudge %}
+    <p class="wyc-branch-content__cta-nudge" id="wyc-cta-nudge">{{ why_you_care_cta_nudge }}</p>
+    {% endif %}
     <div class="wyc-branch-content__ctas">
-        <a href="{{ why_you_care_branch.primary_cta_href }}" class="btn btn--primary why-you-care-link" data-wyc-step="{% if why_you_care_branch.primary_cta_href == '/advocacy' %}wyc_clicked_to_advocacy{% else %}wyc_clicked_to_the_issue{% endif %}">
+        <a href="{{ why_you_care_branch.primary_cta_href }}" class="btn btn--primary wyc-branch-content__cta-primary why-you-care-link" data-wyc-step="{% if why_you_care_branch.primary_cta_href == '/advocacy' %}wyc_clicked_to_advocacy{% else %}wyc_clicked_to_the_issue{% endif %}">
             <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
             {{ why_you_care_branch.primary_cta_label }}
         </a>
@@ -68,7 +71,11 @@
     <p class="wyc-branch-content__results-empty" role="status">Thanks for sharing. Results will appear here once others respond.</p>
     {% endif %}
     <footer class="wyc-branch-content__footer">
+        {% if kei_poll_goal is defined and kei_poll_goal is not none and kei_poll_goal > 0 %}
+        <p class="kei-poll-goal__label wyc-branch-content__total" role="status">{{ (kei_status_results.total_responses if kei_status_results else 0) }} of {{ kei_poll_goal }} responses</p>
+        {% else %}
         <span class="wyc-branch-content__total">Total Votes: {{ kei_status_results.total_responses if kei_status_results else 0 }}</span>
+        {% endif %}
     </footer>
     {% if not why_you_care_branch.secondary_cta_modal_type and not kei_poll_initial_anon %}
     <p class="wyc-branch-content__share">

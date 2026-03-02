@@ -1060,6 +1060,78 @@
   }
 }
 
+/* Locked email button when no email on file — click opens modal instead of drawer */
+.outreach-btn.outreach-btn--locked {
+  opacity: 0.75;
+  cursor: help;
+}
+
+.outreach-btn.outreach-btn--locked:hover,
+.outreach-btn.outreach-btn--locked:focus-visible {
+  opacity: 1;
+}
+
+/* No-email modal: uses .app-modal for container/backdrop; content-only styles below */
+.no-email-modal__title {
+  margin: 0 0 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.no-email-modal__msg {
+  margin: 0 0 1.25rem;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  color: #374151;
+}
+
+.no-email-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.no-email-modal__call {
+  text-decoration: none;
+}
+
+.no-email-modal__call:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.no-email-modal__close {
+  margin: 0;
+}
+
+/* Email-only preference modal: uses .app-modal for container/backdrop; content-only styles below */
+.email-only-pref-dialog__title {
+  margin: 0 0 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.email-only-pref-dialog__msg {
+  margin: 0 0 1.25rem;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  color: #374151;
+}
+
+.email-only-pref-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.email-only-pref-dialog__call:focus-visible,
+.email-only-pref-dialog__email:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
 /* ── Power signal chips ── */
 .chips-label {
   font-size: var(--font-size-label);
@@ -1250,4 +1322,139 @@
   .compact-scorecard ul.compact-stats {
     padding-left: 1em;
   }
+}
+
+/* ── Intro card (first carousel slide): uses .card same as member cards ── */
+.card-intro .intro-card__headline {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.3;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.card-intro .intro-card__pref-section {
+  margin-top: 0;
+}
+
+.card-intro .intro-card__pref-section--saved {
+  justify-content: center;
+  gap: 1rem;
+}
+
+.card-intro .intro-card__pref-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.card-intro .intro-card__pref-buttons .intro-card__pref-form {
+  margin: 0;
+}
+
+.card-intro .intro-card__pref-btn {
+  min-height: 48px;
+  padding: 12px 20px;
+  font-size: 1rem;
+  width: 100%;
+  justify-content: center;
+}
+
+/* "Email only, please" as plain text (not a full button) */
+.card-intro .intro-card__pref-form--link {
+  margin-top: 0.25rem;
+}
+
+.card-intro .intro-card__pref-link {
+  background: none;
+  border: none;
+  padding: 0;
+  min-height: auto;
+  font-size: var(--font-size-body);
+  font-weight: normal;
+  color: #555;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  width: auto;
+}
+
+.card-intro .intro-card__pref-link:hover {
+  color: #333;
+}
+
+.card-intro .intro-card__pref-link:focus-visible {
+  outline: 2px solid #0d7ea4;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* De-emphasized line: "Email only" centered under primary button */
+.card-intro .intro-card__alt-line {
+  margin: 0.5rem 0 0;
+  font-size: var(--font-size-sm);
+  color: #666;
+  text-align: center;
+}
+
+/* Hint under each choice: script / one-click */
+.card-intro .intro-card__pref-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: var(--font-size-sm);
+  color: #666;
+}
+.card-intro .intro-card__pref-form .intro-card__pref-hint {
+  text-align: center;
+}
+
+.card-intro .intro-card__pref-btn--phone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.card-intro .intro-card__phone-icon {
+  flex-shrink: 0;
+}
+
+.card-intro .intro-card__saved-msg {
+  margin: 0 0 1rem;
+  font-size: var(--font-size-label);
+  color: #444;
+}
+
+.card-intro .intro-card__cta {
+  min-height: 48px;
+  padding: 12px 24px;
+  font-size: 1rem;
+}
+
+/* ── Mobile sticky next-step bar (hidden: not used on mobile) ── */
+.mobile-next-bar {
+  display: none;
+}
+
+.mobile-next-bar__action {
+  display: block;
+  text-align: center;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #fff;
+  text-decoration: none;
+  padding: 8px 0;
+  min-height: 44px;
+  line-height: 1.4;
+}
+
+.mobile-next-bar__action:hover,
+.mobile-next-bar__action:focus {
+  color: #e0f2fe;
+}
+
+.mobile-next-bar__action:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
 }

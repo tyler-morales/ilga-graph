@@ -1686,6 +1686,54 @@ a.chat-bubble {
     font-size: var(--font-size-body);
 }
 
+/* No-email screen (call pref, member has no email, user didn't get one — keep them moving) */
+.drawer-no-email-content {
+    padding: 8px 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.drawer-no-email-card {
+    padding: 16px;
+    background: #fff;
+    border: 1px solid #c6c6c8;
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    margin-bottom: 16px;
+}
+
+.drawer-no-email-headline {
+    margin: 0 0 8px;
+    font-size: var(--font-size-body);
+    font-weight: 600;
+    color: #1c1c1e;
+}
+
+.drawer-no-email-text {
+    margin: 0;
+    font-size: var(--font-size-label);
+    line-height: 1.5;
+    color: #3c3c43;
+}
+
+.drawer-no-email-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.drawer-no-email-cta {
+    width: 100%;
+    padding: 14px 20px;
+    border-radius: 12px;
+    font-size: 1em;
+    font-weight: 600;
+}
+
+.drawer-no-email-cta:focus-visible {
+    outline: 2px solid var(--bubble-you-bg);
+    outline-offset: 2px;
+}
+
 /* Fade in/out blue border to indicate "type here" — only one field pulses at a time (see JS) */
 @keyframes drawer-capture-pulse {
 

@@ -21,7 +21,7 @@
     {% include "_kei_poll_initial_results.html" %}
     {% else %}
     {% from "_macros.html" import kei_poll %}
-    {{ kei_poll('updates-kei-poll', kei_impact_options=kei_impact_options) }}
+    {{ kei_poll('updates-kei-poll', kei_impact_options=kei_impact_options, kei_status_total=kei_status_total|default(none), kei_poll_goal=kei_poll_goal|default(none)) }}
     {% endif %}
 </section>
 {% endif %}

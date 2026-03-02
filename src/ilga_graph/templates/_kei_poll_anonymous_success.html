@@ -13,11 +13,10 @@
                     {{ icon_caution() }}
                 </span>
                 <div class="kei-poll-nudge-block__content">
-                    <p class="kei-poll-nudge-block__copy">Your response isn&rsquo;t counted yet. Sign in to save your answer
-                        to the results.</p>
+                    <p class="kei-poll-nudge-block__copy">Your vote is saved. Sign in to track your impact and add your answer to your account.</p>
                     <button type="button" class="auth-strip-signin-btn btn btn--secondary kei-poll-nudge-block__signin-link"
                         id="poll-signin-btn" aria-expanded="false" aria-controls="poll-signin-inline-signin"
-                        aria-label="Sign in to add your answer to the results">Sign in to save your answer</button>
+                        aria-label="Sign in to track your impact">Sign in to save your answer</button>
                 </div>
             </div>
             {% if kei_status_results and kei_status_results.total_responses > 0 %}
@@ -27,11 +26,14 @@
                 offer_save_choice=true) }}
             </div>
             {% else %}
-            <p class="kei-poll-results__empty">No verified responses yet. Sign in and submit to be the first!</p>
+            <p class="kei-poll-results__empty">No responses yet. Be the first!</p>
             {% endif %}
             <footer class="kei-poll__footer kei-poll__footer--results">
-                <span class="kei-poll__total">Total Votes: {{ kei_status_results.total_responses if kei_status_results
-                    else 0 }}</span>
+                {% if kei_poll_goal is defined and kei_poll_goal is not none and kei_poll_goal > 0 %}
+                <p class="kei-poll-goal__label" role="status">{{ (kei_status_results.total_responses if kei_status_results else 0) }} of {{ kei_poll_goal }} responses</p>
+                {% else %}
+                <span class="kei-poll__total">Total Votes: {{ kei_status_results.total_responses if kei_status_results else 0 }}</span>
+                {% endif %}
             </footer>
             <div id="poll-signin-wrap" class="kei-poll-signin-wrap" data-poll-signin-init>
                 {{ inline_signin('poll-signin', dev_available) }}

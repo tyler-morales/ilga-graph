@@ -16,7 +16,11 @@
     <p class="kei-status-success" role="status">Thanks for sharing. Results will appear here once others respond.</p>
     {% endif %}
     <footer class="kei-poll__footer kei-poll__footer--results">
+        {% if kei_poll_goal is defined and kei_poll_goal is not none and kei_poll_goal > 0 %}
+        <p class="kei-poll-goal__label" role="status">{{ (kei_status_results.total_responses if kei_status_results else 0) }} of {{ kei_poll_goal }} responses</p>
+        {% else %}
         <span class="kei-poll__total">Total Votes: {{ kei_status_results.total_responses if kei_status_results else 0 }}</span>
+        {% endif %}
     </footer>
     <p class="kei-poll-story-cta">
         {% if kei_status_selected in ('registered', 'revoked', 'denied') %}
