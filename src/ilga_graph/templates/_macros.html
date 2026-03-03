@@ -229,7 +229,7 @@
 </div>
 {% endmacro %}
 
-{% macro kei_poll(poll_id="footer-kei-poll", show_email=false, kei_status_total=none, kei_impact_options=none, kei_poll_goal=none, zip_known=true, show_intro=true, prefill_zip='') %}
+{% macro kei_poll(poll_id="footer-kei-poll", show_email=false, kei_status_total=none, kei_impact_options=none, kei_poll_goal=none, zip_known=true, show_intro=true, prefill_zip='', poll_on_advocacy_page=false) %}
 <div class="kei-poll kei-poll-card" id="{{ poll_id }}-wrap" aria-labelledby="{{ poll_id }}-heading"
     data-kei-poll-branch>
     <div class="kei-poll__header-strip">
@@ -254,6 +254,7 @@
             aria-label="Your kei status">
             <input type="hidden" name="csrf_token" value="{{ (request.state.csrf_token or '') if request is defined else '' }}">
             <input type="hidden" name="poll_id" value="{{ poll_id }}">
+            {% if poll_on_advocacy_page %}<input type="hidden" name="poll_on_advocacy_page" value="1">{% endif %}
             <input type="hidden" name="kei_impact_slug" id="{{ poll_id }}-impact-input" value="">
             {% if show_email %}
             <label for="{{ poll_id }}-email" class="visually-hidden">Your email (optional if signed in)</label>

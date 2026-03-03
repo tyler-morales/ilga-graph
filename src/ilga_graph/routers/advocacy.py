@@ -820,6 +820,8 @@ async def advocacy_index(
         )
         ctx.update(results_ctx)
         ctx.update(await get_kei_poll_sidebar_context(request, user, db))
+        ctx["poll_on_advocacy_page"] = True
+        ctx["hide_outreach_cta"] = True
     elif zip_param and not in_district:
         ctx["error"] = (
             f"ZIP code {zip_param!r} not found in Illinois district data. "
@@ -1785,5 +1787,7 @@ async def advocacy_search(
             "categories": CATEGORY_CHOICES,
             **results_ctx,
             **poll_ctx,
+            "poll_on_advocacy_page": True,
+            "hide_outreach_cta": True,
         },
     )

@@ -177,7 +177,7 @@ async def get_kei_poll_sidebar_context(
     db: AsyncSession,
 ) -> dict[str, Any]:
     """Sidebar Kei poll (the-issue, legislator-brief, fact-sheet, glossary). Same poll_id."""
-    from ..routers.content_constants import get_why_you_care_branch_for_selection
+    from .routers.content_constants import get_why_you_care_branch_for_selection
 
     state = await get_kei_poll_initial_state(request, user, db)
     state["poll_id"] = SIDEBAR_KEI_POLL_ID

@@ -785,6 +785,10 @@ async def kei_poll_sidebar_fragment(
 ):
     """Return sidebar kei poll fragment (form or results) for HTMX refresh after vote in drawer."""
     ctx = await get_kei_poll_sidebar_context(request, user, db)
+    referer = (request.headers.get("referer") or "").strip()
+    on_advocacy = "/advocacy" in referer
+    ctx["poll_on_advocacy_page"] = on_advocacy
+    ctx["hide_outreach_cta"] = on_advocacy
     return templates.TemplateResponse(
         request,
         "_sidebar_kei_poll.html",
@@ -892,6 +896,7 @@ async def kei_poll_results(
             "kei_poll_goal": get_kei_poll_goal(),
             "kei_poll_is_owner": user.kei_status in KEI_OWNER_SLUGS if user.kei_status else False,
             "poll_id": poll_id,
+            "hide_outreach_cta": False,
         },
     )
 
@@ -914,6 +919,7 @@ async def kei_status_post(
     zip_code: str | None = Form(None, max_length=10),
     email: str | None = Form(None, max_length=_EMAIL_MAX_LEN),
     poll_id: str = Form("footer-kei-poll", max_length=64),
+    poll_on_advocacy_page: str | None = Form(None),
     session_id: str | None = Form(None, max_length=64),
     csrf_token: str | None = Form(None),
     cf_turnstile_response: str | None = Form(None, alias="cf-turnstile-response"),
@@ -921,6 +927,7 @@ async def kei_status_post(
     user: User | None = Depends(get_current_user_optional),
 ):
     """Set kei status and impact (Q3). Insert responses; set user fields if logged in."""
+    hide_outreach_cta = poll_id == "sidebar-kei-poll" and poll_on_advocacy_page == "1"
     prompt_q = get_campaign_config().poll_prompt_query or "kei"
     token = csrf_token or request.headers.get("X-XSRF-TOKEN")
     cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
@@ -1111,6 +1118,7 @@ async def kei_status_post(
                     ),
                     "why_you_care_branch": get_why_you_care_branch_for_selection(existing_status),
                     "poll_id": poll_id,
+                    "hide_outreach_cta": hide_outreach_cta,
                 },
             )
         return RedirectResponse(
@@ -1207,6 +1215,7 @@ async def kei_status_post(
                     "kei_poll_is_owner": validated in KEI_OWNER_SLUGS,
                     "why_you_care_branch": get_why_you_care_branch_for_selection(validated),
                     "poll_id": poll_id,
+                    "hide_outreach_cta": hide_outreach_cta,
                 },
             )
         return RedirectResponse(
@@ -1263,6 +1272,7 @@ async def kei_status_post(
                     "dev_available": cfg.DEV_MODE,
                     "poll_id": poll_id,
                     "show_go_to_site": poll_id == STANDALONE_KEI_POLL_ID,
+                    "hide_outreach_cta": hide_outreach_cta,
                 },
             )
         for params in cookies_to_set:
