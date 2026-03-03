@@ -1714,6 +1714,11 @@ a.vote-bill:visited {
   display: none;
 }
 
+/* When user chose "Call only" or "Elevator", hide email options on member cards */
+.member-carousel.pref-call-only .member-carousel__slide:not(.member-carousel__slide--intro) .outreach-email {
+  display: none;
+}
+
 .member-carousel__slide--locked .slide-lock-overlay {
   display: flex;
 }

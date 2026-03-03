@@ -583,27 +583,6 @@
             });
         })();
     </script>
-    {# Kei poll: init inline sign-in in poll fragment (on load and after HTMX swap). #}
-    <script>
-        (function () {
-            function initPollSignin() {
-                var wrap = document.getElementById('poll-signin-wrap');
-                if (wrap && wrap.hasAttribute('data-poll-signin-init') && typeof window.initInlineSignin === 'function') {
-                    var inline = wrap.querySelector('.hero-signin-inline');
-                    if (inline && !wrap.querySelector('.auth-strip-signin-btn') && !document.getElementById('poll-signin-btn')) inline.hidden = false;
-                    window.initInlineSignin(wrap);
-                }
-            }
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initPollSignin);
-            } else {
-                initPollSignin();
-            }
-            document.body.addEventListener('htmx:afterSwap', function (ev) {
-                initPollSignin();
-            });
-        })();
-    </script>
     {# Refresh sidebar poll when user votes in call drawer (HX-Trigger: pollVoted from /advocacy/personalize) #}
     <script>
         (function () {

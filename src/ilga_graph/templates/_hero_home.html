@@ -45,6 +45,15 @@
                         </div>
                     </form>
                 </div>
+                <script>
+                    (function () {
+                        var form = document.getElementById('advocacy-form');
+                        if (!form) return;
+                        form.addEventListener('submit', function () {
+                            if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('__ilga_scroll_to_results', '1');
+                        });
+                    })();
+                </script>
                 <p class="hero-learn-links hero-learn-link-wrap" role="navigation" aria-label="Learn more">
                     <a href="/the-issue" class="hero-learn-link">Learn</a> about the issue or <a
                         href="/legislator-brief" class="hero-learn-link"

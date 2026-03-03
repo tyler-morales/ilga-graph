@@ -673,7 +673,7 @@ class TestSubscribeUnsubscribeEmail:
     def test_kei_status_anonymous_does_not_persist(
         self, client: TestClient, test_db_path: Path
     ) -> None:
-        """POST kei-status without auth: no user create/update; returns 200 with nudge."""
+        """POST kei-status without auth: no user create/update; returns 200 with results UI."""
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
@@ -689,7 +689,7 @@ class TestSubscribeUnsubscribeEmail:
                 headers={"HX-Request": "true"},
             )
         assert resp.status_code == 200
-        assert b"Sign in" in resp.content and (b"vote" in resp.content or b"save" in resp.content)
+        assert b"change your answer" in resp.content or b"Need to change" in resp.content
 
         async def check():
             from sqlalchemy import select

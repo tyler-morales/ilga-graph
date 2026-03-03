@@ -562,8 +562,18 @@
 }
 
 .wyc-branch-content__footer {
-  margin: 0 0 1rem 0;
+  margin: 0 0 0.25rem 0;
   font-size: var(--font-size-xs, 0.8125rem);
+  color: var(--color-text-muted, #777);
+}
+
+.wyc-branch-content__change {
+  margin: 0 0 1rem 0;
+  font-size: 0.8125rem;
+}
+
+.wyc-branch-content__change .kei-poll-change-btn {
+  font-size: inherit;
   color: var(--color-text-muted, #777);
 }
 
@@ -578,12 +588,32 @@
   color: var(--color-text-muted, #777);
 }
 
-.wyc-branch-content__change {
-  margin: 0;
+.wyc-branch-content__after-change-cta {
+  margin-top: 1.5rem;
 }
 
-.wyc-branch-content__change .kei-poll-change-btn {
-  font-size: 0.9375rem;
+.wyc-branch-content__after-change-cta .wyc-branch-content__ctas {
+  margin-bottom: 0;
+}
+
+/* Primary CTA after change-answer: solid so it stands out as the main next step. */
+.wyc-branch-content__after-change-cta .wyc-branch-content__ctas .btn.btn--primary {
+  background: var(--color-hero-cta, #ed7a0a);
+  border-color: var(--color-hero-cta, #ed7a0a);
+  color: #fff;
+  font-size: 1.125rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+}
+
+.wyc-branch-content__after-change-cta .wyc-branch-content__ctas .btn.btn--primary:hover {
+  background: var(--color-hero-cta-hover, #c96608);
+  border-color: var(--color-hero-cta-hover, #c96608);
+  color: #fff;
+}
+
+.wyc-branch-content__after-change-cta .wyc-branch-content__ctas .btn.btn--primary.why-you-care-link {
+  color: #fff;
 }
 
 @media (prefers-reduced-motion: reduce) {
