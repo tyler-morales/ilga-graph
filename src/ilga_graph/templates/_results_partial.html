@@ -732,7 +732,7 @@ user_emailed_member_ids=none, outreach_heat=none, user_call_pref=none) %}
             aria-labelledby="outreach-goal-heading" data-goal-zip="{{ zip }}"
             data-goal-senator-id="{{ senator.id if senator else '' }}"
             data-goal-rep-id="{{ representative.id if representative else '' }}"
-            data-goal-broker-id="{{ broker_id|default('') }}" data-goal-label-broker="Contact the Power Broker"
+            data-goal-broker-id="{{ broker_id|default('') }}" data-goal-label-broker="{{ broker_goal_label|default('Contact the Power Broker') }}"
             data-goal-senator-label="Senator" data-goal-rep-label="Rep" {% if user_call_pref=='no'
             %}data-goal-email-only="true" {% endif %}>
             <div class="outreach-goal__head-row">
@@ -834,10 +834,8 @@ user_emailed_member_ids=none, outreach_heat=none, user_call_pref=none) %}
             {% endif %}
             {% if broker %}
             <details class="outreach-goal__power-broker-details" id="outreach-goal-power-broker-details">
-                <summary class="outreach-goal__power-broker-summary">Who is the Power Broker?</summary>
-                <p class="outreach-goal__power-broker-explainer">The committee chair for your topic (default
-                    Transportation), or the highest Moneyball senator or representative outside your district. Reaching
-                    them can multiply impact.</p>
+                <summary class="outreach-goal__power-broker-summary">Who {% if broker_cards|length > 1 %}are the Power Brokers{% else %}is the Power Broker{% endif %}?</summary>
+                <p class="outreach-goal__power-broker-explainer">The committee chair{% if broker_cards|length > 1 %}s{% endif %} for your topic (one per chamber; default Transportation), or the highest Moneyball senator or representative outside your district. Reaching {% if broker_cards|length > 1 %}them{% else %}them{% endif %} can multiply impact.</p>
             </details>
             {% endif %}
         </section>

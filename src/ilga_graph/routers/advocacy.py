@@ -361,7 +361,7 @@ async def _build_search_results_context(
         reverse=True,
     )
 
-    broker_member, broker_why = ah.find_power_broker(
+    power_brokers = ah.find_power_brokers(
         state,
         exclude_senate_district=senate_district or "",
         exclude_house_district=house_district or "",
@@ -370,8 +370,8 @@ async def _build_search_results_context(
         category_name=category_label,
     )
 
-    broker_card = None
-    if broker_member:
+    broker_cards: list[dict[str, Any]] = []
+    for broker_member, broker_why in power_brokers:
         broker_card = ah.member_to_card(
             state,
             broker_member,
@@ -397,22 +397,27 @@ async def _build_search_results_context(
             calls_total=calls_total,
             caller=caller,
         )
+        broker_cards.append(broker_card)
 
     # Resolve effective email (public + community) per card so template shows correct lock state.
     for card, member in [
         (senator_card, senator_member),
         (rep_card, rep_member),
-        (broker_card, broker_member),
     ]:
         if card is not None and member is not None:
             effective_email, _, _ = await get_effective_email_for_member(state, db, str(member.id))
             card["email"] = effective_email or ""
+    for broker_card, (broker_member, _) in zip(broker_cards, power_brokers):
+        effective_email, _, _ = await get_effective_email_for_member(
+            state, db, str(broker_member.id)
+        )
+        broker_card["email"] = effective_email or ""
 
     error = "; ".join(warnings) if warnings else None
     result_member_ids: list[str] = []
     for item in your_legislators:
         result_member_ids.append(item["card"]["id"])
-    for card in (senator_card, rep_card, broker_card):
+    for card in (senator_card, rep_card, *broker_cards):
         if card is not None:
             result_member_ids.append(card["id"])
     result_member_ids = list(dict.fromkeys(result_member_ids))
@@ -445,9 +450,15 @@ async def _build_search_results_context(
         rep_card is None or rep_called
     )
 
-    broker_id = str(broker_card["id"]) if broker_card else None
-    broker_called = broker_id is not None and broker_id in user_called_member_ids
-    broker_emailed = broker_id is not None and broker_id in user_emailed_member_ids
+    broker_id = str(broker_cards[0]["id"]) if broker_cards else None
+    broker_called = (
+        any(str(c["id"]) in user_called_member_ids for c in broker_cards) if broker_cards else False
+    )
+    broker_emailed = (
+        any(str(c["id"]) in user_emailed_member_ids for c in broker_cards)
+        if broker_cards
+        else False
+    )
 
     # District steps (for phase 1 or for "completed goals" in phase 2). Goal steps must iterate
     # your_legislators in the same Moneyball order as members_for_carousel so goals and cards align.
@@ -457,23 +468,24 @@ async def _build_search_results_context(
     district_goal_done = sum(1 for s in district_steps if s["done"])
     district_goal_total = len(district_steps)
 
-    broker_goal_steps: list[dict[str, Any]] = []
-    if broker_card:
+    broker_goal_steps = []
+    for broker_card in broker_cards:
+        bid = str(broker_card["id"])
         broker_goal_steps.append(
             {
-                "member_id": broker_id,
+                "member_id": bid,
                 "role_label": "Power Broker",
                 "action": "call",
-                "done": broker_called,
+                "done": bid in user_called_member_ids,
             }
         )
         if bool((broker_card.get("email") or "").strip()):
             broker_goal_steps.append(
                 {
-                    "member_id": broker_id,
+                    "member_id": bid,
                     "role_label": "Power Broker",
                     "action": "email",
-                    "done": broker_emailed,
+                    "done": bid in user_emailed_member_ids,
                 }
             )
 
@@ -492,7 +504,7 @@ async def _build_search_results_context(
     district_goal_complete = (
         visible_district_done == visible_district_total and visible_district_total > 0
     )
-    in_broker_phase = district_goal_complete and broker_card is not None
+    in_broker_phase = district_goal_complete and len(broker_cards) > 0
 
     def _checkpoint_fill_pct(done: int, total: int) -> float:
         """Fill width so bar extends to the last completed step."""
@@ -544,7 +556,9 @@ async def _build_search_results_context(
 
     if in_broker_phase:
         goal_phase = "broker"
-        current_goal_label = "Contact the Power Broker"
+        current_goal_label = (
+            "Contact the Power Brokers" if len(broker_cards) > 1 else "Contact the Power Broker"
+        )
         goal_steps = broker_goal_steps
         goal_done = broker_goal_done
         goal_total = broker_goal_total
@@ -612,7 +626,7 @@ async def _build_search_results_context(
                 "completed": completed,
             }
         )
-    if broker_card is not None:
+    for broker_card in broker_cards:
         has_email = bool((broker_card.get("email") or "").strip())
         has_phone = bool((broker_card.get("phone") or "").strip())
         if user_call_pref == "no":
@@ -704,7 +718,8 @@ async def _build_search_results_context(
         "your_legislators": your_legislators,
         "senator": senator_card,
         "representative": rep_card,
-        "broker": broker_card,
+        "broker": broker_cards[0] if broker_cards else None,
+        "broker_cards": broker_cards,
         "members": members_for_carousel,
         "error": error,
         "user_called_member_ids": user_called_member_ids,
@@ -722,6 +737,10 @@ async def _build_search_results_context(
         "visible_district_total": visible_district_total,
         "both_district_members_called": both_district_members_called,
         "broker_id": broker_id,
+        "broker_ids": [str(c["id"]) for c in broker_cards],
+        "broker_goal_label": (
+            "Contact the Power Brokers" if len(broker_cards) > 1 else "Contact the Power Broker"
+        ),
         "broker_called": broker_called,
         "broker_emailed": broker_emailed,
         "goal_phase": goal_phase,

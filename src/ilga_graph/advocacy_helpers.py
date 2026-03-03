@@ -1151,7 +1151,12 @@ def build_email_first_body(
     )
 
 
-def find_power_broker(
+def _chamber_from_committee_code(code: str) -> str:
+    """Infer chamber from committee code: S* = Senate, H* = House."""
+    return "Senate" if code.startswith("S") else "House"
+
+
+def find_power_brokers(
     state: Any,
     *,
     exclude_senate_district: str = "",
@@ -1159,12 +1164,17 @@ def find_power_broker(
     committee_ids: set[str] | None = None,
     committee_codes: list[str] | None = None,
     category_name: str = "",
-) -> tuple[Member | None, str]:
-    """Find the Power Broker: committee chair for the topic (default Transportation), or highest Moneyball senator or rep outside the user's district. Returns (Member | None, why_text)."""
+) -> list[tuple[Member, str]]:
+    """Find Power Brokers: one committee chair per chamber for the topic, or fallback to highest Moneyball outside district. Returns list of (Member, why_text), Senate first then House."""
     member_lookup = {m.id: m for m in state.members}
+    seen_chambers: set[str] = set()
+    brokers: list[tuple[Member, str]] = []
 
     if committee_codes:
         for code in committee_codes:
+            chamber = _chamber_from_committee_code(code)
+            if chamber in seen_chambers:
+                continue
             for cmr in state.committee_rosters.get(code, []):
                 role_lower = cmr.role.lower()
                 if "chair" in role_lower and "vice" not in role_lower:
@@ -1174,11 +1184,9 @@ def find_power_broker(
                         if chair_member.chamber == "Senate"
                         else exclude_house_district
                     ):
-                        committee_name = ""
                         cmt = state.committee_lookup.get(code)
-                        if cmt:
-                            committee_name = cmt.name
-                        parts = [f"Chair of the {committee_name or code} committee"]
+                        committee_name = cmt.name if cmt else code
+                        parts = [f"Chair of the {committee_name} committee"]
                         if category_name:
                             parts.append(
                                 f"the institutional gatekeeper for {category_name} legislation"
@@ -1192,42 +1200,63 @@ def find_power_broker(
                                 f"effectiveness: {mb.effectiveness_rate:.0%}"
                             )
                         why = ". ".join(parts) + "."
-                        return chair_member, why
+                        brokers.append((chair_member, why))
+                        seen_chambers.add(chamber)
+                        break
+            if "Senate" in seen_chambers and "House" in seen_chambers:
+                break
 
-    if not state.moneyball:
-        return None, ""
+    if not brokers and state.moneyball:
+        best_profile = None
+        for profile in state.moneyball.profiles.values():
+            if profile.chamber == "Senate" and profile.district == exclude_senate_district:
+                continue
+            if profile.chamber == "House" and profile.district == exclude_house_district:
+                continue
+            if committee_ids and profile.member_id not in committee_ids:
+                continue
+            if best_profile is None or profile.moneyball_score > best_profile.moneyball_score:
+                best_profile = profile
+        if best_profile is not None:
+            member = member_lookup.get(best_profile.member_id)
+            if member is not None:
+                chamber_label = "senator" if best_profile.chamber == "Senate" else "representative"
+                parts = [
+                    f"Highest Moneyball score ({best_profile.moneyball_score}) "
+                    f"among senators and representatives outside your district ({chamber_label})",
+                ]
+                if category_name:
+                    parts.append(f"sits on a {category_name} committee")
+                parts.append(
+                    f"effectiveness: {best_profile.effectiveness_rate:.0%}, "
+                    f"{best_profile.unique_collaborators} collaborators"
+                )
+                brokers.append((member, ". ".join(parts) + "."))
 
-    best_profile = None
-    for profile in state.moneyball.profiles.values():
-        if profile.chamber == "Senate" and profile.district == exclude_senate_district:
-            continue
-        if profile.chamber == "House" and profile.district == exclude_house_district:
-            continue
-        if committee_ids and profile.member_id not in committee_ids:
-            continue
-        if best_profile is None or profile.moneyball_score > best_profile.moneyball_score:
-            best_profile = profile
+    return brokers
 
-    if best_profile is None:
-        return None, ""
 
-    member = member_lookup.get(best_profile.member_id)
-    if member is None:
-        return None, ""
-
-    chamber_label = "senator" if best_profile.chamber == "Senate" else "representative"
-    parts = [
-        f"Highest Moneyball score ({best_profile.moneyball_score}) "
-        f"among senators and representatives outside your district ({chamber_label})",
-    ]
-    if category_name:
-        parts.append(f"sits on a {category_name} committee")
-    parts.append(
-        f"effectiveness: {best_profile.effectiveness_rate:.0%}, "
-        f"{best_profile.unique_collaborators} collaborators"
+def find_power_broker(
+    state: Any,
+    *,
+    exclude_senate_district: str = "",
+    exclude_house_district: str = "",
+    committee_ids: set[str] | None = None,
+    committee_codes: list[str] | None = None,
+    category_name: str = "",
+) -> tuple[Member | None, str]:
+    """Legacy: returns first Power Broker from find_power_brokers, or (None, '')."""
+    brokers = find_power_brokers(
+        state,
+        exclude_senate_district=exclude_senate_district,
+        exclude_house_district=exclude_house_district,
+        committee_ids=committee_ids,
+        committee_codes=committee_codes,
+        category_name=category_name,
     )
-    why = ". ".join(parts) + "."
-    return member, why
+    if not brokers:
+        return None, ""
+    return brokers[0][0], brokers[0][1]
 
 
 def test_member_list(state: Any, max_count: int = 20) -> list[dict[str, Any]]:

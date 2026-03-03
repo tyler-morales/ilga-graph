@@ -894,7 +894,7 @@ def _resolve_mock_legislators(zip_code: str) -> list[dict[str, Any]]:
                 "photo_url": photo_url,
             }
         )
-    broker_member, broker_why = ah.find_power_broker(
+    power_brokers = ah.find_power_brokers(
         state,
         exclude_senate_district=senate_district or "",
         exclude_house_district=house_district or "",
@@ -902,7 +902,7 @@ def _resolve_mock_legislators(zip_code: str) -> list[dict[str, Any]]:
         committee_codes=committee_codes or None,
         category_name=topic,
     )
-    if broker_member:
+    for broker_member, broker_why in power_brokers:
         card = ah.member_to_card(
             state,
             broker_member,

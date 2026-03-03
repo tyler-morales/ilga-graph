@@ -1958,57 +1958,62 @@
                 nextBlock.setAttribute('aria-hidden', 'true');
             }
         }
-        /* When district phase complete and broker exists, switch to broker phase (done count matches visible steps). */
+        /* When district phase complete and broker exists, switch to broker phase. Support multiple brokers (dots from DOM). */
         var districtComplete = visibleTotal > 0 && done >= visibleTotal;
-        if (districtComplete && brokerId) {
+        var brokerDots = block.querySelectorAll('.outreach-goal__phase--broker .outreach-goal__bar-dot');
+        var hasBrokerPhase = brokerId && brokerDots.length > 0;
+        if (districtComplete && hasBrokerPhase) {
             block.classList.add('outreach-goal--phase-broker');
             var currentLabelEl = block.querySelector('#outreach-goal-current-label');
             if (currentLabelEl) {
                 var brokerLabel = block.getAttribute('data-goal-label-broker') || 'Contact the Power Broker';
                 currentLabelEl.textContent = brokerLabel;
             }
-            var brokerStored = stored[brokerId] || {};
-            var brokerDone = (brokerStored.call ? 1 : 0) + (brokerStored.email ? 1 : 0);
-            var brokerTotal = 2;
+            var brokerDone = 0;
             function setBrokerAction(memberId, kind, doneVal) {
                 var dot = block.querySelector('.outreach-goal__phase--broker .outreach-goal__bar-dot[data-goal-member="' + memberId + '"][data-goal-kind="' + kind + '"]');
                 if (!dot) return;
+                if (doneVal) brokerDone++;
                 var label = kind === 'call' ? (doneVal ? 'Called' : 'Not yet called') : (doneVal ? 'Emailed' : 'Not yet emailed');
                 dot.setAttribute('aria-label', label);
                 if (doneVal) dot.classList.add('outreach-goal__bar-dot--done'); else dot.classList.remove('outreach-goal__bar-dot--done');
             }
-            setBrokerAction(brokerId, 'call', !!(brokerStored.call));
-            setBrokerAction(brokerId, 'email', !!(brokerStored.email));
+            var brokerSteps = [];
+            brokerDots.forEach(function (d) {
+                var mid = d.getAttribute('data-goal-member');
+                var kind = d.getAttribute('data-goal-kind');
+                if (mid && kind) {
+                    brokerSteps.push({ memberId: mid, kind: kind });
+                    setBrokerAction(mid, kind, !!(stored[mid] && stored[mid][kind]));
+                }
+            });
+            var brokerVisibleTotal = brokerDots.length;
+            var brokerFillPct = checkpointPct(brokerDone, brokerVisibleTotal);
+            var brokerTruckPct = truckOnCheckpointPct(brokerDone, brokerVisibleTotal);
             var brokerBar = block.querySelector('#outreach-goal-bar-broker');
             var brokerFill = block.querySelector('#outreach-goal-bar-fill-broker');
             var brokerLabelEl = block.querySelector('#outreach-goal-bar-label-broker');
-            var brokerDots = block.querySelectorAll('.outreach-goal__phase--broker .outreach-goal__bar-dot');
-            var brokerVisibleTotal = brokerDots.length || brokerTotal;
-            var brokerFillPct = checkpointPct(brokerDone, brokerVisibleTotal);
-            var brokerTruckPct = truckOnCheckpointPct(brokerDone, brokerVisibleTotal);
             if (brokerBar) {
                 brokerBar.setAttribute('aria-valuenow', String(brokerDone));
-                brokerBar.setAttribute('aria-valuemax', String(brokerTotal));
+                brokerBar.setAttribute('aria-valuemax', String(brokerVisibleTotal));
                 var brokerTrack = brokerBar.closest('.outreach-goal__bar-track');
                 if (brokerTrack) brokerTrack.style.setProperty('--truck-pct', String(brokerTruckPct));
             }
             if (brokerFill) brokerFill.style.width = brokerFillPct + '%';
-            if (brokerLabelEl) brokerLabelEl.textContent = brokerDone + ' of ' + brokerTotal + ' actions complete';
+            if (brokerLabelEl) brokerLabelEl.textContent = brokerDone + ' of ' + brokerVisibleTotal + ' actions complete';
             var nextBrokerBlock = block.querySelector('#outreach-goal-next-broker');
             if (nextBrokerBlock) {
-                var brokerSteps = [{ memberId: brokerId, kind: 'call' }, { memberId: brokerId, kind: 'email' }];
                 var firstBrokerIncomplete = null;
                 for (var j = 0; j < brokerSteps.length; j++) {
                     var bStep = brokerSteps[j];
-                    var bDot = block.querySelector('.outreach-goal__phase--broker .outreach-goal__bar-dot[data-goal-member="' + bStep.memberId + '"][data-goal-kind="' + bStep.kind + '"]');
-                    if (bDot && (!stored[bStep.memberId] || !stored[bStep.memberId][bStep.kind])) {
+                    if (!stored[bStep.memberId] || !stored[bStep.memberId][bStep.kind]) {
                         firstBrokerIncomplete = bStep;
                         break;
                     }
                 }
                 if (firstBrokerIncomplete) {
                     var brokerActionVerb = firstBrokerIncomplete.kind === 'call' ? 'Call' : 'Email';
-                    var brokerLinkText = brokerActionVerb + ' your Power Broker';
+                    var brokerLinkText = brokerSteps.length > 2 ? brokerActionVerb + ' your Power Brokers' : brokerActionVerb + ' your Power Broker';
                     nextBrokerBlock.textContent = '';
                     nextBrokerBlock.appendChild(document.createTextNode('Now: '));
                     var nextBrokerLink = document.createElement('a');

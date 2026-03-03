@@ -529,46 +529,51 @@ async def _get_priority_card_status(
             }
             break
 
-    broker_called = False
-    broker_emailed = False
-    broker_id: str | None = None
     if district_complete and senate_district is not None and house_district is not None:
         committee_codes = CATEGORY_COMMITTEES.get("Transportation", [])
-        broker_member, _ = ah.find_power_broker(
+        power_brokers = ah.find_power_brokers(
             state,
             exclude_senate_district=senate_district or "",
             exclude_house_district=house_district or "",
             committee_codes=committee_codes or None,
             category_name="Transportation",
         )
-        if broker_member:
-            broker_id = str(broker_member.id)
-            # User outreach for broker (reuse same events; we need to query for broker_id too)
+        broker_member_ids = [str(m.id) for m, _ in power_brokers]
+        if broker_member_ids:
             broker_result = await db.execute(
-                select(OutreachEvent.kind)
+                select(OutreachEvent.member_id, OutreachEvent.kind)
                 .where(OutreachEvent.user_id == user.id)
-                .where(OutreachEvent.member_id == broker_id)
+                .where(OutreachEvent.member_id.in_(broker_member_ids))
                 .where(OutreachEvent.kind.in_(["call", "email"]))
             )
-            for (kind,) in broker_result.all():
+            broker_done: dict[str, dict[str, bool]] = {}
+            for mid, kind in broker_result.all():
+                mid_str = str(mid)
+                if mid_str not in broker_done:
+                    broker_done[mid_str] = {"call": False, "email": False}
                 if kind == "call":
-                    broker_called = True
+                    broker_done[mid_str]["call"] = True
                 elif kind == "email":
-                    broker_emailed = True
-            broker_steps: list[dict[str, Any]] = [
-                {
-                    "member_id": broker_id,
-                    "role_label": "Power Broker",
-                    "action": "call",
-                    "done": broker_called,
-                },
-                {
-                    "member_id": broker_id,
-                    "role_label": "Power Broker",
-                    "action": "email",
-                    "done": broker_emailed,
-                },
-            ]
+                    broker_done[mid_str]["email"] = True
+            broker_steps = []
+            for mid in broker_member_ids:
+                done = broker_done.get(mid, {"call": False, "email": False})
+                broker_steps.append(
+                    {
+                        "member_id": mid,
+                        "role_label": "Power Broker",
+                        "action": "call",
+                        "done": done["call"],
+                    }
+                )
+                broker_steps.append(
+                    {
+                        "member_id": mid,
+                        "role_label": "Power Broker",
+                        "action": "email",
+                        "done": done["email"],
+                    }
+                )
             if goal_next_step is None:
                 for s in broker_steps:
                     if not s["done"]:

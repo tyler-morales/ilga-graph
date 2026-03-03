@@ -7,10 +7,14 @@ GENERAL_COMMITTEE_CODES: list[str] = [
     "SCOA",  # Assignments * Reports (Senate gatekeeper)
 ]
 
-# Policy categories → Senate committee codes. Used by advocacy search and Power Map.
+# Policy categories → committee codes (Senate + House). Used by advocacy search and Power Map.
 CATEGORY_COMMITTEES: dict[str, list[str]] = {
     "": [],
-    "Transportation": ["STRN"],
+    "Transportation": [
+        "STRN",
+        "HTRR",
+        "HVES",
+    ],  # Senate STRN; House HTRR, HVES
     "Agriculture": ["SAGR"],
     "Commerce & Small Business": ["SCOM", "SBTE"],
     "Criminal Justice": ["SCRL", "SHRJ"],
