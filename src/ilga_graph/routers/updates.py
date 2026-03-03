@@ -114,7 +114,9 @@ def _verify_turnstile_sync(token: str, remote_ip: str) -> bool:
 
 
 async def _verify_turnstile(token: str | None, remote_ip: str) -> bool:
-    """Verify Turnstile token for anonymous poll submission. If secret not set, allow."""
+    """Verify Turnstile token for poll submission. Skipped when TURNSTILE_DISABLED (e.g. dev)."""
+    if cfg.TURNSTILE_DISABLED:
+        return True
     if not cfg.TURNSTILE_SECRET_KEY:
         return True
     if not token or not token.strip():
@@ -162,7 +164,9 @@ templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 templates.env.globals["kei_impact_options"] = KEI_POLL_IMPACT_OPTIONS
-templates.env.globals["turnstile_site_key"] = cfg.TURNSTILE_SITE_KEY or ""
+templates.env.globals["turnstile_site_key"] = (
+    "" if cfg.TURNSTILE_DISABLED else (cfg.TURNSTILE_SITE_KEY or "")
+)
 
 # Email update types: slug -> display label. Default for new drafts is "other".
 UPDATE_TYPES = [("major", "Major"), ("minor", "Minor"), ("other", "Other")]

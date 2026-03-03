@@ -210,7 +210,9 @@ templates.env.globals["get_current_action_campaign"] = get_current_action_campai
 templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
-templates.env.globals["turnstile_site_key"] = cfg.TURNSTILE_SITE_KEY or ""
+templates.env.globals["turnstile_site_key"] = (
+    "" if cfg.TURNSTILE_DISABLED else (cfg.TURNSTILE_SITE_KEY or "")
+)
 
 
 def _hero_context() -> dict[str, Any]:

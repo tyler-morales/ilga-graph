@@ -222,10 +222,13 @@ RATE_LIMIT_STATEMENT_SUBMIT_PER_HOUR: int = int(
 )
 
 # Cloudflare Turnstile (optional). Free tier: 1M requests/month. When both keys are set,
-# the bug report form shows the widget and server verifies the token.
+# the bug report form and poll show the widget and server verifies the token.
+# When ILGA_PROFILE=dev, widget is hidden and verification is skipped.
 # Dashboard: https://dash.cloudflare.com/?to=/:account/turnstile
 TURNSTILE_SITE_KEY: str = _env("ILGA_TURNSTILE_SITE_KEY", "").strip()
 TURNSTILE_SECRET_KEY: str = _env("ILGA_TURNSTILE_SECRET_KEY", "").strip()
+# When True, poll/bug form skip Turnstile (no widget, verification passes). True when PROFILE=dev.
+TURNSTILE_DISABLED: bool = PROFILE == "dev" or not (TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY)
 
 # ── Analytics (Umami) ───────────────────────────────────────────────────────
 # When set (e.g. in prod), base template injects the script. Get ID from Umami Cloud → Add website.

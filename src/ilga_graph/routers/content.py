@@ -286,7 +286,9 @@ templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 templates.env.globals["kei_impact_options"] = KEI_POLL_IMPACT_OPTIONS
-templates.env.globals["turnstile_site_key"] = cfg.TURNSTILE_SITE_KEY or ""
+templates.env.globals["turnstile_site_key"] = (
+    "" if cfg.TURNSTILE_DISABLED else (cfg.TURNSTILE_SITE_KEY or "")
+)
 
 
 async def get_marquee_images(db: AsyncSession) -> list[dict[str, str]]:

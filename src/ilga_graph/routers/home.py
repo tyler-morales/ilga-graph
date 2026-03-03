@@ -98,7 +98,9 @@ templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 templates.env.globals["kei_impact_options"] = KEI_POLL_IMPACT_OPTIONS
 templates.env.globals["why_you_care_default_cards"] = WHY_YOU_CARE_DEFAULT_CARDS
 templates.env.globals["why_you_care_pre_poll_line"] = WHY_YOU_CARE_PRE_POLL_LINE
-templates.env.globals["turnstile_site_key"] = cfg.TURNSTILE_SITE_KEY or ""
+templates.env.globals["turnstile_site_key"] = (
+    "" if cfg.TURNSTILE_DISABLED else (cfg.TURNSTILE_SITE_KEY or "")
+)
 
 
 @router.get("/advocacy", include_in_schema=False)
