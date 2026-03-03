@@ -764,6 +764,7 @@ user_emailed_member_ids=none, outreach_heat=none, user_call_pref=none) %}
                             <span
                                 class="outreach-goal__bar-dot{% if step.done %} outreach-goal__bar-dot--done{% endif %}"
                                 data-goal-member="{{ step.member_id }}" data-goal-kind="{{ step.action }}"
+                                role="img"
                                 aria-label="{{ 'Called' if step.action == 'call' and step.done else 'Not yet called' if step.action == 'call' else 'Emailed' if step.done else 'Not yet emailed' }}"></span>
                             {% endif %}
                             {% endfor %}
@@ -812,6 +813,7 @@ user_emailed_member_ids=none, outreach_heat=none, user_call_pref=none) %}
                             <span
                                 class="outreach-goal__bar-dot{% if step.done %} outreach-goal__bar-dot--done{% endif %}"
                                 data-goal-member="{{ step.member_id }}" data-goal-kind="{{ step.action }}"
+                                role="img"
                                 aria-label="{{ 'Called' if step.action == 'call' and step.done else 'Not yet called' if step.action == 'call' else 'Emailed' if step.done else 'Not yet emailed' }}"></span>
                             {% endif %}
                             {% endfor %}

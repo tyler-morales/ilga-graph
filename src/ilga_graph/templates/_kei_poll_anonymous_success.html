@@ -27,7 +27,7 @@
             <p class="wyc-branch-content__change kei-poll-change-wrap">
                 <button type="button" class="kei-poll-change-btn"
                     hx-get="/updates/kei-poll-form?poll_id={{ poll_id|e }}" hx-target="#{{ poll_id|e }}-wrap"
-                    hx-swap="outerHTML" aria-label="Change your kei status answer">Need to change your answer?</button>
+                    hx-swap="outerHTML" aria-label="Need to change your answer?">Need to change your answer?</button>
             </p>
             {% if not standalone_poll %}
             {% if why_you_care_branch is defined and why_you_care_branch and why_you_care_branch.secondary_cta_label %}

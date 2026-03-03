@@ -190,7 +190,7 @@
 .admin-dashboard-bar--fill {
   height: 100%;
   min-width: 2px;
-  background: var(--color-success, #059669);
+  background: var(--color-success, #047857);
   border-radius: 5px;
   transition: width 0.3s ease;
 }

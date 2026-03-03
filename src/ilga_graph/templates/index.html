@@ -31,7 +31,7 @@
 </div>
 
 {# ── Advocacy drawer (Call script → After-call email, or Email-first) ── #}
-<div id="advocacy-drawer-overlay" class="phone-overlay" onclick="closeAdvocacyDrawer()" aria-hidden="true"></div>
+<div id="advocacy-drawer-overlay" class="phone-overlay" onclick="closeAdvocacyDrawer()" aria-hidden="true" tabindex="-1" role="button" aria-label="Close drawer"></div>
 <div id="advocacy-drawer" class="phone-panel" role="dialog" aria-modal="true" aria-hidden="true"
     aria-label="Contact: call script and email template" data-member-id="" data-drawer-zip="" data-drawer-constituent=""
     data-drawer-photo-url="">
@@ -197,10 +197,14 @@
             }));
             __recommendationChipInstances = chipInstances;
             if (typeof tippy.createSingleton === 'function') {
-                __recommendationChipSingleton = tippy.createSingleton(chipInstances, {
-                    moveTransition: 'transform 0.2s ease-out',
-                    overrides: ['content', 'placement']
-                });
+                try {
+                    __recommendationChipSingleton = tippy.createSingleton(chipInstances, {
+                        moveTransition: 'transform 0.2s ease-out',
+                        overrides: ['content', 'placement']
+                    });
+                } catch (err) {
+                    /* UMD bundle can have undefined applyStyles in createSingleton; chips still work without singleton */
+                }
             }
         }
 
@@ -560,13 +564,18 @@
             if (!section) return;
             section.classList.add('intro-card__pref-section--exiting');
             setTimeout(function () {
-                if (typeof htmx !== 'undefined') {
-                    htmx.ajax('POST', '/advocacy/set-call-pref', {
-                        target: '#advocacy-intro-pref-section',
-                        swap: 'innerHTML',
-                        values: { pref: prefValue }
-                    });
-                }
+                fetch('/advocacy/set-call-pref', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'HX-Request': 'true' },
+                    body: new URLSearchParams({ pref: prefValue }),
+                    credentials: 'same-origin'
+                }).then(function (r) { return r.text(); }).then(function (html) {
+                    if (section && section.id === 'advocacy-intro-pref-section') {
+                        section.innerHTML = html;
+                        if (typeof htmx !== 'undefined') htmx.process(section);
+                        section.dispatchEvent(new CustomEvent('htmx:afterSwap', { bubbles: true, detail: { target: section } }));
+                    }
+                }).catch(function () {});
             }, 300);
         }
     });
@@ -760,7 +769,20 @@
                 }
             });
         }
-        if (drawer) drawer.setAttribute('aria-hidden', 'true');
+        if (drawer) {
+            drawer.setAttribute('aria-hidden', 'true');
+            var focusables = drawer.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+            focusables.forEach(function (el) {
+                if (el.getAttribute('tabindex') !== '-1') el.setAttribute('data-a11y-tabindex', el.getAttribute('tabindex') || '');
+                el.setAttribute('tabindex', '-1');
+            });
+        }
+        if (overlay) {
+            overlay.setAttribute('aria-hidden', 'true');
+            overlay.removeAttribute('tabindex');
+            overlay.removeAttribute('role');
+            overlay.removeAttribute('aria-label');
+        }
         removeDrawerFocusTrap();
     }
 
@@ -777,6 +799,10 @@
             if (drawer && drawer.classList.contains('open')) {
                 closeAdvocacyDrawer();
             }
+        }
+        if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.id === 'advocacy-drawer-overlay') {
+            e.preventDefault();
+            closeAdvocacyDrawer();
         }
     });
 
@@ -800,9 +826,22 @@
 
     function initDrawerFocusTrapAndFocus() {
         var drawer = document.getElementById('advocacy-drawer');
+        var overlay = document.getElementById('advocacy-drawer-overlay');
         var body = document.getElementById('advocacy-drawer-body');
         if (!drawer || !body) return;
         drawer.setAttribute('aria-hidden', 'false');
+        drawer.querySelectorAll('[data-a11y-tabindex]').forEach(function (el) {
+            var val = el.getAttribute('data-a11y-tabindex');
+            if (val === '') el.removeAttribute('tabindex');
+            else el.setAttribute('tabindex', val);
+            el.removeAttribute('data-a11y-tabindex');
+        });
+        if (overlay) {
+            overlay.setAttribute('aria-hidden', 'false');
+            overlay.setAttribute('tabindex', '0');
+            overlay.setAttribute('role', 'button');
+            overlay.setAttribute('aria-label', 'Close drawer');
+        }
         removeDrawerFocusTrap();
         var focusables = getDrawerFocusables();
         var first = focusables[0];

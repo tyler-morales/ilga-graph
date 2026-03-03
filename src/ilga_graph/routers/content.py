@@ -253,7 +253,7 @@ templates.env.globals["app_base_url"] = cfg.APP_BASE_URL
 templates.env.globals["site_name"] = cfg.SITE_NAME
 _campaign = get_campaign_config()
 templates.env.globals["campaign_name"] = _campaign.campaign_name or cfg.SITE_NAME
-templates.env.globals["primary_color"] = _campaign.primary_color or "#FF4500"
+templates.env.globals["primary_color"] = _campaign.primary_color or "#e55a1a"
 templates.env.globals["issue_summary"] = _campaign.issue_summary
 templates.env.globals["meta_description"] = cfg.META_DESCRIPTION
 templates.env.globals["og_image_url"] = cfg.OG_IMAGE_URL
@@ -311,6 +311,7 @@ async def get_marquee_items(db: AsyncSession) -> list[dict]:
         {
             "type": "image",
             "src": m["src"],
+            "src_webp": m.get("src_webp"),
             "alt": m.get("alt", ""),
             "name": m.get("name", ""),
             "caption": m.get("caption", ""),

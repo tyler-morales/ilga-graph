@@ -431,9 +431,9 @@
 .hero-form button {
   font-size: var(--font-size-body);
   padding: 12px 24px;
-  background: var(--color-hero-cta, #ed7a0a);
+  background: var(--color-hero-cta, #c2410c);
   color: #fff;
-  border: 2px solid var(--color-hero-cta, #ed7a0a);
+  border: 2px solid var(--color-hero-cta, #c2410c);
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
@@ -441,8 +441,8 @@
 }
 
 .hero-form button:hover {
-  background: var(--color-hero-cta-hover, #c96608);
-  border-color: var(--color-hero-cta-hover, #c96608);
+  background: var(--color-hero-cta-hover, #a6360a);
+  border-color: var(--color-hero-cta-hover, #a6360a);
 }
 
 .hero-form button:focus-visible {
@@ -525,7 +525,7 @@
 
 .auth-strip-signed-in {
   font-family: var(--font-sans);
-  color: #059669;
+  color: var(--color-success);
   margin-top: 12px;
   transition: opacity 0.55s ease, transform 0.55s ease;
 }
@@ -544,7 +544,7 @@
   display: inline-block;
   vertical-align: middle;
   margin-right: 4px;
-  color: #059669;
+  color: var(--color-success);
 }
 
 .hero-verified-icon svg {
@@ -1390,8 +1390,8 @@
 
 /* Filled-in choice (Yes) in preference tree: green */
 .card-intro .intro-card__pref-tree .btn--primary {
-  background: var(--color-success, #059669);
-  border-color: var(--color-success, #059669);
+  background: var(--color-success, #047857);
+  border-color: var(--color-success, #047857);
 }
 .card-intro .intro-card__pref-tree .btn--primary:hover {
   background: #047857;

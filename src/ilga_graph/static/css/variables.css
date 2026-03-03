@@ -29,8 +29,8 @@
   --color-link-action: #1a73e8;
   --color-link-action-hover: #1765cc;
 
-  /* Semantic */
-  --color-success: #059669;
+  /* Semantic (success green meets WCAG AA 4.5:1 on white) */
+  --color-success: #047857;
   --color-error: #900;
   --color-error-bg: #fff0f0;
   --color-error-border: #c99;
@@ -64,9 +64,9 @@
   --font-size-h1: 1.6rem;
   --font-size-h2: 1.2rem;
 
-  /* Hero CTA (hardball landing) */
-  --color-hero-cta: #ed7a0a;
-  --color-hero-cta-hover: #c96608;
+  /* Hero CTA (hardball landing); orange, WCAG AA 4.5:1 with white text */
+  --color-hero-cta: #c2410c;
+  --color-hero-cta-hover: #a6360a;
   --color-hero-cta-focus-ring: #333;
 
   /* Primary CTA (mission CTA, Start outreach) and subscribe */

@@ -394,7 +394,7 @@
 }
 
 .wyc-pill__icon--revoked {
-  color: #b45309;
+  color: var(--color-hero-cta);
 }
 
 .wyc-pill__icon--revoked svg {
@@ -410,7 +410,7 @@
 }
 
 .wyc-pill__icon--would_want {
-  color: var(--color-hero-cta-hover, #c96608);
+  color: var(--color-hero-cta-hover, #a6360a);
 }
 
 .wyc-pill__icon--would_want svg {
@@ -543,18 +543,18 @@
 /* Branch CTAs: outline style (light bg, colored text/border). Start outreach = orange, Share your story = blue. */
 .wyc-branch-content__ctas .btn.btn--primary {
   background: var(--color-bg-card, #fff);
-  border: 1px solid var(--color-hero-cta, #ed7a0a);
-  color: var(--color-hero-cta, #ed7a0a);
+  border: 1px solid var(--color-hero-cta, #c2410c);
+  color: var(--color-hero-cta, #c2410c);
 }
 
 .wyc-branch-content__ctas .btn.btn--primary:hover {
   background: #fff4e6;
-  border-color: var(--color-hero-cta-hover, #c96608);
-  color: var(--color-hero-cta-hover, #c96608);
+  border-color: var(--color-hero-cta-hover, #a6360a);
+  color: var(--color-hero-cta-hover, #a6360a);
 }
 
 .wyc-branch-content__ctas .btn.btn--primary.why-you-care-link {
-  color: var(--color-hero-cta, #ed7a0a);
+  color: var(--color-hero-cta, #c2410c);
   text-decoration: none;
 }
 
@@ -629,8 +629,8 @@
 
 /* Primary CTA after change-answer: solid so it stands out as the main next step. */
 .wyc-branch-content__after-change-cta .wyc-branch-content__ctas .btn.btn--primary {
-  background: var(--color-hero-cta, #ed7a0a);
-  border-color: var(--color-hero-cta, #ed7a0a);
+  background: var(--color-hero-cta, #c2410c);
+  border-color: var(--color-hero-cta, #c2410c);
   color: #fff;
   font-size: 1.125rem;
   padding: 0.75rem 1.5rem;
@@ -638,8 +638,8 @@
 }
 
 .wyc-branch-content__after-change-cta .wyc-branch-content__ctas .btn.btn--primary:hover {
-  background: var(--color-hero-cta-hover, #c96608);
-  border-color: var(--color-hero-cta-hover, #c96608);
+  background: var(--color-hero-cta-hover, #a6360a);
+  border-color: var(--color-hero-cta-hover, #a6360a);
   color: #fff;
 }
 

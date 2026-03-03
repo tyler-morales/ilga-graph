@@ -28,7 +28,7 @@
         <li class="admin-poll-legend-item">
           <span class="admin-poll-legend-swatch" style="background: {{ segment_colors[loop.index0 % segment_colors|length] }};" aria-hidden="true"></span>
           <span class="admin-poll-legend-label">{{ label }}</span>
-          <span class="admin-poll-legend-count" aria-label="{{ count }} responses">{{ count }}</span>
+          <span class="admin-poll-legend-count" role="status" aria-label="{{ count }} responses">{{ count }}</span>
           <span class="admin-poll-legend-pct">({{ pct }}%)</span>
         </li>
       {% endfor %}
