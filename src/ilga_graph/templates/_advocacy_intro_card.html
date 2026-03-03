@@ -13,74 +13,7 @@
         {% if user_call_pref is none %}
         <div id="advocacy-intro-pref-section" class="intro-card__pref-section intro-card__pref-section--tree" data-call-pref-section
             aria-labelledby="intro-card-heading">
-            <div id="advocacy-pref-tree" class="intro-card__pref-tree" role="group" aria-label="Outreach preference">
-                {# Step 1: email ok? #}
-                <div id="pref-step-1" class="intro-card__pref-step intro-card__pref-step--current" data-pref-step>
-                    <p class="intro-card__pref-question">Are you okay sending one-click emails?</p>
-                    <div class="intro-card__pref-buttons" role="group" aria-label="Yes or No">
-                        <button type="button" class="btn btn--primary intro-card__pref-tree-btn" data-next-step="pref-step-2a"
-                            aria-label="Yes, I can send one-click emails">Yes</button>
-                        <button type="button" class="btn btn--secondary intro-card__pref-tree-btn" data-next-step="pref-step-2b"
-                            aria-label="No">No</button>
-                    </div>
-                </div>
-                {# Step 2a: after Yes to email — 2-min call? #}
-                <div id="pref-step-2a" class="intro-card__pref-step" data-pref-step hidden>
-                    <p class="intro-card__pref-question">Can you make a 2-minute scripted phone call?</p>
-                    <p class="intro-card__pref-hint">Word-for-word script.</p>
-                    <div class="intro-card__pref-buttons" role="group" aria-label="Yes or No">
-                        <button type="button" class="btn btn--primary intro-card__pref-tree-btn intro-card__pref-btn--phone" data-pref-value="yes"
-                            aria-label="Yes — call and email">
-                            <svg class="intro-card__phone-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
-                            </svg>
-                            Yes
-                        </button>
-                        <button type="button" class="btn btn--secondary intro-card__pref-tree-btn" data-next-step="pref-step-3a"
-                            aria-label="No">No</button>
-                    </div>
-                </div>
-                {# Step 3a: after No to 2-min — 30-sec elevator? #}
-                <div id="pref-step-3a" class="intro-card__pref-step" data-pref-step hidden>
-                    <p class="intro-card__pref-question">What about a prepared 30-second script—all you do is dial and read?</p>
-                    <p class="intro-card__pref-hint">Dial and read. (Coming soon.)</p>
-                    <div class="intro-card__pref-buttons" role="group" aria-label="Yes or No">
-                        <button type="button" class="btn btn--primary intro-card__pref-tree-btn" data-pref-value="elevator"
-                            aria-label="Yes — 30-second script">Yes</button>
-                        <button type="button" class="btn btn--secondary intro-card__pref-tree-btn" data-pref-value="no"
-                            aria-label="No — email only">No</button>
-                    </div>
-                </div>
-                {# Step 2b: after No to email — 2-min call? #}
-                <div id="pref-step-2b" class="intro-card__pref-step" data-pref-step hidden>
-                    <p class="intro-card__pref-question">Can you make a 2-minute scripted phone call?</p>
-                    <p class="intro-card__pref-hint">Word-for-word script.</p>
-                    <div class="intro-card__pref-buttons" role="group" aria-label="Yes or No">
-                        <button type="button" class="btn btn--primary intro-card__pref-tree-btn intro-card__pref-btn--phone" data-pref-value="call_only"
-                            aria-label="Yes — call only">
-                            <svg class="intro-card__phone-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
-                            </svg>
-                            Yes
-                        </button>
-                        <button type="button" class="btn btn--secondary intro-card__pref-tree-btn" data-next-step="pref-step-3b"
-                            aria-label="No">No</button>
-                    </div>
-                </div>
-                {# Step 3b: after No to 2-min (from no-email path) — 30-sec? #}
-                <div id="pref-step-3b" class="intro-card__pref-step" data-pref-step hidden>
-                    <p class="intro-card__pref-question">What about a 30-second script—dial and read?</p>
-                    <p class="intro-card__pref-hint">Coming soon.</p>
-                    <div class="intro-card__pref-buttons" role="group" aria-label="Yes or No">
-                        <button type="button" class="btn btn--primary intro-card__pref-tree-btn" data-pref-value="elevator"
-                            aria-label="Yes — 30-second script">Yes</button>
-                        <button type="button" class="btn btn--secondary intro-card__pref-tree-btn" data-pref-value="no"
-                            aria-label="No — email only">No</button>
-                    </div>
-                </div>
-            </div>
+            {% include "_advocacy_intro_pref_tree.html" %}
         </div>
         {% else %}
         <div id="advocacy-intro-pref-section" class="intro-card__pref-section intro-card__pref-section--saved"

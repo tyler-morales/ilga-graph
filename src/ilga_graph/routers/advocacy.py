@@ -878,11 +878,19 @@ async def set_call_pref(
     user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ):
-    """Set call preference. Cookie always; DB when logged in. Returns HTMX fragment."""
+    """Set call preference. Cookie always; DB when logged in. Returns HTMX fragment.
+    When pref is 'no' (user declined all contact methods), we do not persist and return
+    the tree again with a message asking them to select at least one method.
+    """
     if pref not in ADV_CALL_PREF_VALUES:
         raise HTTPException(
             status_code=422,
             detail="pref must be one of: no, yes, call_only, elevator",
+        )
+    if pref == "no":
+        return templates.TemplateResponse(
+            "_advocacy_intro_pref_choose_one.html",
+            {"request": request},
         )
     if user:
         user.call_pref = pref
@@ -1006,6 +1014,16 @@ async def advocacy_drawer(
             )
             if (r.scalar() or 0) > 0:
                 show_call_nudge = False
+        # When user chose email-only, do not show call nudge in drawer.
+        user_call_pref_drawer: str | None = None
+        if user and (p := getattr(user, "call_pref", None)) and p in ADV_CALL_PREF_VALUES:
+            user_call_pref_drawer = p
+        if user_call_pref_drawer is None:
+            user_call_pref_drawer = request.cookies.get(ADV_CALL_PREF_COOKIE)
+            if user_call_pref_drawer not in ADV_CALL_PREF_VALUES:
+                user_call_pref_drawer = None
+        if user_call_pref_drawer == "no":
+            show_call_nudge = False
         target_type = "POWER_BROKER" if target_type_param == "POWER_BROKER" else "NON_COMMITTEE"
         chamber = getattr(member, "chamber", None) if member else None
         district = getattr(member, "district", None) if member else None
