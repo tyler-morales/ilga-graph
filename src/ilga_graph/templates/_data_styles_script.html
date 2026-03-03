@@ -1,0 +1,19 @@
+{# One-time script to apply data-width-pct and data-color to elements. Include once per page that uses these. #}
+<script>
+(function () {
+    if (window.__dataStylesApplied) return;
+    window.__dataStylesApplied = true;
+    function apply() {
+        document.querySelectorAll('[data-width-pct]').forEach(function (el) {
+            var pct = el.getAttribute('data-width-pct');
+            if (pct != null) el.style.width = pct + '%';
+        });
+        document.querySelectorAll('[data-color]').forEach(function (el) {
+            var color = el.getAttribute('data-color');
+            if (color != null) el.style.color = color;
+        });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply);
+    else apply();
+})();
+</script>

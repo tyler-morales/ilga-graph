@@ -324,7 +324,7 @@
                 <div class="kei-poll-goal__bar" role="progressbar" id="{{ poll_id }}-goal-bar"
                     aria-valuenow="{{ kei_status_total or 0 }}" aria-valuemin="0" aria-valuemax="{{ kei_poll_goal }}"
                     aria-labelledby="{{ poll_id }}-goal-label">
-                    <div class="kei-poll-goal__bar-fill" style="width: {{ [((kei_status_total or 0) / kei_poll_goal * 100)|round(1), 100]|min }}%;"></div>
+                    <div class="kei-poll-goal__bar-fill" data-width-pct="{{ [((kei_status_total or 0) / kei_poll_goal * 100)|round(1), 100]|min }}"></div>
                 </div>
             </div>
             {% else %}
@@ -336,6 +336,7 @@
         </form>
     </div>
 </div>
+{% include "_data_styles_script.html" %}
 {% endmacro %}
 
 {# Inline variant for Why-you-care adventure flow: no card chrome, no progress dots. Question + Yes/No pills + sub-options + step 3 impact.
@@ -416,7 +417,7 @@
                 <div class="kei-poll-goal__bar" role="progressbar" id="{{ poll_id }}-goal-bar"
                     aria-valuenow="{{ kei_status_total or 0 }}" aria-valuemin="0" aria-valuemax="{{ kei_poll_goal }}"
                     aria-labelledby="{{ poll_id }}-goal-label">
-                    <div class="kei-poll-goal__bar-fill" style="width: {{ [((kei_status_total or 0) / kei_poll_goal * 100)|round(1), 100]|min }}%;"></div>
+                    <div class="kei-poll-goal__bar-fill" data-width-pct="{{ [((kei_status_total or 0) / kei_poll_goal * 100)|round(1), 100]|min }}"></div>
                 </div>
             </div>
             {% else %}
@@ -425,6 +426,7 @@
         </footer>
     </form>
 </div>
+{% include "_data_styles_script.html" %}
 {% endmacro %}
 
 {% macro kei_poll_results_chart(kei_status_results, kei_status_options, selected_slug=none, offer_save_choice=false) %}
@@ -480,13 +482,14 @@
             </div>
             <div class="kei-poll-chart__bar-wrap" aria-hidden="true" role="presentation">
                 <span class="kei-poll-chart__bar kei-poll-chart__bar--{{ 'highest' if is_highest else 'other' }}"
-                    style="width: {{ pct }}%"></span>
+                    data-width-pct="{{ pct }}"></span>
             </div>
             <span class="visually-hidden" aria-label="{{ count }} responses">{{ count }}</span>
         </li>
         {% endfor %}
     </ul>
 </div>
+{% include "_data_styles_script.html" %}
 {% endmacro %}
 
 {% macro subscribe_form(form_id, action="/updates/subscribe-email", variant="inline") %}
@@ -506,8 +509,14 @@
 {% set share_copy_text_id = section_id ~ '-copy-text' %}
 {% set share_feedback_id = section_id ~ '-copy-feedback' %}
 {% set share_native_btn_id = section_id ~ '-native-btn' %}
+{% set _share_variant = 'full' if variant == 'full' else ('constituent' if target == 'constituent' else 'brief') %}
+{% set _share_fallback = 'What Illinois residents need to know about Kei vehicle registration — learn and contact your legislators.' if target == 'constituent' else 'Brief on Kei vehicle registration in Illinois — statutory gap and proposed clarification.' %}
+{% set _share_native_sel = '.js-share-native' ~ ('-sidebar' if variant == 'sidebar' else '') %}
 <section class="share-section {% if variant == 'sidebar' %}share-section--sidebar{% endif %}" id="{{ section_id }}"
-    aria-labelledby="{{ share_heading_id }}">
+    aria-labelledby="{{ share_heading_id }}"
+    data-share-variant="{{ _share_variant }}"
+    data-share-fallback="{{ _share_fallback | e }}"
+    data-share-native-selector="{{ _share_native_sel }}">
     <h2 class="share-section-title" id="{{ share_heading_id }}">Share</h2>
     {% if variant == 'full' %}
     <p class="share-section-intro">Help spread the word.</p>
@@ -531,7 +540,7 @@
             <span class="share-section-btn-text" id="{{ share_copy_text_id }}">Copy link</span>
         </button>
         <button type="button"
-            class="share-section-btn share-section-btn-native js-share-native{% if variant == 'sidebar' %}-sidebar{% endif %}"
+            class="share-section-btn share-section-btn-native {{ _share_native_sel[1:] }}"
             id="{{ share_native_btn_id }}" aria-label="Share via your device or app" {% if variant=='sidebar'
             %}data-section-id="{{ section_id }}" {% endif %} hidden>
             <span class="share-section-btn-icon" aria-hidden="true">
@@ -597,18 +606,15 @@
             copyBtn.disabled = true;
         }
 
-        var nativeBtn = section.querySelector('.js-share-native{% if variant == 'sidebar' %}-sidebar{% endif %}');
+        var nativeBtn = section.querySelector(section.getAttribute('data-share-native-selector') || '.js-share-native');
         if (nativeBtn && typeof navigator !== 'undefined' && navigator.share) {
             nativeBtn.removeAttribute('hidden');
             nativeBtn.addEventListener('click', function () {
                 var title = document.title || 'The Land of Kei';
-                {% if variant == 'full' %}
-                var text = (document.querySelector('meta[name="description"]') && document.querySelector('meta[name="description"]').getAttribute('content')) || 'Fix Illinois law — allow Kei vehicle registration.';
-                {% elif target == 'constituent' %}
-                var text = 'What Illinois residents need to know about Kei vehicle registration — learn and contact your legislators.';
-                {% else %}
-                var text = 'Brief on Kei vehicle registration in Illinois — statutory gap and proposed clarification.';
-                {% endif %}
+                var shareVariant = section.getAttribute('data-share-variant');
+                var text = shareVariant === 'full'
+                    ? (document.querySelector('meta[name="description"]') && document.querySelector('meta[name="description"]').getAttribute('content')) || 'Fix Illinois law — allow Kei vehicle registration.'
+                    : (section.getAttribute('data-share-fallback') || '');
                 navigator.share({
                     title: title,
                     text: text,
@@ -653,7 +659,7 @@
                     {% if _five_point_icons[_card_index] == 'states' %}
                     {% include "_strategic_states_icon.html" %}
                     {% else %}
-                    <iconify-icon icon="{{ _five_point_icons[_card_index].icon }}" style="color: {{ _five_point_icons[_card_index].color }}"></iconify-icon>
+                    <iconify-icon icon="{{ _five_point_icons[_card_index].icon }}" data-color="{{ _five_point_icons[_card_index].color }}"></iconify-icon>
                     {% endif %}
                 </span>
                 <p class="strategic-points-card-text">{{ point|safe }}</p>
@@ -668,7 +674,7 @@
                     {% if _five_point_icons[_card_index] == 'states' %}
                     {% include "_strategic_states_icon.html" %}
                     {% else %}
-                    <iconify-icon icon="{{ _five_point_icons[_card_index].icon }}" style="color: {{ _five_point_icons[_card_index].color }}"></iconify-icon>
+                    <iconify-icon icon="{{ _five_point_icons[_card_index].icon }}" data-color="{{ _five_point_icons[_card_index].color }}"></iconify-icon>
                     {% endif %}
                 </span>
                 <p class="strategic-points-card-text">{{ point|safe }}</p>
@@ -677,6 +683,7 @@
         </div>
     </div>
 </section>
+{% include "_data_styles_script.html" %}
 {% endif %}
 {% endmacro %}
 
@@ -684,9 +691,10 @@
 {% set pct = (score / max * 100) if max else 0 %}
 <div class="score-bar score-bar--{{ size }}">
     <div class="score-bar__fill">
-        <div class="score-bar__fill-inner {% if fill_class %}{{ fill_class }}{% endif %}" style="width: {{ pct }}%;">
+        <div class="score-bar__fill-inner {% if fill_class %}{{ fill_class }}{% endif %}" data-width-pct="{{ pct }}">
         </div>
     </div>
     {% if label %}<span class="score-bar__label">{{ label }}</span>{% endif %}
 </div>
+{% include "_data_styles_script.html" %}
 {% endmacro %}
