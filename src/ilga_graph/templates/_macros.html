@@ -229,7 +229,7 @@
 </div>
 {% endmacro %}
 
-{% macro kei_poll(poll_id="footer-kei-poll", show_email=false, kei_status_total=none, kei_impact_options=none, kei_poll_goal=none) %}
+{% macro kei_poll(poll_id="footer-kei-poll", show_email=false, kei_status_total=none, kei_impact_options=none, kei_poll_goal=none, zip_known=true, show_intro=true, prefill_zip='') %}
 <div class="kei-poll kei-poll-card" id="{{ poll_id }}-wrap" aria-labelledby="{{ poll_id }}-heading"
     data-kei-poll-branch>
     <div class="kei-poll__header-strip">
@@ -246,7 +246,9 @@
                         aria-hidden="true">3</span></li>
             </ol>
         </nav>
+        {% if show_intro %}
         <p class="kei-poll__intro">Your input helps us explain to legislators who's really affected. Numbers speak louder than words.</p>
+        {% endif %}
         <form id="{{ poll_id }}-form" action="/updates/kei-status" method="post" class="kei-poll__form"
             hx-post="/updates/kei-status" hx-target="#{{ poll_id }}-wrap" hx-swap="innerHTML"
             aria-label="Your kei status">
@@ -289,23 +291,32 @@
                 </fieldset>
             </div>
             <div class="kei-poll__step3-panel kei-poll__step3-panel--hidden" id="{{ poll_id }}-panel-impact"
-                data-step-heading="How does this affect you?" aria-hidden="true">
-                <fieldset class="kei-poll__options" aria-label="How does this affect you?">
-                    <legend class="kei-poll__step-legend">How does this affect you?</legend>
+                data-step-heading="What would this fix mean for you?" aria-hidden="true">
+                <fieldset class="kei-poll__options" aria-label="What would this fix mean for you?">
+                    <legend class="kei-poll__step-legend">What would this fix mean for you?</legend>
                     {% for slug, label in (kei_impact_options or []) %}
                     <label class="kei-poll__option"><input type="radio" name="kei_impact_radio" value="{{ slug }}"
                             data-kei-impact-slug>{{ label }}</label>
                     {% endfor %}
                 </fieldset>
             </div>
-            {% if turnstile_site_key %}
-            <div id="{{ poll_id }}-turnstile-container" class="kei-poll__turnstile-wrap kei-poll__turnstile-wrap--hidden"
-                data-sitekey="{{ turnstile_site_key }}" aria-describedby="{{ poll_id }}-turnstile-hint" aria-live="polite">
+            <p class="kei-poll__back-wrap kei-poll__back-wrap--hidden" id="{{ poll_id }}-back-wrap" aria-hidden="true">
+                <button type="button" class="kei-poll__back btn btn--text" aria-label="Back to previous question">Back</button>
+            </p>
+            <div class="kei-poll__zip-panel kei-poll__zip-panel--hidden" id="{{ poll_id }}-panel-zip" data-kei-poll-step="zip" aria-hidden="true">
+                <p class="kei-poll__zip-intro">Last thing — your ZIP code helps us tell your legislator exactly how many of their constituents are affected.</p>
+                <label for="{{ poll_id }}-zip" class="visually-hidden">Your ZIP code</label>
+                <input type="text" id="{{ poll_id }}-zip" name="zip_code" class="kei-poll__zip-input input" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" placeholder="ZIP code" autocomplete="postal-code" aria-required="true" value="{{ prefill_zip|default('')|e }}">
             </div>
-            <span id="{{ poll_id }}-turnstile-hint" class="visually-hidden">Security check so your vote counts.</span>
-            <p class="kei-poll__turnstile-hint">This check helps us count real responses.</p>
+            {% if turnstile_site_key %}
+            <div id="{{ poll_id }}-turnstile-wrap" class="kei-poll__turnstile-wrap kei-poll__turnstile-wrap--hidden">
+                <div id="{{ poll_id }}-turnstile-container"
+                    data-sitekey="{{ turnstile_site_key }}" aria-describedby="{{ poll_id }}-turnstile-hint" aria-live="polite">
+                </div>
+                <span id="{{ poll_id }}-turnstile-hint" class="visually-hidden">Security check so your vote counts.</span>
+                <p class="kei-poll__turnstile-hint">This check helps us count real responses.</p>
+            </div>
             {% endif %}
-        </form>
         <footer class="kei-poll__footer">
             {% if kei_poll_goal is not none and kei_poll_goal > 0 %}
             <div class="kei-poll-goal" role="status" aria-live="polite">
@@ -313,22 +324,24 @@
                 <div class="kei-poll-goal__bar" role="progressbar" id="{{ poll_id }}-goal-bar"
                     aria-valuenow="{{ kei_status_total or 0 }}" aria-valuemin="0" aria-valuemax="{{ kei_poll_goal }}"
                     aria-labelledby="{{ poll_id }}-goal-label">
-                    <div class="kei-poll-goal__bar-fill" style="width: {{ [((kei_status_total or 0) / kei_poll_goal * 100)|round(1), 100]|min }}%;"></div>
+                    <div class="kei-poll-goal__bar-fill" data-width-pct="{{ [((kei_status_total or 0) / kei_poll_goal * 100)|round(1), 100]|min }}"></div>
                 </div>
             </div>
             {% else %}
             <span class="kei-poll__total">Total Votes: {{ kei_status_total if kei_status_total is not none else '—' }}</span>
             {% endif %}
-            <button type="submit" form="{{ poll_id }}-form" class="kei-poll__submit btn btn--primary"
+            <button type="submit" class="kei-poll__submit btn btn--primary"
                 aria-label="Submit and see results" disabled>Submit and see results</button>
         </footer>
+        </form>
     </div>
 </div>
+{% include "_data_styles_script.html" %}
 {% endmacro %}
 
 {# Inline variant for Why-you-care adventure flow: no card chrome, no progress dots. Question + Yes/No pills + sub-options + step 3 impact.
    swap_target_id: element id whose innerHTML is replaced on submit (e.g. why-you-care-flow). #}
-{% macro kei_poll_inline(poll_id="home-kei-poll", kei_status_total=none, swap_target_id="why-you-care-flow", kei_impact_options=none, kei_poll_goal=none) %}
+{% macro kei_poll_inline(poll_id="home-kei-poll", kei_status_total=none, swap_target_id="why-you-care-flow", kei_impact_options=none, kei_poll_goal=none, zip_known=true, prefill_zip='') %}
 <div class="wyc-inline-poll" data-kei-poll-branch data-kei-poll-inline aria-labelledby="{{ poll_id }}-heading">
     <form id="{{ poll_id }}-form" action="/updates/kei-status" method="post" class="wyc-inline-poll__form"
         hx-post="/updates/kei-status" hx-target="#{{ swap_target_id }}" hx-swap="innerHTML"
@@ -368,41 +381,52 @@
             </div>
         </div>
         <div class="wyc-inline-poll__step3 wyc-inline-poll__step3--hidden" id="{{ poll_id }}-panel-impact" aria-hidden="true">
-            <p class="wyc-inline-poll__step2-legend">How does this affect you?</p>
-            <div class="wyc-inline-poll__options" role="group" aria-label="How does this affect you?">
+            <p class="wyc-inline-poll__step2-legend">What would this fix mean for you?</p>
+            <div class="wyc-inline-poll__options" role="group" aria-label="What would this fix mean for you?">
                 {% for slug, label in (kei_impact_options or []) %}
                 <label class="wyc-inline-poll__option"><input type="radio" name="kei_impact_radio" value="{{ slug }}"
                         data-kei-impact-slug>{{ label }}</label>
                 {% endfor %}
             </div>
         </div>
-        {% if turnstile_site_key %}
-        <div id="{{ poll_id }}-turnstile-container" class="wyc-inline-poll__turnstile-wrap kei-poll__turnstile-wrap--hidden"
-            data-sitekey="{{ turnstile_site_key }}" aria-describedby="{{ poll_id }}-turnstile-hint" aria-live="polite">
+        <p class="wyc-inline-poll__back-wrap wyc-inline-poll__back-wrap--hidden" id="{{ poll_id }}-back-wrap" aria-hidden="true">
+            <button type="button" class="wyc-inline-poll__back btn btn--text" aria-label="Back to previous question">Back</button>
+        </p>
+        <div class="wyc-inline-poll__zip-panel kei-poll__zip-panel kei-poll__zip-panel--hidden" id="{{ poll_id }}-panel-zip" data-kei-poll-step="zip" aria-hidden="true">
+            <p class="kei-poll__zip-intro">Last thing — your ZIP code helps us tell your legislator exactly how many of their constituents are affected.</p>
+            <label for="{{ poll_id }}-zip-inline" class="visually-hidden">Your ZIP code</label>
+            <input type="text" id="{{ poll_id }}-zip-inline" name="zip_code" class="kei-poll__zip-input input" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" placeholder="ZIP code" autocomplete="postal-code" aria-required="true" value="{{ prefill_zip|default('')|e }}">
         </div>
-        <span id="{{ poll_id }}-turnstile-hint" class="visually-hidden">Security check so your vote counts.</span>
-        <p class="kei-poll__turnstile-hint">This check helps us count real responses.</p>
+        {% if turnstile_site_key %}
+        <div id="{{ poll_id }}-turnstile-wrap" class="wyc-inline-poll__turnstile-wrap kei-poll__turnstile-wrap kei-poll__turnstile-wrap--hidden">
+            <div id="{{ poll_id }}-turnstile-container"
+                data-sitekey="{{ turnstile_site_key }}" aria-describedby="{{ poll_id }}-turnstile-hint" aria-live="polite">
+            </div>
+            <span id="{{ poll_id }}-turnstile-hint" class="visually-hidden">Security check so your vote counts.</span>
+            <p class="kei-poll__turnstile-hint">This check helps us count real responses.</p>
+        </div>
         {% endif %}
         <footer class="wyc-inline-poll__footer">
+            <span class="wyc-inline-poll__submit-wrap wyc-inline-poll__submit-wrap--hidden" aria-hidden="true">
+                <button type="submit" class="wyc-inline-poll__submit btn btn--success" aria-label="Submit and see results"
+                    disabled>Submit and see results</button>
+            </span>
             {% if kei_poll_goal is not none and kei_poll_goal > 0 %}
             <div class="kei-poll-goal wyc-inline-poll__goal" role="status" aria-live="polite">
                 <p class="kei-poll-goal__label" id="{{ poll_id }}-goal-label">{{ (kei_status_total or 0) }} of {{ kei_poll_goal }} responses</p>
                 <div class="kei-poll-goal__bar" role="progressbar" id="{{ poll_id }}-goal-bar"
                     aria-valuenow="{{ kei_status_total or 0 }}" aria-valuemin="0" aria-valuemax="{{ kei_poll_goal }}"
                     aria-labelledby="{{ poll_id }}-goal-label">
-                    <div class="kei-poll-goal__bar-fill" style="width: {{ [((kei_status_total or 0) / kei_poll_goal * 100)|round(1), 100]|min }}%;"></div>
+                    <div class="kei-poll-goal__bar-fill" data-width-pct="{{ [((kei_status_total or 0) / kei_poll_goal * 100)|round(1), 100]|min }}"></div>
                 </div>
             </div>
             {% else %}
             <span class="wyc-inline-poll__total" aria-hidden="true">Total Votes: {{ kei_status_total if kei_status_total is not none else '—' }}</span>
             {% endif %}
-            <span class="wyc-inline-poll__submit-wrap wyc-inline-poll__submit-wrap--hidden" aria-hidden="true">
-                <button type="submit" class="wyc-inline-poll__submit btn btn--success" aria-label="Submit and see results"
-                    disabled>Submit and see results</button>
-            </span>
         </footer>
     </form>
 </div>
+{% include "_data_styles_script.html" %}
 {% endmacro %}
 
 {% macro kei_poll_results_chart(kei_status_results, kei_status_options, selected_slug=none, offer_save_choice=false) %}
@@ -458,13 +482,14 @@
             </div>
             <div class="kei-poll-chart__bar-wrap" aria-hidden="true" role="presentation">
                 <span class="kei-poll-chart__bar kei-poll-chart__bar--{{ 'highest' if is_highest else 'other' }}"
-                    style="width: {{ pct }}%"></span>
+                    data-width-pct="{{ pct }}"></span>
             </div>
             <span class="visually-hidden" aria-label="{{ count }} responses">{{ count }}</span>
         </li>
         {% endfor %}
     </ul>
 </div>
+{% include "_data_styles_script.html" %}
 {% endmacro %}
 
 {% macro subscribe_form(form_id, action="/updates/subscribe-email", variant="inline") %}
@@ -484,8 +509,14 @@
 {% set share_copy_text_id = section_id ~ '-copy-text' %}
 {% set share_feedback_id = section_id ~ '-copy-feedback' %}
 {% set share_native_btn_id = section_id ~ '-native-btn' %}
+{% set _share_variant = 'full' if variant == 'full' else ('constituent' if target == 'constituent' else 'brief') %}
+{% set _share_fallback = 'What Illinois residents need to know about Kei vehicle registration — learn and contact your legislators.' if target == 'constituent' else 'Brief on Kei vehicle registration in Illinois — statutory gap and proposed clarification.' %}
+{% set _share_native_sel = '.js-share-native' ~ ('-sidebar' if variant == 'sidebar' else '') %}
 <section class="share-section {% if variant == 'sidebar' %}share-section--sidebar{% endif %}" id="{{ section_id }}"
-    aria-labelledby="{{ share_heading_id }}">
+    aria-labelledby="{{ share_heading_id }}"
+    data-share-variant="{{ _share_variant }}"
+    data-share-fallback="{{ _share_fallback | e }}"
+    data-share-native-selector="{{ _share_native_sel }}">
     <h2 class="share-section-title" id="{{ share_heading_id }}">Share</h2>
     {% if variant == 'full' %}
     <p class="share-section-intro">Help spread the word.</p>
@@ -509,7 +540,7 @@
             <span class="share-section-btn-text" id="{{ share_copy_text_id }}">Copy link</span>
         </button>
         <button type="button"
-            class="share-section-btn share-section-btn-native js-share-native{% if variant == 'sidebar' %}-sidebar{% endif %}"
+            class="share-section-btn share-section-btn-native {{ _share_native_sel[1:] }}"
             id="{{ share_native_btn_id }}" aria-label="Share via your device or app" {% if variant=='sidebar'
             %}data-section-id="{{ section_id }}" {% endif %} hidden>
             <span class="share-section-btn-icon" aria-hidden="true">
@@ -575,18 +606,15 @@
             copyBtn.disabled = true;
         }
 
-        var nativeBtn = section.querySelector('.js-share-native{% if variant == 'sidebar' %}-sidebar{% endif %}');
+        var nativeBtn = section.querySelector(section.getAttribute('data-share-native-selector') || '.js-share-native');
         if (nativeBtn && typeof navigator !== 'undefined' && navigator.share) {
             nativeBtn.removeAttribute('hidden');
             nativeBtn.addEventListener('click', function () {
                 var title = document.title || 'The Land of Kei';
-                {% if variant == 'full' %}
-                var text = (document.querySelector('meta[name="description"]') && document.querySelector('meta[name="description"]').getAttribute('content')) || 'Fix Illinois law — allow Kei vehicle registration.';
-                {% elif target == 'constituent' %}
-                var text = 'What Illinois residents need to know about Kei vehicle registration — learn and contact your legislators.';
-                {% else %}
-                var text = 'Brief on Kei vehicle registration in Illinois — statutory gap and proposed clarification.';
-                {% endif %}
+                var shareVariant = section.getAttribute('data-share-variant');
+                var text = shareVariant === 'full'
+                    ? (document.querySelector('meta[name="description"]') && document.querySelector('meta[name="description"]').getAttribute('content')) || 'Fix Illinois law — allow Kei vehicle registration.'
+                    : (section.getAttribute('data-share-fallback') || '');
                 navigator.share({
                     title: title,
                     text: text,
@@ -631,7 +659,7 @@
                     {% if _five_point_icons[_card_index] == 'states' %}
                     {% include "_strategic_states_icon.html" %}
                     {% else %}
-                    <iconify-icon icon="{{ _five_point_icons[_card_index].icon }}" style="color: {{ _five_point_icons[_card_index].color }}"></iconify-icon>
+                    <iconify-icon icon="{{ _five_point_icons[_card_index].icon }}" data-color="{{ _five_point_icons[_card_index].color }}"></iconify-icon>
                     {% endif %}
                 </span>
                 <p class="strategic-points-card-text">{{ point|safe }}</p>
@@ -646,7 +674,7 @@
                     {% if _five_point_icons[_card_index] == 'states' %}
                     {% include "_strategic_states_icon.html" %}
                     {% else %}
-                    <iconify-icon icon="{{ _five_point_icons[_card_index].icon }}" style="color: {{ _five_point_icons[_card_index].color }}"></iconify-icon>
+                    <iconify-icon icon="{{ _five_point_icons[_card_index].icon }}" data-color="{{ _five_point_icons[_card_index].color }}"></iconify-icon>
                     {% endif %}
                 </span>
                 <p class="strategic-points-card-text">{{ point|safe }}</p>
@@ -655,6 +683,7 @@
         </div>
     </div>
 </section>
+{% include "_data_styles_script.html" %}
 {% endif %}
 {% endmacro %}
 
@@ -662,9 +691,10 @@
 {% set pct = (score / max * 100) if max else 0 %}
 <div class="score-bar score-bar--{{ size }}">
     <div class="score-bar__fill">
-        <div class="score-bar__fill-inner {% if fill_class %}{{ fill_class }}{% endif %}" style="width: {{ pct }}%;">
+        <div class="score-bar__fill-inner {% if fill_class %}{{ fill_class }}{% endif %}" data-width-pct="{{ pct }}">
         </div>
     </div>
     {% if label %}<span class="score-bar__label">{{ label }}</span>{% endif %}
 </div>
+{% include "_data_styles_script.html" %}
 {% endmacro %}

@@ -96,3 +96,15 @@ def test_timeline_waterfall_data_builds_months_and_columns() -> None:
         assert "start_col" in p
         assert "end_col" in p
         assert 0 <= p["start_col"] <= p["end_col"] < len(out["months"])
+
+
+def test_timeline_waterfall_data_milestones_have_column_indices() -> None:
+    """Each milestone has start_col and end_col within the timeline grid."""
+    phases = _timeline_phases_with_inline_glossary()
+    out = _timeline_waterfall_data(phases)
+    n_cols = len(out["months"])
+    for p in out["phases"]:
+        for m in p.get("milestones") or []:
+            assert "start_col" in m
+            assert "end_col" in m
+            assert 0 <= m["start_col"] <= m["end_col"] < n_cols

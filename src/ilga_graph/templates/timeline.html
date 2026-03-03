@@ -7,88 +7,107 @@
         <h1 id="timeline-heading">2027 campaign timeline</h1>
         <p class="timeline-page__intro">From now through when a bill could get signed into law. Key phases and
             milestones for the Illinois kei vehicle registration fix. <span class="timeline-page__scroll-hint">Scroll or
-                swipe left and right to see all months; the phase for the visible period opens automatically.</span></p>
+                swipe left and right to see all months; click a phase or month to open or close its details.</span></p>
     </header>
 
     <div class="timeline-waterfall" tabindex="0" role="region"
-        aria-label="Campaign timeline by month — scroll horizontally to see all months. The phase for the visible period opens automatically; you can also click a month or phase to show its details."
-        data-current-phase-id="{{ current_phase_id or '' }}">
-        <table class="timeline-waterfall__table" role="table">
-            <thead>
-                <tr>
-                    <th scope="col" class="timeline-waterfall__label-cell timeline-waterfall__header-cell">Phase</th>
-                    {% for mo in timeline_months %}
-                    <th scope="col" class="timeline-waterfall__month-cell timeline-waterfall__header-cell"
-                        abbr="{{ mo.key }}">
-                        <button type="button" class="timeline-waterfall__month-trigger"
-                            data-month-index="{{ loop.index0 }}" data-month-label="{{ mo.label }}"
-                            title="Show phase for {{ mo.label }}" aria-label="Show phase for {{ mo.label }}">{{ mo.label
-                            }}</button>
-                    </th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
+        aria-label="Campaign timeline by month — scroll horizontally to see all months. Click a phase or month to open or close its details."
+        data-current-phase-id="{{ current_phase_id or '' }}"
+        data-now-month-index="{{ now_month_index if now_month_index is defined and now_month_index >= 0 else -1 }}">
+        <div class="timeline-waterfall__scroll-content">
+            {% if now_month_index is defined and now_month_index >= 0 %}
+            <div class="timeline-waterfall__now-line" role="presentation" aria-hidden="true"
+                data-now-month-index="{{ now_month_index }}" title="Today"></div>
+            {% endif %}
+            <table class="timeline-waterfall__table" role="table">
+                <thead>
+                    <tr>
+                        <th scope="col" class="timeline-waterfall__label-cell timeline-waterfall__header-cell">Phase
+                        </th>
+                        {% for mo in timeline_months %}
+                        <th scope="col" class="timeline-waterfall__month-cell timeline-waterfall__header-cell"
+                            abbr="{{ mo.key }}">
+                            <button type="button" class="timeline-waterfall__month-trigger"
+                                data-month-index="{{ loop.index0 }}" data-month-label="{{ mo.label }}"
+                                title="Toggle phase for {{ mo.label }}"
+                                aria-label="Toggle phase details for {{ mo.label }}">{{
+                                mo.label
+                                }}</button>
+                        </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
                 {% for phase in timeline_phases %}
-                <tr class="timeline-waterfall__phase-row{% if phase.id == current_phase_id %} timeline-waterfall__phase-row--current{% endif %}"
-                    id="phase-{{ phase.id }}" data-start-col="{{ phase.start_col }}" data-end-col="{{ phase.end_col }}"
-                    {% if phase.id==current_phase_id %} aria-current="true" {% endif %}>
-                    <th scope="row" class="timeline-waterfall__label-cell" id="phase-{{ phase.id }}-heading">
-                        <button type="button" class="timeline-waterfall__expand-btn" aria-expanded="false"
-                            aria-controls="phase-details-{{ phase.id }}"
-                            data-phase-details="phase-details-{{ phase.id }}" id="phase-toggle-{{ phase.id }}">
-                            <span class="timeline-waterfall__phase-title">{% if phase.get('label_html') %}{{
-                                phase.label_html|safe }}{% else %}{{ phase.label }}{% endif %}</span>
-                            <span class="timeline-waterfall__date-range">{{ phase.date_range }}</span>
-                            <span class="timeline-waterfall__expand-icon" aria-hidden="true"></span>
-                        </button>
-                    </th>
-                    {% for i in range(phase.start_col) %}
-                    <td class="timeline-waterfall__empty-cell" headers="phase-{{ phase.id }}-heading"></td>
+                <tbody class="timeline-waterfall__phase-group" data-phase-id="{{ phase.id }}">
+                    <tr class="timeline-waterfall__phase-row{% if phase.id == current_phase_id %} timeline-waterfall__phase-row--current{% endif %}"
+                        id="phase-{{ phase.id }}" data-start-col="{{ phase.start_col }}"
+                        data-end-col="{{ phase.end_col }}" {% if phase.id==current_phase_id %} aria-current="true" {%
+                        endif %}>
+                        <th scope="row" class="timeline-waterfall__label-cell" id="phase-{{ phase.id }}-heading">
+                            <button type="button" class="timeline-waterfall__expand-btn" aria-expanded="false"
+                                aria-controls="phase-details-{{ phase.id }}"
+                                data-phase-details="phase-details-{{ phase.id }}" id="phase-toggle-{{ phase.id }}">
+                                <span class="timeline-waterfall__phase-title">{% if phase.get('label_html') %}{{
+                                    phase.label_html|safe }}{% else %}{{ phase.label }}{% endif %}</span>
+                                <span class="timeline-waterfall__date-range">{{ phase.date_range }}</span>
+                                <span class="timeline-waterfall__expand-icon" aria-hidden="true"></span>
+                            </button>
+                        </th>
+                        {% for i in range(phase.start_col) %}
+                        <td class="timeline-waterfall__empty-cell" headers="phase-{{ phase.id }}-heading"></td>
+                        {% endfor %}
+                        <td colspan="{{ phase.end_col - phase.start_col + 1 }}" class="timeline-waterfall__bar-cell"
+                            headers="phase-{{ phase.id }}-heading">
+                            <button type="button" class="timeline-waterfall__bar-trigger" aria-expanded="false"
+                                aria-controls="phase-details-{{ phase.id }}"
+                                data-phase-details="phase-details-{{ phase.id }}"
+                                title="Toggle details for {{ phase.label }}"><span class="visually-hidden">Toggle
+                                    details
+                                    for {{
+                                    phase.label }}</span></button>
+                        </td>
+                        {% for i in range(timeline_months|length - phase.end_col - 1) %}
+                        <td class="timeline-waterfall__empty-cell" headers="phase-{{ phase.id }}-heading"></td>
+                        {% endfor %}
+                    </tr>
+                    <tr class="timeline-waterfall__details-row timeline-waterfall__phase-definition-row timeline-waterfall__details-row--collapsed"
+                        id="phase-details-{{ phase.id }}" data-phase-id="{{ phase.id }}" role="region"
+                        aria-labelledby="phase-toggle-{{ phase.id }}" hidden>
+                        <td class="timeline-waterfall__label-cell timeline-waterfall__details-label-cell">
+                            <div class="timeline-waterfall__phase-definition" aria-label="Phase definition">
+                                <p class="timeline-waterfall__phase-definition-text">{% if phase.get('summary_html')
+                                    %}{{
+                                    phase.summary_html|safe }}{% else %}{{ phase.summary }}{% endif %}</p>
+                            </div>
+                        </td>
+                        <td colspan="{{ timeline_months|length }}" class="timeline-waterfall__details-cell"></td>
+                    </tr>
+                    {% for m in phase.milestones %}
+                    <tr class="timeline-waterfall__milestone-row timeline-waterfall__details-row timeline-waterfall__details-row--collapsed"
+                        data-phase-id="{{ phase.id }}" hidden>
+                        <td class="timeline-waterfall__label-cell timeline-waterfall__milestone-label-cell"
+                            headers="phase-{{ phase.id }}-heading">
+                            <span class="timeline-waterfall__milestone-date">{{ m.date }}</span>
+                            <strong class="timeline-waterfall__milestone-title">{% if m.get('title_html') %}{{
+                                m.title_html|safe }}{% else %}{{ m.title }}{% endif %}</strong>
+                        </td>
+                        {% for i in range(m.start_col) %}
+                        <td class="timeline-waterfall__empty-cell" headers="phase-{{ phase.id }}-heading"></td>
+                        {% endfor %}
+                        <td colspan="{{ m.end_col - m.start_col + 1 }}" class="timeline-waterfall__milestone-desc-cell"
+                            headers="phase-{{ phase.id }}-heading">
+                            <span class="timeline-waterfall__milestone-desc">{% if m.get('description_html') %}{{
+                                m.description_html|safe }}{% else %}{{ m.description }}{% endif %}</span>
+                        </td>
+                        {% for i in range(timeline_months|length - m.end_col - 1) %}
+                        <td class="timeline-waterfall__empty-cell" headers="phase-{{ phase.id }}-heading"></td>
+                        {% endfor %}
+                    </tr>
                     {% endfor %}
-                    <td colspan="{{ phase.end_col - phase.start_col + 1 }}" class="timeline-waterfall__bar-cell"
-                        headers="phase-{{ phase.id }}-heading">
-                        <button type="button" class="timeline-waterfall__bar-trigger" aria-expanded="false"
-                            aria-controls="phase-details-{{ phase.id }}"
-                            data-phase-details="phase-details-{{ phase.id }}"
-                            title="Show details for {{ phase.label }}"><span class="visually-hidden">Show details for {{
-                                phase.label }}</span></button>
-                    </td>
-                    {% for i in range(timeline_months|length - phase.end_col - 1) %}
-                    <td class="timeline-waterfall__empty-cell" headers="phase-{{ phase.id }}-heading"></td>
-                    {% endfor %}
-                </tr>
-                <tr class="timeline-waterfall__details-row timeline-waterfall__details-row--collapsed"
-                    id="phase-details-{{ phase.id }}" role="region" aria-labelledby="phase-toggle-{{ phase.id }}"
-                    hidden>
-                    <td class="timeline-waterfall__label-cell timeline-waterfall__details-label-cell">
-                        <div class="timeline-waterfall__phase-definition" aria-label="Phase definition">
-                            <p class="timeline-waterfall__phase-definition-text">{% if phase.get('summary_html') %}{{
-                                phase.summary_html|safe }}{% else %}{{ phase.summary }}{% endif %}</p>
-                        </div>
-                    </td>
-                    <td colspan="{{ timeline_months|length }}" class="timeline-waterfall__details-cell">
-                        <div class="timeline-waterfall__details-inner">
-                            {% if phase.milestones %}
-                            <ul class="timeline-waterfall__milestones" role="list"
-                                aria-label="Milestones for this phase">
-                                {% for m in phase.milestones %}
-                                <li class="timeline-waterfall__milestone">
-                                    <span class="timeline-waterfall__milestone-date">{{ m.date }}</span>
-                                    <strong class="timeline-waterfall__milestone-title">{% if m.get('title_html') %}{{
-                                        m.title_html|safe }}{% else %}{{ m.title }}{% endif %}</strong>
-                                    <span class="timeline-waterfall__milestone-desc">{% if m.get('description_html')
-                                        %}{{ m.description_html|safe }}{% else %}{{ m.description }}{% endif %}</span>
-                                </li>
-                                {% endfor %}
-                            </ul>
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
+                </tbody>
                 {% endfor %}
-            </tbody>
-        </table>
+            </table>
+        </div>
     </div>
     <script>
         (function () {
@@ -96,86 +115,38 @@
             var table = container && container.querySelector('.timeline-waterfall__table');
             if (!container || !table) return;
 
-            function setDetailsMonthContext(inner, monthLabel) {
-                var ctx = inner.querySelector('.timeline-waterfall__details-context');
-                if (monthLabel) {
-                    if (!ctx) {
-                        ctx = document.createElement('p');
-                        ctx.className = 'timeline-waterfall__details-context';
-                        inner.insertBefore(ctx, inner.firstChild);
-                    }
-                    ctx.textContent = 'For ' + monthLabel;
-                    ctx.setAttribute('aria-hidden', 'false');
-                } else if (ctx) {
-                    ctx.setAttribute('aria-hidden', 'true');
-                    ctx.textContent = '';
-                }
+            function getDetailRowsForPhase(phaseId) {
+                return container.querySelectorAll('.timeline-waterfall__details-row[data-phase-id="' + phaseId + '"]');
             }
 
-            function applyDetailsOffset(row, monthIndex, monthTh) {
-                var inner = row.querySelector('.timeline-waterfall__details-inner');
-                var col = monthTh || (typeof monthIndex === 'number' && monthIndex >= 0
-                    ? table.querySelector('thead tr th.timeline-waterfall__month-cell:nth-child(' + (monthIndex + 2) + ')')
-                    : null);
-                if (!inner || !col) return;
-                var containerRect = container.getBoundingClientRect();
-                var colRect = col.getBoundingClientRect();
-                var offsetPx = colRect.left - containerRect.left;
-                inner.classList.add('timeline-waterfall__details-inner--sticky');
-                inner.style.left = offsetPx + 'px';
-            }
-
-            function openDetailsForPhase(phaseId, monthIndex, clickedMonthTh) {
-                var detailsId = 'phase-details-' + phaseId;
-                var row = document.getElementById(detailsId);
-                if (!row) return;
-                var inner = row.querySelector('.timeline-waterfall__details-inner');
-                if (!inner) return;
-                row.removeAttribute('data-offset-month-index');
-                row.hidden = false;
-                row.classList.remove('timeline-waterfall__details-row--collapsed');
-                container.querySelectorAll('[data-phase-details="' + detailsId + '"]').forEach(function (b) {
+            function openDetailsForPhase(phaseId) {
+                getDetailRowsForPhase(phaseId).forEach(function (row) {
+                    row.hidden = false;
+                    row.classList.remove('timeline-waterfall__details-row--collapsed');
+                });
+                container.querySelectorAll('[data-phase-details="phase-details-' + phaseId + '"]').forEach(function (b) {
                     b.setAttribute('aria-expanded', 'true');
                 });
-                if (typeof monthIndex === 'number' && monthIndex >= 0) {
-                    row.setAttribute('data-offset-month-index', monthIndex);
-                    var monthBtn = table.querySelector('.timeline-waterfall__month-trigger[data-month-index="' + monthIndex + '"]');
-                    var monthLabel = monthBtn ? monthBtn.getAttribute('data-month-label') : '';
-                    setDetailsMonthContext(inner, monthLabel);
-                    var runOffset = function () { applyDetailsOffset(row, monthIndex, clickedMonthTh); };
-                    requestAnimationFrame(function () {
-                        requestAnimationFrame(runOffset);
-                    });
-                } else {
-                    setDetailsMonthContext(inner, '');
-                    inner.style.position = '';
-                    inner.style.left = '';
-                    inner.classList.remove('timeline-waterfall__details-inner--sticky');
-                }
+                var phaseGroup = container.querySelector('.timeline-waterfall__phase-group[data-phase-id="' + phaseId + '"]');
+                if (phaseGroup) phaseGroup.classList.add('timeline-waterfall__phase-group--open');
+                container.classList.add('timeline-waterfall--has-open');
+                requestAnimationFrame(positionNowLine);
             }
 
             function closeDetails(phaseId) {
-                var detailsId = 'phase-details-' + phaseId;
-                var row = document.getElementById(detailsId);
-                if (!row) return;
-                row.removeAttribute('data-offset-month-index');
-                var inner = row.querySelector('.timeline-waterfall__details-inner');
-                if (inner) {
-                    inner.classList.remove('timeline-waterfall__details-inner--sticky');
-                    inner.style.left = '';
-                }
-                row.hidden = true;
-                row.classList.add('timeline-waterfall__details-row--collapsed');
-                container.querySelectorAll('[data-phase-details="' + detailsId + '"]').forEach(function (b) {
+                getDetailRowsForPhase(phaseId).forEach(function (row) {
+                    row.hidden = true;
+                    row.classList.add('timeline-waterfall__details-row--collapsed');
+                });
+                container.querySelectorAll('[data-phase-details="phase-details-' + phaseId + '"]').forEach(function (b) {
                     b.setAttribute('aria-expanded', 'false');
                 });
-            }
-
-            function openDetailsForPhaseFromPhaseClick(phaseId) {
-                var phaseRow = document.getElementById('phase-' + phaseId);
-                var startCol = phaseRow ? parseInt(phaseRow.getAttribute('data-start-col'), 10) : 0;
-                if (isNaN(startCol)) startCol = 0;
-                openDetailsForPhase(phaseId, startCol, null);
+                var phaseGroup = container.querySelector('.timeline-waterfall__phase-group[data-phase-id="' + phaseId + '"]');
+                if (phaseGroup) phaseGroup.classList.remove('timeline-waterfall__phase-group--open');
+                if (!container.querySelector('.timeline-waterfall__phase-group--open')) {
+                    container.classList.remove('timeline-waterfall--has-open');
+                }
+                requestAnimationFrame(positionNowLine);
             }
 
             function getPhaseIdForMonthIndex(monthIndex) {
@@ -190,79 +161,27 @@
                 return null;
             }
 
-            function getMonthIndexAtViewportCenter() {
-                var containerRect = container.getBoundingClientRect();
-                var centerX = containerRect.left + containerRect.width / 2;
-                var monthCells = table.querySelectorAll('thead tr th.timeline-waterfall__month-cell');
-                var bestIdx = -1, bestDist = Infinity;
-                for (var i = 0; i < monthCells.length; i++) {
-                    var r = monthCells[i].getBoundingClientRect();
-                    var cellCenter = r.left + r.width / 2;
-                    var d = Math.abs(cellCenter - centerX);
-                    if (d < bestDist) { bestDist = d; bestIdx = i; }
-                }
-                return bestIdx >= 0 ? bestIdx : 0;
-            }
-
-            function syncOpenPhaseToScroll() {
-                var monthIndex = getMonthIndexAtViewportCenter();
-                var phaseId = getPhaseIdForMonthIndex(monthIndex);
-                if (!phaseId) return;
-                var openRow = container.querySelector('.timeline-waterfall__details-row[id^="phase-details-"]:not([hidden])');
-                var openPhaseId = openRow ? openRow.id.replace(/^phase-details-/, '') : null;
-                if (openPhaseId === phaseId) {
-                    var row = document.getElementById('phase-details-' + phaseId);
-                    if (row) {
-                        row.setAttribute('data-offset-month-index', monthIndex);
-                        var inner = row.querySelector('.timeline-waterfall__details-inner');
-                        var monthTh = table.querySelector('thead tr th.timeline-waterfall__month-cell:nth-child(' + (monthIndex + 2) + ')');
-                        var monthBtn = monthTh ? monthTh.querySelector('.timeline-waterfall__month-trigger') : null;
-                        var monthLabel = monthBtn ? monthBtn.getAttribute('data-month-label') : '';
-                        setDetailsMonthContext(inner, monthLabel);
-                        applyDetailsOffset(row, monthIndex, monthTh);
-                    }
-                    return;
-                }
-                var phaseRows = table.querySelectorAll('tbody tr.timeline-waterfall__phase-row');
-                phaseRows.forEach(function (r) {
-                    var pid = r.id && r.id.replace(/^phase-/, '');
-                    if (pid) closeDetails(pid);
-                });
-                var monthTh = table.querySelector('thead tr th.timeline-waterfall__month-cell:nth-child(' + (monthIndex + 2) + ')');
-                var monthBtn = monthTh ? monthTh.querySelector('.timeline-waterfall__month-trigger') : null;
-                openDetailsForPhase(phaseId, monthIndex, monthTh);
-                var detailsRow = document.getElementById('phase-details-' + phaseId);
-                if (detailsRow) {
-                    detailsRow.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-                }
+            function getAllPhaseIds() {
+                var groups = container.querySelectorAll('.timeline-waterfall__phase-group');
+                return Array.prototype.map.call(groups, function (g) { return g.getAttribute('data-phase-id'); });
             }
 
             function toggleDetails(btn) {
                 var id = btn.getAttribute('data-phase-details');
-                var row = id && document.getElementById(id);
-                if (!row) return;
-                var isCurrentlyOpen = row.getAttribute('hidden') === null;
+                var phaseId = id ? id.replace(/^phase-details-/, '') : null;
+                if (!phaseId) return;
+                var firstRow = document.getElementById(id);
+                if (!firstRow) return;
+                var isCurrentlyOpen = !firstRow.hidden;
                 if (isCurrentlyOpen) {
-                    var phaseId = id.replace(/^phase-details-/, '');
                     closeDetails(phaseId);
                 } else {
-                    var phaseId = id.replace(/^phase-details-/, '');
-                    openDetailsForPhaseFromPhaseClick(phaseId);
+                    getAllPhaseIds().forEach(function (pid) {
+                        if (pid && pid !== phaseId) closeDetails(pid);
+                    });
+                    openDetailsForPhase(phaseId);
                 }
             }
-
-            var scrollSyncTimeout;
-            container.addEventListener('scroll', function () {
-                var row = container.querySelector('.timeline-waterfall__details-row[data-offset-month-index]');
-                if (row && !row.hidden) {
-                    var monthIndex = parseInt(row.getAttribute('data-offset-month-index'), 10);
-                    if (!isNaN(monthIndex)) applyDetailsOffset(row, monthIndex);
-                }
-                clearTimeout(scrollSyncTimeout);
-                scrollSyncTimeout = setTimeout(function () {
-                    syncOpenPhaseToScroll();
-                }, 120);
-            });
 
             container.addEventListener('click', function (e) {
                 var monthBtn = e.target.closest('.timeline-waterfall__month-trigger');
@@ -282,11 +201,17 @@
                         }
                     }
                     if (targetPhaseId) {
-                        phaseRows.forEach(function (r) {
-                            var pid = r.id && r.id.replace(/^phase-/, '');
-                            if (pid) closeDetails(pid);
-                        });
-                        openDetailsForPhase(targetPhaseId, monthIndex, monthBtn.closest('th'));
+                        var firstRow = document.getElementById('phase-details-' + targetPhaseId);
+                        var isOpen = firstRow && !firstRow.hidden;
+                        if (isOpen) {
+                            closeDetails(targetPhaseId);
+                        } else {
+                            phaseRows.forEach(function (r) {
+                                var pid = r.id && r.id.replace(/^phase-/, '');
+                                if (pid) closeDetails(pid);
+                            });
+                            openDetailsForPhase(targetPhaseId);
+                        }
                     }
                     return;
                 }
@@ -297,21 +222,28 @@
                 }
             });
 
-            var currentPhaseId = container.getAttribute('data-current-phase-id');
-            if (currentPhaseId) {
-                openDetailsForPhaseFromPhaseClick(currentPhaseId);
-                var phaseRow = document.getElementById('phase-' + currentPhaseId);
-                if (phaseRow) {
-                    var startCol = parseInt(phaseRow.getAttribute('data-start-col'), 10);
-                    if (!isNaN(startCol)) {
-                        var monthTh = table.querySelector('thead tr th.timeline-waterfall__month-cell:nth-child(' + (startCol + 2) + ')');
-                        if (monthTh) {
-                            var left = monthTh.offsetLeft - container.clientWidth / 4;
-                            container.scrollLeft = Math.max(0, left);
-                        }
-                    }
-                }
+            function positionNowLine() {
+                var scrollContent = container.querySelector('.timeline-waterfall__scroll-content');
+                var nowLine = scrollContent && scrollContent.querySelector('.timeline-waterfall__now-line');
+                if (!scrollContent || !nowLine) return;
+                var nowIdx = parseInt(container.getAttribute('data-now-month-index'), 10);
+                if (isNaN(nowIdx) || nowIdx < 0) return;
+                var monthCells = table.querySelectorAll('thead tr th.timeline-waterfall__month-cell');
+                var cell = monthCells[nowIdx];
+                var phaseRows = table.querySelectorAll('tbody tr.timeline-waterfall__phase-row');
+                if (!cell || !phaseRows.length) return;
+                var scrollRect = scrollContent.getBoundingClientRect();
+                var cellRect = cell.getBoundingClientRect();
+                var firstRect = phaseRows[0].getBoundingClientRect();
+                // Extend to bottom of scroll content so line grows when drawers open (details/milestone rows).
+                var bottom = scrollRect.bottom;
+                nowLine.style.left = (cellRect.left - scrollRect.left + cellRect.width / 2 - 1.5) + 'px';
+                nowLine.style.top = (firstRect.top - scrollRect.top) + 'px';
+                nowLine.style.height = (bottom - firstRect.top) + 'px';
             }
+
+            positionNowLine();
+            window.addEventListener('resize', positionNowLine);
         })();
     </script>
 

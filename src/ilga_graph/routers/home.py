@@ -16,7 +16,11 @@ from ..constants import KEI_POLL_IMPACT_OPTIONS, KEI_STATUS_OPTIONS
 from ..db import get_db
 from ..db_models import User
 from ..dependencies import get_current_user_optional
-from ..kei_poll_context import _get_kei_status_results, get_kei_poll_initial_state
+from ..kei_poll_context import (
+    _get_kei_status_results,
+    get_kei_poll_initial_state,
+    zip_known_for_user,
+)
 from ..routers.advocacy import DEFAULT_HERO_ZIP, _hero_context
 from ..routers.content import (
     HERO_CLARITY_LINE,
@@ -98,7 +102,9 @@ templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 templates.env.globals["kei_impact_options"] = KEI_POLL_IMPACT_OPTIONS
 templates.env.globals["why_you_care_default_cards"] = WHY_YOU_CARE_DEFAULT_CARDS
 templates.env.globals["why_you_care_pre_poll_line"] = WHY_YOU_CARE_PRE_POLL_LINE
-templates.env.globals["turnstile_site_key"] = cfg.TURNSTILE_SITE_KEY or ""
+templates.env.globals["turnstile_site_key"] = (
+    "" if cfg.TURNSTILE_DISABLED else (cfg.TURNSTILE_SITE_KEY or "")
+)
 
 
 @router.get("/advocacy", include_in_schema=False)
@@ -185,4 +191,6 @@ async def home(
         results = await _get_kei_status_results(db)
         ctx["kei_status_total"] = results["total_responses"]
     ctx["kei_poll_wide_net_line"] = KEI_POLL_WIDE_NET_LINE
+    ctx["zip_known"] = zip_known_for_user(user)
+    ctx["prefill_zip"] = (user.zip_code or "").strip() if user else ""
     return templates.TemplateResponse("home.html", ctx)

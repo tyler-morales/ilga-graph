@@ -737,6 +737,10 @@ a:visited {
   color: #555;
 }
 
+.kei-poll__turnstile-wrap {
+  margin-top: 1.25rem;
+}
+
 .kei-poll__turnstile-wrap--hidden {
   display: none;
 }
@@ -784,52 +788,6 @@ a:visited {
 
 .kei-status-error {
   color: #c62828;
-}
-
-/* Prominent CTA block: sign in to save poll response (hardballer-style nudge). Yellow alert style, full-bleed under Results header, no radius. */
-.kei-poll-nudge-block {
-  margin: -0.5rem -1.25rem 0 -1.25rem;
-  padding: 1rem 1.25rem;
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  background: var(--color-warning-bg, #fef7e0);
-  border: 1px solid var(--color-warning-border, #e6c200);
-  border-left: none;
-  border-right: none;
-  border-radius: 0;
-}
-
-.kei-poll-nudge-block__icon {
-  flex-shrink: 0;
-  color: #b38600;
-  margin-top: 0.1rem;
-}
-
-.kei-poll-nudge-block__content {
-  flex: 1;
-  min-width: 0;
-}
-
-.kei-poll-nudge-block__copy {
-  margin: 0 0 0.75rem;
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  color: #1a1a1a;
-}
-
-/* Poll sign-in: use shared btn--secondary (no link-style). No blue background — blue text on hover only. */
-.kei-poll-nudge-block__signin-link.btn,
-.kei-poll-nudge-block .auth-strip-signin-btn {
-  background: transparent;
-  color: inherit;
-  text-decoration: none;
-}
-
-.kei-poll-nudge-block__signin-link.btn:hover,
-.kei-poll-nudge-block .auth-strip-signin-btn:hover {
-  background: transparent;
-  color: #1a73e8;
 }
 
 .kei-poll-results {
@@ -2042,16 +2000,6 @@ a:visited {
     padding: 0.75rem;
   }
 
-  .kei-poll-card .kei-poll-nudge-block {
-    margin: -0.75rem -0.75rem 0 -0.75rem;
-    padding: 0.75rem;
-  }
-
-  .kei-poll-card .kei-poll-nudge-block__copy {
-    margin-bottom: 0.5rem;
-    font-size: 0.8125rem;
-  }
-
   .kei-poll-card .kei-poll-chart__list {
     gap: 0.5rem;
   }
@@ -2086,11 +2034,6 @@ a:visited {
   }
 
   .kei-poll-card .kei-poll__body {
-    padding: 0.5rem 0.6rem;
-  }
-
-  .kei-poll-card .kei-poll-nudge-block {
-    margin: -0.5rem -0.6rem 0 -0.6rem;
     padding: 0.5rem 0.6rem;
   }
 

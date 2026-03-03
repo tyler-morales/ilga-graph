@@ -5,21 +5,29 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import Request
-from sqlalchemy import func, select
+from sqlalchemy import cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.types import String
 
-from .campaign_config import get_kei_poll_goal
+from .campaign_config import get_campaign_config, get_kei_poll_goal
 from .constants import (
     KEI_IMPACT_ALL_OPTIONS,
     KEI_IMPACT_SLUG_COOKIE,
     KEI_POLL_IMPACT_SLUGS,
     KEI_STATUS_SLUGS,
 )
-from .db_models import KeiPollResponse, Poll, PollResponse, User
+from .db_models import Poll, PollResponse, User
 
 SIDEBAR_KEI_POLL_ID = "sidebar-kei-poll"
+STANDALONE_KEI_POLL_ID = "standalone-kei-poll"
 _KEI_POLL_IDS = frozenset(
-    {"footer-kei-poll", "home-kei-poll", "updates-kei-poll", SIDEBAR_KEI_POLL_ID}
+    {
+        "footer-kei-poll",
+        "home-kei-poll",
+        "updates-kei-poll",
+        SIDEBAR_KEI_POLL_ID,
+        STANDALONE_KEI_POLL_ID,
+    }
 )
 KEI_POLL_VOTED_COOKIE = "kei_poll_voted"
 KEI_POLL_CHOICE_COOKIE = "kei_poll_choice"
@@ -40,15 +48,51 @@ def _validate_kei_poll_impact(slug: str | None) -> str | None:
     return s
 
 
+def _respondent_key_expr():
+    """SQL expression: one key per respondent (user_id or session_id; id fallback)."""
+    return func.coalesce(
+        cast(PollResponse.user_id, String(64)),
+        func.coalesce(PollResponse.session_id, cast(PollResponse.id, String(64))),
+    )
+
+
+async def get_distinct_respondent_count(db: AsyncSession, poll_id: int) -> int:
+    """Distinct respondent count for a poll (one per person). Used by admin and progress bar."""
+    r = await db.execute(
+        select(func.count(func.distinct(_respondent_key_expr()))).where(
+            PollResponse.poll_id == poll_id
+        )
+    )
+    return r.scalar() or 0
+
+
 async def _get_kei_status_results(db: AsyncSession) -> dict[str, Any]:
-    """Aggregate kei_status counts from KeiPollResponse (all votes: anonymous + logged-in)."""
+    """Aggregate kei_status counts from PollResponse for the campaign poll.
+    total_responses = distinct respondents (one per person who completed the poll).
+    by_status = response counts per option (for chart)."""
+    poll_slug = get_campaign_config().poll_slug or "kei"
+    poll = (await db.execute(select(Poll).where(Poll.slug == poll_slug))).scalar_one_or_none()
+    if not poll:
+        return {
+            "by_status": {slug: 0 for slug in KEI_STATUS_SLUGS},
+            "total_responses": 0,
+        }
     result = await db.execute(
-        select(KeiPollResponse.kei_status, func.count())
-        .where(KeiPollResponse.kei_status.isnot(None))
-        .group_by(KeiPollResponse.kei_status)
+        select(PollResponse.option_slug, func.count())
+        .where(PollResponse.poll_id == poll.id)
+        .group_by(PollResponse.option_slug)
     )
     by_status: dict[str, int] = {row[0]: row[1] for row in result.all()}
-    total = sum(by_status.values())
+    row_total = sum(by_status.values())
+    # One response per person: count distinct respondents (progress bar "x of 1000")
+    distinct_r = await db.execute(
+        select(func.count(func.distinct(_respondent_key_expr()))).where(
+            PollResponse.poll_id == poll.id
+        )
+    )
+    total = distinct_r.scalar() or 0
+    if total == 0 and row_total > 0:
+        total = row_total  # fallback if distinct query returns 0
     return {
         "by_status": {slug: by_status.get(slug, 0) for slug in KEI_STATUS_SLUGS},
         "total_responses": total,
@@ -118,6 +162,11 @@ async def get_kei_poll_initial_state(
     }
 
 
+def zip_known_for_user(user: User | None) -> bool:
+    """True if we already have the user's ZIP (don't show zip panel in poll)."""
+    return bool(user and (user.zip_code or "").strip())
+
+
 async def get_kei_poll_sidebar_context(
     request: Request,
     user: User | None,
@@ -126,6 +175,8 @@ async def get_kei_poll_sidebar_context(
     """Sidebar Kei poll (the-issue, legislator-brief, fact-sheet, glossary). Same poll_id."""
     state = await get_kei_poll_initial_state(request, user, db)
     state["poll_id"] = SIDEBAR_KEI_POLL_ID
+    state["zip_known"] = zip_known_for_user(user)
+    state["prefill_zip"] = (user.zip_code or "").strip() if user else ""
     if not state.get("kei_poll_done"):
         results = await _get_kei_status_results(db)
         state["kei_status_total"] = results["total_responses"]

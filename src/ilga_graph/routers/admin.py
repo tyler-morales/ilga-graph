@@ -27,7 +27,6 @@ from ..constants import (
 )
 from ..db import get_db
 from ..db_models import (
-    KeiPollResponse,
     OutreachEvent,
     OutreachStepEvent,
     Poll,
@@ -37,6 +36,7 @@ from ..db_models import (
     User,
 )
 from ..dependencies import get_current_user_optional, require_admin
+from ..kei_poll_context import get_distinct_respondent_count
 from ..member_lookup import find_member_by_district, find_member_by_id
 from ..outreach_steps import (
     CALL_ANSWERED_STEPS,
@@ -530,21 +530,6 @@ async def _get_kei_poll_results(db: AsyncSession) -> dict[str, Any]:
     }
 
 
-async def _get_kei_poll_all_responses(db: AsyncSession) -> dict[str, Any]:
-    """All kei poll response counts (from kei_poll_responses table)."""
-    result = await db.execute(
-        select(KeiPollResponse.kei_status, func.count())
-        .where(KeiPollResponse.kei_status.isnot(None))
-        .group_by(KeiPollResponse.kei_status)
-    )
-    by_status: dict[str, int] = {row[0]: row[1] for row in result.all()}
-    total = sum(by_status.values())
-    return {
-        "by_status": {slug: by_status.get(slug, 0) for slug in KEI_STATUS_SLUGS},
-        "total_responses": total,
-    }
-
-
 # --- Poll (Poll/PollOption/PollResponse) helpers ---
 
 POLL_PLACEMENT_CHOICES: list[tuple[str, str]] = [
@@ -588,15 +573,12 @@ async def _get_poll_results_all(db: AsyncSession, poll_id: int) -> dict[str, Any
 
 
 async def _list_polls_with_counts(db: AsyncSession) -> list[dict[str, Any]]:
-    """List all polls with response count per poll."""
+    """List all polls with distinct respondent count per poll (one per person)."""
     r = await db.execute(select(Poll).order_by(Poll.created_at.desc()))
     polls = list(r.scalars().all())
     out: list[dict[str, Any]] = []
     for p in polls:
-        cnt = await db.execute(
-            select(func.count()).select_from(PollResponse).where(PollResponse.poll_id == p.id)
-        )
-        total = cnt.scalar() or 0
+        total = await get_distinct_respondent_count(db, p.id)
         out.append(
             {
                 "id": p.id,
@@ -612,15 +594,14 @@ async def _list_polls_with_counts(db: AsyncSession) -> list[dict[str, Any]]:
 
 
 async def _get_active_polls_summary(db: AsyncSession) -> dict[str, Any]:
-    """Count of active polls and total responses across them (for dashboard)."""
+    """Active poll count and total distinct respondents (campaign poll only, for dashboard)."""
     r = await db.execute(select(Poll).where(Poll.is_active.is_(True)))
     active = list(r.scalars().all())
-    total_responses = 0
-    for p in active:
-        cnt = await db.execute(
-            select(func.count()).select_from(PollResponse).where(PollResponse.poll_id == p.id)
-        )
-        total_responses += cnt.scalar() or 0
+    poll_slug = get_campaign_config().poll_slug or "kei"
+    campaign_poll = next((p for p in active if p.slug == poll_slug), None)
+    total_responses = (
+        await get_distinct_respondent_count(db, campaign_poll.id) if campaign_poll else 0
+    )
     return {
         "active_count": len(active),
         "total_responses": total_responses,

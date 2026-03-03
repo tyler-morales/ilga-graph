@@ -328,7 +328,7 @@ async def report_bug_page(request: Request):
     """Show the in-app bug report form. Sets csrf_token for the form."""
     submitted = request.query_params.get("submitted") == "1"
     csrf_token = getattr(request.state, "csrf_token", None) or ""
-    turnstile_site_key = cfg.TURNSTILE_SITE_KEY or None
+    turnstile_site_key = None if cfg.TURNSTILE_DISABLED else (cfg.TURNSTILE_SITE_KEY or None)
     return templates.TemplateResponse(
         "report_bug.html",
         {
@@ -392,7 +392,11 @@ async def report_bug_submit(
     client_ip = _client_ip(request)
     if not rate_limit_bug_report(client_ip):
         return RedirectResponse("/report-bug?error=rate", status_code=303)
-    if cfg.TURNSTILE_SECRET_KEY and not await _verify_turnstile(cf_turnstile_response, client_ip):
+    if (
+        not cfg.TURNSTILE_DISABLED
+        and cfg.TURNSTILE_SECRET_KEY
+        and not await _verify_turnstile(cf_turnstile_response, client_ip)
+    ):
         return RedirectResponse("/report-bug?error=captcha", status_code=303)
     description = description.strip()
     if not description or len(description) < BUG_REPORT_DESCRIPTION_MIN_LENGTH:

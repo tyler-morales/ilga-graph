@@ -129,7 +129,7 @@
 </div>
 
 <script>
-    /* ── Auto-scroll to results only when user just submitted zip (not on plain navigation) ── */
+    /* ── Auto-scroll to member cards when user just submitted zip (home or advocacy hero) ── */
     (function () {
         var results = document.getElementById('results');
         if (!results || results.getAttribute('data-has-initial-results') !== 'true') return;
@@ -143,8 +143,9 @@
         var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         requestAnimationFrame(function () {
             var drawer = document.getElementById('advocacy-drawer');
-            if ((drawer && drawer.classList.contains('open')) || shouldSkipResultsScroll()) return;
-            results.scrollIntoView({
+            if ((drawer && drawer.classList.contains('open')) || (typeof shouldSkipResultsScroll === 'function' && shouldSkipResultsScroll())) return;
+            var scrollTarget = results.querySelector('#member-carousel') || results;
+            scrollTarget.scrollIntoView({
                 behavior: reduceMotion ? 'auto' : 'smooth',
                 block: 'start'
             });
@@ -398,6 +399,24 @@
             var zipForGoal = (document.getElementById('zip_code') && document.getElementById('zip_code').value.trim()) || (resultsEl.querySelector('.outreach-goal') && resultsEl.querySelector('.outreach-goal').getAttribute('data-goal-zip'));
             if (zipForGoal && typeof initGoalBlockFromStorage === 'function') initGoalBlockFromStorage();
             if (typeof refreshAdvocacyCarouselLocks === 'function') refreshAdvocacyCarouselLocks();
+            /* Email-only pref: open first incomplete member’s email drawer after re-render (avoids race with pref swap) */
+            if (resultsEl.querySelector('[data-pref="email-only"]')) {
+                var carouselAuto = resultsEl.querySelector('#member-carousel');
+                if (carouselAuto) carouselAuto.classList.add('pref-email-only');
+                var memberSlides = carouselAuto && carouselAuto.querySelectorAll('.member-carousel__slide[data-member-id]');
+                for (var i = 0; memberSlides && i < memberSlides.length; i++) {
+                    var slide = memberSlides[i];
+                    if (slide.classList.contains('member-carousel__slide--locked')) continue;
+                    var emailBtn = slide.querySelector('.outreach-email:not(.outreach-done)');
+                    if (!emailBtn || emailBtn.hasAttribute('data-no-email')) continue;
+                    var mid = emailBtn.getAttribute('data-member-id');
+                    var zip = emailBtn.getAttribute('data-zip') || '';
+                    var photo = emailBtn.getAttribute('data-photo-url') || '';
+                    var targetType = emailBtn.getAttribute('data-target-type') || '';
+                    if (mid && typeof openAdvocacyDrawer === 'function') openAdvocacyDrawer('email', mid, zip, photo, targetType);
+                    break;
+                }
+            }
         });
     }
 
@@ -514,24 +533,6 @@
                 }, 450);
             }
             if (typeof refreshAdvocacyCarouselLocks === 'function') refreshAdvocacyCarouselLocks();
-            if (savedBlock.getAttribute('data-pref') === 'email-only') {
-                setTimeout(function () {
-                    var container = document.getElementById('results');
-                    var carousel = container && container.querySelector('#member-carousel');
-                    if (!carousel) return;
-                    var firstMemberSlide = carousel.querySelector('.member-carousel__slide[data-member-id]');
-                    if (!firstMemberSlide) return;
-                    var emailBtn = firstMemberSlide.querySelector('.outreach-email:not(.outreach-done):not(.outreach-btn--locked)');
-                    if (!emailBtn || emailBtn.hasAttribute('data-no-email')) return;
-                    var mid = emailBtn.getAttribute('data-member-id');
-                    var zip = emailBtn.getAttribute('data-zip') || '';
-                    var photo = emailBtn.getAttribute('data-photo-url') || '';
-                    var targetType = emailBtn.getAttribute('data-target-type') || '';
-                    if (mid && typeof openAdvocacyDrawer === 'function') {
-                        openAdvocacyDrawer('email', mid, zip, photo, targetType);
-                    }
-                }, 500);
-            }
         }
     });
 
@@ -1762,15 +1763,15 @@
         if (slide) {
             var callDone = !!card.querySelector('.outreach-phone.outreach-done');
             var emailDone = !!card.querySelector('.outreach-email.outreach-done');
-            var emailOnly = !card.querySelector('.outreach-phone');
-            if ((emailOnly && emailDone) || (callDone && emailDone)) {
+            var carousel = slide.closest('#member-carousel');
+            var prefCallOnly = carousel && carousel.classList.contains('pref-call-only');
+            var prefEmailOnly = carousel && carousel.classList.contains('pref-email-only');
+            var slideComplete = (prefCallOnly && callDone) || (prefEmailOnly && emailDone) || (!prefCallOnly && !prefEmailOnly && callDone && emailDone);
+            if (slideComplete) {
                 slide.setAttribute('data-completed', 'true');
                 slide.classList.add('member-carousel__slide--done');
                 card.classList.add('card-outreach-complete');
-                var carousel = slide.parentElement;
-                if (carousel && carousel.id === 'member-carousel') {
-                    carousel.appendChild(slide);
-                }
+                if (carousel) carousel.appendChild(slide);
                 if (typeof refreshAdvocacyCarouselLocks === 'function') refreshAdvocacyCarouselLocks();
             }
         }
@@ -1957,9 +1958,8 @@
                 nextBlock.setAttribute('aria-hidden', 'true');
             }
         }
-        /* When district phase complete and broker exists, switch to broker phase (4/4 call+email or 2/2 email-only). */
-        var emailOnly = block.getAttribute('data-goal-email-only') === 'true';
-        var districtComplete = emailOnly ? (done === 2 && visibleTotal === 2) : (done === 4 && total === 4);
+        /* When district phase complete and broker exists, switch to broker phase (done count matches visible steps). */
+        var districtComplete = visibleTotal > 0 && done >= visibleTotal;
         if (districtComplete && brokerId) {
             block.classList.add('outreach-goal--phase-broker');
             var currentLabelEl = block.querySelector('#outreach-goal-current-label');
@@ -3136,11 +3136,10 @@
         if (typeof closeAdvocacyDrawer === 'function') closeAdvocacyDrawer();
     });
 
-    /* When user sets call/email preference on intro card: refresh locks (unlock first member), optionally switch to email-only UI */
+    /* When user sets call/email preference on intro card: remove pref gate, add carousel pref class, update section text (locks refreshed by other handler) */
     document.body.addEventListener('htmx:afterSwap', function (e) {
         if (e.detail.target && e.detail.target.id === 'advocacy-intro-pref-section') {
             e.detail.target.removeAttribute('data-call-pref-section');
-            if (typeof refreshAdvocacyCarouselLocks === 'function') refreshAdvocacyCarouselLocks();
             var prefEl = e.detail.target.querySelector('[data-pref]');
             var sectionDesc = document.querySelector('.member-carousel-heading + .section-desc, #member-carousel-heading + .section-desc');
             if (prefEl && prefEl.getAttribute('data-pref') === 'email-only') {
@@ -3149,8 +3148,10 @@
                 if (sectionDesc) sectionDesc.textContent = 'One target at a time. Email each to advance.';
                 var hints = document.querySelectorAll('#member-carousel .member-carousel__slide:not(.member-carousel__slide--intro) .outreach-row-hint');
                 hints.forEach(function (h) { h.textContent = 'Email to advance.'; });
-            } else if (prefEl && (prefEl.getAttribute('data-pref') === 'call-only' || prefEl.getAttribute('data-pref') === 'elevator') && sectionDesc) {
-                sectionDesc.textContent = 'One target at a time. Call to advance.';
+            } else if (prefEl && (prefEl.getAttribute('data-pref') === 'call-only' || prefEl.getAttribute('data-pref') === 'elevator')) {
+                var carouselCallOnly = document.getElementById('member-carousel');
+                if (carouselCallOnly) carouselCallOnly.classList.add('pref-call-only');
+                if (sectionDesc) sectionDesc.textContent = 'One target at a time. Call to advance.';
             }
         }
     });

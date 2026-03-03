@@ -286,13 +286,23 @@ templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 templates.env.globals["kei_impact_options"] = KEI_POLL_IMPACT_OPTIONS
-templates.env.globals["turnstile_site_key"] = cfg.TURNSTILE_SITE_KEY or ""
+templates.env.globals["turnstile_site_key"] = (
+    "" if cfg.TURNSTILE_DISABLED else (cfg.TURNSTILE_SITE_KEY or "")
+)
 
 
 async def get_marquee_images(db: AsyncSession) -> list[dict[str, str]]:
     """Return MARQUEE_IMAGES plus approved community story submissions (image-only). Legacy; prefer get_marquee_items."""
     items = await get_marquee_items(db)
     return [x for x in items if x.get("type") == "image" and "src" in x]
+
+
+def _story_image_path_exists(image_path: str) -> bool:
+    """True if the story image file exists under static (avoids showing broken images in marquee)."""
+    if not image_path:
+        return False
+    static_dir = Path(__file__).resolve().parent.parent / "static"
+    return (static_dir / image_path).exists()
 
 
 async def get_marquee_items(db: AsyncSession) -> list[dict]:
@@ -314,6 +324,8 @@ async def get_marquee_items(db: AsyncSession) -> list[dict]:
         .order_by(CommunityStory.reviewed_at)
     )
     for s in result.scalars().all():
+        if not _story_image_path_exists(s.image_path):
+            continue
         image_items.append(
             {
                 "type": "image",
@@ -469,6 +481,7 @@ def _timeline_waterfall_data(timeline_phases: list[dict]) -> dict:
             return month_keys.index(ym)
         return 0 if ym < month_keys[0] else len(month_keys) - 1
 
+    n_cols = len(month_keys)
     phases_out: list[dict] = []
     for p in timeline_phases:
         pc = dict(p)
@@ -478,9 +491,38 @@ def _timeline_waterfall_data(timeline_phases: list[dict]) -> dict:
             pc["end_col"] = col_for(e[:7])
         else:
             pc["start_col"] = 0
-            pc["end_col"] = len(month_keys) - 1
+            pc["end_col"] = n_cols - 1
+        milestones_in = p.get("milestones") or []
+        milestones_out: list[dict] = []
+        for m in milestones_in:
+            mc = dict(m)
+            start_ym = m.get("start_ym")
+            end_ym = m.get("end_ym")
+            if start_ym is not None and end_ym is not None:
+                mc["start_col"] = max(0, min(col_for(start_ym), n_cols - 1))
+                mc["end_col"] = max(0, min(col_for(end_ym), n_cols - 1))
+                if mc["end_col"] < mc["start_col"]:
+                    mc["end_col"] = mc["start_col"]
+            else:
+                mc["start_col"] = pc["start_col"]
+                mc["end_col"] = pc["end_col"]
+            milestones_out.append(mc)
+        pc["milestones"] = milestones_out
         phases_out.append(pc)
     return {"months": months, "phases": phases_out}
+
+
+def _timeline_now_month_index(month_keys: list[str], today: date | None = None) -> int:
+    """Return 0-based column index for *today* in the timeline months; -1 if before/after or empty."""
+    if not month_keys:
+        return -1
+    d = today or date.today()
+    ym = d.strftime("%Y-%m")
+    if ym in month_keys:
+        return month_keys.index(ym)
+    if ym < month_keys[0]:
+        return 0
+    return len(month_keys) - 1
 
 
 def _session_deadlines_for_issue() -> list[dict]:
@@ -775,6 +817,8 @@ async def timeline_page(request: Request):
         session_deadlines = []
     timeline_phases = _timeline_phases_with_inline_glossary()
     waterfall = _timeline_waterfall_data(timeline_phases)
+    month_keys = [mo["key"] for mo in waterfall["months"]]
+    now_month_index = _timeline_now_month_index(month_keys)
     return templates.TemplateResponse(
         "timeline.html",
         {
@@ -782,6 +826,7 @@ async def timeline_page(request: Request):
             "timeline_months": waterfall["months"],
             "timeline_phases": waterfall["phases"],
             "current_phase_id": _current_timeline_phase_id(),
+            "now_month_index": now_month_index,
             "session_deadlines": session_deadlines,
             "session_label": session_label(),
         },

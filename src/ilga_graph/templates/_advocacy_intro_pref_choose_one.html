@@ -1,0 +1,8 @@
+{# Shown when user chose "no" (no contact method): ask them to select at least one. Replaces innerHTML of #advocacy-intro-pref-section. #}
+<div class="intro-card__pref-section intro-card__pref-section--tree" data-call-pref-section
+    aria-labelledby="intro-card-heading">
+    <p id="advocacy-pref-choose-one-msg" class="intro-card__pref-error" role="alert">
+        Please select at least one method to contact your legislator (for example, one-click email or a scripted call).
+    </p>
+    {% include "_advocacy_intro_pref_tree.html" %}
+</div>

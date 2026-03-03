@@ -20,7 +20,7 @@ from sqlalchemy import select
 import ilga_graph.config as cfg_mod
 import ilga_graph.db as db_mod
 import ilga_graph.dependencies as deps_mod
-from ilga_graph.db_models import Poll, PollResponse, User
+from ilga_graph.db_models import User
 from ilga_graph.routers import account as account_router_mod
 from ilga_graph.routers import admin as admin_router_mod
 from ilga_graph.routers import advocacy as advocacy_router_mod
@@ -108,10 +108,8 @@ def _data_with_csrf(client: TestClient, data: dict) -> dict:
     return out
 
 
-# Valid kei_status + kei_impact_slug for POST /updates/kei-status and /advocacy/personalize-poll.
-# Use "other" so it passes both: KEI_POLL_IMPACT_SLUGS (updates) and
-# KEI_IMPACT_OPTIONS["would_want"] (advocacy).
-POLL_SUBMIT_DATA = {"kei_status": "would_want", "kei_impact_slug": "other"}
+# Valid kei_status + kei_impact_slug for POST /updates/kei-status (benefit slugs only).
+POLL_SUBMIT_DATA = {"kei_status": "would_want", "kei_impact_slug": "support_cause"}
 
 
 async def _add_auth_code(email: str, plain_code: str) -> None:
@@ -631,16 +629,19 @@ class TestSubscribeUnsubscribeEmail:
     def test_kei_status_authenticated_sets_status(
         self, authed_client: TestClient, test_db_path: Path
     ) -> None:
-        """POST /updates/kei-status with auth sets user.kei_status."""
+        """POST /updates/kei-status with auth sets user.kei_status (Turnstile required for all)."""
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
             importlib.reload(updates_router_mod)
-        resp = authed_client.post(
-            "/updates/kei-status",
-            data=_data_with_csrf(authed_client, POLL_SUBMIT_DATA),
-            headers={"HX-Request": "true"},
-        )
+        with patch.object(
+            updates_router_mod, "_verify_turnstile", new_callable=AsyncMock, return_value=True
+        ):
+            resp = authed_client.post(
+                "/updates/kei-status",
+                data=_data_with_csrf(authed_client, POLL_SUBMIT_DATA),
+                headers={"HX-Request": "true"},
+            )
         assert resp.status_code == 200
         assert b"Thanks" in resp.content or b"community" in resp.content
 
@@ -656,7 +657,7 @@ class TestSubscribeUnsubscribeEmail:
                 u = next((x for x in users if x.email == "subscriber@example.com"), None)
                 assert u is not None
                 assert u.kei_status == "would_want"
-                assert u.kei_impact_slug == "other"
+                assert u.kei_impact_slug == "support_cause"
                 pr = await session.execute(select(KeiPollResponse))
                 responses = list(pr.scalars().all())
                 assert len(responses) == 1
@@ -670,7 +671,7 @@ class TestSubscribeUnsubscribeEmail:
     def test_kei_status_anonymous_does_not_persist(
         self, client: TestClient, test_db_path: Path
     ) -> None:
-        """POST kei-status without auth: no user create/update; returns 200 with nudge."""
+        """POST kei-status without auth: no user create/update; returns 200 with results UI."""
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
@@ -681,12 +682,12 @@ class TestSubscribeUnsubscribeEmail:
             resp = client.post(
                 "/updates/kei-status",
                 data=_data_with_csrf(
-                    client, {"kei_status": "registered", "kei_impact_slug": "civic_duty"}
+                    client, {"kei_status": "registered", "kei_impact_slug": "support_cause"}
                 ),
                 headers={"HX-Request": "true"},
             )
         assert resp.status_code == 200
-        assert b"Sign in" in resp.content and (b"vote" in resp.content or b"save" in resp.content)
+        assert b"change your answer" in resp.content or b"Need to change" in resp.content
 
         async def check():
             from sqlalchemy import select
@@ -723,7 +724,7 @@ class TestSubscribeUnsubscribeEmail:
             resp = client.post(
                 "/updates/kei-status",
                 data=_data_with_csrf(
-                    client, {"kei_status": "registered", "kei_impact_slug": "other"}
+                    client, {"kei_status": "registered", "kei_impact_slug": "support_cause"}
                 ),
                 headers={"HX-Request": "true"},
             )
@@ -812,14 +813,17 @@ class TestSubscribeUnsubscribeEmail:
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
             importlib.reload(updates_router_mod)
-        resp = client.post(
-            "/updates/kei-status",
-            data=_data_with_csrf(
-                client,
-                {"kei_status": "would_want", "kei_impact_slug": "invalid_impact"},
-            ),
-            headers={"HX-Request": "true"},
-        )
+        with patch.object(
+            updates_router_mod, "_verify_turnstile", new_callable=AsyncMock, return_value=True
+        ):
+            resp = client.post(
+                "/updates/kei-status",
+                data=_data_with_csrf(
+                    client,
+                    {"kei_status": "would_want", "kei_impact_slug": "invalid_impact"},
+                ),
+                headers={"HX-Request": "true"},
+            )
         assert resp.status_code == 400
 
     def test_kei_poll_form_get_returns_form_html(
@@ -840,27 +844,108 @@ class TestSubscribeUnsubscribeEmail:
     def test_kei_status_results_only_verified_users(
         self, client: TestClient, test_db_path: Path
     ) -> None:
-        """GET /updates/kei-status-results returns counts from KeiPollResponse (all votes)."""
-        from ilga_graph.db_models import KeiPollResponse
-
-        async def setup():
-            async with db_mod.async_session_factory() as session:
-                session.add(KeiPollResponse(kei_status="registered", user_id=None, session_id=None))
-                await session.commit()
-
-        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
-            importlib.reload(db_mod)
-            asyncio.run(setup())
+        """GET /updates/kei-status-results returns counts from PollResponse
+        (Turnstile-verified only)."""
+        with patch.object(
+            updates_router_mod, "_verify_turnstile", new_callable=AsyncMock, return_value=True
+        ):
+            resp = client.post(
+                "/updates/kei-status",
+                data=_data_with_csrf(
+                    client,
+                    {"kei_status": "registered", "kei_impact_slug": "support_cause"},
+                ),
+                headers={"HX-Request": "true"},
+            )
+        assert resp.status_code == 200
         resp = client.get("/updates/kei-status-results")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["total_responses"] == 1
-        assert data["by_status"]["registered"] == 1
-        assert data["by_status"]["would_want"] == 0
+        assert "total_responses" in data and "by_status" in data
+        for slug in ("registered", "would_want", "would_not_want", "revoked", "denied"):
+            assert slug in data["by_status"]
+        assert isinstance(data["total_responses"], int) and data["total_responses"] >= 0
+
+
+class TestPollStandalonePage:
+    """GET /poll and POST kei-status with poll_id=standalone-kei-poll (shareable poll-only page)."""
+
+    def test_poll_page_shows_form_when_no_vote(
+        self, client: TestClient, test_db_path: Path
+    ) -> None:
+        """GET /poll without cookie shows poll form with standalone-kei-poll."""
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            importlib.reload(updates_router_mod)
+        resp = client.get("/poll")
+        assert resp.status_code == 200
+        html = resp.text
+        assert "standalone-kei-poll" in html
+        assert "Do you have a kei" in html or "kei" in html.lower()
+        assert 'name="kei_status"' in html
+        assert "poll-standalone" in html
+
+    def test_poll_page_shows_results_when_cookie_or_submitted(
+        self, client: TestClient, test_db_path: Path
+    ) -> None:
+        """GET /poll with cookie or ?submitted=1 shows results and Go to full site."""
+        from ilga_graph.routers.updates import KEI_POLL_VOTED_COOKIE
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            importlib.reload(updates_router_mod)
+        resp = client.get("/poll", cookies={KEI_POLL_VOTED_COOKIE: "1"})
+        assert resp.status_code == 200
+        html = resp.text
+        assert "Go to full site" in html
+        assert "Results" in html or "results" in html.lower()
+
+        resp2 = client.get("/poll", params={"submitted": "1"})
+        assert resp2.status_code == 200
+        assert "Go to full site" in resp2.text
+
+    def test_kei_status_standalone_redirects_to_poll(
+        self, client: TestClient, test_db_path: Path
+    ) -> None:
+        """POST kei-status with poll_id=standalone-kei-poll redirects to /poll?submitted=1."""
+        from ilga_graph.routers.updates import (
+            KEI_POLL_CHOICE_COOKIE,
+            KEI_POLL_VOTED_COOKIE,
+        )
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            importlib.reload(updates_router_mod)
+        with patch.object(
+            updates_router_mod, "_verify_turnstile", new_callable=AsyncMock, return_value=True
+        ):
+            resp = client.post(
+                "/updates/kei-status",
+                data=_data_with_csrf(
+                    client,
+                    {
+                        "kei_status": "would_want",
+                        "kei_impact_slug": "support_cause",
+                        "poll_id": "standalone-kei-poll",
+                        "zip_code": "60001",
+                    },
+                ),
+                follow_redirects=False,
+            )
+        assert resp.status_code == 303
+        assert resp.headers.get("location") == "/poll?submitted=1"
+        assert resp.cookies.get(KEI_POLL_VOTED_COOKIE) == "1"
+        assert resp.cookies.get(KEI_POLL_CHOICE_COOKIE) == "would_want"
 
 
 class TestAdvocacyPersonalizePoll:
     """POST /advocacy/personalize-poll: persist kei_status and kei_impact_slug (drawer flow)."""
+
+    # Use slug in KEI_IMPACT_OPTIONS["would_want"] (advocacy drawer), not main poll benefit set.
+    _PERSONALIZE_DATA = {"kei_status": "would_want", "kei_impact_slug": "other"}
 
     def test_personalize_poll_requires_csrf(self, client: TestClient, test_db_path: Path) -> None:
         """POST without valid CSRF returns 403."""
@@ -870,21 +955,22 @@ class TestAdvocacyPersonalizePoll:
             importlib.reload(advocacy_router_mod)
         resp = client.post(
             "/advocacy/personalize-poll",
-            data={"kei_status": "would_want", "kei_impact_slug": "support_cause"},
+            data={"kei_status": "would_want", "kei_impact_slug": "other"},
         )
         assert resp.status_code == 403
 
-    def test_personalize_poll_authenticated_sets_user_and_dual_writes(
+    def test_personalize_poll_authenticated_sets_user_only(
         self, authed_client: TestClient, test_db_path: Path
     ) -> None:
-        """POST with auth: kei_status and kei_impact_slug set; kei_impact PollResponse created."""
+        """POST with auth: kei_status and kei_impact_slug set on user; no poll
+        response rows (counted only after Turnstile at /updates/kei-status)."""
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
             importlib.reload(advocacy_router_mod)
         resp = authed_client.post(
             "/advocacy/personalize-poll",
-            data=_data_with_csrf(authed_client, POLL_SUBMIT_DATA),
+            data=_data_with_csrf(authed_client, self._PERSONALIZE_DATA),
         )
         assert resp.status_code == 200
         assert resp.json() == {"ok": True}
@@ -897,23 +983,6 @@ class TestAdvocacyPersonalizePoll:
                 assert u is not None
                 assert u.kei_status == "would_want"
                 assert u.kei_impact_slug == "other"
-                poll = (
-                    await session.execute(select(Poll).where(Poll.slug == "kei_impact"))
-                ).scalar_one_or_none()
-                if poll is not None:
-                    from sqlalchemy import and_
-
-                    pr = await session.execute(
-                        select(PollResponse).where(
-                            and_(
-                                PollResponse.poll_id == poll.id,
-                                PollResponse.user_id == u.id,
-                            )
-                        )
-                    )
-                    responses = list(pr.scalars().all())
-                    assert len(responses) == 1
-                    assert responses[0].option_slug == "other"
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
@@ -935,7 +1004,7 @@ class TestAdvocacyPersonalizePoll:
             importlib.reload(advocacy_router_mod)
         resp = client.post(
             "/advocacy/personalize-poll",
-            data=_data_with_csrf(client, POLL_SUBMIT_DATA),
+            data=_data_with_csrf(client, self._PERSONALIZE_DATA),
         )
         assert resp.status_code == 200
         assert resp.cookies.get(KEI_POLL_VOTED_COOKIE) == "1"

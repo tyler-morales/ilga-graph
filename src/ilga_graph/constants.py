@@ -34,12 +34,13 @@ KEI_STATUS_SLUGS: frozenset[str] = frozenset(
         "would_not_want",
     }
 )
+# Labels match poll form (Question 2) and results chart.
 KEI_STATUS_OPTIONS: list[tuple[str, str]] = [
-    ("registered", "I have a kei (registered)"),
-    ("revoked", "I had a kei; registration was revoked"),
-    ("denied", "I was denied registration"),
-    ("would_want", "I don't have a kei but would want one"),
-    ("would_not_want", "I don't have a kei and wouldn't want one"),
+    ("registered", "Registered"),
+    ("revoked", "Had one; registration was revoked"),
+    ("denied", "Was denied registration"),
+    ("would_want", "Yes, I'd want one"),
+    ("would_not_want", "No, I wouldn't want one"),
 ]
 
 # First poll question: two bubbles (animate up). Second question shows status sub-options.
@@ -49,25 +50,25 @@ KEI_FIRST_OPTIONS: list[tuple[str, str]] = [
 ]
 KEI_STATUS_BY_FIRST: dict[str, list[tuple[str, str]]] = {
     "have_or_had": [
-        ("registered", "I have a kei (registered)"),
-        ("revoked", "I had a kei; registration was revoked"),
-        ("denied", "I was denied registration"),
+        ("registered", "Registered"),
+        ("revoked", "Had one; registration was revoked"),
+        ("denied", "Was denied registration"),
     ],
     "dont_have": [
-        ("would_want", "I don't have a kei but would want one"),
-        ("would_not_want", "I don't have a kei and wouldn't want one"),
+        ("would_want", "Yes, I'd want one"),
+        ("would_not_want", "No, I wouldn't want one"),
     ],
 }
 
-# Main poll Q3: "How does this affect you?" — universal options for all users (tracking + admin).
+# Main poll Q3: "What would this fix mean for you?" — benefit-oriented for legislator narrative.
 KEI_POLL_IMPACT_SLUGS: frozenset[str] = frozenset(
-    {"support_cause", "know_someone", "civic_duty", "other"}
+    {"direct_owner", "want_to_buy", "know_someone", "support_cause"}
 )
 KEI_POLL_IMPACT_OPTIONS: list[tuple[str, str]] = [
-    ("support_cause", "I support the cause"),
-    ("know_someone", "I know someone affected"),
-    ("civic_duty", "Civic duty"),
-    ("other", "Other"),
+    ("direct_owner", "I could keep (or get) my kei legally registered"),
+    ("want_to_buy", "I could buy a kei I've been wanting"),
+    ("know_someone", "It would help someone I know"),
+    ("support_cause", "I support clearer rules for kei vehicles"),
 ]
 KEI_IMPACT_SLUG_COOKIE = "kei_impact_slug"
 
@@ -106,11 +107,12 @@ KEI_IMPACT_OPTIONS: dict[str, list[tuple[str, str]]] = {
     ],
 }
 
-# All impact (slug, label) for results display — flattened from KEI_IMPACT_OPTIONS, unique by slug.
-# Order: universal first, then status-specific, then "other" last.
+# All impact (slug, label) for results — poll Q3 first, then status-specific, legacy.
 KEI_IMPACT_ALL_OPTIONS: list[tuple[str, str]] = [
-    ("support_cause", "I support the cause"),
-    ("know_someone", "I know someone affected"),
+    ("direct_owner", "I could keep (or get) my kei legally registered"),
+    ("want_to_buy", "I could buy a kei I've been wanting"),
+    ("know_someone", "It would help someone I know"),
+    ("support_cause", "I support clearer rules for kei vehicles"),
     ("civic_duty", "Civic duty"),
     ("work_commute", "Daily commute"),
     ("recreation", "Recreation"),

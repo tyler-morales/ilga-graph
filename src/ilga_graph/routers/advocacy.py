@@ -38,7 +38,7 @@ from ..constants import (
 )
 from ..data_source import is_using_mocks
 from ..db import get_db
-from ..db_models import KeiPollResponse, OutreachEvent, Poll, PollResponse, User
+from ..db_models import OutreachEvent, User
 from ..dependencies import get_current_user_optional, require_user
 from ..kei_poll_context import (
     KEI_POLL_CHOICE_COOKIE,
@@ -109,45 +109,6 @@ def _build_district_steps(
                 }
             )
     return district_steps
-
-
-async def _dual_write_kei_poll(
-    db: AsyncSession,
-    user_id: int | None,
-    kei_status: str,
-    session_id: str | None,
-) -> None:
-    """Write kei poll to KeiPollResponse and PollResponse (campaign poll) for counts sync."""
-    db.add(KeiPollResponse(user_id=user_id, session_id=session_id, kei_status=kei_status))
-    poll_slug = get_campaign_config().poll_slug or "kei"
-    campaign_poll = (
-        await db.execute(select(Poll).where(Poll.slug == poll_slug))
-    ).scalar_one_or_none()
-    if campaign_poll:
-        db.add(
-            PollResponse(
-                poll_id=campaign_poll.id,
-                user_id=user_id,
-                session_id=session_id,
-                option_slug=kei_status,
-            )
-        )
-
-
-async def _dual_write_kei_impact(db: AsyncSession, user_id: int, option_slug: str) -> None:
-    """Write impact choice to kei_impact poll for aggregate results (verified users only)."""
-    impact_poll = (
-        await db.execute(select(Poll).where(Poll.slug == "kei_impact"))
-    ).scalar_one_or_none()
-    if impact_poll:
-        db.add(
-            PollResponse(
-                poll_id=impact_poll.id,
-                user_id=user_id,
-                session_id=None,
-                option_slug=option_slug,
-            )
-        )
 
 
 # Cookie names for script personalization (anon users and skip flag).
@@ -249,7 +210,9 @@ templates.env.globals["get_current_action_campaign"] = get_current_action_campai
 templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
-templates.env.globals["turnstile_site_key"] = cfg.TURNSTILE_SITE_KEY or ""
+templates.env.globals["turnstile_site_key"] = (
+    "" if cfg.TURNSTILE_DISABLED else (cfg.TURNSTILE_SITE_KEY or "")
+)
 
 
 def _hero_context() -> dict[str, Any]:
@@ -915,11 +878,19 @@ async def set_call_pref(
     user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ):
-    """Set call preference. Cookie always; DB when logged in. Returns HTMX fragment."""
+    """Set call preference. Cookie always; DB when logged in. Returns HTMX fragment.
+    When pref is 'no' (user declined all contact methods), we do not persist and return
+    the tree again with a message asking them to select at least one method.
+    """
     if pref not in ADV_CALL_PREF_VALUES:
         raise HTTPException(
             status_code=422,
             detail="pref must be one of: no, yes, call_only, elevator",
+        )
+    if pref == "no":
+        return templates.TemplateResponse(
+            "_advocacy_intro_pref_choose_one.html",
+            {"request": request},
         )
     if user:
         user.call_pref = pref
@@ -1043,6 +1014,16 @@ async def advocacy_drawer(
             )
             if (r.scalar() or 0) > 0:
                 show_call_nudge = False
+        # When user chose email-only, do not show call nudge in drawer.
+        user_call_pref_drawer: str | None = None
+        if user and (p := getattr(user, "call_pref", None)) and p in ADV_CALL_PREF_VALUES:
+            user_call_pref_drawer = p
+        if user_call_pref_drawer is None:
+            user_call_pref_drawer = request.cookies.get(ADV_CALL_PREF_COOKIE)
+            if user_call_pref_drawer not in ADV_CALL_PREF_VALUES:
+                user_call_pref_drawer = None
+        if user_call_pref_drawer == "no":
+            show_call_nudge = False
         target_type = "POWER_BROKER" if target_type_param == "POWER_BROKER" else "NON_COMMITTEE"
         chamber = getattr(member, "chamber", None) if member else None
         district = getattr(member, "district", None) if member else None
@@ -1175,15 +1156,15 @@ async def advocacy_personalize_poll(
     impact_val = _validate_kei_impact_slug(
         (kei_impact_slug or "").strip() or None, updated_caller.kei_status or kei_status_val
     )
+    # Only update user/cookies here. Responses are counted only after Turnstile-verified
+    # submit at /updates/kei-status (last question), not when saving preferences.
     cookies_to_set: list[dict[str, Any]] = []
     if user:
         if kei_status_val:
             user.kei_status = kei_status_val
         if impact_val is not None:
             user.kei_impact_slug = impact_val
-            await _dual_write_kei_impact(db, user.id, impact_val)
         if kei_status_val or impact_val is not None:
-            await _dual_write_kei_poll(db, user.id, kei_status_val, None)
             await db.commit()
     else:
         if kei_status_val:
@@ -1218,9 +1199,6 @@ async def advocacy_personalize_poll(
                     "samesite": "lax",
                 }
             )
-        if kei_status_val:
-            await _dual_write_kei_poll(db, None, kei_status_val, None)
-            await db.commit()
     resp = JSONResponse({"ok": True})
     for params in cookies_to_set:
         resp.set_cookie(**params)
@@ -1276,13 +1254,12 @@ async def advocacy_personalize(
         )
         raw_note = (kei_personal_note or "").strip()
         note_val = raw_note[:200] if raw_note else None
+        # Only update user/cookies; responses counted only after Turnstile at /updates/kei-status.
         if user:
             if kei_status_val:
                 user.kei_status = kei_status_val
-                await _dual_write_kei_poll(db, user.id, kei_status_val, None)
             if impact_val is not None:
                 user.kei_impact_slug = impact_val
-                await _dual_write_kei_impact(db, user.id, impact_val)
             if note_val is not None:
                 user.kei_personal_note = note_val
             await db.commit()
@@ -1308,8 +1285,6 @@ async def advocacy_personalize(
                         "samesite": "lax",
                     }
                 )
-                await _dual_write_kei_poll(db, None, kei_status_val, None)
-                await db.commit()
             if impact_val:
                 cookies_to_set.append(
                     {

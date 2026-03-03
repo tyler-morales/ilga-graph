@@ -1,5 +1,4 @@
 {# HTMX swap (innerHTML into poll wrap): anonymous user submitted. No outer div — wrap is the single card. #}
-{% from "_macros.html" import inline_signin %}
 <details class="kei-poll-drawer" id="{{ poll_id }}-results-drawer" open aria-labelledby="{{ poll_id }}-heading">
     <summary class="kei-poll__header-strip kei-poll-drawer__summary">
         <h2 id="{{ poll_id }}-heading" class="kei-poll__heading">Results</h2>
@@ -7,18 +6,6 @@
     </summary>
     <div class="kei-poll-drawer__panel">
         <div class="kei-poll__body">
-            <div class="kei-poll-nudge-block" role="status" aria-live="polite">
-                <span class="kei-poll-nudge-block__icon" aria-hidden="true">
-                    {% from "_macros.html" import icon_caution %}
-                    {{ icon_caution() }}
-                </span>
-                <div class="kei-poll-nudge-block__content">
-                    <p class="kei-poll-nudge-block__copy">Your vote is saved. Sign in to track your impact and add your answer to your account.</p>
-                    <button type="button" class="auth-strip-signin-btn btn btn--secondary kei-poll-nudge-block__signin-link"
-                        id="poll-signin-btn" aria-expanded="false" aria-controls="poll-signin-inline-signin"
-                        aria-label="Sign in to track your impact">Sign in to save your answer</button>
-                </div>
-            </div>
             {% if kei_status_results and kei_status_results.total_responses > 0 %}
             <div class="kei-poll-results" aria-label="Poll results from verified users">
                 {% from "_macros.html" import kei_poll_results_chart %}
@@ -30,31 +17,23 @@
             {% endif %}
             <footer class="kei-poll__footer kei-poll__footer--results">
                 {% if kei_poll_goal is defined and kei_poll_goal is not none and kei_poll_goal > 0 %}
-                <p class="kei-poll-goal__label" role="status">{{ (kei_status_results.total_responses if kei_status_results else 0) }} of {{ kei_poll_goal }} responses</p>
+                <p class="kei-poll-goal__label" role="status">{{ (kei_status_results.total_responses if
+                    kei_status_results else 0) }} of {{ kei_poll_goal }} responses</p>
                 {% else %}
-                <span class="kei-poll__total">Total Votes: {{ kei_status_results.total_responses if kei_status_results else 0 }}</span>
+                <span class="kei-poll__total">Total responses: {{ kei_status_results.total_responses if kei_status_results
+                    else 0 }}</span>
                 {% endif %}
             </footer>
-            <div id="poll-signin-wrap" class="kei-poll-signin-wrap" data-poll-signin-init>
-                {{ inline_signin('poll-signin', dev_available) }}
-                <div class="poll-signup-prompt" id="poll-signup-prompt" hidden aria-live="polite"
-                    aria-label="Sign up for campaign updates">
-                    <p class="poll-signup-prompt__copy">Get one update when we move?</p>
-                    <div class="poll-signup-prompt__actions" role="group" aria-label="Subscribe to updates">
-                        <button type="button" class="poll-signup-yes btn btn--primary"
-                            aria-label="Yes, add me to the list">Yes</button>
-                        <button type="button" class="poll-signup-notyet btn btn--secondary" aria-label="Not yet, close this">Not
-                            yet</button>
-                    </div>
-                    <div class="poll-signup-prompt__success" id="poll-signup-success" hidden role="status"></div>
-                </div>
-            </div>
-            <p class="kei-poll-story-cta">Sign in to share your story on our community wall.</p>
             <p class="kei-poll-change-wrap">
                 <button type="button" class="kei-poll-change-btn"
                     hx-get="/updates/kei-poll-form?poll_id={{ poll_id|e }}" hx-target="#{{ poll_id|e }}-wrap"
                     hx-swap="outerHTML" aria-label="Change your kei status answer">Need to change your answer?</button>
             </p>
+            {% if show_go_to_site %}
+            <p class="poll-standalone-cta poll-standalone-cta--inline">
+                <a href="/" class="btn btn--primary">Go to full site</a>
+            </p>
+            {% endif %}
         </div>
     </div>
 </details>

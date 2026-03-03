@@ -16,7 +16,7 @@
             {% else %}
             <p class="wyc-poll-intro">{{ kei_poll_why_we_ask }}</p>
             {% from "_macros.html" import kei_poll_inline %}
-            {{ kei_poll_inline('home-kei-poll', kei_status_total|default(none), 'why-you-care-flow', kei_impact_options, kei_poll_goal|default(none)) }}
+            {{ kei_poll_inline('home-kei-poll', kei_status_total|default(none), 'why-you-care-flow', kei_impact_options, kei_poll_goal|default(none), zip_known=zip_known|default(true)) }}
             {% if kei_poll_wide_net_line is defined and kei_poll_wide_net_line %}
             <p class="wyc-poll-under-goal">{{ kei_poll_wide_net_line }}</p>
             {% endif %}
@@ -65,54 +65,5 @@
         {% endif %}
     </div>
 
-    {% if features.get('images_marquee') and (marquee_items|default([])) %}
-    <div class="why-you-care-marquee" id="why-you-care-marquee" role="region"
-        aria-label="Scrolling stories and statements from the community">
-        <div class="why-you-care-marquee-control-wrap">
-            <button type="button" class="why-you-care-marquee-control" id="why-you-care-marquee-pause"
-                aria-pressed="false" aria-label="Pause scrolling">Pause</button>
-        </div>
-        <div class="why-you-care-marquee-visual" aria-hidden="true">
-            <div class="why-you-care-marquee-track">
-                {% for strip_index in range(2) %}
-                <div
-                    class="why-you-care-marquee-strip{% if strip_index == 1 %} why-you-care-marquee-strip--dup{% endif %}">
-                    {% for item in (marquee_items|default([])) %}
-                    {% if item.type == 'text' %}
-                    <div class="why-you-care-marquee-item why-you-care-marquee-item--text" role="article"
-                        aria-label="Statement from {{ item.name }}">
-                        <p class="why-you-care-marquee-item__statement">{{ item.statement }}</p>
-                        <p class="why-you-care-marquee-caption"><strong>{{ item.name }}</strong>{% if item.location %}
-                            <span class="why-you-care-marquee-location">{{ item.location }}</span>{% endif %}
-                        </p>
-                    </div>
-                    {% else %}
-                    <figure class="why-you-care-marquee-item">
-                        <img src="{{ item.src }}" alt="{{ item.alt }}" width="360" height="240" loading="lazy"
-                            decoding="async">
-                        <figcaption class="why-you-care-marquee-caption"><strong>{{ item.name }}</strong> — {{
-                            item.caption }}{% if item.location %} <span class="why-you-care-marquee-location">{{
-                                item.location }}</span>{% endif %}</figcaption>
-                    </figure>
-                    {% endif %}
-                    {% endfor %}
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        <script>
-            (function () {
-                var marquee = document.getElementById('why-you-care-marquee');
-                var btn = document.getElementById('why-you-care-marquee-pause');
-                if (!marquee || !btn) return;
-                btn.addEventListener('click', function () {
-                    var paused = marquee.classList.toggle('why-you-care-marquee--paused');
-                    btn.setAttribute('aria-pressed', paused ? 'true' : 'false');
-                    btn.setAttribute('aria-label', paused ? 'Resume scrolling images' : 'Pause scrolling images');
-                    btn.textContent = paused ? 'Resume' : 'Pause';
-                });
-            })();
-        </script>
-    </div>
-    {% endif %}
+    {% include "_images_marquee.html" %}
 </section>

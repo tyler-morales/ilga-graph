@@ -26,12 +26,12 @@
     <script defer src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>
     {% endif %}
     <link rel="stylesheet" href="/static/css/variables.css">
-    {% if primary_color %}
+    {% if primary_color and primary_color|lower not in ['#fff', '#ffffff', '#fafafa', '#f5f5f5', '#eee', '#eeeeee', '#f0f0f0', '#e0e0e0'] %}
     <style>
-      :root {
-        --color-hero-cta: {{ primary_color }};
-        --color-primary: {{ primary_color }};
-      }
+        :root {
+            --color-hero-cta: {{ primary_color }};
+            --color-primary: {{ primary_color }};
+        }
     </style>
     {% endif %}
     <link rel="stylesheet" href="/static/css/components.css">
@@ -316,7 +316,8 @@
                         if (!pollId) return;
                         var container = document.getElementById(pollId + '-turnstile-container');
                         if (!container || !container.getAttribute('data-sitekey')) return;
-                        container.classList.remove('kei-poll__turnstile-wrap--hidden');
+                        var turnstileWrap = document.getElementById(pollId + '-turnstile-wrap');
+                        (turnstileWrap || container).classList.remove('kei-poll__turnstile-wrap--hidden');
                         if (container.getAttribute('data-turnstile-rendered')) return;
                         container.setAttribute('data-turnstile-rendered', '1');
                         var sitekey = container.getAttribute('data-sitekey');
@@ -330,8 +331,16 @@
                         doRender();
                     }
                     if (isInline) {
+                        var step1Inline = wrap.querySelector('.wyc-inline-question');
                         var step3Panel = wrap.querySelector('.wyc-inline-poll__step3');
+                        var backWrapInline = wrap.querySelector('.wyc-inline-poll__back-wrap');
+                        var submitWrap = wrap.querySelector('.wyc-inline-poll__submit-wrap');
                         function showBranchInline(branch) {
+                            wrap.setAttribute('data-current-branch', branch);
+                            if (step1Inline) {
+                                step1Inline.classList.add('wyc-inline-question--hidden');
+                                step1Inline.setAttribute('aria-hidden', 'true');
+                            }
                             branchBtns.forEach(function (btn) {
                                 btn.setAttribute('aria-pressed', btn.getAttribute('data-branch') === branch ? 'true' : 'false');
                             });
@@ -347,30 +356,70 @@
                                 var impactInput = form.querySelector('input[name="kei_impact_slug"]');
                                 if (impactInput) impactInput.value = '';
                             }
+                            var tw = form.id && document.getElementById(form.id.replace(/-form$/, '') + '-turnstile-wrap');
                             var tc = form.id && document.getElementById(form.id.replace(/-form$/, '') + '-turnstile-container');
-                            if (tc) tc.classList.add('kei-poll__turnstile-wrap--hidden');
+                            if (tw || tc) (tw || tc).classList.add('kei-poll__turnstile-wrap--hidden');
                             form.querySelectorAll('input[name="kei_status"]').forEach(function (radio) { radio.checked = false; });
                             var submitBtn = wrap.querySelector('.wyc-inline-poll__submit');
                             if (submitBtn) submitBtn.disabled = true;
-                            var submitWrap = wrap.querySelector('.wyc-inline-poll__submit-wrap');
                             if (submitWrap) {
                                 submitWrap.classList.remove('wyc-inline-poll__submit-wrap--hidden');
                                 submitWrap.removeAttribute('aria-hidden');
                             }
+                            if (backWrapInline) {
+                                backWrapInline.classList.remove('wyc-inline-poll__back-wrap--hidden');
+                                backWrapInline.removeAttribute('aria-hidden');
+                            }
                         }
                         function showStep3Inline() {
+                            panels.forEach(function (panel) {
+                                panel.classList.add('wyc-inline-poll__step2--hidden');
+                                panel.setAttribute('aria-hidden', 'true');
+                            });
                             if (step3Panel) {
                                 step3Panel.classList.remove('wyc-inline-poll__step3--hidden');
                                 step3Panel.setAttribute('aria-hidden', 'false');
                             }
                         }
+                        function isZipValidInline() {
+                            var pollId = form.id && form.id.replace(/-form$/, '');
+                            var zipInput = pollId && document.getElementById(pollId + '-zip-inline');
+                            var val = zipInput ? (zipInput.value || '').trim() : '';
+                            return /^\d{5}$/.test(val);
+                        }
                         function updateSubmitStateInline() {
                             var visiblePanel = wrap.querySelector('.wyc-inline-poll__step2:not(.wyc-inline-poll__step2--hidden)');
+                            var onStep3Inline = step3Panel && !step3Panel.classList.contains('wyc-inline-poll__step3--hidden');
                             var statusChecked = wrap.querySelector('input[name="kei_status"]:checked');
                             var impactInput = form.querySelector('input[name="kei_impact_slug"]');
                             var impactSet = impactInput && impactInput.value;
+                            var pollId = form.id && form.id.replace(/-form$/, '');
+                            var zipPanel = pollId && document.getElementById(pollId + '-panel-zip');
+                            var zipRequired = zipPanel && !zipPanel.classList.contains('kei-poll__zip-panel--hidden');
                             var submitBtn = wrap.querySelector('.wyc-inline-poll__submit');
-                            if (submitBtn) submitBtn.disabled = !visiblePanel || !statusChecked || !impactSet;
+                            if (submitBtn) {
+                                var baseOk = (visiblePanel || onStep3Inline) && statusChecked && impactSet;
+                                submitBtn.disabled = !(baseOk && (!zipRequired || isZipValidInline()));
+                            }
+                        }
+                        function maybeShowZipThenTurnstileInline() {
+                            var pollId = form.id && form.id.replace(/-form$/, '');
+                            var zipPanel = pollId && document.getElementById(pollId + '-panel-zip');
+                            if (zipPanel) {
+                                zipPanel.classList.remove('kei-poll__zip-panel--hidden');
+                                zipPanel.setAttribute('aria-hidden', 'false');
+                                updateSubmitStateInline();
+                                var zipInput = document.getElementById(pollId + '-zip-inline');
+                                if (zipInput && !zipInput.getAttribute('data-kei-poll-zip-listener')) {
+                                    zipInput.setAttribute('data-kei-poll-zip-listener', '1');
+                                    zipInput.addEventListener('input', function () {
+                                        updateSubmitStateInline();
+                                        if (isZipValidInline()) showAndRenderTurnstile();
+                                    });
+                                }
+                                return;
+                            }
+                            showAndRenderTurnstile();
                         }
                         form.addEventListener('change', function (ev) {
                             if (ev.target && ev.target.name === 'kei_status') {
@@ -383,15 +432,58 @@
                                 var impactInput = form.querySelector('input[name="kei_impact_slug"]');
                                 if (impactInput) impactInput.value = ev.target.value || '';
                                 updateSubmitStateInline();
-                                showAndRenderTurnstile();
+                                maybeShowZipThenTurnstileInline();
                             }
                         });
                         branchBtns.forEach(function (btn) {
                             btn.addEventListener('click', function () { showBranchInline(btn.getAttribute('data-branch')); });
                         });
+                        var backBtnInline = wrap.querySelector('.wyc-inline-poll__back');
+                        if (backBtnInline && backWrapInline) {
+                            backBtnInline.addEventListener('click', function () {
+                                if (step3Panel && !step3Panel.classList.contains('wyc-inline-poll__step3--hidden')) {
+                                    step3Panel.classList.add('wyc-inline-poll__step3--hidden');
+                                    step3Panel.setAttribute('aria-hidden', 'true');
+                                    wrap.querySelectorAll('input[name="kei_impact_radio"]').forEach(function (r) { r.checked = false; });
+                                    var impactInput = form.querySelector('input[name="kei_impact_slug"]');
+                                    if (impactInput) impactInput.value = '';
+                                    var branch = wrap.getAttribute('data-current-branch');
+                                    panels.forEach(function (p) {
+                                        var show = p.getAttribute('data-branch') === branch;
+                                        p.classList.toggle('wyc-inline-poll__step2--hidden', !show);
+                                        p.setAttribute('aria-hidden', show ? 'false' : 'true');
+                                    });
+                                    updateSubmitStateInline();
+                                } else {
+                                    if (step1Inline) {
+                                        step1Inline.classList.remove('wyc-inline-question--hidden');
+                                        step1Inline.removeAttribute('aria-hidden');
+                                    }
+                                    panels.forEach(function (p) {
+                                        p.classList.add('wyc-inline-poll__step2--hidden');
+                                        p.setAttribute('aria-hidden', 'true');
+                                    });
+                                    if (step3Panel) {
+                                        step3Panel.classList.add('wyc-inline-poll__step3--hidden');
+                                        step3Panel.setAttribute('aria-hidden', 'true');
+                                    }
+                                    branchBtns.forEach(function (btn) { btn.setAttribute('aria-pressed', 'false'); });
+                                    form.querySelectorAll('input[name="kei_status"]').forEach(function (r) { r.checked = false; });
+                                    wrap.removeAttribute('data-current-branch');
+                                    backWrapInline.classList.add('wyc-inline-poll__back-wrap--hidden');
+                                    backWrapInline.setAttribute('aria-hidden', 'true');
+                                    if (submitWrap) {
+                                        submitWrap.classList.add('wyc-inline-poll__submit-wrap--hidden');
+                                        submitWrap.setAttribute('aria-hidden', 'true');
+                                    }
+                                }
+                            });
+                        }
                         updateSubmitStateInline();
                         return;
                     }
+                    var step1 = wrap.querySelector('.kei-poll__step1');
+                    var backWrap = wrap.querySelector('.kei-poll__back-wrap');
                     var headingPrefix = 'Poll: ';
                     var step3Panel = wrap.querySelector('.kei-poll__step3-panel');
                     var impactInput = form.querySelector('input[name="kei_impact_slug"]');
@@ -400,6 +492,15 @@
                         if (h2) h2.textContent = headingPrefix + suffix;
                     }
                     function showBranch(branch) {
+                        wrap.setAttribute('data-current-branch', branch);
+                        if (step1) {
+                            step1.classList.add('kei-poll__step1--hidden');
+                            step1.setAttribute('aria-hidden', 'true');
+                        }
+                        if (backWrap) {
+                            backWrap.classList.remove('kei-poll__back-wrap--hidden');
+                            backWrap.removeAttribute('aria-hidden');
+                        }
                         branchBtns.forEach(function (btn) {
                             btn.setAttribute('aria-pressed', btn.getAttribute('data-branch') === branch ? 'true' : 'false');
                         });
@@ -415,8 +516,9 @@
                             form.querySelectorAll('input[name="kei_impact_radio"]').forEach(function (r) { r.checked = false; });
                             if (impactInput) impactInput.value = '';
                         }
+                        var tw = form.id && document.getElementById(form.id.replace(/-form$/, '') + '-turnstile-wrap');
                         var tc = form.id && document.getElementById(form.id.replace(/-form$/, '') + '-turnstile-container');
-                        if (tc) tc.classList.add('kei-poll__turnstile-wrap--hidden');
+                        if (tw || tc) (tw || tc).classList.add('kei-poll__turnstile-wrap--hidden');
                         form.querySelectorAll('input[name="kei_status"]').forEach(function (radio) {
                             radio.checked = false;
                         });
@@ -435,6 +537,10 @@
                         if (submitBtn) submitBtn.disabled = true;
                     }
                     function showStep3() {
+                        panels.forEach(function (panel) {
+                            panel.classList.add('kei-poll__step2-panel--hidden');
+                            panel.setAttribute('aria-hidden', 'true');
+                        });
                         if (step3Panel) {
                             step3Panel.classList.remove('kei-poll__step3-panel--hidden');
                             step3Panel.setAttribute('aria-hidden', 'false');
@@ -450,12 +556,46 @@
                             }
                         }
                     }
+                    function isZipValid() {
+                        var pollId = form.id && form.id.replace(/-form$/, '');
+                        var zipInput = pollId && document.getElementById(pollId + '-zip');
+                        var val = zipInput ? (zipInput.value || '').trim() : '';
+                        return /^\d{5}$/.test(val);
+                    }
                     function updateSubmitState() {
                         var visiblePanel = wrap.querySelector('.kei-poll__step2-panel:not(.kei-poll__step2-panel--hidden)');
+                        var onStep3 = step3Panel && !step3Panel.classList.contains('kei-poll__step3-panel--hidden');
                         var statusChecked = wrap.querySelector('input[name="kei_status"]:checked');
                         var impactChecked = wrap.querySelector('input[name="kei_impact_radio"]:checked');
+                        var pollId = form.id && form.id.replace(/-form$/, '');
+                        var zipPanel = pollId && document.getElementById(pollId + '-panel-zip');
+                        var zipRequired = zipPanel && !zipPanel.classList.contains('kei-poll__zip-panel--hidden');
                         var submitBtn = wrap.querySelector('.kei-poll__submit');
-                        if (submitBtn) submitBtn.disabled = !visiblePanel || !statusChecked || !impactChecked;
+                        if (!submitBtn) return;
+                        if ((!visiblePanel && !onStep3) || !statusChecked || !impactChecked) {
+                            submitBtn.disabled = true;
+                            return;
+                        }
+                        submitBtn.disabled = zipRequired ? !isZipValid() : false;
+                    }
+                    function maybeShowZipThenTurnstile() {
+                        var pollId = form.id && form.id.replace(/-form$/, '');
+                        var zipPanel = pollId && document.getElementById(pollId + '-panel-zip');
+                        if (zipPanel) {
+                            zipPanel.classList.remove('kei-poll__zip-panel--hidden');
+                            zipPanel.setAttribute('aria-hidden', 'false');
+                            updateSubmitState();
+                            var zipInput = document.getElementById(pollId + '-zip');
+                            if (zipInput && !zipInput.getAttribute('data-kei-poll-zip-listener')) {
+                                zipInput.setAttribute('data-kei-poll-zip-listener', '1');
+                                zipInput.addEventListener('input', function () {
+                                    updateSubmitState();
+                                    if (isZipValid()) showAndRenderTurnstile();
+                                });
+                            }
+                            return;
+                        }
+                        showAndRenderTurnstile();
                     }
                     setHeading('Question 1 of 3');
                     var submitBtn = wrap.querySelector('.kei-poll__submit');
@@ -469,7 +609,7 @@
                         } else if (ev.target && ev.target.name === 'kei_impact_radio') {
                             if (impactInput) impactInput.value = ev.target.value || '';
                             updateSubmitState();
-                            showAndRenderTurnstile();
+                            maybeShowZipThenTurnstile();
                         }
                     });
                     branchBtns.forEach(function (btn) {
@@ -477,6 +617,63 @@
                             showBranch(btn.getAttribute('data-branch'));
                         });
                     });
+                    var backBtn = wrap.querySelector('.kei-poll__back');
+                    if (backBtn && backWrap) {
+                        backBtn.addEventListener('click', function () {
+                            if (step3Panel && !step3Panel.classList.contains('kei-poll__step3-panel--hidden')) {
+                                step3Panel.classList.add('kei-poll__step3-panel--hidden');
+                                step3Panel.setAttribute('aria-hidden', 'true');
+                                form.querySelectorAll('input[name="kei_impact_radio"]').forEach(function (r) { r.checked = false; });
+                                if (impactInput) impactInput.value = '';
+                                var branch = wrap.getAttribute('data-current-branch');
+                                setHeading('Question 2 of 3');
+                                var progressSteps = wrap.querySelectorAll('.kei-poll__progress-step');
+                                if (progressSteps.length >= 3) {
+                                    progressSteps[2].classList.remove('kei-poll__progress-step--current');
+                                    progressSteps[2].removeAttribute('aria-current');
+                                    progressSteps[1].classList.add('kei-poll__progress-step--current');
+                                    progressSteps[1].setAttribute('aria-current', 'step');
+                                }
+                                panels.forEach(function (p) {
+                                    var show = p.getAttribute('data-branch') === branch;
+                                    p.classList.toggle('kei-poll__step2-panel--hidden', !show);
+                                    p.setAttribute('aria-hidden', show ? 'false' : 'true');
+                                });
+                                updateSubmitState();
+                            } else {
+                                wrap.removeAttribute('data-current-branch');
+                                if (step1) {
+                                    step1.classList.remove('kei-poll__step1--hidden');
+                                    step1.removeAttribute('aria-hidden');
+                                }
+                                backWrap.classList.add('kei-poll__back-wrap--hidden');
+                                backWrap.setAttribute('aria-hidden', 'true');
+                                panels.forEach(function (p) {
+                                    p.classList.add('kei-poll__step2-panel--hidden');
+                                    p.setAttribute('aria-hidden', 'true');
+                                });
+                                if (step3Panel) {
+                                    step3Panel.classList.add('kei-poll__step3-panel--hidden');
+                                    step3Panel.setAttribute('aria-hidden', 'true');
+                                }
+                                branchBtns.forEach(function (btn) { btn.setAttribute('aria-pressed', 'false'); });
+                                form.querySelectorAll('input[name="kei_status"]').forEach(function (r) { r.checked = false; });
+                                setHeading('Question 1 of 3');
+                                var progressSteps = wrap.querySelectorAll('.kei-poll__progress-step');
+                                progressSteps.forEach(function (el, i) {
+                                    if (i === 0) {
+                                        el.classList.add('kei-poll__progress-step--current');
+                                        el.setAttribute('aria-current', 'step');
+                                    } else {
+                                        el.classList.remove('kei-poll__progress-step--current');
+                                        el.removeAttribute('aria-current');
+                                    }
+                                });
+                                var submitBtn = wrap.querySelector('.kei-poll__submit');
+                                if (submitBtn) submitBtn.disabled = true;
+                            }
+                        });
+                    }
                 });
             }
             function initWycResetFlow(container) {
@@ -522,7 +719,8 @@
             });
         })();
     </script>
-    {# WYC funnel: record steps for why-you-care section (relies on hero-auth-strip.js for getCsrfToken / getAnonSessionId). #}
+    {# WYC funnel: record steps for why-you-care section (relies on hero-auth-strip.js for getCsrfToken /
+    getAnonSessionId). #}
     <script>
         (function () {
             function recordWycStep(stepSlug) {
@@ -577,27 +775,6 @@
                         window.recordWycStep('wyc_poll_submitted');
                     }
                 }
-            });
-        })();
-    </script>
-    {# Kei poll: init inline sign-in in poll fragment (on load and after HTMX swap). #}
-    <script>
-        (function () {
-            function initPollSignin() {
-                var wrap = document.getElementById('poll-signin-wrap');
-                if (wrap && wrap.hasAttribute('data-poll-signin-init') && typeof window.initInlineSignin === 'function') {
-                    var inline = wrap.querySelector('.hero-signin-inline');
-                    if (inline && !wrap.querySelector('.auth-strip-signin-btn') && !document.getElementById('poll-signin-btn')) inline.hidden = false;
-                    window.initInlineSignin(wrap);
-                }
-            }
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initPollSignin);
-            } else {
-                initPollSignin();
-            }
-            document.body.addEventListener('htmx:afterSwap', function (ev) {
-                initPollSignin();
             });
         })();
     </script>
@@ -996,9 +1173,6 @@
             document.addEventListener('click', function (e) {
                 if (e.target && e.target.classList && e.target.classList.contains('story-submit-trigger')) {
                     e.preventDefault();
-                    // #region agent log
-                    fetch('http://127.0.0.1:7529/ingest/11db6628-00c4-48fe-8d2c-13b9347e70f3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5f51b3'},body:JSON.stringify({sessionId:'5f51b3',location:'base.html:story-trigger-click',message:'Share story trigger clicked',data:{disabled:!!e.target.disabled},timestamp:Date.now(),hypothesisId:'H2'})}).catch(function(){});
-                    // #endregion
                     if (e.target.disabled) return;
                     var type = e.target.getAttribute('data-marquee-type');
                     if (type === 'statement' && statementDialog) {

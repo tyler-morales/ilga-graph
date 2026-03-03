@@ -131,46 +131,11 @@ MARQUEE_IMAGES: list[dict[str, str]] = [
         "location": "Chicago",
     },
     {
-        "src": "https://picsum.photos/seed/kei1/360/240",
-        "alt": "Kei vehicle owner affected by registration — placeholder",
-        "name": "Marcus",
-        "caption": "Registration revoked after years of legal use",
-        "location": "Chicago",
-    },
-    {
-        "src": "https://picsum.photos/seed/kei2/360/240",
-        "alt": "Kei owner unable to register — placeholder",
-        "name": "Sarah",
-        "caption": "Imported kei truck stuck, can't get plates",
-        "location": "Peoria",
-    },
-    {
-        "src": "https://picsum.photos/seed/kei3/360/240",
-        "alt": "Affected kei owner — placeholder",
-        "name": "James",
-        "caption": "Van denied; same model registered in other states",
-        "location": "Rockford",
-    },
-    {
-        "src": "https://picsum.photos/seed/kei4/360/240",
-        "alt": "Illinois kei vehicle registration issue — placeholder",
-        "name": "Elena",
-        "caption": "DMV turned away federally compliant vehicle",
-        "location": "Springfield",
-    },
-    {
-        "src": "https://picsum.photos/seed/kei5/360/240",
-        "alt": "Kei owner story — placeholder",
-        "name": "David",
-        "caption": "Registration renewal rejected without notice",
-        "location": "Naperville",
-    },
-    {
-        "src": "https://picsum.photos/seed/kei6/360/240",
-        "alt": "Vehicle registration affected owner — placeholder",
-        "name": "Rachel",
-        "caption": "Legal kei car can't be registered in Illinois",
-        "location": "Champaign",
+        "src": "/static/images/Mercedes_Weikal%20.jpeg",
+        "alt": "Mercedes Weikal with her 1989 Suzuki Every kei van from Japan",
+        "name": "Mercedes Weikal",
+        "caption": 'Into tiny cars since 15; now has five imports including her 1989 Suzuki Every from Japan. "They\'re thrifty, easy to park, and bring smiles. If these vehicles remain banned, enthusiasts in Illinois like me will have less choice."',
+        "location": "Lake County",
     },
 ]
 
@@ -1389,21 +1354,29 @@ TIMELINE_PHASES: list[dict] = [
         "milestones": [
             {
                 "date": "Mar – May 2026",
+                "start_ym": "2026-03",
+                "end_ym": "2026-05",
                 "title": "Lock lead sponsor(s)",
                 "description": "Secure sponsor in the chamber you want to start in. Share draft concept so they're ready to file in January.",
             },
             {
                 "date": "Jun – Aug 2026",
+                "start_ym": "2026-06",
+                "end_ym": "2026-08",
                 "title": "Bill draft with LRB",
                 "description": "Work with Legislative Reference Bureau or sponsor's staff. Nail down one-sentence ask and one-pager.",
             },
             {
                 "date": "Sep – Nov 2026",
+                "start_ym": "2026-09",
+                "end_ym": "2026-11",
                 "title": "Co-sponsors and coalition",
                 "description": "Co-sponsor asks; recruit orgs; brief stakeholders. Plan pre-session pushes.",
             },
             {
                 "date": "Dec 2026",
+                "start_ym": "2026-12",
+                "end_ym": "2026-12",
                 "title": "Finalize intro plan",
                 "description": "Bill number and intro plan with sponsor. Prep first-session campaign.",
             },
@@ -1419,16 +1392,22 @@ TIMELINE_PHASES: list[dict] = [
         "milestones": [
             {
                 "date": "Early Jan 2027",
+                "start_ym": "2027-01",
+                "end_ym": "2027-01",
                 "title": "Session convenes",
                 "description": "105th GA perfunctory/session days. LRB request deadline ~Jan 16.",
             },
             {
                 "date": "Jan – early Feb 2027",
+                "start_ym": "2027-01",
+                "end_ym": "2027-02",
                 "title": "Bill introduced",
                 "description": 'File as soon as practical. Once filed, you have a bill number for "Support HB/SB XXXX" campaigns.',
             },
             {
                 "date": "~Feb 6, 2027",
+                "start_ym": "2027-02",
+                "end_ym": "2027-02",
                 "title": "Introduction deadline",
                 "description": "House and Senate bill introduction deadline. Bill must be introduced by this date.",
             },
@@ -1444,26 +1423,36 @@ TIMELINE_PHASES: list[dict] = [
         "milestones": [
             {
                 "date": "Feb 2027",
+                "start_ym": "2027-02",
+                "end_ym": "2027-02",
                 "title": "Committee assignments",
                 "description": "First hearings possible. Push witness slips and constituent contacts to committee members.",
             },
             {
                 "date": "~Mar 13 / Mar 27, 2027",
+                "start_ym": "2027-03",
+                "end_ym": "2027-03",
                 "title": "Committee deadlines",
                 "description": "SB committee deadline ~Mar 13; HB committee deadline ~Mar 27 (substantive bills out of committee).",
             },
             {
                 "date": "~Apr 17, 2027",
+                "start_ym": "2027-04",
+                "end_ym": "2027-04",
                 "title": "Third reading (first chamber)",
                 "description": "HB 3rd reading deadline (House); SB 3rd reading deadline (Senate).",
             },
             {
                 "date": "~May 8 / May 22, 2027",
+                "start_ym": "2027-05",
+                "end_ym": "2027-05",
                 "title": "Crossover and second chamber",
                 "description": "House bills in Senate: committee ~May 8, 3rd reading ~May 22. Senate bills in House: same pattern.",
             },
             {
                 "date": "~May 31, 2027",
+                "start_ym": "2027-05",
+                "end_ym": "2027-05",
                 "title": "Session adjournment",
                 "description": "If the bill passed both chambers, it goes to the governor.",
             },
@@ -1479,11 +1468,15 @@ TIMELINE_PHASES: list[dict] = [
         "milestones": [
             {
                 "date": "Jun – Jul 2027",
+                "start_ym": "2027-06",
+                "end_ym": "2027-07",
                 "title": "Governor review",
                 "description": "60 days from passage to sign or veto. Signing often within a few weeks.",
             },
             {
                 "date": "Jun – Aug 2027",
+                "start_ym": "2027-06",
+                "end_ym": "2027-08",
                 "title": "Bill signed into law",
                 "description": "Effective date is usually upon signing or Jan 1 of the next year, per the bill.",
             },
