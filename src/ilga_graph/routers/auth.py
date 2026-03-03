@@ -28,9 +28,11 @@ from ..constants import (
     ADV_CALL_PREF_COOKIE,
     ADV_CALL_PREF_MAX_AGE,
     ADV_CALL_PREF_VALUES,
+    KEI_POLL_IMPACT_SLUGS,
+    KEI_STATUS_SLUGS,
 )
 from ..db import get_db
-from ..db_models import AuthCode, OutreachStepEvent, User
+from ..db_models import AuthCode, KeiPollResponse, OutreachStepEvent, Poll, PollResponse, User
 from ..dependencies import create_session_token, get_current_user_optional, require_user
 from ..email_utils import send_email, send_welcome_email
 from ..security import (
@@ -179,8 +181,10 @@ async def verify_code(
 ):
     """Verify the 6-digit code. On success: create/get user, set session cookie.
 
-    If anon_session_id is provided and valid, outreach_step_events rows with that
-    session_id are attributed to the user (user_id set, session_id cleared).
+    If anon_session_id is provided and valid:
+    - outreach_step_events with that session_id attributed (user_id set, session_id cleared).
+    - poll_responses and kei_poll_responses attributed the same way.
+    - user.kei_status and kei_impact_slug set from attributed poll data if null (already voted).
     If from_poll is set, welcome email is deferred (sent when user opts in via poll).
     """
     cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
@@ -235,6 +239,46 @@ async def verify_code(
             .where(OutreachStepEvent.session_id == anon_sid)
             .values(user_id=user.id, session_id=None)
         )
+        await db.execute(
+            update(PollResponse)
+            .where(PollResponse.session_id == anon_sid)
+            .values(user_id=user.id, session_id=None)
+        )
+        await db.execute(
+            update(KeiPollResponse)
+            .where(KeiPollResponse.session_id == anon_sid)
+            .values(user_id=user.id, session_id=None)
+        )
+        # Sync user.kei_status / kei_impact_slug from attributed poll so they see "already voted".
+        if getattr(user, "kei_status", None) is None:
+            latest_kei = (
+                await db.execute(
+                    select(KeiPollResponse)
+                    .where(KeiPollResponse.user_id == user.id)
+                    .order_by(KeiPollResponse.created_at.desc())
+                    .limit(1)
+                )
+            ).scalar_one_or_none()
+            if latest_kei and latest_kei.kei_status in KEI_STATUS_SLUGS:
+                user.kei_status = latest_kei.kei_status
+        if getattr(user, "kei_impact_slug", None) is None:
+            impact_poll = (
+                await db.execute(select(Poll).where(Poll.slug == "kei_impact"))
+            ).scalar_one_or_none()
+            if impact_poll:
+                latest_impact = (
+                    await db.execute(
+                        select(PollResponse)
+                        .where(
+                            PollResponse.user_id == user.id,
+                            PollResponse.poll_id == impact_poll.id,
+                        )
+                        .order_by(PollResponse.created_at.desc())
+                        .limit(1)
+                    )
+                ).scalar_one_or_none()
+                if latest_impact and latest_impact.option_slug in KEI_POLL_IMPACT_SLUGS:
+                    user.kei_impact_slug = latest_impact.option_slug
 
     await db.commit()
 
