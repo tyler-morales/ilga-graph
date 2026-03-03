@@ -3,11 +3,13 @@
 {% block title %}Fact sheet — {{ site_name }}{% endblock %}
 {% block body_class %}page-fact-sheet{% endblock %}
 {% block brief_layout_class %}page-fact-sheet{% endblock %}
-{% block meta_description %}One-page fact sheet for volunteers: kei vehicle registration in Illinois, our position, five points to remember, and FAQs.{% endblock %}
+{% block meta_description %}One-page fact sheet for volunteers: kei vehicle registration in Illinois, our position, five
+points to remember, and FAQs.{% endblock %}
 
 {% block brief_title %}Kei Vehicle Registration in Illinois — Fact Sheet for Volunteers{% endblock %}
 {% block brief_intro %}
-<p class="legal-page-intro">Stay on message. Use this page to share the issue, our position, and five points with volunteers and supporters.</p>
+<p class="legal-page-intro">Stay on message. Use this page to share the issue, our position, and five points with
+    volunteers and supporters.</p>
 {% endblock %}
 {% block brief_main_heading %}{% endblock %}
 {% block brief_main %}
@@ -23,7 +25,8 @@
     </section>
 
     <section class="fact-sheet-section">
-        {{ strategic_points(strategic_five_points, 'banner', 'fact-key-points', 'fact-points-heading', 'Five points to remember (stay on message)') }}
+        {{ strategic_points(strategic_five_points, 'banner', 'fact-key-points', 'fact-points-heading', 'Five points to
+        remember (stay on message)') }}
     </section>
 
     <section class="fact-sheet-section">
@@ -44,7 +47,7 @@
 <aside class="legislator-brief-sidebar" aria-labelledby="fact-sidebar-heading">
     <h2 id="fact-sidebar-heading" class="legislator-brief-sidebar__title">Community poll</h2>
     <div class="legislator-brief-sidebar__content">
-        <section id="sidebar-kei-poll-section" class="legislator-brief-sidebar__poll" aria-labelledby="sidebar-kei-poll-heading">
+        <section class="legislator-brief-sidebar__poll" aria-labelledby="sidebar-kei-poll-heading">
             {% include "_sidebar_kei_poll.html" %}
         </section>
         {{ share_buttons('sidebar', 'fact-share', 'constituent') }}

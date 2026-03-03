@@ -1,99 +1,127 @@
 {% extends "_brief_skeleton.html" %}
-{% from "_macros.html" import faq_section, state_status_table, session_deadlines_table, subscribe_form, share_buttons, strategic_points %}
+{% from "_macros.html" import faq_section, state_status_table, session_deadlines_table, subscribe_form, share_buttons,
+strategic_points %}
 {% block title %}The Issue — {{ site_name }}{% endblock %}
 {% block brief_title %}Illinois Kei Vehicle Registration{% endblock %}
 {% block brief_intro %}
-<p>{% if constituent_brief and constituent_brief.get('intro_html') %}{{ constituent_brief.intro_html|safe }}{% elif constituent_brief and constituent_brief.sections and constituent_brief.sections[0].paragraphs %}{{ constituent_brief.sections[0].paragraphs[0] }}{% else %}Illinois is treating lawfully imported kei vehicles as off-highway, so owners cannot register them for normal road use. Here&rsquo;s what residents need to know and what you can do.{% endif %}</p>
+<p>{% if constituent_brief and constituent_brief.get('intro_html') %}{{ constituent_brief.intro_html|safe }}{% elif
+    constituent_brief and constituent_brief.sections and constituent_brief.sections[0].paragraphs %}{{
+    constituent_brief.sections[0].paragraphs[0] }}{% else %}Illinois is treating lawfully imported kei vehicles as
+    off-highway, so owners cannot register them for normal road use. Here&rsquo;s what residents need to know and what
+    you can do.{% endif %}</p>
 {% endblock %}
 {% block brief_layout_class %}{% endblock %}
 {% block brief_main_heading %}What Illinois Residents Need to Know{% endblock %}
 {% block brief_main %}
-    {% if strategic_five_points %}
-    {{ strategic_points(constituent_brief.strategic_five_points_html if constituent_brief and constituent_brief.get('strategic_five_points_html') else strategic_five_points, 'banner', 'issue-key-points', 'issue-key-points-heading') }}
-    {% endif %}
-    <section aria-labelledby="issue-legislation-heading">
-        <h2 id="issue-legislation-heading">Current legislation in Illinois</h2>
-        {% if constituent_brief %}
-        {% for sec in constituent_brief.sections %}
-        <section aria-labelledby="issue-sec-{{ loop.index }}">
-            <h3 id="issue-sec-{{ loop.index }}">{{ sec.heading }}</h3>
-            {% if sec.heading == 'The Narrow Fix' and strategic_vision %}
-            <p class="strategic-vision-callout"><strong>Our vision:</strong> {{ strategic_vision }}</p>
-            {% endif %}
-            {% for p in (sec.paragraphs_html if constituent_brief.get('intro_html') else sec.paragraphs) %}<p>{% if constituent_brief.get('intro_html') %}{{ p|safe }}{% else %}{{ p }}{% endif %}</p>{% endfor %}
-            {% if sec.bullets %}
-            <ul role="list">
-                {% for b in (sec.bullets_html if constituent_brief.get('intro_html') else sec.bullets) %}<li>{% if constituent_brief.get('intro_html') %}{{ b|safe }}{% else %}{{ b }}{% endif %}</li>{% endfor %}
-            </ul>
-            {% endif %}
-        </section>
-        {% endfor %}
-        {% else %}
-        <section aria-labelledby="issue-plain">
-            <h3 id="issue-plain">The Issue in Plain English</h3>
-            <p>Illinois is treating lawfully imported kei vehicles as off-highway, so owners cannot register them for normal road use. This is based on how Illinois interprets <strong>625 ILCS 5/3-401(c-1)</strong>, not on federal law or missing paperwork.</p>
-        </section>
-
-        <section aria-labelledby="issue-why-happening">
-            <h3 id="issue-why-happening">Why This Is Happening</h3>
-            <p>Under federal law, vehicles that are 25 years old or older may be legally imported into the United States under established federal pathways. However, Illinois registration is controlled at the state level. The Secretary of State has cited 625 ILCS 5/3-401(c-1), which restricts registration eligibility based on how a vehicle was originally manufactured for highway use. The current interpretation treats that phrase as meaning &lsquo;manufactured for U.S. highways.&rsquo;</p>
-        </section>
-
-        <section aria-labelledby="issue-means">
-            <h3 id="issue-means">What This Means for Residents</h3>
-            <p>Registrations have been denied or revoked. Titles have been branded &lsquo;Not Eligible for Registration.&rsquo; Some owners have been instructed to surrender license plates. Contesting a decision requires a formal administrative hearing and filing fee.</p>
-        </section>
-
-        <section aria-labelledby="issue-not-about">
-            <h3 id="issue-not-about">What This Is NOT About</h3>
-            <p>This is not about weakening safety laws or bypassing insurance requirements. Illinois would continue to enforce equipment requirements, insurance requirements, titling documentation, and traffic laws. The request is simply for normal registration eligibility.</p>
-        </section>
-
-        <section aria-labelledby="issue-what-changed">
-            <h3 id="issue-what-changed">What changed / Why now</h3>
-            <p>Other states have already clarified or restored Kei registration via statute or policy. The federal 25-year import pathway is well established; the gap is state-level clarity.</p>
-        </section>
-
-        <section aria-labelledby="issue-fix">
-            <h3 id="issue-fix">The Narrow Fix</h3>
-            {% if strategic_vision %}
-            <p class="strategic-vision-callout"><strong>Our vision:</strong> {{ strategic_vision }}</p>
-            {% endif %}
-            <p>We are asking for a narrow statutory clarification so that vehicles originally manufactured for highway use (in any jurisdiction) and lawfully importable under federal law may be titled and registered in Illinois under normal requirements (insurance, equipment, traffic laws). No weakening of safety or enforcement. This preserves enforcement authority while resolving ambiguity in 625 ILCS 5/3-401(c-1).</p>
-        </section>
-
-        <section aria-labelledby="issue-matters">
-            <h3 id="issue-matters">Why This Matters</h3>
-            <p>Clear law protects residents. When statutory language is ambiguous, regular people absorb the consequences. This issue is about fairness, predictability, and consistent application of Illinois law.</p>
-        </section>
+{% if strategic_five_points %}
+{{ strategic_points(constituent_brief.strategic_five_points_html if constituent_brief and
+constituent_brief.get('strategic_five_points_html') else strategic_five_points, 'banner', 'issue-key-points',
+'issue-key-points-heading') }}
+{% endif %}
+<section aria-labelledby="issue-legislation-heading">
+    <h2 id="issue-legislation-heading">Current legislation in Illinois</h2>
+    {% if constituent_brief %}
+    {% for sec in constituent_brief.sections %}
+    <section aria-labelledby="issue-sec-{{ loop.index }}">
+        <h3 id="issue-sec-{{ loop.index }}">{{ sec.heading }}</h3>
+        {% if sec.heading == 'The Narrow Fix' and strategic_vision %}
+        <p class="strategic-vision-callout"><strong>Our vision:</strong> {{ strategic_vision }}</p>
         {% endif %}
+        {% for p in (sec.paragraphs_html if constituent_brief.get('intro_html') else sec.paragraphs) %}<p>{% if
+            constituent_brief.get('intro_html') %}{{ p|safe }}{% else %}{{ p }}{% endif %}</p>{% endfor %}
+        {% if sec.bullets %}
+        <ul role="list">
+            {% for b in (sec.bullets_html if constituent_brief.get('intro_html') else sec.bullets) %}<li>{% if
+                constituent_brief.get('intro_html') %}{{ b|safe }}{% else %}{{ b }}{% endif %}</li>{% endfor %}
+        </ul>
+        {% endif %}
+    </section>
+    {% endfor %}
+    {% else %}
+    <section aria-labelledby="issue-plain">
+        <h3 id="issue-plain">The Issue in Plain English</h3>
+        <p>Illinois is treating lawfully imported kei vehicles as off-highway, so owners cannot register them for normal
+            road use. This is based on how Illinois interprets <strong>625 ILCS 5/3-401(c-1)</strong>, not on federal
+            law or missing paperwork.</p>
+    </section>
 
-        {% set why_you_care_variant = 'full' %}
-        {% set why_you_care_heading_tag = 'h3' %}
-        {% include "_why_you_care.html" %}
+    <section aria-labelledby="issue-why-happening">
+        <h3 id="issue-why-happening">Why This Is Happening</h3>
+        <p>Under federal law, vehicles that are 25 years old or older may be legally imported into the United States
+            under established federal pathways. However, Illinois registration is controlled at the state level. The
+            Secretary of State has cited 625 ILCS 5/3-401(c-1), which restricts registration eligibility based on how a
+            vehicle was originally manufactured for highway use. The current interpretation treats that phrase as
+            meaning &lsquo;manufactured for U.S. highways.&rsquo;</p>
+    </section>
 
-        <section aria-labelledby="issue-other-states">
-            <h3 id="issue-other-states">Where Other States Stand</h3>
-            <p>Many states already allow kei vehicle registration—by passing laws or updating policy. The map and table below show where laws have passed, where bills are in progress, and where agencies have allowed registration without a new law.</p>
-            {{ state_status_table(brief_state_status, brief_state_map_status_json, brief_aamva_fix_state_abbrs_json|default('[]'), 'issue-view') }}
-        </section>
+    <section aria-labelledby="issue-means">
+        <h3 id="issue-means">What This Means for Residents</h3>
+        <p>Registrations have been denied or revoked. Titles have been branded &lsquo;Not Eligible for
+            Registration.&rsquo; Some owners have been instructed to surrender license plates. Contesting a decision
+            requires a formal administrative hearing and filing fee.</p>
+    </section>
+
+    <section aria-labelledby="issue-not-about">
+        <h3 id="issue-not-about">What This Is NOT About</h3>
+        <p>This is not about weakening safety laws or bypassing insurance requirements. Illinois would continue to
+            enforce equipment requirements, insurance requirements, titling documentation, and traffic laws. The request
+            is simply for normal registration eligibility.</p>
+    </section>
+
+    <section aria-labelledby="issue-what-changed">
+        <h3 id="issue-what-changed">What changed / Why now</h3>
+        <p>Other states have already clarified or restored Kei registration via statute or policy. The federal 25-year
+            import pathway is well established; the gap is state-level clarity.</p>
+    </section>
+
+    <section aria-labelledby="issue-fix">
+        <h3 id="issue-fix">The Narrow Fix</h3>
+        {% if strategic_vision %}
+        <p class="strategic-vision-callout"><strong>Our vision:</strong> {{ strategic_vision }}</p>
+        {% endif %}
+        <p>We are asking for a narrow statutory clarification so that vehicles originally manufactured for highway use
+            (in any jurisdiction) and lawfully importable under federal law may be titled and registered in Illinois
+            under normal requirements (insurance, equipment, traffic laws). No weakening of safety or enforcement. This
+            preserves enforcement authority while resolving ambiguity in 625 ILCS 5/3-401(c-1).</p>
+    </section>
+
+    <section aria-labelledby="issue-matters">
+        <h3 id="issue-matters">Why This Matters</h3>
+        <p>Clear law protects residents. When statutory language is ambiguous, regular people absorb the consequences.
+            This issue is about fairness, predictability, and consistent application of Illinois law.</p>
+    </section>
+    {% endif %}
+
+    {% set why_you_care_variant = 'full' %}
+    {% set why_you_care_heading_tag = 'h3' %}
+    {% include "_why_you_care.html" %}
+
+    <section aria-labelledby="issue-other-states">
+        <h3 id="issue-other-states">Where Other States Stand</h3>
+        <p>Many states already allow kei vehicle registration—by passing laws or updating policy. The map and table
+            below show where laws have passed, where bills are in progress, and where agencies have allowed registration
+            without a new law.</p>
+        {{ state_status_table(brief_state_status, brief_state_map_status_json,
+        brief_aamva_fix_state_abbrs_json|default('[]'), 'issue-view') }}
+    </section>
 
     {% if faq_law %}
     {{ faq_section(faq_law['items'], faq_law.title, 'issue-faq-law', faq_law.intro) }}
     {% endif %}
-    </section>
+</section>
 
-    <section aria-labelledby="issue-advocacy-heading">
-        <h2 id="issue-advocacy-heading">Advocacy &amp; how you can help</h2>
-        <section aria-labelledby="issue-action">
-            <h3 id="issue-action">What You Can Do</h3>
-            <ul class="content-list" role="list">
-                <li>Contact your Illinois State Representative and State Senator.</li>
-                <li>Ask them to support a narrow statutory clarification to 625 ILCS 5/3-401(c-1).</li>
-                <li>Encourage them to meet with the Secretary of State&rsquo;s office to confirm language that resolves the ambiguity while preserving safety and insurance requirements.</li>
-            </ul>
-            <p><a href="/advocacy/" class="content-cta">Find your legislators and start outreach</a></p>
-        </section>
+<section aria-labelledby="issue-advocacy-heading">
+    <h2 id="issue-advocacy-heading">Advocacy &amp; how you can help</h2>
+    <section aria-labelledby="issue-action">
+        <h3 id="issue-action">What You Can Do</h3>
+        <ul class="content-list" role="list">
+            <li>Contact your Illinois State Representative and State Senator.</li>
+            <li>Ask them to support a narrow statutory clarification to 625 ILCS 5/3-401(c-1).</li>
+            <li>Encourage them to meet with the Secretary of State&rsquo;s office to confirm language that resolves the
+                ambiguity while preserving safety and insurance requirements.</li>
+        </ul>
+        <p><a href="/advocacy/" class="content-cta">Find your legislators and start outreach</a></p>
+    </section>
 
     {% if faq_advocacy %}
     {{ faq_section(faq_advocacy['items'], faq_advocacy.title, 'issue-faq-advocacy', faq_advocacy.intro) }}
@@ -119,7 +147,7 @@
         </div>
     </section>
     {% endif %}
-    </section>
+</section>
 {% endblock %}
 {% block brief_sidebar %}
 <aside class="legislator-brief-sidebar" aria-labelledby="issue-brief-documents-heading">
@@ -128,8 +156,8 @@
         <h4 id="issue-brief-docs-heading" class="legislator-brief-sidebar__subtitle">Documents</h4>
         <ul class="legislator-brief-docs" role="list" aria-labelledby="issue-brief-docs-heading">
             <li class="legislator-brief-doc">
-                <a class="legislator-brief-doc__link" href="{{ fact_sheet_pdf_url }}"
-                    target="_blank" rel="noopener noreferrer"
+                <a class="legislator-brief-doc__link" href="{{ fact_sheet_pdf_url }}" target="_blank"
+                    rel="noopener noreferrer"
                     aria-label="Download Kei Vehicle Registration Fact Sheet for volunteers (PDF)">
                     <img class="legislator-brief-doc__icon" src="/static/images/icon-pdf.svg" alt="" width="24"
                         height="24" aria-hidden="true">
@@ -137,8 +165,9 @@
                 </a>
             </li>
             <li class="legislator-brief-doc">
-                <a class="legislator-brief-doc__link" href="/static/images/Illinois_Kei_Vehicle_Registration_Constituent_Brief.pdf"
-                    target="_blank" rel="noopener noreferrer"
+                <a class="legislator-brief-doc__link"
+                    href="/static/images/Illinois_Kei_Vehicle_Registration_Constituent_Brief.pdf" target="_blank"
+                    rel="noopener noreferrer"
                     aria-label="Download Illinois Kei Vehicle Registration Constituent Brief (PDF)">
                     <img class="legislator-brief-doc__icon" src="/static/images/icon-pdf.svg" alt="" width="24"
                         height="24" aria-hidden="true">
@@ -161,12 +190,14 @@
             {% endfor %}
         </ul>
         {% endif %}
-        <section id="sidebar-kei-poll-section" class="legislator-brief-sidebar__poll" aria-labelledby="sidebar-kei-poll-heading">
+        <section id="sidebar-kei-poll-section" class="legislator-brief-sidebar__poll"
+            aria-labelledby="sidebar-kei-poll-heading">
             {% include "_sidebar_kei_poll.html" %}
         </section>
         {{ share_buttons('sidebar', 'issue-share', 'constituent') }}
         {% if not (request.state.user and request.state.user.wants_updates) %}
-        <section class="legislator-brief-sidebar__stay-informed" id="issue-stay-informed" aria-labelledby="issue-stay-informed-heading">
+        <section class="legislator-brief-sidebar__stay-informed" id="issue-stay-informed"
+            aria-labelledby="issue-stay-informed-heading">
             <h2 id="issue-stay-informed-heading" class="legislator-brief-sidebar__subtitle">Stay informed</h2>
             <p class="stay-informed-p">Get one email when the bill moves.</p>
             <div id="issue-email-subscribe-wrap" class="stay-informed-form-wrap">
@@ -191,7 +222,7 @@
         try {
             var arr = JSON.parse(aamvaJson);
             for (var a = 0; a < arr.length; a++) { aamvaSet[arr[a].toLowerCase()] = true; }
-        } catch (e) {}
+        } catch (e) { }
         var currentFilter = 'all';
         var wrap = viewEl.querySelector('.brief-us-map-wrap');
         var container = wrap ? wrap.querySelector('.brief-us-map') : null;

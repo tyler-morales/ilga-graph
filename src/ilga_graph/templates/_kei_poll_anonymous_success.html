@@ -45,6 +45,7 @@
             </p>
             {% endif %}
             {% endif %}
+            {% if not hide_outreach_cta %}
             <div class="wyc-branch-content__after-change-cta">
                 {% if why_you_care_cta_nudge is defined and why_you_care_cta_nudge %}
                 <p class="wyc-branch-content__cta-nudge">{{ why_you_care_cta_nudge }}</p>
@@ -57,6 +58,7 @@
                     {% endif %}
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
 </details>

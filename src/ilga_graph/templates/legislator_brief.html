@@ -3,17 +3,20 @@
 {% block title %}Legislator brief — {{ site_name }}{% endblock %}
 {% block brief_title %}Legislator brief{% endblock %}
 {% block brief_intro %}
-<p class="legal-page-intro">{% if legislator_brief %}{{ legislator_brief.title }}: {{ legislator_brief.subtitle }}{% else %}Illinois Kei Vehicle Registration: A narrow statutory fix to clarify 625 ILCS 5/3-401(c-1). Two-page briefing for Illinois legislators and staff (as of 2026-02-19).{% endif %}</p>
+<p class="legal-page-intro">{% if legislator_brief %}{{ legislator_brief.title }}: {{ legislator_brief.subtitle }}{%
+    else %}Illinois Kei Vehicle Registration: A narrow statutory fix to clarify 625 ILCS 5/3-401(c-1). Two-page briefing
+    for Illinois legislators and staff (as of 2026-02-19).{% endif %}</p>
 {% endblock %}
 {% block brief_header_after %}
 <div class="legislator-brief-cta" role="region" aria-labelledby="brief-cta-heading">
     <h2 id="brief-cta-heading" class="legislator-brief-cta__heading">Endorse, sponsor, or get in touch</h2>
-    <p class="legislator-brief-cta__copy">Contact Tyler Morales to request information, discuss endorsing the cause, or support the bill.</p>
+    <p class="legislator-brief-cta__copy">Contact Tyler Morales to request information, discuss endorsing the cause, or
+        support the bill.</p>
     <div class="legislator-brief-cta__actions" role="group" aria-label="Contact options">
         <a href="tel:+17733188539" class="legislator-brief-cta__btn legislator-brief-cta__btn--primary"
-           aria-label="Call Tyler Morales at 773 318 8539">Call</a>
+            aria-label="Call Tyler Morales at 773 318 8539">Call</a>
         <a href="mailto:tyler@tylermorales.pro" class="legislator-brief-cta__btn legislator-brief-cta__btn--primary"
-           aria-label="Email Tyler Morales at tyler@tylermorales.pro">Email</a>
+            aria-label="Email Tyler Morales at tyler@tylermorales.pro">Email</a>
     </div>
 </div>
 {% endblock %}
@@ -25,13 +28,16 @@
 {% if legislator_brief %}
 <section aria-labelledby="brief-issue">
     <h2 id="brief-issue">Issue in one sentence</h2>
-    <p>{% if legislator_brief.get('issue_one_sentence_html') %}{{ legislator_brief.issue_one_sentence_html|safe }}{% else %}{{ legislator_brief.issue_one_sentence }}{% endif %}</p>
-    <p><strong>Core ambiguity:</strong> {% if legislator_brief.get('core_ambiguity_html') %}{{ legislator_brief.core_ambiguity_html|safe }}{% else %}{{ legislator_brief.core_ambiguity }}{% endif %}</p>
+    <p>{% if legislator_brief.get('issue_one_sentence_html') %}{{ legislator_brief.issue_one_sentence_html|safe }}{%
+        else %}{{ legislator_brief.issue_one_sentence }}{% endif %}</p>
+    <p><strong>Core ambiguity:</strong> {% if legislator_brief.get('core_ambiguity_html') %}{{
+        legislator_brief.core_ambiguity_html|safe }}{% else %}{{ legislator_brief.core_ambiguity }}{% endif %}</p>
 </section>
 {% for sec in legislator_brief.sections %}
 <section aria-labelledby="brief-sec-{{ loop.index }}">
     <h2 id="brief-sec-{{ loop.index }}">{{ sec.heading }}</h2>
-    {% for p in (sec.paragraphs_html if sec.get('paragraphs_html') else sec.paragraphs) %}<p>{% if sec.get('paragraphs_html') %}{{ p|safe }}{% else %}{{ p }}{% endif %}</p>{% endfor %}
+    {% for p in (sec.paragraphs_html if sec.get('paragraphs_html') else sec.paragraphs) %}<p>{% if
+        sec.get('paragraphs_html') %}{{ p|safe }}{% else %}{{ p }}{% endif %}</p>{% endfor %}
 </section>
 {% endfor %}
 <section aria-labelledby="brief-ask">
@@ -55,38 +61,57 @@
 {% else %}
 <section aria-labelledby="brief-issue">
     <h2 id="brief-issue">Issue in one sentence</h2>
-    <p>Illinois is treating Kei vehicles that are lawfully imported under federal rules as off-highway/non-highway based on an interpretation of 625 ILCS 5/3-401(c-1)—blocking normal titling and registration for road use.</p>
-    <p><strong>Core ambiguity:</strong> SOS reads “manufactured for operation on highways” as “manufactured for U.S. highways.”</p>
+    <p>Illinois is treating Kei vehicles that are lawfully imported under federal rules as off-highway/non-highway based
+        on an interpretation of 625 ILCS 5/3-401(c-1)—blocking normal titling and registration for road use.</p>
+    <p><strong>Core ambiguity:</strong> SOS reads “manufactured for operation on highways” as “manufactured for U.S.
+        highways.”</p>
 </section>
 
 <section aria-labelledby="brief-what-changed">
     <h2 id="brief-what-changed">What changed / Why now</h2>
-    <p>Other states have already clarified or restored Kei registration via statute or agency policy. The federal 25-year import pathway is well established; the gap is state-level clarity. Illinois can align with that trend through a narrow statutory fix.</p>
+    <p>Other states have already clarified or restored Kei registration via statute or agency policy. The federal
+        25-year import pathway is well established; the gap is state-level clarity. Illinois can align with that trend
+        through a narrow statutory fix.</p>
 </section>
 
 <section aria-labelledby="brief-sos-posture">
     <h2 id="brief-sos-posture">What the Secretary of State is relying on (current posture)</h2>
-    <p>The Secretary of State has pointed to <strong>625 ILCS 5/3-401(c-1)</strong>, which says a vehicle may not be registered unless it: 1) was originally manufactured for operation on highways; 2) is a modification of a vehicle originally manufactured for operation on highways; or 3) was assembled from component parts designed for highway vehicles.</p>
-    <p>We are not disputing SOS’s authority to enforce the Vehicle Code; we are asking the General Assembly to clarify how highway-built imported vehicles fit within it.</p>
-    <p><strong>Key takeaway:</strong> Under the SOS’s own framing, the barrier is not a paperwork glitch—it’s a statutory clarity gap. In practice, states that allow ongoing registration generally do so through explicit statutory authorization and/or documented agency policy.</p>
+    <p>The Secretary of State has pointed to <strong>625 ILCS 5/3-401(c-1)</strong>, which says a vehicle may not be
+        registered unless it: 1) was originally manufactured for operation on highways; 2) is a modification of a
+        vehicle originally manufactured for operation on highways; or 3) was assembled from component parts designed for
+        highway vehicles.</p>
+    <p>We are not disputing SOS’s authority to enforce the Vehicle Code; we are asking the General Assembly to clarify
+        how highway-built imported vehicles fit within it.</p>
+    <p><strong>Key takeaway:</strong> Under the SOS’s own framing, the barrier is not a paperwork glitch—it’s a
+        statutory clarity gap. In practice, states that allow ongoing registration generally do so through explicit
+        statutory authorization and/or documented agency policy.</p>
 </section>
 
 <section aria-labelledby="brief-why-narrow">
     <h2 id="brief-why-narrow">Why a narrowly tailored statute is the most direct fix</h2>
-    <p>Illinois can keep existing safety and equipment enforcement intact while clarifying that a foreign-manufactured vehicle originally designed for highway use (in another country) can be titled/registered here when it is lawfully imported under federal rules (often via the 25-year NHTSA exemption; emissions requirements still apply).</p>
+    <p>Illinois can keep existing safety and equipment enforcement intact while clarifying that a foreign-manufactured
+        vehicle originally designed for highway use (in another country) can be titled/registered here when it is
+        lawfully imported under federal rules (often via the 25-year NHTSA exemption; emissions requirements still
+        apply).</p>
 </section>
 
 <section aria-labelledby="brief-proposed">
     <h2 id="brief-proposed">Proposed legislative concept (drafting direction)</h2>
-    <p>Add a targeted clarification to 625 ILCS 5/3-401(c-1) (or a related definitional section) so that a vehicle may be registered if it was originally manufactured for operation on highways in any jurisdiction and is legally importable into the United States under federal law (commonly 25+ years). Eligibility would still require normal Illinois titling documentation, insurance, and compliance with Illinois equipment and traffic laws.</p>
-    <p><strong>Policy posture:</strong> We are asking for normal registration for highway-built Kei vehicles. If operating limits are desired, they should be narrowly tailored and evidence-based—not achieved by categorizing all highway-built Kei vehicles as off-highway.</p>
+    <p>Add a targeted clarification to 625 ILCS 5/3-401(c-1) (or a related definitional section) so that a vehicle may
+        be registered if it was originally manufactured for operation on highways in any jurisdiction and is legally
+        importable into the United States under federal law (commonly 25+ years). Eligibility would still require normal
+        Illinois titling documentation, insurance, and compliance with Illinois equipment and traffic laws.</p>
+    <p><strong>Policy posture:</strong> We are asking for normal registration for highway-built Kei vehicles. If
+        operating limits are desired, they should be narrowly tailored and evidence-based—not achieved by categorizing
+        all highway-built Kei vehicles as off-highway.</p>
 </section>
 
 <section aria-labelledby="brief-ask">
     <h2 id="brief-ask">What we are asking your office to do</h2>
     <ol class="brief-ask-list">
         <li>Help identify the best legislative vehicle and sponsor path (Transportation / Vehicle Code).</li>
-        <li>Facilitate a staff-level meeting with SOS legal/policy to confirm what statutory language would satisfy their interpretation.</li>
+        <li>Facilitate a staff-level meeting with SOS legal/policy to confirm what statutory language would satisfy
+            their interpretation.</li>
         <li>If supportive, commit to carry or co-sponsor a narrowly drafted fix in the next filing window.</li>
     </ol>
 </section>
@@ -94,9 +119,11 @@
 
 <section aria-labelledby="brief-current-law">
     <h2 id="brief-current-law">State-by-state authorization</h2>
-    <p>Recent examples where states authorized or restored Kei registration via statute or policy. (See map and table below.)</p>
+    <p>Recent examples where states authorized or restored Kei registration via statute or policy. (See map and table
+        below.)</p>
     <h3 id="brief-states-view">States with bills passed or in progress</h3>
-    {{ state_status_table(brief_state_status, brief_state_map_status_json, brief_aamva_fix_state_abbrs_json|default('[]'), 'brief-view') }}
+    {{ state_status_table(brief_state_status, brief_state_map_status_json,
+    brief_aamva_fix_state_abbrs_json|default('[]'), 'brief-view') }}
 </section>
 
 <section aria-labelledby="brief-attachments" class="brief-attachments">
@@ -106,7 +133,9 @@
         <li>A short one-page summary for quick internal sharing (see Documents sidebar)</li>
         <li>Examples of SOS denial/revocation letters (see Documents sidebar when available)</li>
     </ul>
-    <p><strong>Illinois statutory reference:</strong> 625 ILCS 5/3-401(c-1) (text available via <a href="https://www.ilga.gov/legislation/ilcs/ilcs3.asp?ActID=1815&amp;ChapterID=49" target="_blank" rel="noopener noreferrer">ILGA</a>).</p>
+    <p><strong>Illinois statutory reference:</strong> 625 ILCS 5/3-401(c-1) (text available via <a
+            href="https://www.ilga.gov/legislation/ilcs/ilcs3.asp?ActID=1815&amp;ChapterID=49" target="_blank"
+            rel="noopener noreferrer">ILGA</a>).</p>
 </section>
 
 <section aria-labelledby="brief-office-outreach" class="brief-office-outreach">
@@ -122,12 +151,14 @@
 
 <section aria-labelledby="brief-contact" class="brief-contact">
     <h2 id="brief-contact">Point of contact</h2>
-    <p>Tyler Morales — <a href="tel:+17733188539">773 318 8539</a>, <a href="mailto:tyler@tylermorales.pro">tyler@tylermorales.pro</a></p>
+    <p>Tyler Morales — <a href="tel:+17733188539">773 318 8539</a>, <a
+            href="mailto:tyler@tylermorales.pro">tyler@tylermorales.pro</a></p>
 </section>
 
 <section aria-labelledby="brief-next-step">
     <h2 id="brief-next-step">Outreach</h2>
-    <p>Constituents and advocates are using our outreach tool to contact their legislators. View the tool or share it with constituents so they can find their legislators and send a message.</p>
+    <p>Constituents and advocates are using our outreach tool to contact their legislators. View the tool or share it
+        with constituents so they can find their legislators and send a message.</p>
     <p><a href="/advocacy/" class="content-cta">View outreach tool</a></p>
     <p>Short overview for constituents: <a href="/the-issue">The Issue</a>.</p>
 </section>
@@ -203,7 +234,8 @@
             </li>
             {% endfor %}
         </ul>
-        <section id="sidebar-kei-poll-section" class="legislator-brief-sidebar__poll" aria-labelledby="sidebar-kei-poll-heading">
+        <section id="sidebar-kei-poll-section" class="legislator-brief-sidebar__poll"
+            aria-labelledby="sidebar-kei-poll-heading">
             {% include "_sidebar_kei_poll.html" %}
         </section>
         {{ share_buttons('sidebar', 'brief-share', 'legislator') }}
@@ -224,7 +256,7 @@
         try {
             var arr = JSON.parse(aamvaJson);
             for (var a = 0; a < arr.length; a++) { aamvaSet[arr[a].toLowerCase()] = true; }
-        } catch (e) {}
+        } catch (e) { }
         var currentFilter = 'all';
         var wrap = viewEl.querySelector('.brief-us-map-wrap');
         var container = wrap ? wrap.querySelector('.brief-us-map') : null;

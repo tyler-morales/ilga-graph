@@ -6,20 +6,25 @@
 
 {% block brief_title %}Definitions & glossary{% endblock %}
 {% block brief_intro %}
-<p class="legal-page-intro">Terms we use on this site and key concepts about kei vehicles and the Illinois registration issue.</p>
+<p class="legal-page-intro">Terms we use on this site and key concepts about kei vehicles and the Illinois registration
+    issue.</p>
 {% endblock %}
 {% block brief_main_heading %}{% endblock %}
 {% block brief_main %}
 <div class="glossary-sections">
     <section aria-labelledby="glossary-kei-heading" class="glossary-section">
         <h2 id="glossary-kei-heading" class="glossary-section-title">Kei vehicles & policy</h2>
-        <p class="glossary-section-intro">Terms related to kei vehicles, federal import rules, and the Illinois statutory fix we're advocating for.</p>
+        <p class="glossary-section-intro">Terms related to kei vehicles, federal import rules, and the Illinois
+            statutory fix we're advocating for.</p>
         <dl class="glossary-list">
             {% for item in kei_glossary %}
             <div class="glossary-entry">
                 <dt id="glossary-{{ item.id }}" class="glossary-term" tabindex="-1">{{ item.term }}</dt>
                 <dd class="glossary-def">{{ item.definition }}{% if item.get("source_url") %}
-                <p class="glossary-source">Source: <cite><a href="{{ item.source_url }}" rel="noopener noreferrer">{{ item.get("source") or item.source_url }}</a></cite></p>{% endif %}</dd>
+                    <p class="glossary-source">Source: <cite><a href="{{ item.source_url }}"
+                                rel="noopener noreferrer">{{ item.get("source") or item.source_url }}</a></cite></p>{%
+                    endif %}
+                </dd>
             </div>
             {% endfor %}
         </dl>
@@ -27,13 +32,17 @@
 
     <section aria-labelledby="glossary-session-heading" class="glossary-section">
         <h2 id="glossary-session-heading" class="glossary-section-title">Session calendar & deadlines</h2>
-        <p class="glossary-section-intro">Terms used in the legislative session schedule and deadline lists on The Issue and Timeline pages.</p>
+        <p class="glossary-section-intro">Terms used in the legislative session schedule and deadline lists on The Issue
+            and Timeline pages.</p>
         <dl class="glossary-list">
             {% for item in session_schedule_terms %}
             <div class="glossary-entry">
                 <dt id="glossary-{{ item.id }}" class="glossary-term" tabindex="-1">{{ item.term }}</dt>
                 <dd class="glossary-def">{{ item.definition }}{% if item.get("source_url") %}
-                <p class="glossary-source">Source: <cite><a href="{{ item.source_url }}" rel="noopener noreferrer">{{ item.get("source") or item.source_url }}</a></cite></p>{% endif %}</dd>
+                    <p class="glossary-source">Source: <cite><a href="{{ item.source_url }}"
+                                rel="noopener noreferrer">{{ item.get("source") or item.source_url }}</a></cite></p>{%
+                    endif %}
+                </dd>
             </div>
             {% endfor %}
         </dl>
@@ -41,7 +50,8 @@
 
     <section aria-labelledby="glossary-site-heading" class="glossary-section">
         <h2 id="glossary-site-heading" class="glossary-section-title">Terms used on this site</h2>
-        <p class="glossary-section-intro">Organizational and product terms that have specific meanings here (e.g. campaign = action alert, not the multi-year effort).</p>
+        <p class="glossary-section-intro">Organizational and product terms that have specific meanings here (e.g.
+            campaign = action alert, not the multi-year effort).</p>
         {% for category, label in [("advocacy", "Advocacy"), ("legislative", "Legislative"), ("product", "Product")] %}
         {% set terms = domain_glossary | selectattr("category", "equalto", category) | list %}
         {% if terms %}
@@ -51,7 +61,10 @@
             <div class="glossary-entry">
                 <dt id="glossary-{{ item.id }}" class="glossary-term" tabindex="-1">{{ item.term }}</dt>
                 <dd class="glossary-def">{{ item.definition }}{% if item.get("source_url") %}
-                <p class="glossary-source">Source: <cite><a href="{{ item.source_url }}" rel="noopener noreferrer">{{ item.get("source") or item.source_url }}</a></cite></p>{% endif %}</dd>
+                    <p class="glossary-source">Source: <cite><a href="{{ item.source_url }}"
+                                rel="noopener noreferrer">{{ item.get("source") or item.source_url }}</a></cite></p>{%
+                    endif %}
+                </dd>
             </div>
             {% endfor %}
         </dl>
@@ -64,7 +77,7 @@
 <aside class="legislator-brief-sidebar" aria-labelledby="glossary-sidebar-heading">
     <h2 id="glossary-sidebar-heading" class="legislator-brief-sidebar__title">Community poll</h2>
     <div class="legislator-brief-sidebar__content">
-        <section id="sidebar-kei-poll-section" class="legislator-brief-sidebar__poll" aria-labelledby="sidebar-kei-poll-heading">
+        <section class="legislator-brief-sidebar__poll" aria-labelledby="sidebar-kei-poll-heading">
             {% include "_sidebar_kei_poll.html" %}
         </section>
         {{ share_buttons('sidebar', 'glossary-share', 'constituent') }}
