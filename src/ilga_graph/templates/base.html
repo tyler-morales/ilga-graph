@@ -26,7 +26,8 @@
     <script defer src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>
     {% endif %}
     <link rel="stylesheet" href="/static/css/variables.css">
-    {% if primary_color and primary_color|lower not in ['#fff', '#ffffff', '#fafafa', '#f5f5f5', '#eee', '#eeeeee', '#f0f0f0', '#e0e0e0'] %}
+    {% if primary_color and primary_color|lower not in ['#fff', '#ffffff', '#fafafa', '#f5f5f5', '#eee', '#eeeeee',
+    '#f0f0f0', '#e0e0e0'] %}
     <style>
         :root {
             --color-hero-cta: {{ primary_color }};
@@ -438,6 +439,18 @@
                         branchBtns.forEach(function (btn) {
                             btn.addEventListener('click', function () { showBranchInline(btn.getAttribute('data-branch')); });
                         });
+                        function hideZipAndTurnstileInline() {
+                            var pollId = form.id && form.id.replace(/-form$/, '');
+                            var zipPanel = pollId && document.getElementById(pollId + '-panel-zip');
+                            var turnstileWrap = pollId && document.getElementById(pollId + '-turnstile-wrap');
+                            if (zipPanel) {
+                                zipPanel.classList.add('kei-poll__zip-panel--hidden');
+                                zipPanel.setAttribute('aria-hidden', 'true');
+                            }
+                            if (turnstileWrap) {
+                                turnstileWrap.classList.add('kei-poll__turnstile-wrap--hidden');
+                            }
+                        }
                         var backBtnInline = wrap.querySelector('.wyc-inline-poll__back');
                         if (backBtnInline && backWrapInline) {
                             backBtnInline.addEventListener('click', function () {
@@ -447,6 +460,7 @@
                                     wrap.querySelectorAll('input[name="kei_impact_radio"]').forEach(function (r) { r.checked = false; });
                                     var impactInput = form.querySelector('input[name="kei_impact_slug"]');
                                     if (impactInput) impactInput.value = '';
+                                    hideZipAndTurnstileInline();
                                     var branch = wrap.getAttribute('data-current-branch');
                                     panels.forEach(function (p) {
                                         var show = p.getAttribute('data-branch') === branch;
@@ -470,6 +484,7 @@
                                     branchBtns.forEach(function (btn) { btn.setAttribute('aria-pressed', 'false'); });
                                     form.querySelectorAll('input[name="kei_status"]').forEach(function (r) { r.checked = false; });
                                     wrap.removeAttribute('data-current-branch');
+                                    hideZipAndTurnstileInline();
                                     backWrapInline.classList.add('wyc-inline-poll__back-wrap--hidden');
                                     backWrapInline.setAttribute('aria-hidden', 'true');
                                     if (submitWrap) {
@@ -617,6 +632,18 @@
                             showBranch(btn.getAttribute('data-branch'));
                         });
                     });
+                    function hideZipAndTurnstile() {
+                        var pollId = form.id && form.id.replace(/-form$/, '');
+                        var zipPanel = pollId && document.getElementById(pollId + '-panel-zip');
+                        var turnstileWrap = pollId && document.getElementById(pollId + '-turnstile-wrap');
+                        if (zipPanel) {
+                            zipPanel.classList.add('kei-poll__zip-panel--hidden');
+                            zipPanel.setAttribute('aria-hidden', 'true');
+                        }
+                        if (turnstileWrap) {
+                            turnstileWrap.classList.add('kei-poll__turnstile-wrap--hidden');
+                        }
+                    }
                     var backBtn = wrap.querySelector('.kei-poll__back');
                     if (backBtn && backWrap) {
                         backBtn.addEventListener('click', function () {
@@ -625,6 +652,7 @@
                                 step3Panel.setAttribute('aria-hidden', 'true');
                                 form.querySelectorAll('input[name="kei_impact_radio"]').forEach(function (r) { r.checked = false; });
                                 if (impactInput) impactInput.value = '';
+                                hideZipAndTurnstile();
                                 var branch = wrap.getAttribute('data-current-branch');
                                 setHeading('Question 2 of 3');
                                 var progressSteps = wrap.querySelectorAll('.kei-poll__progress-step');
@@ -642,6 +670,7 @@
                                 updateSubmitState();
                             } else {
                                 wrap.removeAttribute('data-current-branch');
+                                hideZipAndTurnstile();
                                 if (step1) {
                                     step1.classList.remove('kei-poll__step1--hidden');
                                     step1.removeAttribute('aria-hidden');

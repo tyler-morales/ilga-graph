@@ -301,7 +301,7 @@
                 </fieldset>
             </div>
             <p class="kei-poll__back-wrap kei-poll__back-wrap--hidden" id="{{ poll_id }}-back-wrap" aria-hidden="true">
-                <button type="button" class="kei-poll__back btn btn--text" aria-label="Back to previous question">Back</button>
+                <button type="button" class="kei-poll__back kei-poll__back--link" aria-label="Back to previous question">Back</button>
             </p>
             <div class="kei-poll__zip-panel kei-poll__zip-panel--hidden" id="{{ poll_id }}-panel-zip" data-kei-poll-step="zip" aria-hidden="true">
                 <p class="kei-poll__zip-intro">Last thing — your ZIP code helps us tell your legislator exactly how many of their constituents are affected.</p>
@@ -319,12 +319,13 @@
             {% endif %}
         <footer class="kei-poll__footer">
             {% if kei_poll_goal is not none and kei_poll_goal > 0 %}
+            {% set _goal_pct = [((kei_status_total or 0) / kei_poll_goal * 100)|round(1), 100]|min %}
             <div class="kei-poll-goal" role="status" aria-live="polite">
                 <p class="kei-poll-goal__label" id="{{ poll_id }}-goal-label">{{ (kei_status_total or 0) }} of {{ kei_poll_goal }} responses</p>
                 <div class="kei-poll-goal__bar" role="progressbar" id="{{ poll_id }}-goal-bar"
                     aria-valuenow="{{ kei_status_total or 0 }}" aria-valuemin="0" aria-valuemax="{{ kei_poll_goal }}"
                     aria-labelledby="{{ poll_id }}-goal-label">
-                    <div class="kei-poll-goal__bar-fill" data-width-pct="{{ [((kei_status_total or 0) / kei_poll_goal * 100)|round(1), 100]|min }}"></div>
+                    <div class="kei-poll-goal__bar-fill" data-width-pct="{{ _goal_pct }}" style="width: {{ _goal_pct }}%"></div>
                 </div>
             </div>
             {% else %}
@@ -390,7 +391,7 @@
             </div>
         </div>
         <p class="wyc-inline-poll__back-wrap wyc-inline-poll__back-wrap--hidden" id="{{ poll_id }}-back-wrap" aria-hidden="true">
-            <button type="button" class="wyc-inline-poll__back btn btn--text" aria-label="Back to previous question">Back</button>
+            <button type="button" class="wyc-inline-poll__back wyc-inline-poll__back--link" aria-label="Back to previous question">Back</button>
         </p>
         <div class="wyc-inline-poll__zip-panel kei-poll__zip-panel kei-poll__zip-panel--hidden" id="{{ poll_id }}-panel-zip" data-kei-poll-step="zip" aria-hidden="true">
             <p class="kei-poll__zip-intro">Last thing — your ZIP code helps us tell your legislator exactly how many of their constituents are affected.</p>
@@ -412,12 +413,13 @@
                     disabled>Submit and see results</button>
             </span>
             {% if kei_poll_goal is not none and kei_poll_goal > 0 %}
+            {% set _goal_pct = [((kei_status_total or 0) / kei_poll_goal * 100)|round(1), 100]|min %}
             <div class="kei-poll-goal wyc-inline-poll__goal" role="status" aria-live="polite">
                 <p class="kei-poll-goal__label" id="{{ poll_id }}-goal-label">{{ (kei_status_total or 0) }} of {{ kei_poll_goal }} responses</p>
                 <div class="kei-poll-goal__bar" role="progressbar" id="{{ poll_id }}-goal-bar"
                     aria-valuenow="{{ kei_status_total or 0 }}" aria-valuemin="0" aria-valuemax="{{ kei_poll_goal }}"
                     aria-labelledby="{{ poll_id }}-goal-label">
-                    <div class="kei-poll-goal__bar-fill" data-width-pct="{{ [((kei_status_total or 0) / kei_poll_goal * 100)|round(1), 100]|min }}"></div>
+                    <div class="kei-poll-goal__bar-fill" data-width-pct="{{ _goal_pct }}" style="width: {{ _goal_pct }}%"></div>
                 </div>
             </div>
             {% else %}
@@ -482,7 +484,7 @@
             </div>
             <div class="kei-poll-chart__bar-wrap" aria-hidden="true" role="presentation">
                 <span class="kei-poll-chart__bar kei-poll-chart__bar--{{ 'highest' if is_highest else 'other' }}"
-                    data-width-pct="{{ pct }}"></span>
+                    data-width-pct="{{ pct }}" style="width: {{ pct }}%"></span>
             </div>
             <span class="visually-hidden" aria-label="{{ count }} responses">{{ count }}</span>
         </li>

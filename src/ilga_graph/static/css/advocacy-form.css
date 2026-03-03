@@ -431,9 +431,9 @@
 .hero-form button {
   font-size: var(--font-size-body);
   padding: 12px 24px;
-  background: var(--color-hero-cta);
+  background: var(--color-hero-cta, #ed7a0a);
   color: #fff;
-  border: 2px solid var(--color-hero-cta);
+  border: 2px solid var(--color-hero-cta, #ed7a0a);
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
@@ -441,13 +441,13 @@
 }
 
 .hero-form button:hover {
-  background: var(--color-hero-cta-hover);
-  border-color: var(--color-hero-cta-hover);
+  background: var(--color-hero-cta-hover, #c96608);
+  border-color: var(--color-hero-cta-hover, #c96608);
 }
 
 .hero-form button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--color-hero-cta-focus-ring);
+  box-shadow: 0 0 0 3px var(--color-hero-cta-focus-ring, #333);
 }
 
 /* Home-only: "Learn about the issue? / for legislators" under the hero form */

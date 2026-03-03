@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -65,35 +64,9 @@ def _collect_unique_bills_by_number(bills_lookup: dict[str, Bill]) -> dict[str, 
     return unique
 
 
-def _debug_log(message: str, hypothesis_id: str, data: dict | None = None) -> None:
-    # #region agent log
-    try:
-        import os as _os
-        import time as _t
-
-        path = _os.path.join(_os.environ.get("TMPDIR", "/tmp"), "debug-d3a55a.log")
-        payload = {
-            "sessionId": "d3a55a",
-            "location": "startup.py:lifespan",
-            "message": message,
-            "hypothesisId": hypothesis_id,
-            "data": data or {},
-            "timestamp": int(_t.time() * 1000),
-        }
-        with open(path, "a") as f:
-            f.write(json.dumps(payload) + "\n")
-    except Exception:
-        pass
-    # #endregion
-
-
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     import time as _time
-
-    # #region agent log
-    _debug_log("lifespan_start", "H3")
-    # #endregion
 
     # In-memory job store for campaign send progress (single-worker; keyed by job_id).
     _app.state.send_jobs = {}
@@ -199,10 +172,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
                 )
                 state.members = []
 
-    # #region agent log
-    _debug_log("after_load", "H1", {"elapsed_load": elapsed_load})
-    # #endregion
-
     # ── Step 2: Compute analytics (or load from cache when fresh) ───────────
     try:
         t_analytics = _time.perf_counter()
@@ -222,10 +191,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         elapsed_analytics = _time.perf_counter() - t_analytics
     except Exception:
         LOGGER.exception("Analytics computation failed; scorecards will be empty.")
-
-    # #region agent log
-    _debug_log("after_analytics", "H2", {"elapsed_analytics": elapsed_analytics})
-    # #endregion
 
     # ── Step 2a: Build co-sponsorship adjacency for graph visualization ──
     try:
@@ -551,20 +516,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         is_using_mocks(),
     )
 
-    # #region agent log
-    _debug_log("before_init_db", "H5")
-    # #endregion
-
     from .db import init_db
 
     await init_db()
-
-    # #region agent log
-    _debug_log("after_init_db", "H5")
-    # #endregion
-
-    # #region agent log
-    _debug_log("lifespan_yield", "H4")
-    # #endregion
 
     yield
