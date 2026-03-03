@@ -22,27 +22,42 @@
         <span class="kei-poll__total">Total responses: {{ kei_status_results.total_responses if kei_status_results else 0 }}</span>
         {% endif %}
     </footer>
-    <p class="kei-poll-story-cta">
-        {% if kei_status_selected in ('registered', 'revoked', 'denied') %}
-        <button type="button" class="story-submit-trigger btn btn--story kei-poll-story-cta__btn" data-marquee-type="story" aria-label="Open form to share your photo and story on the community wall"><span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>Share your story</button>
-        <span class="kei-poll-story-cta__hint">Add your photo to our community wall.</span>
-        {% else %}
-        <button type="button" class="story-submit-trigger btn btn--story kei-poll-story-cta__btn" data-marquee-type="statement" aria-label="Open form to share your interest (e.g. would buy if legal) on the community wall"><span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>Share your story</button>
-        <span class="kei-poll-story-cta__hint">Share that you&rsquo;d buy one if it were legal—we&rsquo;ll add it to the wall.</span>
-        {% endif %}
-    </p>
-    <p class="kei-poll-change-wrap">
+    <p class="wyc-branch-content__change kei-poll-change-wrap">
         <button type="button" class="kei-poll-change-btn"
             hx-get="/updates/kei-poll-form?poll_id={{ poll_id|e }}"
             hx-target="#{{ poll_id|e }}-wrap"
             hx-swap="outerHTML"
             aria-label="Change your kei status answer">Need to change your answer?</button>
     </p>
-    {% if show_go_to_site %}
-    <p class="poll-standalone-cta poll-standalone-cta--inline">
-        <a href="/" class="btn btn--primary">Go to full site</a>
+    {% if not standalone_poll %}
+    {% if why_you_care_branch is defined and why_you_care_branch and why_you_care_branch.secondary_cta_label %}
+    <p class="wyc-branch-content__share kei-poll-story-cta">
+        {% if why_you_care_branch.secondary_cta_modal_type %}
+        <button type="button" class="story-submit-trigger btn btn--story kei-poll-story-cta__btn" data-marquee-type="{{ why_you_care_branch.secondary_cta_modal_type }}" aria-label="{{ why_you_care_branch.secondary_cta_label }}"><span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>{{ why_you_care_branch.secondary_cta_label }}</button>
+        {% else %}
+        <a href="{{ why_you_care_branch.secondary_cta_href }}" class="btn btn--secondary kei-poll-story-cta__btn">{{ why_you_care_branch.secondary_cta_label }}</a>
+        {% endif %}
+        <span class="kei-poll-story-cta__hint">Add your photo to our community wall.</span>
+    </p>
+    {% elif not why_you_care_branch and kei_poll_is_owner|default(kei_status_selected in ('registered', 'revoked', 'denied')) %}
+    <p class="wyc-branch-content__share kei-poll-story-cta">
+        <button type="button" class="story-submit-trigger btn btn--story kei-poll-story-cta__btn" data-marquee-type="story" aria-label="Open form to share your photo and story on the community wall"><span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>Share your story</button>
+        <span class="kei-poll-story-cta__hint">Add your photo to our community wall.</span>
     </p>
     {% endif %}
+    {% endif %}
+    <div class="wyc-branch-content__after-change-cta">
+        {% if why_you_care_cta_nudge is defined and why_you_care_cta_nudge %}
+        <p class="wyc-branch-content__cta-nudge">{{ why_you_care_cta_nudge }}</p>
+        {% endif %}
+        <div class="wyc-branch-content__ctas">
+            {% if why_you_care_branch is defined and why_you_care_branch %}
+            <a href="{{ why_you_care_branch.primary_cta_href }}" class="btn btn--primary wyc-branch-content__cta-primary why-you-care-link" aria-label="{{ why_you_care_branch.primary_cta_label }}"><span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>{{ why_you_care_branch.primary_cta_label }}</a>
+            {% else %}
+            <a href="/advocacy/" class="btn btn--primary wyc-branch-content__cta-primary why-you-care-link" aria-label="Find your legislators and start outreach"><span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>Find your legislators and start outreach</a>
+            {% endif %}
+        </div>
+    </div>
     </div>
     </div>
 </details>

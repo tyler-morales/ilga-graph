@@ -4,15 +4,16 @@
 {% block content %}
 <div class="poll-standalone__wrap" id="poll-standalone">
     <header class="poll-standalone__header" aria-label="Page header">
-        <a href="/" class="poll-standalone__logo">{{ site_name }}</a>
+        <a href="/" class="poll-standalone__logo poll-standalone__logo--title" aria-label="Go to {{ site_name }} home">{{ site_name }}</a>
         <p class="poll-standalone__tagline">Your input helps us explain to legislators who&rsquo;s really affected. Numbers speak louder than words.</p>
     </header>
     {% if show_results %}
     <section class="poll-standalone__results" aria-labelledby="poll-results-heading">
-        {% if request.query_params.get("submitted") == "1" %}
-        <p class="kei-status-success poll-standalone__thanks" role="status">Thanks — your response helps us show
-            legislators that numbers speak louder than words.</p>
-        {% endif %}
+        <p class="kei-status-success poll-standalone__thanks" role="status">
+            {% if why_you_care_branch is defined and why_you_care_branch %}Thanks. {{ why_you_care_branch.headline }}
+            {% else %}Thanks — your response helps us show legislators that numbers speak louder than words.
+            {% endif %}
+        </p>
         <h2 id="poll-results-heading" class="visually-hidden">Poll results</h2>
         {% include "_kei_poll_initial_results.html" %}
     </section>

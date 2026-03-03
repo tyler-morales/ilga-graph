@@ -889,8 +889,10 @@ class TestPollStandalonePage:
     def test_poll_page_shows_results_when_cookie_or_submitted(
         self, client: TestClient, test_db_path: Path
     ) -> None:
-        """GET /poll with cookie or ?submitted=1 shows results and Go to full site."""
-        from ilga_graph.routers.updates import KEI_POLL_VOTED_COOKIE
+        """GET /poll with cookie or ?submitted=1 shows results and link to home."""
+        from ilga_graph.kei_poll_context import (
+            KEI_POLL_VOTED_COOKIE,
+        )
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)
@@ -899,12 +901,127 @@ class TestPollStandalonePage:
         resp = client.get("/poll", cookies={KEI_POLL_VOTED_COOKIE: "1"})
         assert resp.status_code == 200
         html = resp.text
-        assert "Go to full site" in html
+        assert 'href="/"' in html
         assert "Results" in html or "results" in html.lower()
 
         resp2 = client.get("/poll", params={"submitted": "1"})
         assert resp2.status_code == 200
-        assert "Go to full site" in resp2.text
+        assert 'href="/"' in resp2.text
+
+    def test_poll_results_cta_owner_shows_branch_ctas(
+        self, client: TestClient, test_db_path: Path
+    ) -> None:
+        """Poll standalone with choice=registered shows Start outreach CTA; no Share your story."""
+        from ilga_graph.kei_poll_context import (
+            KEI_POLL_CHOICE_COOKIE,
+            KEI_POLL_VOTED_COOKIE,
+        )
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            importlib.reload(updates_router_mod)
+        resp = client.get(
+            "/poll",
+            cookies={
+                KEI_POLL_VOTED_COOKIE: "1",
+                KEI_POLL_CHOICE_COOKIE: "registered",
+            },
+        )
+        assert resp.status_code == 200
+        html = resp.text
+        assert "Start outreach" in html
+        assert "/advocacy" in html
+        # Share CTA block hidden on standalone; dialog may still be in layout
+        assert "wyc-branch-content__share" not in html
+
+    def test_poll_results_cta_non_owner_shows_branch_ctas(
+        self, client: TestClient, test_db_path: Path
+    ) -> None:
+        """Poll standalone choice=would_want shows branch CTAs (Learn issue + outreach)."""
+        from ilga_graph.kei_poll_context import (
+            KEI_POLL_CHOICE_COOKIE,
+            KEI_POLL_VOTED_COOKIE,
+        )
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            importlib.reload(updates_router_mod)
+        resp = client.get(
+            "/poll",
+            cookies={
+                KEI_POLL_VOTED_COOKIE: "1",
+                KEI_POLL_CHOICE_COOKIE: "would_want",
+            },
+        )
+        assert resp.status_code == 200
+        html = resp.text
+        assert "Learn about the issue" in html
+        assert "Start outreach" in html or "/advocacy" in html
+        assert "wyc-branch-content__after-change-cta" in html
+
+    def test_poll_state_sync_after_standalone_vote(
+        self, client: TestClient, test_db_path: Path
+    ) -> None:
+        """After standalone poll submit, updates page shows results (cookie shared)."""
+        from ilga_graph.kei_poll_context import KEI_POLL_VOTED_COOKIE
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            importlib.reload(updates_router_mod)
+        with patch.object(
+            updates_router_mod, "_verify_turnstile", new_callable=AsyncMock, return_value=True
+        ):
+            client.post(
+                "/updates/kei-status",
+                data=_data_with_csrf(
+                    client,
+                    {
+                        "kei_status": "would_want",
+                        "kei_impact_slug": "support_cause",
+                        "poll_id": "standalone-kei-poll",
+                        "zip_code": "60001",
+                    },
+                ),
+                follow_redirects=True,
+            )
+        assert KEI_POLL_VOTED_COOKIE in client.cookies
+        resp = client.get("/updates", params={"prompt": "kei"})
+        assert resp.status_code == 200
+        html = resp.text
+        assert "Results" in html
+        assert "Learn about the issue" in html or "Start outreach" in html
+
+    def test_kei_status_htmx_returns_branch_cta_in_fragment(
+        self, client: TestClient, test_db_path: Path
+    ) -> None:
+        """POST kei-status (HTMX) non-home poll returns success fragment with branch primary CTA."""
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            importlib.reload(updates_router_mod)
+        with patch.object(
+            updates_router_mod, "_verify_turnstile", new_callable=AsyncMock, return_value=True
+        ):
+            resp = client.post(
+                "/updates/kei-status",
+                data=_data_with_csrf(
+                    client,
+                    {
+                        "kei_status": "would_want",
+                        "kei_impact_slug": "support_cause",
+                        "poll_id": "updates-kei-poll",
+                        "zip_code": "60001",
+                    },
+                ),
+                headers={"HX-Request": "true"},
+            )
+        assert resp.status_code == 200
+        html = resp.text
+        assert "Learn about the issue" in html
+        assert "/the-issue" in html
 
     def test_kei_status_standalone_redirects_to_poll(
         self, client: TestClient, test_db_path: Path
