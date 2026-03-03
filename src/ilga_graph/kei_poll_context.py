@@ -5,8 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import Request
-from sqlalchemy import func, select
+from sqlalchemy import cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.types import String
 
 from .campaign_config import get_campaign_config, get_kei_poll_goal
 from .constants import (
@@ -40,10 +41,28 @@ def _validate_kei_poll_impact(slug: str | None) -> str | None:
     return s
 
 
+def _respondent_key_expr():
+    """SQL expression: one key per respondent (user_id or session_id; id fallback)."""
+    return func.coalesce(
+        cast(PollResponse.user_id, String(64)),
+        func.coalesce(PollResponse.session_id, cast(PollResponse.id, String(64))),
+    )
+
+
+async def get_distinct_respondent_count(db: AsyncSession, poll_id: int) -> int:
+    """Distinct respondent count for a poll (one per person). Used by admin and progress bar."""
+    r = await db.execute(
+        select(func.count(func.distinct(_respondent_key_expr()))).where(
+            PollResponse.poll_id == poll_id
+        )
+    )
+    return r.scalar() or 0
+
+
 async def _get_kei_status_results(db: AsyncSession) -> dict[str, Any]:
-    """Aggregate kei_status counts from PollResponse for the campaign poll
-    (Turnstile-verified only). Single source of truth so admin list, admin
-    results, and public UI show the same count."""
+    """Aggregate kei_status counts from PollResponse for the campaign poll.
+    total_responses = distinct respondents (one per person who completed the poll).
+    by_status = response counts per option (for chart)."""
     poll_slug = get_campaign_config().poll_slug or "kei"
     poll = (await db.execute(select(Poll).where(Poll.slug == poll_slug))).scalar_one_or_none()
     if not poll:
@@ -57,7 +76,16 @@ async def _get_kei_status_results(db: AsyncSession) -> dict[str, Any]:
         .group_by(PollResponse.option_slug)
     )
     by_status: dict[str, int] = {row[0]: row[1] for row in result.all()}
-    total = sum(by_status.values())
+    row_total = sum(by_status.values())
+    # One response per person: count distinct respondents (progress bar "x of 1000")
+    distinct_r = await db.execute(
+        select(func.count(func.distinct(_respondent_key_expr()))).where(
+            PollResponse.poll_id == poll.id
+        )
+    )
+    total = distinct_r.scalar() or 0
+    if total == 0 and row_total > 0:
+        total = row_total  # fallback if distinct query returns 0
     return {
         "by_status": {slug: by_status.get(slug, 0) for slug in KEI_STATUS_SLUGS},
         "total_responses": total,
