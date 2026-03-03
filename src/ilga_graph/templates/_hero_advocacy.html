@@ -6,9 +6,9 @@ advocate-focused. ── #}
         <h1 class="hero-headline">
             {% if hero_headline_line1 and hero_headline_line2 %}
             <span class="hero-headline-line">{% if hero_headline_line1_highlight %}{{
-                hero_headline_line1_prefix|default('') }}<span class="hero-headline-sharpie-wrap"><img
+                hero_headline_line1_prefix|default('') }}<span class="hero-headline-sharpie-wrap"><picture><source type="image/webp" srcset="/static/images/sharpie.webp"><img
                         src="/static/images/sharpie.png" alt="" class="hero-headline-sharpie" aria-hidden="true"
-                        width="120" height="120"><span class="hero-headline-sharpie-text">{{
+                        width="120" height="120"></picture><span class="hero-headline-sharpie-text">{{
                         hero_headline_line1_highlight }}</span></span>{{ hero_headline_line1_suffix|default('') }}{%
                 else %}{{ hero_headline_line1 }}{% endif %}</span>
             <span class="hero-headline-line">{% if hero_headline_highlight %}{{ hero_headline_line2_prefix|default('')

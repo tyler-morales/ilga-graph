@@ -5,8 +5,8 @@
         <p class="hero-eyebrow">Take action</p>
         <h1 class="hero-headline">{% if hero_headline_line1 and hero_headline_line2 %}{% if
             hero_headline_line1_highlight %}{{ hero_headline_line1_prefix|default('') }}<span
-                class="hero-headline-sharpie-wrap"><img src="/static/images/sharpie.png" alt=""
-                    class="hero-headline-sharpie" aria-hidden="true" width="120" height="120"><span
+                class="hero-headline-sharpie-wrap"><picture><source type="image/webp" srcset="/static/images/sharpie.webp"><img src="/static/images/sharpie.png" alt=""
+                    class="hero-headline-sharpie" aria-hidden="true" width="120" height="120"></picture><span
                     class="hero-headline-sharpie-text">{{ hero_headline_line1_highlight }}</span></span>{{
             hero_headline_line1_suffix|default('') }}{% else %}{{ hero_headline_line1 }}{% endif %}<br>{% if
             hero_headline_highlight %}{{ hero_headline_line2_prefix|default('') }}<span class="hero-headline-mark"
@@ -14,9 +14,14 @@
             else %}{{ hero_headline_line2 }}{% endif %}{% else %}{{ hero_headline or title }}{% endif %}</h1>
         <div class="hero-split">
             <div class="hero-image-wrap">
-                <img src="/static/images/truck-hero.jpg" alt="White Kei truck on city street" class="hero-image"
-                    loading="eager" width="600" height="400"
-                    onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/a/ad/SuzukiCarry8th.jpg'; this.alt='Suzuki Carry kei truck';">
+                <picture>
+                    <source type="image/webp"
+                        srcset="/static/images/truck-hero-400w.webp 400w, /static/images/truck-hero.webp 800w"
+                        sizes="(max-width: 600px) 100vw, 600px">
+                    <img src="/static/images/truck-hero.jpg" alt="White Kei truck on city street" class="hero-image"
+                        loading="eager" fetchpriority="high" width="600" height="400"
+                        onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/a/ad/SuzukiCarry8th.jpg'; this.alt='Suzuki Carry kei truck';">
+                </picture>
             </div>
             <div class="hero-action">
                 <p class="hero-subhead">{{ hero_subhead }}</p>

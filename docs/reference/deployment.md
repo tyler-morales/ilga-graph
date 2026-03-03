@@ -67,7 +67,7 @@ See [Environment variables](environment-variables.md) for the full list.
 
 ## Performance and resilience
 
-Static assets under `/static` are served with `Cache-Control: public, max-age=3600` so repeat visits are faster. When HTMX or network requests fail, the app shows a dismissible “We're having trouble” banner; when the user goes offline, a “You're offline” indicator is shown and hidden automatically. See [Performance and resilience](performance-resilience.md) for details.
+Before deploying production, run **`make minify`** from the project root so that `.min.css` and `.min.js` exist; with `ILGA_PROFILE=prod`, the app serves these minified assets for better Lighthouse scores. Static assets under `/static` use `Cache-Control` (1 hour for unversioned files, 1 year for minified). Responses are gzip-compressed when the client supports it. When HTMX or network requests fail, the app shows a dismissible “We're having trouble” banner; when the user goes offline, a “You're offline” indicator is shown and hidden automatically. See [Performance and resilience](performance-resilience.md) for details.
 
 ---
 
