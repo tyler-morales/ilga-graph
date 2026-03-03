@@ -37,6 +37,7 @@ from ..campaign_helpers import get_active_campaign
 from ..constants import (
     CATEGORY_COMMITTEES,
     KEI_IMPACT_SLUG_COOKIE,
+    KEI_OWNER_SLUGS,
     KEI_POLL_IMPACT_OPTIONS,
     KEI_STATUS_OPTIONS,
 )
@@ -66,12 +67,12 @@ from ..routers.content import (
     PROGRESS_ACHIEVED_COUNT,
     PROGRESS_CHECKPOINTS,
     STRATEGIC_FIVE_POINTS,
-    WHY_YOU_CARE_BRANCHES,
     WHY_YOU_CARE_CTA_NUDGE,
     WHY_YOU_CARE_DEFAULT_CARDS,
     WHY_YOU_CARE_PRE_POLL_LINE,
     get_marquee_items,
 )
+from ..routers.content_constants import get_why_you_care_branch_for_selection
 from ..security import (
     CSRF_COOKIE_NAME,
     rate_limit_kei_status,
@@ -652,10 +653,15 @@ async def poll_standalone_page(
         "poll_id": STANDALONE_KEI_POLL_ID,
         "show_results": show_results,
         "show_go_to_site": True,
+        "standalone_poll": True,
     }
     ctx.update(state)
     ctx["zip_known"] = False
     ctx["prefill_zip"] = (user.zip_code or "").strip() if user else ""
+    if show_results and state.get("kei_status_selected"):
+        ctx["why_you_care_branch"] = get_why_you_care_branch_for_selection(
+            state.get("kei_status_selected")
+        )
     if not show_results:
         results = await _get_kei_status_results(db)
         ctx["kei_status_total"] = results["total_responses"]
@@ -691,6 +697,10 @@ async def updates_page(
     poll_state = await get_kei_poll_initial_state(request, user, db)
     ctx.update(poll_state)
     ctx["poll_id"] = "updates-kei-poll"
+    if ctx.get("kei_poll_done") and ctx.get("kei_status_selected"):
+        ctx["why_you_care_branch"] = get_why_you_care_branch_for_selection(
+            ctx.get("kei_status_selected")
+        )
     ctx["zip_known"] = zip_known_for_user(user)
     ctx["prefill_zip"] = (user.zip_code or "").strip() if user else ""
     return templates.TemplateResponse(request, "updates.html", ctx)
@@ -880,6 +890,7 @@ async def kei_poll_results(
             "kei_impact_results": impact_results,
             "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
             "kei_poll_goal": get_kei_poll_goal(),
+            "kei_poll_is_owner": user.kei_status in KEI_OWNER_SLUGS if user.kei_status else False,
             "poll_id": poll_id,
         },
     )
@@ -1060,18 +1071,11 @@ async def kei_status_post(
             results = await _get_kei_status_results(db)
             impact_results = await _get_kei_impact_results(db)
             if poll_id == "home-kei-poll":
-                branch_slug = (
+                why_you_care_branch = get_why_you_care_branch_for_selection(existing_status)
+                wyc_pill_icon_slug = (
                     "owner"
                     if existing_status in ("registered", "revoked", "denied")
                     else existing_status
-                )
-                why_you_care_branch = WHY_YOU_CARE_BRANCHES.get(
-                    branch_slug, WHY_YOU_CARE_BRANCHES["would_not_want"]
-                )
-                wyc_pill_icon_slug = (
-                    existing_status
-                    if existing_status in ("registered", "revoked", "denied")
-                    else branch_slug
                 )
                 return templates.TemplateResponse(
                     request,
@@ -1102,6 +1106,10 @@ async def kei_status_post(
                     "kei_impact_results": impact_results,
                     "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
                     "kei_poll_goal": get_kei_poll_goal(),
+                    "kei_poll_is_owner": (
+                        existing_status in KEI_OWNER_SLUGS if existing_status else False
+                    ),
+                    "why_you_care_branch": get_why_you_care_branch_for_selection(existing_status),
                     "poll_id": poll_id,
                 },
             )
@@ -1160,11 +1168,9 @@ async def kei_status_post(
             results = await _get_kei_status_results(db)
             impact_results = await _get_kei_impact_results(db)
             if poll_id == "home-kei-poll":
+                why_you_care_branch = get_why_you_care_branch_for_selection(validated)
                 branch_slug = (
                     "owner" if validated in ("registered", "revoked", "denied") else validated
-                )
-                why_you_care_branch = WHY_YOU_CARE_BRANCHES.get(
-                    branch_slug, WHY_YOU_CARE_BRANCHES["would_not_want"]
                 )
                 wyc_pill_icon_slug = (
                     validated if validated in ("registered", "revoked", "denied") else branch_slug
@@ -1198,6 +1204,8 @@ async def kei_status_post(
                     "kei_impact_results": impact_results,
                     "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
                     "kei_poll_goal": get_kei_poll_goal(),
+                    "kei_poll_is_owner": validated in KEI_OWNER_SLUGS,
+                    "why_you_care_branch": get_why_you_care_branch_for_selection(validated),
                     "poll_id": poll_id,
                 },
             )
@@ -1215,10 +1223,8 @@ async def kei_status_post(
     ]
     if request.headers.get("HX-Request"):
         if poll_id == "home-kei-poll":
+            why_you_care_branch = get_why_you_care_branch_for_selection(validated)
             branch_slug = "owner" if validated in ("registered", "revoked", "denied") else validated
-            why_you_care_branch = WHY_YOU_CARE_BRANCHES.get(
-                branch_slug, WHY_YOU_CARE_BRANCHES["would_not_want"]
-            )
             wyc_pill_icon_slug = (
                 validated if validated in ("registered", "revoked", "denied") else branch_slug
             )
@@ -1252,6 +1258,8 @@ async def kei_status_post(
                     "kei_impact_results": impact_results,
                     "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
                     "kei_poll_goal": get_kei_poll_goal(),
+                    "kei_poll_is_owner": validated in KEI_OWNER_SLUGS,
+                    "why_you_care_branch": get_why_you_care_branch_for_selection(validated),
                     "dev_available": cfg.DEV_MODE,
                     "poll_id": poll_id,
                     "show_go_to_site": poll_id == STANDALONE_KEI_POLL_ID,

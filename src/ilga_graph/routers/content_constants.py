@@ -113,6 +113,17 @@ WHY_YOU_CARE_BRANCHES: dict[str, dict[str, str]] = {
     },
 }
 
+
+def get_why_you_care_branch_for_selection(kei_status_selected: str | None) -> dict[str, str]:
+    """Return branch config for post-poll CTAs from kei_status selection. Single source of truth."""
+    branch_slug = (
+        "owner"
+        if (kei_status_selected in ("registered", "revoked", "denied"))
+        else (kei_status_selected or "would_not_want")
+    )
+    return WHY_YOU_CARE_BRANCHES.get(branch_slug, WHY_YOU_CARE_BRANCHES["would_not_want"])
+
+
 # Why-you-care marquee: list of {"src", "alt", "name", "caption", "location"}.
 # name = person's name (bold in blurb); caption = description; location = city only.
 MARQUEE_IMAGES: list[dict[str, str]] = [
