@@ -34,7 +34,7 @@
         {% if kei_poll_goal is defined and kei_poll_goal is not none and kei_poll_goal > 0 %}
         <p class="kei-poll-goal__label wyc-branch-content__total" role="status">{{ (kei_status_results.total_responses if kei_status_results else 0) }} of {{ kei_poll_goal }} responses</p>
         {% else %}
-        <span class="wyc-branch-content__total">Total Votes: {{ kei_status_results.total_responses if kei_status_results else 0 }}</span>
+        <span class="wyc-branch-content__total">Total responses: {{ kei_status_results.total_responses if kei_status_results else 0 }}</span>
         {% endif %}
     </footer>
     <p class="wyc-branch-content__change">

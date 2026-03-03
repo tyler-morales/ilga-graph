@@ -16,7 +16,11 @@ from ..constants import KEI_POLL_IMPACT_OPTIONS, KEI_STATUS_OPTIONS
 from ..db import get_db
 from ..db_models import User
 from ..dependencies import get_current_user_optional
-from ..kei_poll_context import _get_kei_status_results, get_kei_poll_initial_state
+from ..kei_poll_context import (
+    _get_kei_status_results,
+    get_kei_poll_initial_state,
+    zip_known_for_user,
+)
 from ..routers.advocacy import DEFAULT_HERO_ZIP, _hero_context
 from ..routers.content import (
     HERO_CLARITY_LINE,
@@ -187,4 +191,6 @@ async def home(
         results = await _get_kei_status_results(db)
         ctx["kei_status_total"] = results["total_responses"]
     ctx["kei_poll_wide_net_line"] = KEI_POLL_WIDE_NET_LINE
+    ctx["zip_known"] = zip_known_for_user(user)
+    ctx["prefill_zip"] = (user.zip_code or "").strip() if user else ""
     return templates.TemplateResponse("home.html", ctx)

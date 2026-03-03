@@ -49,6 +49,7 @@ from ..kei_poll_context import (
     KEI_POLL_CHOICE_COOKIE,
     KEI_POLL_VOTED_COOKIE,
     KEI_POLL_VOTED_MAX_AGE,
+    STANDALONE_KEI_POLL_ID,
     _get_kei_impact_results,
     _get_kei_status_results,
     _validate_kei_poll_impact,
@@ -56,6 +57,7 @@ from ..kei_poll_context import (
     get_kei_poll_ids,
     get_kei_poll_initial_state,
     get_kei_poll_sidebar_context,
+    zip_known_for_user,
 )
 from ..member_lookup import find_member_by_district
 from ..routers.content import (
@@ -68,6 +70,7 @@ from ..routers.content import (
     WHY_YOU_CARE_CTA_NUDGE,
     WHY_YOU_CARE_DEFAULT_CARDS,
     WHY_YOU_CARE_PRE_POLL_LINE,
+    get_marquee_items,
 )
 from ..security import (
     CSRF_COOKIE_NAME,
@@ -85,6 +88,7 @@ _TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteveri
 # Email validation for public subscribe (no auth code). Max length matches User.email.
 _EMAIL_MAX_LEN = 320
 _EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", re.IGNORECASE)
+_ZIP_RE = re.compile(r"^\d{5}$")
 
 
 def _client_ip(request: Request) -> str:
@@ -628,6 +632,34 @@ def _updates_page_ctx(
     }
 
 
+@router.get("/poll", include_in_schema=False)
+async def poll_standalone_page(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+):
+    """Shareable poll-only page: minimal UI, kei poll then results + Go to full site CTA."""
+    state = await get_kei_poll_initial_state(request, user, db)
+    show_results = state.get("kei_poll_done") or request.query_params.get("submitted") == "1"
+    ctx: dict[str, Any] = {
+        "request": request,
+        "user": user,
+        "poll_id": STANDALONE_KEI_POLL_ID,
+        "show_results": show_results,
+        "show_go_to_site": True,
+    }
+    ctx.update(state)
+    ctx["zip_known"] = False
+    ctx["prefill_zip"] = (user.zip_code or "").strip() if user else ""
+    if not show_results:
+        results = await _get_kei_status_results(db)
+        ctx["kei_status_total"] = results["total_responses"]
+        ctx["kei_impact_options"] = KEI_POLL_IMPACT_OPTIONS
+    ctx["marquee_items"] = await get_marquee_items(db)
+    ctx["marquee_title"] = "Stories from Kei truck owners"
+    return templates.TemplateResponse(request, "poll_standalone.html", ctx)
+
+
 @router.get("/updates", include_in_schema=False)
 async def updates_page(
     request: Request,
@@ -654,6 +686,8 @@ async def updates_page(
     poll_state = await get_kei_poll_initial_state(request, user, db)
     ctx.update(poll_state)
     ctx["poll_id"] = "updates-kei-poll"
+    ctx["zip_known"] = zip_known_for_user(user)
+    ctx["prefill_zip"] = (user.zip_code or "").strip() if user else ""
     return templates.TemplateResponse(request, "updates.html", ctx)
 
 
@@ -762,17 +796,23 @@ async def kei_poll_form(
         {
             "poll_id": poll_id,
             "show_email": show_email,
+            "show_intro": poll_id != STANDALONE_KEI_POLL_ID,
             "kei_status_total": results["total_responses"],
             "kei_poll_goal": get_kei_poll_goal(),
             "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
             "kei_status_selected": state.get("kei_status_selected"),
             "kei_impact_selected": state.get("kei_impact_selected"),
+            "zip_known": zip_known_for_user(user),
+            "prefill_zip": (user.zip_code or "").strip() if user else "",
         },
     )
 
 
 def _why_you_care_flow_ctx(
-    request: Request, kei_status_total: int, kei_error_message: str | None = None
+    request: Request,
+    kei_status_total: int,
+    kei_error_message: str | None = None,
+    user: User | None = None,
 ) -> dict[str, Any]:
     """Context for _why_you_care_flow_ambient.html (initial load or error re-render)."""
     ctx: dict[str, Any] = {
@@ -782,23 +822,33 @@ def _why_you_care_flow_ctx(
         "kei_status_total": kei_status_total,
         "kei_poll_goal": get_kei_poll_goal(),
         "kei_poll_wide_net_line": KEI_POLL_WIDE_NET_LINE,
+        "zip_known": zip_known_for_user(user),
+        "prefill_zip": (user.zip_code or "").strip() if user else "",
     }
     if kei_error_message:
         ctx["kei_error_message"] = kei_error_message
     return ctx
 
 
+def _kei_status_redirect_url(poll_id: str, prompt_q: str, query: str) -> str:
+    """Redirect URL after kei-status POST: /poll for standalone, else /updates?prompt=..."""
+    if poll_id == STANDALONE_KEI_POLL_ID:
+        return f"/poll?{query}"
+    return f"/updates?prompt={prompt_q}&{query}"
+
+
 @router.get("/updates/why-you-care-flow", include_in_schema=False)
 async def why_you_care_flow(
     request: Request,
     db: AsyncSession = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
 ):
     """Return ambient Why-you-care flow HTML for HTMX swap into #why-you-care-flow."""
     results = await _get_kei_status_results(db)
     return templates.TemplateResponse(
         request,
         "_why_you_care_flow_ambient.html",
-        _why_you_care_flow_ctx(request, results["total_responses"]),
+        _why_you_care_flow_ctx(request, results["total_responses"], user=user),
     )
 
 
@@ -830,11 +880,22 @@ async def kei_poll_results(
     )
 
 
+def _normalize_poll_zip(raw: str | None) -> str | None:
+    """Return 5-digit ZIP if valid (and in state.zip_to_district when available), else None."""
+    s = (raw or "").strip()
+    if not s or not _ZIP_RE.match(s):
+        return None
+    if getattr(state, "zip_to_district", None) and s not in state.zip_to_district:
+        return None
+    return s
+
+
 @router.post("/updates/kei-status", include_in_schema=False)
 async def kei_status_post(
     request: Request,
     kei_status: str = Form(..., max_length=32),
     kei_impact_slug: str | None = Form(None, max_length=32),
+    zip_code: str | None = Form(None, max_length=10),
     email: str | None = Form(None, max_length=_EMAIL_MAX_LEN),
     poll_id: str = Form("footer-kei-poll", max_length=64),
     session_id: str | None = Form(None, max_length=64),
@@ -857,6 +918,7 @@ async def kei_status_post(
                     request,
                     results["total_responses"],
                     "Invalid or expired security token. Reload the page and try again.",
+                    user=user,
                 ),
             )
             resp.status_code = 403
@@ -867,7 +929,9 @@ async def kei_status_post(
                 "Reload the page and try again.</p>",
                 status_code=403,
             )
-        return RedirectResponse(f"/updates?prompt={prompt_q}&error=csrf", status_code=303)
+        return RedirectResponse(
+            _kei_status_redirect_url(poll_id, prompt_q, "error=csrf"), status_code=303
+        )
     if user is None:
         client_ip = _client_ip(request)
         if not rate_limit_kei_status(client_ip):
@@ -880,6 +944,7 @@ async def kei_status_post(
                         request,
                         results["total_responses"],
                         "Too many responses from this device. Try again later.",
+                        user=user,
                     ),
                 )
                 resp.status_code = 429
@@ -890,7 +955,9 @@ async def kei_status_post(
                     "device. Try again later.</p>",
                     status_code=429,
                 )
-            return RedirectResponse(f"/updates?prompt={prompt_q}&error=rate", status_code=303)
+            return RedirectResponse(
+                _kei_status_redirect_url(poll_id, prompt_q, "error=rate"), status_code=303
+            )
     # Require Turnstile for everyone so a response is only counted after verification.
     client_ip = _client_ip(request)
     if not await _verify_turnstile(cf_turnstile_response, client_ip):
@@ -903,6 +970,7 @@ async def kei_status_post(
                     request,
                     results["total_responses"],
                     "Verification failed. Complete the security check and try again.",
+                    user=user,
                 ),
             )
             resp.status_code = 400
@@ -913,7 +981,9 @@ async def kei_status_post(
                 "security check and try again.</p>",
                 status_code=400,
             )
-        return RedirectResponse(f"/updates?prompt={prompt_q}&error=verify", status_code=303)
+        return RedirectResponse(
+            _kei_status_redirect_url(poll_id, prompt_q, "error=verify"), status_code=303
+        )
     if poll_id not in get_kei_poll_ids():
         poll_id = "footer-kei-poll"
     validated = _validate_kei_status(kei_status)
@@ -924,7 +994,10 @@ async def kei_status_post(
                 request,
                 "_why_you_care_flow_ambient.html",
                 _why_you_care_flow_ctx(
-                    request, results["total_responses"], "Please choose an option."
+                    request,
+                    results["total_responses"],
+                    "Please choose an option.",
+                    user=user,
                 ),
             )
             resp.status_code = 400
@@ -934,7 +1007,9 @@ async def kei_status_post(
                 '<p class="kei-status-error" role="alert">Please choose an option.</p>',
                 status_code=400,
             )
-        return RedirectResponse(f"/updates?prompt={prompt_q}&error=invalid", status_code=303)
+        return RedirectResponse(
+            _kei_status_redirect_url(poll_id, prompt_q, "error=invalid"), status_code=303
+        )
     impact_val = _validate_kei_poll_impact((kei_impact_slug or "").strip() or None)
     if not impact_val:
         if request.headers.get("HX-Request") and poll_id == "home-kei-poll":
@@ -946,6 +1021,7 @@ async def kei_status_post(
                     request,
                     results["total_responses"],
                     "Please choose how it affects you.",
+                    user=user,
                 ),
             )
             resp.status_code = 400
@@ -955,17 +1031,92 @@ async def kei_status_post(
                 '<p class="kei-status-error" role="alert">Please choose how it affects you.</p>',
                 status_code=400,
             )
-        return RedirectResponse(f"/updates?prompt={prompt_q}&error=invalid", status_code=303)
+        return RedirectResponse(
+            _kei_status_redirect_url(poll_id, prompt_q, "error=invalid"), status_code=303
+        )
+    # Standalone poll requires a valid ZIP so we can show district results.
+    if poll_id == STANDALONE_KEI_POLL_ID:
+        zip_val = _normalize_poll_zip(zip_code)
+        if not zip_val:
+            if request.headers.get("HX-Request"):
+                return HTMLResponse(
+                    '<p class="kei-status-error" role="alert">'
+                    "Please enter a valid 5-digit Illinois ZIP code.</p>",
+                    status_code=400,
+                )
+            return RedirectResponse(
+                _kei_status_redirect_url(poll_id, prompt_q, "error=zip"), status_code=303
+            )
+    # Idempotent: if user already voted (e.g. anon attributed on sign-in), return success.
+    if user and getattr(user, "kei_status", None) is not None:
+        existing_status = user.kei_status
+        existing_impact = getattr(user, "kei_impact_slug", None) or impact_val
+        if request.headers.get("HX-Request"):
+            results = await _get_kei_status_results(db)
+            impact_results = await _get_kei_impact_results(db)
+            if poll_id == "home-kei-poll":
+                branch_slug = (
+                    "owner"
+                    if existing_status in ("registered", "revoked", "denied")
+                    else existing_status
+                )
+                why_you_care_branch = WHY_YOU_CARE_BRANCHES.get(
+                    branch_slug, WHY_YOU_CARE_BRANCHES["would_not_want"]
+                )
+                wyc_pill_icon_slug = (
+                    existing_status
+                    if existing_status in ("registered", "revoked", "denied")
+                    else branch_slug
+                )
+                return templates.TemplateResponse(
+                    request,
+                    "_why_you_care_branch.html",
+                    {
+                        "why_you_care_branch": why_you_care_branch,
+                        "why_you_care_cta_nudge": WHY_YOU_CARE_CTA_NUDGE,
+                        "wyc_pill_icon_slug": wyc_pill_icon_slug,
+                        "kei_status_results": results,
+                        "kei_status_options": KEI_STATUS_OPTIONS,
+                        "kei_status_selected": existing_status,
+                        "kei_impact_selected": existing_impact,
+                        "kei_impact_results": impact_results,
+                        "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
+                        "kei_poll_goal": get_kei_poll_goal(),
+                        "kei_poll_initial_anon": False,
+                        "poll_id": poll_id,
+                    },
+                )
+            return templates.TemplateResponse(
+                request,
+                "_kei_poll_logged_in_success.html",
+                {
+                    "kei_status_results": results,
+                    "kei_status_options": KEI_STATUS_OPTIONS,
+                    "kei_status_selected": existing_status,
+                    "kei_impact_selected": existing_impact,
+                    "kei_impact_results": impact_results,
+                    "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
+                    "kei_poll_goal": get_kei_poll_goal(),
+                    "poll_id": poll_id,
+                },
+            )
+        return RedirectResponse(
+            _kei_status_redirect_url(poll_id, prompt_q, "submitted=1"), status_code=303
+        )
     anon_sid = validate_anon_session_id(session_id) if session_id else None
+    zip_val = _normalize_poll_zip(zip_code)
     response_row = KeiPollResponse(
         user_id=user.id if user else None,
         session_id=anon_sid,
         kei_status=validated,
+        zip_code=zip_val,
     )
     db.add(response_row)
     if user:
         user.kei_status = validated
         user.kei_impact_slug = impact_val
+        if zip_val and not (user.zip_code or "").strip():
+            user.zip_code = zip_val
     # Dual-write to poll_responses so admin Polls list and per-poll results stay in sync.
     poll_slug = get_campaign_config().poll_slug or "kei"
     campaign_poll = (
@@ -1045,7 +1196,9 @@ async def kei_status_post(
                     "poll_id": poll_id,
                 },
             )
-        return RedirectResponse(f"/updates?prompt={prompt_q}&submitted=1", status_code=303)
+        return RedirectResponse(
+            _kei_status_redirect_url(poll_id, prompt_q, "submitted=1"), status_code=303
+        )
     # Anonymous: set cookies for results/selection on next visit; return fragment or redirect
     results = await _get_kei_status_results(db)
     impact_results = await _get_kei_impact_results(db)
@@ -1096,12 +1249,15 @@ async def kei_status_post(
                     "kei_poll_goal": get_kei_poll_goal(),
                     "dev_available": cfg.DEV_MODE,
                     "poll_id": poll_id,
+                    "show_go_to_site": poll_id == STANDALONE_KEI_POLL_ID,
                 },
             )
         for params in cookies_to_set:
             resp.set_cookie(**params)
         return resp
-    redir = RedirectResponse(f"/updates?prompt={prompt_q}&submitted=1", status_code=303)
+    redir = RedirectResponse(
+        _kei_status_redirect_url(poll_id, prompt_q, "submitted=1"), status_code=303
+    )
     for params in cookies_to_set:
         redir.set_cookie(**params)
     return redir

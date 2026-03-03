@@ -238,6 +238,7 @@ class KeiPollResponse(Base):
     )
     session_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     kei_status: Mapped[str] = mapped_column(String(32), nullable=False)
+    zip_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 

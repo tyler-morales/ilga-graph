@@ -1,0 +1,55 @@
+{# Reusable image marquee: community stories and statements. Include when features.images_marquee and marquee_items are set. Optional marquee_title for a visible heading (e.g. on poll page). #}
+{% if features.get('images_marquee') and (marquee_items|default([])) %}
+<div class="why-you-care-marquee" id="{{ marquee_id|default('why-you-care-marquee') }}" role="region"
+    {% if marquee_title %}aria-labelledby="{{ marquee_id|default('why-you-care-marquee') }}-heading"
+    {% else %}aria-label="Scrolling stories and statements from the community"{% endif %}>
+    {% if marquee_title %}
+    <h2 id="{{ marquee_id|default('why-you-care-marquee') }}-heading" class="why-you-care-marquee__title">{{ marquee_title }}</h2>
+    {% endif %}
+    <div class="why-you-care-marquee-control-wrap">
+        <button type="button" class="why-you-care-marquee-control" id="{{ pause_btn_id|default('why-you-care-marquee-pause') }}"
+            aria-pressed="false" aria-label="Pause scrolling">Pause</button>
+    </div>
+    <div class="why-you-care-marquee-visual" aria-hidden="true">
+        <div class="why-you-care-marquee-track">
+            {% for strip_index in range(2) %}
+            <div
+                class="why-you-care-marquee-strip{% if strip_index == 1 %} why-you-care-marquee-strip--dup{% endif %}">
+                {% for item in (marquee_items|default([])) %}
+                {% if item.type == 'text' %}
+                <div class="why-you-care-marquee-item why-you-care-marquee-item--text" role="article"
+                    aria-label="Statement from {{ item.name }}">
+                    <p class="why-you-care-marquee-item__statement">{{ item.statement }}</p>
+                    <p class="why-you-care-marquee-caption"><strong>{{ item.name }}</strong>{% if item.location %}
+                        <span class="why-you-care-marquee-location">{{ item.location }}</span>{% endif %}
+                    </p>
+                </div>
+                {% else %}
+                <figure class="why-you-care-marquee-item">
+                    <img src="{{ item.src }}" alt="{{ item.alt }}" width="360" height="240" loading="lazy"
+                        decoding="async">
+                    <figcaption class="why-you-care-marquee-caption"><strong>{{ item.name }}</strong> — {{
+                        item.caption }}{% if item.location %} <span class="why-you-care-marquee-location">{{
+                            item.location }}</span>{% endif %}</figcaption>
+                </figure>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <script>
+        (function () {
+            var marquee = document.getElementById('{{ marquee_id|default("why-you-care-marquee") }}');
+            var btn = document.getElementById('{{ pause_btn_id|default("why-you-care-marquee-pause") }}');
+            if (!marquee || !btn) return;
+            btn.addEventListener('click', function () {
+                var paused = marquee.classList.toggle('why-you-care-marquee--paused');
+                btn.setAttribute('aria-pressed', paused ? 'true' : 'false');
+                btn.setAttribute('aria-label', paused ? 'Resume scrolling images' : 'Pause scrolling images');
+                btn.textContent = paused ? 'Resume' : 'Pause';
+            });
+        })();
+    </script>
+</div>
+{% endif %}

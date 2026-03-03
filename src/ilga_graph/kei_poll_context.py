@@ -19,8 +19,15 @@ from .constants import (
 from .db_models import Poll, PollResponse, User
 
 SIDEBAR_KEI_POLL_ID = "sidebar-kei-poll"
+STANDALONE_KEI_POLL_ID = "standalone-kei-poll"
 _KEI_POLL_IDS = frozenset(
-    {"footer-kei-poll", "home-kei-poll", "updates-kei-poll", SIDEBAR_KEI_POLL_ID}
+    {
+        "footer-kei-poll",
+        "home-kei-poll",
+        "updates-kei-poll",
+        SIDEBAR_KEI_POLL_ID,
+        STANDALONE_KEI_POLL_ID,
+    }
 )
 KEI_POLL_VOTED_COOKIE = "kei_poll_voted"
 KEI_POLL_CHOICE_COOKIE = "kei_poll_choice"
@@ -155,6 +162,11 @@ async def get_kei_poll_initial_state(
     }
 
 
+def zip_known_for_user(user: User | None) -> bool:
+    """True if we already have the user's ZIP (don't show zip panel in poll)."""
+    return bool(user and (user.zip_code or "").strip())
+
+
 async def get_kei_poll_sidebar_context(
     request: Request,
     user: User | None,
@@ -163,6 +175,8 @@ async def get_kei_poll_sidebar_context(
     """Sidebar Kei poll (the-issue, legislator-brief, fact-sheet, glossary). Same poll_id."""
     state = await get_kei_poll_initial_state(request, user, db)
     state["poll_id"] = SIDEBAR_KEI_POLL_ID
+    state["zip_known"] = zip_known_for_user(user)
+    state["prefill_zip"] = (user.zip_code or "").strip() if user else ""
     if not state.get("kei_poll_done"):
         results = await _get_kei_status_results(db)
         state["kei_status_total"] = results["total_responses"]

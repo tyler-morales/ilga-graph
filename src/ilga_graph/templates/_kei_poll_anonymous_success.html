@@ -17,9 +17,11 @@
             {% endif %}
             <footer class="kei-poll__footer kei-poll__footer--results">
                 {% if kei_poll_goal is defined and kei_poll_goal is not none and kei_poll_goal > 0 %}
-                <p class="kei-poll-goal__label" role="status">{{ (kei_status_results.total_responses if kei_status_results else 0) }} of {{ kei_poll_goal }} responses</p>
+                <p class="kei-poll-goal__label" role="status">{{ (kei_status_results.total_responses if
+                    kei_status_results else 0) }} of {{ kei_poll_goal }} responses</p>
                 {% else %}
-                <span class="kei-poll__total">Total Votes: {{ kei_status_results.total_responses if kei_status_results else 0 }}</span>
+                <span class="kei-poll__total">Total responses: {{ kei_status_results.total_responses if kei_status_results
+                    else 0 }}</span>
                 {% endif %}
             </footer>
             <p class="kei-poll-change-wrap">
@@ -27,6 +29,11 @@
                     hx-get="/updates/kei-poll-form?poll_id={{ poll_id|e }}" hx-target="#{{ poll_id|e }}-wrap"
                     hx-swap="outerHTML" aria-label="Change your kei status answer">Need to change your answer?</button>
             </p>
+            {% if show_go_to_site %}
+            <p class="poll-standalone-cta poll-standalone-cta--inline">
+                <a href="/" class="btn btn--primary">Go to full site</a>
+            </p>
+            {% endif %}
         </div>
     </div>
 </details>
