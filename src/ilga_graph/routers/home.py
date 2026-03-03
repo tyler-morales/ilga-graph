@@ -33,12 +33,12 @@ from ..routers.content import (
     WHY_SHOULD_YOU_CARE_INTRO,
     WHY_SHOULD_YOU_CARE_TEASER_ITEMS,
     WHY_SHOULD_YOU_CARE_VOICE,
-    WHY_YOU_CARE_BRANCHES,
     WHY_YOU_CARE_DEFAULT_CARDS,
     WHY_YOU_CARE_PRE_POLL_LINE,
     get_marquee_items,
     get_strategic_states_tooltips,
 )
+from ..routers.content_constants import get_why_you_care_branch_for_selection
 from ..routers.outreach import get_outreach_aggregate
 from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
 
@@ -181,9 +181,7 @@ async def home(
     if ctx.get("kei_poll_done") and ctx.get("kei_status_selected"):
         slug = ctx["kei_status_selected"]
         branch_slug = "owner" if slug in ("registered", "revoked", "denied") else slug
-        ctx["why_you_care_branch"] = WHY_YOU_CARE_BRANCHES.get(
-            branch_slug, WHY_YOU_CARE_BRANCHES["would_not_want"]
-        )
+        ctx["why_you_care_branch"] = get_why_you_care_branch_for_selection(slug)
         ctx["wyc_pill_icon_slug"] = (
             slug if slug in ("registered", "revoked", "denied") else branch_slug
         )

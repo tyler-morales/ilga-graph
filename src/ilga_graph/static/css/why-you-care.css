@@ -147,6 +147,10 @@
   margin: 0 0 0.75rem 0;
 }
 
+.wyc-inline-question--hidden {
+  display: none;
+}
+
 .wyc-inline-question__branch-btns {
   display: flex;
   gap: 0.5rem;
@@ -217,9 +221,9 @@
 }
 
 .wyc-inline-poll__step2-legend {
-  font-size: 0.9375rem;
-  font-weight: 500;
-  color: var(--color-text-secondary, #555);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text, #222);
   margin: 0 0 0.5rem 0;
 }
 
@@ -275,6 +279,33 @@
 
 .wyc-inline-poll__submit-wrap--hidden {
   display: none;
+}
+
+.wyc-inline-poll__back-wrap {
+  margin-top: 1.25rem;
+}
+
+.wyc-inline-poll__back-wrap--hidden {
+  display: none;
+}
+
+.wyc-inline-poll__back.wyc-inline-poll__back--link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--color-link, #1976d2);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.wyc-inline-poll__back.wyc-inline-poll__back--link:hover {
+  text-decoration-thickness: 2px;
+}
+
+.wyc-inline-poll__back.wyc-inline-poll__back--link:focus-visible {
+  outline: 2px solid var(--color-focus, #1976d2);
+  outline-offset: 2px;
 }
 
 .wyc-inline-poll__submit {

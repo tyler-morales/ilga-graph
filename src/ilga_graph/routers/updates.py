@@ -37,6 +37,7 @@ from ..campaign_helpers import get_active_campaign
 from ..constants import (
     CATEGORY_COMMITTEES,
     KEI_IMPACT_SLUG_COOKIE,
+    KEI_OWNER_SLUGS,
     KEI_POLL_IMPACT_OPTIONS,
     KEI_STATUS_OPTIONS,
 )
@@ -66,12 +67,12 @@ from ..routers.content import (
     PROGRESS_ACHIEVED_COUNT,
     PROGRESS_CHECKPOINTS,
     STRATEGIC_FIVE_POINTS,
-    WHY_YOU_CARE_BRANCHES,
     WHY_YOU_CARE_CTA_NUDGE,
     WHY_YOU_CARE_DEFAULT_CARDS,
     WHY_YOU_CARE_PRE_POLL_LINE,
     get_marquee_items,
 )
+from ..routers.content_constants import get_why_you_care_branch_for_selection
 from ..security import (
     CSRF_COOKIE_NAME,
     rate_limit_kei_status,
@@ -529,46 +530,51 @@ async def _get_priority_card_status(
             }
             break
 
-    broker_called = False
-    broker_emailed = False
-    broker_id: str | None = None
     if district_complete and senate_district is not None and house_district is not None:
         committee_codes = CATEGORY_COMMITTEES.get("Transportation", [])
-        broker_member, _ = ah.find_power_broker(
+        power_brokers = ah.find_power_brokers(
             state,
             exclude_senate_district=senate_district or "",
             exclude_house_district=house_district or "",
             committee_codes=committee_codes or None,
             category_name="Transportation",
         )
-        if broker_member:
-            broker_id = str(broker_member.id)
-            # User outreach for broker (reuse same events; we need to query for broker_id too)
+        broker_member_ids = [str(m.id) for m, _ in power_brokers]
+        if broker_member_ids:
             broker_result = await db.execute(
-                select(OutreachEvent.kind)
+                select(OutreachEvent.member_id, OutreachEvent.kind)
                 .where(OutreachEvent.user_id == user.id)
-                .where(OutreachEvent.member_id == broker_id)
+                .where(OutreachEvent.member_id.in_(broker_member_ids))
                 .where(OutreachEvent.kind.in_(["call", "email"]))
             )
-            for (kind,) in broker_result.all():
+            broker_done: dict[str, dict[str, bool]] = {}
+            for mid, kind in broker_result.all():
+                mid_str = str(mid)
+                if mid_str not in broker_done:
+                    broker_done[mid_str] = {"call": False, "email": False}
                 if kind == "call":
-                    broker_called = True
+                    broker_done[mid_str]["call"] = True
                 elif kind == "email":
-                    broker_emailed = True
-            broker_steps: list[dict[str, Any]] = [
-                {
-                    "member_id": broker_id,
-                    "role_label": "Power Broker",
-                    "action": "call",
-                    "done": broker_called,
-                },
-                {
-                    "member_id": broker_id,
-                    "role_label": "Power Broker",
-                    "action": "email",
-                    "done": broker_emailed,
-                },
-            ]
+                    broker_done[mid_str]["email"] = True
+            broker_steps = []
+            for mid in broker_member_ids:
+                done = broker_done.get(mid, {"call": False, "email": False})
+                broker_steps.append(
+                    {
+                        "member_id": mid,
+                        "role_label": "Power Broker",
+                        "action": "call",
+                        "done": done["call"],
+                    }
+                )
+                broker_steps.append(
+                    {
+                        "member_id": mid,
+                        "role_label": "Power Broker",
+                        "action": "email",
+                        "done": done["email"],
+                    }
+                )
             if goal_next_step is None:
                 for s in broker_steps:
                     if not s["done"]:
@@ -647,10 +653,15 @@ async def poll_standalone_page(
         "poll_id": STANDALONE_KEI_POLL_ID,
         "show_results": show_results,
         "show_go_to_site": True,
+        "standalone_poll": True,
     }
     ctx.update(state)
     ctx["zip_known"] = False
     ctx["prefill_zip"] = (user.zip_code or "").strip() if user else ""
+    if show_results and state.get("kei_status_selected"):
+        ctx["why_you_care_branch"] = get_why_you_care_branch_for_selection(
+            state.get("kei_status_selected")
+        )
     if not show_results:
         results = await _get_kei_status_results(db)
         ctx["kei_status_total"] = results["total_responses"]
@@ -686,6 +697,10 @@ async def updates_page(
     poll_state = await get_kei_poll_initial_state(request, user, db)
     ctx.update(poll_state)
     ctx["poll_id"] = "updates-kei-poll"
+    if ctx.get("kei_poll_done") and ctx.get("kei_status_selected"):
+        ctx["why_you_care_branch"] = get_why_you_care_branch_for_selection(
+            ctx.get("kei_status_selected")
+        )
     ctx["zip_known"] = zip_known_for_user(user)
     ctx["prefill_zip"] = (user.zip_code or "").strip() if user else ""
     return templates.TemplateResponse(request, "updates.html", ctx)
@@ -875,6 +890,7 @@ async def kei_poll_results(
             "kei_impact_results": impact_results,
             "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
             "kei_poll_goal": get_kei_poll_goal(),
+            "kei_poll_is_owner": user.kei_status in KEI_OWNER_SLUGS if user.kei_status else False,
             "poll_id": poll_id,
         },
     )
@@ -1055,18 +1071,11 @@ async def kei_status_post(
             results = await _get_kei_status_results(db)
             impact_results = await _get_kei_impact_results(db)
             if poll_id == "home-kei-poll":
-                branch_slug = (
+                why_you_care_branch = get_why_you_care_branch_for_selection(existing_status)
+                wyc_pill_icon_slug = (
                     "owner"
                     if existing_status in ("registered", "revoked", "denied")
                     else existing_status
-                )
-                why_you_care_branch = WHY_YOU_CARE_BRANCHES.get(
-                    branch_slug, WHY_YOU_CARE_BRANCHES["would_not_want"]
-                )
-                wyc_pill_icon_slug = (
-                    existing_status
-                    if existing_status in ("registered", "revoked", "denied")
-                    else branch_slug
                 )
                 return templates.TemplateResponse(
                     request,
@@ -1097,6 +1106,10 @@ async def kei_status_post(
                     "kei_impact_results": impact_results,
                     "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
                     "kei_poll_goal": get_kei_poll_goal(),
+                    "kei_poll_is_owner": (
+                        existing_status in KEI_OWNER_SLUGS if existing_status else False
+                    ),
+                    "why_you_care_branch": get_why_you_care_branch_for_selection(existing_status),
                     "poll_id": poll_id,
                 },
             )
@@ -1155,11 +1168,9 @@ async def kei_status_post(
             results = await _get_kei_status_results(db)
             impact_results = await _get_kei_impact_results(db)
             if poll_id == "home-kei-poll":
+                why_you_care_branch = get_why_you_care_branch_for_selection(validated)
                 branch_slug = (
                     "owner" if validated in ("registered", "revoked", "denied") else validated
-                )
-                why_you_care_branch = WHY_YOU_CARE_BRANCHES.get(
-                    branch_slug, WHY_YOU_CARE_BRANCHES["would_not_want"]
                 )
                 wyc_pill_icon_slug = (
                     validated if validated in ("registered", "revoked", "denied") else branch_slug
@@ -1193,6 +1204,8 @@ async def kei_status_post(
                     "kei_impact_results": impact_results,
                     "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
                     "kei_poll_goal": get_kei_poll_goal(),
+                    "kei_poll_is_owner": validated in KEI_OWNER_SLUGS,
+                    "why_you_care_branch": get_why_you_care_branch_for_selection(validated),
                     "poll_id": poll_id,
                 },
             )
@@ -1210,10 +1223,8 @@ async def kei_status_post(
     ]
     if request.headers.get("HX-Request"):
         if poll_id == "home-kei-poll":
+            why_you_care_branch = get_why_you_care_branch_for_selection(validated)
             branch_slug = "owner" if validated in ("registered", "revoked", "denied") else validated
-            why_you_care_branch = WHY_YOU_CARE_BRANCHES.get(
-                branch_slug, WHY_YOU_CARE_BRANCHES["would_not_want"]
-            )
             wyc_pill_icon_slug = (
                 validated if validated in ("registered", "revoked", "denied") else branch_slug
             )
@@ -1247,6 +1258,8 @@ async def kei_status_post(
                     "kei_impact_results": impact_results,
                     "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
                     "kei_poll_goal": get_kei_poll_goal(),
+                    "kei_poll_is_owner": validated in KEI_OWNER_SLUGS,
+                    "why_you_care_branch": get_why_you_care_branch_for_selection(validated),
                     "dev_available": cfg.DEV_MODE,
                     "poll_id": poll_id,
                     "show_go_to_site": poll_id == STANDALONE_KEI_POLL_ID,

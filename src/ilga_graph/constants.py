@@ -7,10 +7,14 @@ GENERAL_COMMITTEE_CODES: list[str] = [
     "SCOA",  # Assignments * Reports (Senate gatekeeper)
 ]
 
-# Policy categories → Senate committee codes. Used by advocacy search and Power Map.
+# Policy categories → committee codes (Senate + House). Used by advocacy search and Power Map.
 CATEGORY_COMMITTEES: dict[str, list[str]] = {
     "": [],
-    "Transportation": ["STRN"],
+    "Transportation": [
+        "STRN",
+        "HTRR",
+        "HVES",
+    ],  # Senate STRN; House HTRR, HVES
     "Agriculture": ["SAGR"],
     "Commerce & Small Business": ["SCOM", "SBTE"],
     "Criminal Justice": ["SCRL", "SHRJ"],
@@ -34,6 +38,8 @@ KEI_STATUS_SLUGS: frozenset[str] = frozenset(
         "would_not_want",
     }
 )
+# Slugs that mean the respondent has or had a Kei (used for poll CTA: story vs outreach).
+KEI_OWNER_SLUGS: frozenset[str] = frozenset({"registered", "revoked", "denied"})
 # Labels match poll form (Question 2) and results chart.
 KEI_STATUS_OPTIONS: list[tuple[str, str]] = [
     ("registered", "Registered"),

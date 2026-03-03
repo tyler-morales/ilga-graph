@@ -68,7 +68,6 @@ _STORY_MAX_LEN = 500
 _STATEMENT_MAX_LEN = 500
 _NAME_MAX_LEN = 120
 _LOCATION_MAX_LEN = 100
-_KEI_OWNER_SLUGS = frozenset({"registered", "revoked", "denied"})
 _KEI_NON_OWNER_SLUGS = frozenset({"would_want", "would_not_want"})
 
 

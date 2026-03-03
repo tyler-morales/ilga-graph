@@ -13,6 +13,7 @@ from .campaign_config import get_campaign_config, get_kei_poll_goal
 from .constants import (
     KEI_IMPACT_ALL_OPTIONS,
     KEI_IMPACT_SLUG_COOKIE,
+    KEI_OWNER_SLUGS,
     KEI_POLL_IMPACT_SLUGS,
     KEI_STATUS_SLUGS,
 )
@@ -135,7 +136,9 @@ async def get_kei_poll_initial_state(
     db: AsyncSession,
 ) -> dict[str, Any]:
     """Return context to show poll form vs results on initial load. If user has voted (logged-in
-    kei_status or cookie for anonymous), show results; else show form."""
+    kei_status or cookie for anonymous), show results; else show form.
+    Poll state is shared everywhere: cookie (anon) and user.kei_status (logged-in) so any page
+    (home, /poll, /updates, sidebar) shows consistent 'voted' state after a vote."""
     voted_cookie = request.cookies.get(KEI_POLL_VOTED_COOKIE) == "1"
     logged_in_voted = user is not None and getattr(user, "kei_status", None) is not None
     show_results = logged_in_voted or voted_cookie
@@ -158,6 +161,7 @@ async def get_kei_poll_initial_state(
         "kei_impact_selected": impact_selected,
         "kei_impact_results": impact_results,
         "kei_poll_initial_anon": not logged_in_voted,
+        "kei_poll_is_owner": selected in KEI_OWNER_SLUGS if selected else False,
         "kei_poll_goal": get_kei_poll_goal(),
     }
 
@@ -173,10 +177,16 @@ async def get_kei_poll_sidebar_context(
     db: AsyncSession,
 ) -> dict[str, Any]:
     """Sidebar Kei poll (the-issue, legislator-brief, fact-sheet, glossary). Same poll_id."""
+    from ..routers.content_constants import get_why_you_care_branch_for_selection
+
     state = await get_kei_poll_initial_state(request, user, db)
     state["poll_id"] = SIDEBAR_KEI_POLL_ID
     state["zip_known"] = zip_known_for_user(user)
     state["prefill_zip"] = (user.zip_code or "").strip() if user else ""
+    if state.get("kei_poll_done") and state.get("kei_status_selected"):
+        state["why_you_care_branch"] = get_why_you_care_branch_for_selection(
+            state.get("kei_status_selected")
+        )
     if not state.get("kei_poll_done"):
         results = await _get_kei_status_results(db)
         state["kei_status_total"] = results["total_responses"]
