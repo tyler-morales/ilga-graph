@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import importlib
 import io
 import os
@@ -12,6 +11,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import FastAPI, Request
+
+from tests.async_helpers import run_async
 from fastapi.responses import Response
 from fastapi.templating import Jinja2Templates
 from fastapi.testclient import TestClient
@@ -88,7 +89,7 @@ def _make_test_app(db_path: Path) -> FastAPI:
     templates.env.globals["strategic_five_points"] = []
     templates.env.globals["app_base_url"] = "http://testserver"
     templates.env.globals["og_image_url"] = ""
-    templates.env.globals["primary_color"] = "#FF4500"
+    templates.env.globals["primary_color"] = "#c2410c"
     templates.env.globals["show_beta_banner"] = False
     templates.env.globals["footer_last_updated"] = None
     templates.env.globals["get_current_action_campaign"] = lambda r: None
@@ -167,7 +168,7 @@ def authed_client(client: TestClient, test_db_path: Path) -> TestClient:
     with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
         importlib.reload(cfg_mod)
         importlib.reload(db_mod)
-        asyncio.run(_add_auth_code(email, code))
+        run_async(_add_auth_code(email, code))
     client.post(
         "/auth/verify-code",
         data=_data_with_csrf(client, {"email": email, "code": code}),
@@ -183,7 +184,7 @@ def admin_client(client: TestClient, test_db_path: Path) -> TestClient:
     with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
         importlib.reload(cfg_mod)
         importlib.reload(db_mod)
-        asyncio.run(_add_auth_code(email, code))
+        run_async(_add_auth_code(email, code))
     client.post(
         "/auth/verify-code",
         data=_data_with_csrf(client, {"email": email, "code": code}),
@@ -225,7 +226,7 @@ class TestUpdatesPage:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(add_sent())
+            run_async(add_sent())
         resp = client.get("/updates")
         assert resp.status_code == 200
         assert b"Test Update" in resp.content
@@ -254,7 +255,7 @@ class TestUpdatesPage:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(add_sent_update())
+            run_async(add_sent_update())
 
         resp = client.get("/updates")
         assert resp.status_code == 200
@@ -285,7 +286,7 @@ class TestUpdatesPage:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            uid = asyncio.run(add_sent())
+            uid = run_async(add_sent())
         resp = client.get("/updates")
         assert resp.status_code == 200
         raw = resp.content
@@ -312,7 +313,7 @@ class TestUpdatesPage:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(add_sent())
+            run_async(add_sent())
         resp = client.get("/updates")
         assert resp.status_code == 200
         assert b"View this update in a new page" not in resp.content
@@ -344,7 +345,7 @@ class TestUpdateDetailPage:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            uid = asyncio.run(add_sent())
+            uid = run_async(add_sent())
         resp = client.get(f"/updates/{uid}", follow_redirects=False)
         assert resp.status_code == 303
         assert resp.headers.get("location") == f"/updates#update-{uid}"
@@ -366,7 +367,7 @@ class TestUpdateDetailPage:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            uid = asyncio.run(add_draft())
+            uid = run_async(add_draft())
         resp = client.get(f"/updates/{uid}")
         assert resp.status_code == 404
 
@@ -390,7 +391,7 @@ class TestSubscribeUnsubscribe:
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
-            asyncio.run(_add_auth_code(email, code))
+            run_async(_add_auth_code(email, code))
         client.post(
             "/auth/verify-code",
             data=_data_with_csrf(client, {"email": email, "code": code}),
@@ -411,7 +412,7 @@ class TestSubscribeUnsubscribe:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(set_unsubscribed())
+            run_async(set_unsubscribed())
 
         resp = client.post("/updates/subscribe", follow_redirects=False)
         assert resp.status_code == 303
@@ -430,7 +431,7 @@ class TestSubscribeUnsubscribe:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(check())
+            run_async(check())
 
     def test_unsubscribe_with_valid_token_sets_wants_updates_false(
         self, client: TestClient, test_db_path: Path
@@ -451,7 +452,7 @@ class TestSubscribeUnsubscribe:
             importlib.reload(db_mod)
             importlib.reload(deps_mod)
             importlib.reload(updates_router_mod)
-            uid = asyncio.run(add_user())
+            uid = run_async(add_user())
 
         token = _create_unsubscribe_token(uid)
         resp = client.get(f"/updates/unsubscribe?token={token}")
@@ -471,7 +472,7 @@ class TestSubscribeUnsubscribe:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(check())
+            run_async(check())
 
     def test_unsubscribe_invalid_token_shows_message(self, client: TestClient) -> None:
         resp = client.get("/updates/unsubscribe?token=invalid")
@@ -531,7 +532,7 @@ class TestAccountPage:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(check_unsubscribed())
+            run_async(check_unsubscribed())
 
 
 class TestSubscribeComponentVisibility:
@@ -568,7 +569,7 @@ class TestSubscribeComponentVisibility:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(set_unsubscribed())
+            run_async(set_unsubscribed())
 
         resp = authed_client.get("/updates", headers={"Accept": "text/html"})
         assert resp.status_code == 200
@@ -608,7 +609,7 @@ class TestSubscribeUnsubscribeEmail:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(check())
+            run_async(check())
 
     def test_subscribe_email_invalid_returns_400_with_htmx(
         self, client: TestClient, test_db_path: Path
@@ -666,7 +667,7 @@ class TestSubscribeUnsubscribeEmail:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(check())
+            run_async(check())
 
     def test_kei_status_anonymous_does_not_persist(
         self, client: TestClient, test_db_path: Path
@@ -706,7 +707,7 @@ class TestSubscribeUnsubscribeEmail:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(check())
+            run_async(check())
 
     def test_kei_status_anonymous_sets_voted_cookie(
         self, client: TestClient, test_db_path: Path
@@ -1103,7 +1104,7 @@ class TestAdvocacyPersonalizePoll:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(check())
+            run_async(check())
 
     def test_personalize_poll_anonymous_sets_cookies(
         self, client: TestClient, test_db_path: Path
@@ -1156,7 +1157,7 @@ class TestAdvocacyPersonalizePoll:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(check())
+            run_async(check())
 
 
 class TestAdminGate:
@@ -1233,7 +1234,7 @@ class TestCommunityStories:
         """POST without valid CSRF token is rejected."""
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(_set_user_kei_status(test_db_path, "subscriber@example.com", "registered"))
+            run_async(_set_user_kei_status(test_db_path, "subscriber@example.com", "registered"))
         resp = authed_client.post(
             "/community-stories",
             data={"name": "X", "location": "Y", "story": "Z", "consent": "on"},  # no csrf_token
@@ -1246,7 +1247,7 @@ class TestCommunityStories:
     ) -> None:
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(_set_user_kei_status(test_db_path, "subscriber@example.com", "registered"))
+            run_async(_set_user_kei_status(test_db_path, "subscriber@example.com", "registered"))
         resp = authed_client.post(
             "/community-stories",
             data=_data_with_csrf(
@@ -1262,7 +1263,7 @@ class TestCommunityStories:
     ) -> None:
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(_set_user_kei_status(test_db_path, "subscriber@example.com", "registered"))
+            run_async(_set_user_kei_status(test_db_path, "subscriber@example.com", "registered"))
         resp = authed_client.post(
             "/community-stories",
             data=_data_with_csrf(
@@ -1294,7 +1295,7 @@ class TestCommunityStories:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(check())
+            run_async(check())
 
     def test_admin_stories_list_returns_200(self, admin_client: TestClient) -> None:
         resp = admin_client.get("/admin/stories")
@@ -1306,7 +1307,7 @@ class TestCommunityStories:
     ) -> None:
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(_set_user_kei_status(test_db_path, "subscriber@example.com", "registered"))
+            run_async(_set_user_kei_status(test_db_path, "subscriber@example.com", "registered"))
         authed_client.post(
             "/community-stories",
             data=_data_with_csrf(
@@ -1330,12 +1331,12 @@ class TestCommunityStories:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            story_id = asyncio.run(get_story_id())
+            story_id = run_async(get_story_id())
         assert story_id is not None
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(_add_auth_code("admin@example.com", "654321"))
+            run_async(_add_auth_code("admin@example.com", "654321"))
         client.post(
             "/auth/verify-code",
             data=_data_with_csrf(client, {"email": "admin@example.com", "code": "654321"}),
@@ -1364,14 +1365,14 @@ class TestCommunityStories:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(check())
+            run_async(check())
 
     def test_admin_story_review_already_reviewed_redirects_with_flash(
         self, client: TestClient, authed_client: TestClient, test_db_path: Path
     ) -> None:
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(_set_user_kei_status(test_db_path, "subscriber@example.com", "registered"))
+            run_async(_set_user_kei_status(test_db_path, "subscriber@example.com", "registered"))
         authed_client.post(
             "/community-stories",
             data=_data_with_csrf(
@@ -1395,12 +1396,12 @@ class TestCommunityStories:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            story_id = asyncio.run(get_story_id())
+            story_id = run_async(get_story_id())
         assert story_id is not None
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(_add_auth_code("admin@example.com", "654321"))
+            run_async(_add_auth_code("admin@example.com", "654321"))
         client.post(
             "/auth/verify-code",
             data=_data_with_csrf(client, {"email": "admin@example.com", "code": "654321"}),
@@ -1427,7 +1428,7 @@ class TestCommunityStatements:
     ) -> None:
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(_set_user_kei_status(test_db_path, "subscriber@example.com", "registered"))
+            run_async(_set_user_kei_status(test_db_path, "subscriber@example.com", "registered"))
         resp = authed_client.post(
             "/community-statements",
             data=_data_with_csrf(
@@ -1447,7 +1448,7 @@ class TestCommunityStatements:
     ) -> None:
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(_set_user_kei_status(test_db_path, "subscriber@example.com", "would_want"))
+            run_async(_set_user_kei_status(test_db_path, "subscriber@example.com", "would_want"))
         resp = authed_client.post(
             "/community-statements",
             data=_data_with_csrf(
@@ -1477,7 +1478,7 @@ class TestCommunityStatements:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(check())
+            run_async(check())
 
     def test_admin_statements_list_returns_200(self, admin_client: TestClient) -> None:
         resp = admin_client.get("/admin/statements")
@@ -1489,7 +1490,7 @@ class TestCommunityStatements:
     ) -> None:
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(_set_user_kei_status(test_db_path, "subscriber@example.com", "would_want"))
+            run_async(_set_user_kei_status(test_db_path, "subscriber@example.com", "would_want"))
         authed_client.post(
             "/community-statements",
             data=_data_with_csrf(
@@ -1517,12 +1518,12 @@ class TestCommunityStatements:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            stmt_id = asyncio.run(get_stmt_id())
+            stmt_id = run_async(get_stmt_id())
         assert stmt_id is not None
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(_add_auth_code("admin@example.com", "654321"))
+            run_async(_add_auth_code("admin@example.com", "654321"))
         client.post(
             "/auth/verify-code",
             data=_data_with_csrf(client, {"email": "admin@example.com", "code": "654321"}),
@@ -1617,7 +1618,7 @@ class TestAdminCreateAndSend:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(check())
+            run_async(check())
 
     def test_create_draft_with_update_type_major_stores_type(
         self, admin_client: TestClient, test_db_path: Path
@@ -1646,7 +1647,7 @@ class TestAdminCreateAndSend:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(check())
+            run_async(check())
 
     def test_create_draft_invalid_update_type_falls_back_to_other(
         self, admin_client: TestClient, test_db_path: Path
@@ -1675,7 +1676,7 @@ class TestAdminCreateAndSend:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(check())
+            run_async(check())
 
     def test_send_update_sets_sent_at_and_count(
         self, admin_client: TestClient, test_db_path: Path
@@ -1699,7 +1700,7 @@ class TestAdminCreateAndSend:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(setup())
+            run_async(setup())
 
         with patch(
             "ilga_graph.routers.updates.send_email",
@@ -1717,7 +1718,7 @@ class TestAdminCreateAndSend:
 
             with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
                 importlib.reload(db_mod)
-                uid = asyncio.run(get_update_id())
+                uid = run_async(get_update_id())
             assert uid is not None
 
             resp = admin_client.post(f"/admin/updates/{uid}/send", follow_redirects=False)
@@ -1748,7 +1749,7 @@ class TestAdminCreateAndSend:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(check())
+            run_async(check())
 
     def test_send_update_dev_fallback_when_no_subscribers(
         self, admin_client: TestClient, test_db_path: Path
@@ -1781,7 +1782,7 @@ class TestAdminCreateAndSend:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(setup())
+            run_async(setup())
 
         with (
             patch("ilga_graph.config.DEV_MODE", True),
@@ -1802,7 +1803,7 @@ class TestAdminCreateAndSend:
 
             with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
                 importlib.reload(db_mod)
-                uid = asyncio.run(get_update_id())
+                uid = run_async(get_update_id())
             assert uid is not None
 
             resp = admin_client.post(f"/admin/updates/{uid}/send", follow_redirects=False)
@@ -1832,7 +1833,7 @@ class TestAdminCreateAndSend:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(check())
+            run_async(check())
 
     def test_recipients_page_returns_200_and_lists_subscribers(
         self, admin_client: TestClient, test_db_path: Path
@@ -1849,7 +1850,7 @@ class TestAdminCreateAndSend:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(setup())
+            run_async(setup())
 
         async def get_uid():
             from sqlalchemy import select
@@ -1861,7 +1862,7 @@ class TestAdminCreateAndSend:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            uid = asyncio.run(get_uid())
+            uid = run_async(get_uid())
         assert uid is not None
         resp = admin_client.get(f"/admin/updates/{uid}/recipients")
         assert resp.status_code == 200
@@ -1889,7 +1890,7 @@ class TestAdminCreateAndSend:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(setup())
+            run_async(setup())
 
         async def get_uid():
             from sqlalchemy import select
@@ -1901,7 +1902,7 @@ class TestAdminCreateAndSend:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            uid = asyncio.run(get_uid())
+            uid = run_async(get_uid())
         assert uid is not None
         resp = admin_client.post(
             f"/admin/updates/{uid}/send",
@@ -1958,7 +1959,7 @@ class TestUpdateImage:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(check())
+            run_async(check())
 
     def test_public_updates_page_shows_image_when_image_path_set(
         self, client: TestClient, test_db_path: Path
@@ -1983,7 +1984,7 @@ class TestUpdateImage:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(add_sent_with_image())
+            run_async(add_sent_with_image())
         resp = client.get("/updates")
         assert resp.status_code == 200
         assert b"Update with photo" in resp.content
@@ -2023,8 +2024,6 @@ class TestWelcomeEmailUnsubscribe:
 
     def test_welcome_email_includes_unsubscribe_link_when_unsub_url_provided(self) -> None:
         """send_welcome_email(..., unsub_url=...) produces body with Unsubscribe link."""
-        import asyncio
-
         from ilga_graph.email_utils import send_welcome_email
 
         unsub_url = "https://example.com/updates/unsubscribe?token=abc123"
@@ -2033,7 +2032,7 @@ class TestWelcomeEmailUnsubscribe:
             new_callable=AsyncMock,
             return_value=True,
         ) as mock_send:
-            asyncio.run(send_welcome_email("user@example.com", unsub_url=unsub_url))
+            run_async(send_welcome_email("user@example.com", unsub_url=unsub_url))
         mock_send.assert_called_once()
         call = mock_send.call_args
         assert call[0][0] == "user@example.com"
@@ -2046,8 +2045,6 @@ class TestWelcomeEmailUnsubscribe:
 
     def test_welcome_email_no_unsubscribe_when_unsub_url_omitted(self) -> None:
         """send_welcome_email without unsub_url does not include Unsubscribe in body."""
-        import asyncio
-
         from ilga_graph.email_utils import send_welcome_email
 
         with patch(
@@ -2055,7 +2052,7 @@ class TestWelcomeEmailUnsubscribe:
             new_callable=AsyncMock,
             return_value=True,
         ) as mock_send:
-            asyncio.run(send_welcome_email("user@example.com"))
+            run_async(send_welcome_email("user@example.com"))
         mock_send.assert_called_once()
         plain = mock_send.call_args[0][2]
         html = mock_send.call_args[0][3]
@@ -2068,8 +2065,6 @@ class TestEmailRobustness:
 
     def test_send_email_invalid_recipient_returns_false(self) -> None:
         """Empty or invalid 'to' returns False without raising."""
-        import asyncio
-
         from ilga_graph.email_utils import send_email
 
         async def run() -> None:
@@ -2077,7 +2072,7 @@ class TestEmailRobustness:
             assert await send_email("  ", "Sub", "Plain", "<p>P</p>") is False
             assert await send_email("no-at-sign", "Sub", "Plain", "<p>P</p>") is False
 
-        asyncio.run(run())
+        run_async(run())
 
     def test_user_with_blank_email_skipped_in_send(
         self, admin_client: TestClient, test_db_path: Path
@@ -2109,7 +2104,7 @@ class TestEmailRobustness:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            update_id = asyncio.run(setup())
+            update_id = run_async(setup())
 
         with patch(
             "ilga_graph.routers.updates.send_email",
@@ -2166,7 +2161,7 @@ class TestEmailRobustness:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            update_id = asyncio.run(setup())
+            update_id = run_async(setup())
 
         call_count = 0
 
@@ -2214,4 +2209,4 @@ class TestEmailRobustness:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(check())
+            run_async(check())

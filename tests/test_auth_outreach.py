@@ -6,7 +6,6 @@ real app lifespan and data/ilga.db are not used.
 
 from __future__ import annotations
 
-import asyncio
 import importlib
 import os
 from contextlib import asynccontextmanager
@@ -15,6 +14,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import FastAPI
+
+from tests.async_helpers import run_async
 from fastapi.testclient import TestClient
 
 import ilga_graph.config as cfg_mod
@@ -154,14 +155,12 @@ class TestAuthVerifyRoundtrip:
     """Verify with a known code (inserted directly), then /me returns authenticated."""
 
     def test_full_flow_with_code_from_db(self, client: TestClient, test_db_path: Path) -> None:
-        import asyncio
-
         email = "roundtrip@example.com"
         known_code = "123456"
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
-            asyncio.run(_add_auth_code(email, known_code))
+            run_async(_add_auth_code(email, known_code))
 
         resp = client.post(
             "/auth/verify-code",
@@ -188,8 +187,6 @@ class TestAuthVerifyRoundtrip:
         self, client: TestClient, test_db_path: Path
     ) -> None:
         """First sign-in triggers welcome email and sets welcome_email_sent_at."""
-        import asyncio
-
         from sqlalchemy import select
 
         from ilga_graph.db_models import User
@@ -199,7 +196,7 @@ class TestAuthVerifyRoundtrip:
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
-            asyncio.run(_add_auth_code(email, known_code))
+            run_async(_add_auth_code(email, known_code))
 
         with patch(
             "ilga_graph.routers.auth.send_welcome_email",
@@ -229,7 +226,7 @@ class TestAuthVerifyRoundtrip:
 
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(db_mod)
-            asyncio.run(check_user())
+            run_async(check_user())
 
 
 class TestPatchMe:
@@ -245,7 +242,7 @@ class TestPatchMe:
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
-            asyncio.run(_add_auth_code(email, known_code))
+            run_async(_add_auth_code(email, known_code))
         client.post(
             "/auth/verify-code",
             data=_data_with_csrf(client, {"email": email, "code": known_code}),
@@ -263,7 +260,7 @@ class TestPatchMe:
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
-            asyncio.run(_add_auth_code(email, known_code))
+            run_async(_add_auth_code(email, known_code))
         client.post(
             "/auth/verify-code",
             data=_data_with_csrf(client, {"email": email, "code": known_code}),
@@ -306,7 +303,6 @@ class TestOutreachRecord:
         # Create user and get session cookie via verify with known code
         email = "outreach@example.com"
         known_code = "654321"
-        import asyncio
         import hashlib
         from datetime import datetime, timedelta, timezone
 
@@ -329,7 +325,7 @@ class TestOutreachRecord:
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
-            asyncio.run(setup())
+            run_async(setup())
 
         client.post(
             "/auth/verify-code",
@@ -362,8 +358,6 @@ class TestOutreachRecord:
     def test_record_stores_support_score_and_constituent(
         self, client: TestClient, test_db_path: Path
     ) -> None:
-        import asyncio
-
         from sqlalchemy import select
 
         from ilga_graph.db_models import OutreachEvent
@@ -373,7 +367,7 @@ class TestOutreachRecord:
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
-            asyncio.run(_add_auth_code(email, code))
+            run_async(_add_auth_code(email, code))
         client.post(
             "/auth/verify-code",
             data=_data_with_csrf(client, {"email": email, "code": code}),
@@ -409,7 +403,7 @@ class TestOutreachRecord:
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
-            asyncio.run(check())
+            run_async(check())
 
 
 async def _add_auth_code(email: str, plain_code: str) -> None:
@@ -432,14 +426,12 @@ async def _add_auth_code(email: str, plain_code: str) -> None:
 @pytest.fixture
 def authed_client(client: TestClient, test_db_path: Path) -> TestClient:
     """Client with authenticated user (outreach@example.com)."""
-    import asyncio
-
     email = "authed@example.com"
     code = "999888"
     with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
         importlib.reload(cfg_mod)
         importlib.reload(db_mod)
-        asyncio.run(_add_auth_code(email, code))
+        run_async(_add_auth_code(email, code))
     client.post(
         "/auth/verify-code",
         data=_data_with_csrf(client, {"email": email, "code": code}),
@@ -459,14 +451,12 @@ class TestOutreachStats:
         assert data["total"] == 0
 
     def test_stats_aggregates_after_record(self, client: TestClient, test_db_path: Path) -> None:
-        import asyncio
-
         email = "stats@example.com"
         code = "777666"
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
-            asyncio.run(_add_auth_code(email, code))
+            run_async(_add_auth_code(email, code))
         client.post(
             "/auth/verify-code",
             data=_data_with_csrf(client, {"email": email, "code": code}),
@@ -509,14 +499,12 @@ class TestOutreachMyStats:
         assert resp.status_code == 401
 
     def test_my_stats_returns_counts(self, client: TestClient, test_db_path: Path) -> None:
-        import asyncio
-
         email = "stats@example.com"
         code = "111222"
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
-            asyncio.run(_add_auth_code(email, code))
+            run_async(_add_auth_code(email, code))
         client.post(
             "/auth/verify-code",
             data=_data_with_csrf(client, {"email": email, "code": code}),
@@ -558,14 +546,12 @@ class TestOutreachMyHistory:
     def test_my_history_returns_events_ordered_newest_first(
         self, client: TestClient, test_db_path: Path
     ) -> None:
-        import asyncio
-
         email = "history@example.com"
         code = "555444"
         with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
-            asyncio.run(_add_auth_code(email, code))
+            run_async(_add_auth_code(email, code))
         with patch(
             "ilga_graph.routers.auth.rate_limit_verify_code",
             return_value=True,

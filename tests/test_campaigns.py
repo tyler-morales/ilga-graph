@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import importlib
 import json
 import os
@@ -21,8 +20,7 @@ from ilga_graph.campaign_helpers import (
 from ilga_graph.zip_crosswalk import ZipDistrictInfo
 
 
-def _run(coro):
-    return asyncio.run(coro)
+from tests.async_helpers import run_async as _run
 
 
 class TestIsCampaignVisibleToZip:

@@ -1,4 +1,9 @@
 {
+  "60601": {
+    "il_house": "26",
+    "il_senate": "18",
+    "us_house": "4"
+  },
   "60007": {
     "il_house": "56",
     "il_senate": "28",
