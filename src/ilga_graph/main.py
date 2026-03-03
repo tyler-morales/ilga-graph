@@ -80,11 +80,14 @@ _TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 
 class StaticFilesWithCache(BaseStaticFiles):
-    """StaticFiles that sets Cache-Control for repeat visits. Unversioned assets use 1h."""
+    """StaticFiles that sets Cache-Control for repeat visits. Minified assets use 1y; others 1h."""
 
     async def get_response(self, path: str, scope: dict) -> Response:
         response = await super().get_response(path, scope)
-        response.headers.setdefault("Cache-Control", "public, max-age=3600")
+        if path.endswith(".min.css") or path.endswith(".min.js"):
+            response.headers.setdefault("Cache-Control", "public, max-age=31536000, immutable")
+        else:
+            response.headers.setdefault("Cache-Control", "public, max-age=3600")
         return response
 
 
@@ -100,7 +103,7 @@ templates.env.globals["site_name"] = cfg.SITE_NAME
 templates.env.globals["meta_description"] = cfg.META_DESCRIPTION
 _campaign = get_campaign_config()
 templates.env.globals["campaign_name"] = _campaign.campaign_name or cfg.SITE_NAME
-templates.env.globals["primary_color"] = _campaign.primary_color or "#FF4500"
+templates.env.globals["primary_color"] = _campaign.primary_color or "#e55a1a"
 templates.env.globals["issue_summary"] = _campaign.issue_summary
 templates.env.globals["strategic_mission"] = _campaign.strategic_mission
 templates.env.globals["mission_attribution"] = _campaign.mission_attribution
@@ -111,6 +114,7 @@ templates.env.globals["umami_website_id"] = cfg.UMAMI_WEBSITE_ID
 templates.env.globals["umami_script_url"] = cfg.UMAMI_SCRIPT_URL
 templates.env.globals["show_beta_banner"] = cfg.BETA_BANNER
 templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
+templates.env.globals["use_minified_assets"] = cfg.PROFILE == "prod"
 templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS

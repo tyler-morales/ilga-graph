@@ -1,4 +1,4 @@
-.PHONY: scrape scrape-full dev serve dev-reset install test smoke-outreach lint lint-fix pre-commit clean help ml-setup ml-run ml-pipeline ml-resolve ml-predict ml-embed scrape-fulltext scrape-members scrape-full-members snapshot-mocks logs docs docs-serve
+.PHONY: scrape scrape-full dev serve dev-reset install test smoke-outreach lint lint-fix pre-commit clean help minify ml-setup ml-run ml-pipeline ml-resolve ml-predict ml-embed scrape-fulltext scrape-members scrape-full-members snapshot-mocks logs docs docs-serve
 
 # ── Virtual environment ─────────────────────────────────────────────────────
 VENV ?= $(or $(wildcard .venv), $(wildcard venv), $(wildcard src/ilga_graph/.venv))
@@ -86,6 +86,9 @@ lint-fix: ## Auto-fix lint and format
 
 pre-commit: ## Run pre-commit on all files (same checks as git hook: ruff + pytest)
 	$(BIN)pre-commit run --all-files
+
+minify: ## Minify CSS and JS for production (ILGA_PROFILE=prod serves .min assets)
+	npm install && npm run minify
 
 # ── ML Pipeline ───────────────────────────────────────────────────────────────
 

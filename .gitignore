@@ -30,6 +30,10 @@ env/
 .DS_Store
 Thumbs.db
 
+# Node (a11y scanner in scripts/a11y; minify at root)
+node_modules/
+scripts/a11y/node_modules/
+
 # Project
 name_map.json
 cache/
