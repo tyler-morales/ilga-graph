@@ -1,6 +1,6 @@
 # Hardball Spec — Chunked Reference
 
-**Source of truth:** *Hardball Lobbying for Nonprofits* (Barry Hessenius). The full text lives in the repo as `hardball.txt` (root). This folder holds the same content split into **bite-sized chunks** so you (and the AI) can look up specific topics without reading the whole book.
+**Source of truth:** *Hardball Lobbying for Nonprofits* (Barry Hessenius). The full text lives at `docs/canonical/books/hardball.txt`. This folder holds the same content split into **bite-sized chunks** so you (and the AI) can look up specific topics without reading the whole book.
 
 ## When to use which chunk
 
@@ -28,7 +28,7 @@ When planning features, fixing bugs, or writing code that touches advocacy, lobb
 
 ## Regenerating chunks
 
-If `hardball.txt` is updated (e.g. re-exported from PDF), regenerate the chunks:
+If `docs/canonical/books/hardball.txt` is updated (e.g. re-exported from PDF), regenerate the chunks:
 
 ```bash
 python3 scripts/split_hardball_spec.py

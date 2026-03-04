@@ -1,6 +1,6 @@
 # Ch 3: The Decision-Making Process
 
-Source: hardball.txt (Barry Hessenius, *Hardball Lobbying for Nonprofits*)
+Source: docs/canonical/books/hardball.txt (Barry Hessenius, *Hardball Lobbying for Nonprofits*)
 
 ---
 

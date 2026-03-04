@@ -1,6 +1,6 @@
 # Ch 1: Framing the Context for a New Approach
 
-Source: hardball.txt (Barry Hessenius, *Hardball Lobbying for Nonprofits*)
+Source: docs/canonical/books/hardball.txt (Barry Hessenius, *Hardball Lobbying for Nonprofits*)
 
 ---
 

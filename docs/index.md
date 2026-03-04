@@ -22,6 +22,7 @@ Documentation for the **ILGA Graph** proof-of-concept: Illinois General Assembly
 
 - [**CLI (Make)**](reference/cli-make.md) — All `make` targets: server, scrape, ML, test, lint, docs.
 - [**Environment variables**](reference/environment-variables.md) — Profiles and full variable list.
+- [**Fact sheet best practices**](reference/fact-sheet-analysis.txt) — Analysis of sample advocacy fact sheets and recommendations; used to update the Kei vehicle fact sheet.
 - [**GraphQL API**](reference/graphql.md) — Endpoint, example query files, key operations.
 - [**Project structure**](reference/project-structure.md) — Where to find code, cache, and docs.
 
@@ -31,7 +32,7 @@ Documentation for the **ILGA Graph** proof-of-concept: Illinois General Assembly
 
 - [**Dev Bar — How it works**](development/advocacy-test-mode-internals.md) — URL contract, config guard, backend injection, template rendering, client-side persistence.
 - [**Component playground**](development/component-playground.md) — Dev-only `/dev/playground` to isolate UI components (truck animation, drawer, etc.); how to add scenes.
-- [**Bills-first pipeline testing**](BILLS_FIRST_TESTING.md) — What to expect after scrape + export; GraphQL queries to test the server.
+- [**Bills-first pipeline testing**](development/bills-first-testing.md) — What to expect after scrape + export; GraphQL queries to test the server.
 
 ---
 

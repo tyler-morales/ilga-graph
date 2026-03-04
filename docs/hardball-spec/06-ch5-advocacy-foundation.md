@@ -1,6 +1,6 @@
 # Ch 5: Building an Advocacy Foundation
 
-Source: hardball.txt (Barry Hessenius, *Hardball Lobbying for Nonprofits*)
+Source: docs/canonical/books/hardball.txt (Barry Hessenius, *Hardball Lobbying for Nonprofits*)
 
 ---
 

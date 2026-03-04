@@ -32,7 +32,7 @@ All of this lives in [src/ilga_graph/routers/content_constants.py](../src/ilga_g
 
 | Area | Location | Notes |
 |------|----------|--------|
-| Brief paths | content_constants.py | `CONSTITUENT_BRIEF_PATH`, `LEGISLATOR_BRIEF_PATH` — hardcoded Kei .txt filenames |
+| Brief paths | content_constants.py | `CONSTITUENT_BRIEF_PATH`, `LEGISLATOR_BRIEF_PATH` — point at `docs/canonical/briefs/` (constituent-brief.txt, legislator-brief.txt); single content root for canonical copy |
 | Strategic copy | content_constants.py | `STRATEGIC_MISSION`, `STRATEGIC_VISION`, `STRATEGIC_FIVE_POINTS`, `WHY_SHOULD_YOU_CARE_*`, `WHY_YOU_CARE_*`, `KEI_POLL_WHY_WE_ASK` |
 | Marquee / progress / docs | content_constants.py | `MARQUEE_IMAGES`, `PROGRESS_CHECKPOINTS` ("Keis be legal"), `BRIEF_DOCUMENTS`, `BRIEF_STATE_STATUS`, `FACT_SHEET_PDF_URL` |
 | Glossary | content_constants.py | `KEI_GLOSSARY` — Kei vehicle terms |

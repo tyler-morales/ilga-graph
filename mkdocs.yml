@@ -49,7 +49,7 @@ nav:
     - Component playground: development/component-playground.md
     - Data and environments: development/data-and-environments.md
     - Advocacy Test Mode (internals): development/advocacy-test-mode-internals.md
-    - Bills-first pipeline testing: BILLS_FIRST_TESTING.md
+    - Bills-first pipeline testing: development/bills-first-testing.md
     - DB and outreach: development/db-and-outreach.md
 
 plugins:

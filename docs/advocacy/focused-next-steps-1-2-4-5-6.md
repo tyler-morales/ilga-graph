@@ -1,6 +1,6 @@
 # Focused Next Steps (1, 2, 4, 5, 6)
 
-Content below is drawn only from this repo: Hardball spec (`docs/hardball-spec/`), legislator brief (`IL_Kei_Vehicle_Registration_Fix_Brief 1.txt`), constituent brief (`Illinois_Kei_Vehicle_Registration_Constituent_Brief.txt`), and `src/ilga_graph/routers/content.py` (STRATEGIC_*, FAQ_*).
+Content below is drawn only from this repo: Hardball spec (`docs/hardball-spec/`), legislator brief (`docs/canonical/briefs/legislator-brief.txt`), constituent brief (`docs/canonical/briefs/constituent-brief.txt`), and `src/ilga_graph/routers/content_constants.py` (STRATEGIC_*, FAQ_*).
 
 ---
 

@@ -1,8 +1,8 @@
 # Founding Sales Reference: Chapter Breakdown and Advocacy Use
 
-Use this doc when drafting sales or advocacy copy, scripts, or flows. **Source of truth:** [reference/founding-sales.txt](../../reference/founding-sales.txt) (~4,035 lines).
+Use this doc when drafting sales or advocacy copy, scripts, or flows. **Source of truth:** [docs/canonical/books/founding-sales.txt](../canonical/books/founding-sales.txt) (~4,035 lines).
 
-**Rule:** When using Founding Sales for advocacy or sales copy, cite chapter and (optionally) line range from `reference/founding-sales.txt`.
+**Rule:** When using Founding Sales for advocacy or sales copy, cite chapter and (optionally) line range from `docs/canonical/books/founding-sales.txt`.
 
 ---
 
@@ -36,7 +36,7 @@ Use this doc when drafting sales or advocacy copy, scripts, or flows. **Source o
 
 ## 2. Chapter line ranges (quick reference)
 
-Use these to cite or re-read a specific chapter in `reference/founding-sales.txt`:
+Use these to cite or re-read a specific chapter in `docs/canonical/books/founding-sales.txt`:
 
 | Chapter            | Lines (approx.) | Title                                                       |
 | ------------------ | --------------- | ----------------------------------------------------------- |
@@ -106,7 +106,7 @@ Reference this checklist for future brief/the_issue edits.
 
 ## 5. Materials checklist (Ch 3)
 
-- **Brief (deck for sending):** Problem → cost → alternatives/gaps → what changed → solution → proof → ask. Ensure one-pager/summary link in sidebar (Documents). See line ranges 596–798 in reference/founding-sales.txt.
+- **Brief (deck for sending):** Problem → cost → alternatives/gaps → what changed → solution → proof → ask. Ensure one-pager/summary link in sidebar (Documents). See line ranges 596–798 in docs/canonical/books/founding-sales.txt.
 - **Call script (pitch flow):** Intro → discovery (Kei explainer) → problem → legal why → ask → easy yes close; pushbacks = objection handling. `advocacy_helpers.py`, `_advocacy_drawer_call.html`.
 - **Email:** One clear **click target** (e.g. “Download one-pager (PDF)”) so staff can act immediately; subject/body personalization (district, name). `_advocacy_drawer_email.html`, `email_utils.py`.
 
