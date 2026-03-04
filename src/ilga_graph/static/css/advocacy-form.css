@@ -431,9 +431,9 @@
 .hero-form button {
   font-size: var(--font-size-body);
   padding: 12px 24px;
-  background: var(--color-hero-cta, #c2410c);
+  background: var(--color-hero-cta, #ed7a0a);
   color: #fff;
-  border: 2px solid var(--color-hero-cta, #c2410c);
+  border: 2px solid var(--color-hero-cta, #ed7a0a);
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
@@ -441,8 +441,8 @@
 }
 
 .hero-form button:hover {
-  background: var(--color-hero-cta-hover, #a6360a);
-  border-color: var(--color-hero-cta-hover, #a6360a);
+  background: var(--color-hero-cta-hover, #d96b09);
+  border-color: var(--color-hero-cta-hover, #d96b09);
 }
 
 .hero-form button:focus-visible {

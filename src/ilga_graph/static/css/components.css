@@ -91,13 +91,13 @@
 
 /* Story/accent CTA: orange (community story, photo share). */
 .btn--story {
-  background: var(--color-hero-cta, #c2410c);
-  border: 1px solid var(--color-hero-cta, #c2410c);
+  background: var(--color-hero-cta, #ed7a0a);
+  border: 1px solid var(--color-hero-cta, #ed7a0a);
   color: #fff;
 }
 .btn--story:hover {
-  background: var(--color-hero-cta-hover, #a6360a);
-  border-color: var(--color-hero-cta-hover, #a6360a);
+  background: var(--color-hero-cta-hover, #d96b09);
+  border-color: var(--color-hero-cta-hover, #d96b09);
 }
 .btn--story:focus-visible {
   outline: 2px solid var(--color-hero-cta-focus-ring, #333);

@@ -64,9 +64,9 @@
   --font-size-h1: 1.6rem;
   --font-size-h2: 1.2rem;
 
-  /* Hero CTA (hardball landing); orange, WCAG AA 4.5:1 with white text */
-  --color-hero-cta: #c2410c;
-  --color-hero-cta-hover: #a6360a;
+  /* Hero CTA (hardball landing); bright orange for visibility and color-blind accessibility, WCAG AA with white text */
+  --color-hero-cta: #ed7a0a;
+  --color-hero-cta-hover: #d96b09;
   --color-hero-cta-focus-ring: #333;
 
   /* Primary CTA (mission CTA, Start outreach) and subscribe */
