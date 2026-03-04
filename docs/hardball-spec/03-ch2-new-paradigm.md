@@ -1,6 +1,6 @@
 # Ch 2: Toward a New Paradigm for Nonprofit Advocacy/Lobbying
 
-Source: hardball.txt (Barry Hessenius, *Hardball Lobbying for Nonprofits*)
+Source: docs/canonical/books/hardball.txt (Barry Hessenius, *Hardball Lobbying for Nonprofits*)
 
 ---
 

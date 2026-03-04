@@ -14,6 +14,11 @@ points to remember, and FAQs.{% endblock %}
 {% block brief_main_heading %}{% endblock %}
 {% block brief_main %}
 <div class="fact-sheet-sections">
+    <section class="fact-sheet-section" aria-labelledby="fact-what-heading">
+        <h2 id="fact-what-heading">What are kei vehicles?</h2>
+        <p>{{ fact_sheet_kei_definition }}</p>
+    </section>
+
     <section class="fact-sheet-section" aria-labelledby="fact-issue-heading">
         <h2 id="fact-issue-heading">The issue</h2>
         <p>{{ fact_sheet_issue }}</p>
@@ -22,6 +27,15 @@ points to remember, and FAQs.{% endblock %}
     <section class="fact-sheet-section" aria-labelledby="fact-position-heading">
         <h2 id="fact-position-heading">Our position</h2>
         <p>{{ fact_sheet_position }}</p>
+    </section>
+
+    <section class="fact-sheet-section" aria-labelledby="fact-glance-heading">
+        <h2 id="fact-glance-heading">Key numbers at a glance</h2>
+        <ul class="fact-sheet-at-a-glance" role="list">
+            {% for item in fact_sheet_at_a_glance %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
     </section>
 
     <section class="fact-sheet-section">
@@ -33,12 +47,22 @@ points to remember, and FAQs.{% endblock %}
         {{ faq_section(fact_sheet_faq_items, 'Key FAQs for volunteers', 'fact-faq') }}
     </section>
 
-    <section class="fact-sheet-section" aria-labelledby="fact-links-heading">
-        <h2 id="fact-links-heading">Links</h2>
+    <section class="fact-sheet-section" aria-labelledby="fact-cta-heading">
+        <h2 id="fact-cta-heading">What you can do</h2>
+        <p><strong>Contact your Illinois State Representative and State Senator.</strong> Ask them to support a narrow statutory clarification to 625 ILCS 5/3-401(c-1). Encourage them to meet with the Secretary of State's office to confirm language that resolves the ambiguity while preserving safety and insurance requirements.</p>
         <ul class="fact-sheet-links" role="list">
             <li><a href="/the-issue">The Issue</a> (constituent narrative)</li>
             <li><a href="/legislator-brief">Legislator brief</a> (one-pager)</li>
             <li><a href="/advocacy/">Advocacy tool</a> (find your legislators, call/email)</li>
+        </ul>
+    </section>
+
+    <section class="fact-sheet-section" aria-labelledby="fact-sources-heading">
+        <h2 id="fact-sources-heading">Sources</h2>
+        <ul class="fact-sheet-sources" role="list" aria-labelledby="fact-sources-heading">
+            {% for source in fact_sheet_sources|default([]) %}
+            <li><a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">{{ source.title }}</a></li>
+            {% endfor %}
         </ul>
     </section>
 </div>

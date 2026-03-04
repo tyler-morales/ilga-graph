@@ -1,6 +1,6 @@
 # Ch 4: Advocacy, Lobbying, and the Law
 
-Source: hardball.txt (Barry Hessenius, *Hardball Lobbying for Nonprofits*)
+Source: docs/canonical/books/hardball.txt (Barry Hessenius, *Hardball Lobbying for Nonprofits*)
 
 ---
 

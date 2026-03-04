@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Split hardball.txt into chunked markdown files under docs/hardball-spec/.
+Split docs/canonical/books/hardball.txt into chunked markdown files under docs/hardball-spec/.
 Run from repo root: python scripts/split_hardball_spec.py
 """
 
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SOURCE = REPO_ROOT / "hardball.txt"
+SOURCE = REPO_ROOT / "docs" / "canonical" / "books" / "hardball.txt"
 OUT_DIR = REPO_ROOT / "docs" / "hardball-spec"
 
 # (start_line_1based, end_line_inclusive, filename, title)
@@ -43,7 +43,10 @@ def main() -> None:
         end_idx = min(end_1, len(lines))
         section_lines = lines[start_idx:end_idx]
         content = "\n".join(section_lines)
-        header = "Source: hardball.txt (Barry Hessenius, *Hardball Lobbying for Nonprofits*)"
+        header = (
+            "Source: docs/canonical/books/hardball.txt "
+            "(Barry Hessenius, *Hardball Lobbying for Nonprofits*)"
+        )
         body = f"# {title}\n\n{header}\n\n---\n\n{content}"
         (OUT_DIR / filename).write_text(body, encoding="utf-8")
         print(f"Wrote {filename} ({len(section_lines)} lines)")

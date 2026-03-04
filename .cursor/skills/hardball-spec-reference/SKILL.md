@@ -5,7 +5,7 @@ description: Before implementing advocacy/lobbying features, planning product be
 
 # Hardball Spec Reference
 
-When planning features, fixing bugs, or writing code that touches **advocacy, lobbying, legislator outreach, coalitions, or “making the case”** for this project, treat the Hardball spec as source of truth and cite it explicitly.
+When planning features, fixing bugs, or writing code that touches **advocacy, lobbying, legislator outreach, coalitions, or “making the case”** for this project, treat the Hardball spec as source of truth and cite it explicitly. **Full book text:** `docs/canonical/books/hardball.txt` (regenerate chunks with `scripts/split_hardball_spec.py`).
 
 ## Quick steps
 

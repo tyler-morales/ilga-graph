@@ -14,6 +14,7 @@ from .constants import (
     KEI_IMPACT_ALL_OPTIONS,
     KEI_IMPACT_SLUG_COOKIE,
     KEI_OWNER_SLUGS,
+    KEI_POLL_IMPACT_OPTIONS,
     KEI_POLL_IMPACT_SLUGS,
     KEI_STATUS_SLUGS,
 )
@@ -190,6 +191,7 @@ async def get_kei_poll_sidebar_context(
     if not state.get("kei_poll_done"):
         results = await _get_kei_status_results(db)
         state["kei_status_total"] = results["total_responses"]
+    state["kei_impact_options"] = KEI_POLL_IMPACT_OPTIONS
     return state
 
 
