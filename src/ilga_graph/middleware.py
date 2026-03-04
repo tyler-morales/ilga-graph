@@ -13,7 +13,7 @@ from sqlalchemy import select
 from starlette.middleware.gzip import GZipMiddleware
 
 from . import config as cfg
-from .campaign_helpers import get_active_campaign
+from .campaign_helpers import build_poll_campaign_context, get_active_campaign
 from .db import async_session_factory
 from .db_models import User
 from .dependencies import decode_session_token
@@ -68,6 +68,11 @@ def register_middleware(app: FastAPI) -> None:
                 async with async_session_factory() as db:
                     campaign = await get_active_campaign(db)
                     request.state.current_action_campaign = campaign  # type: ignore[attr-defined]
+                    if campaign is None:
+                        poll_ctx = await build_poll_campaign_context(db)
+                        request.state.poll_campaign = poll_ctx  # type: ignore[attr-defined]
+                    else:
+                        request.state.poll_campaign = None  # type: ignore[attr-defined]
                     session_cookie = request.cookies.get(cfg.AUTH_COOKIE_NAME)
                     user_id = decode_session_token(session_cookie) if session_cookie else None
                     if user_id is not None:
@@ -78,6 +83,7 @@ def register_middleware(app: FastAPI) -> None:
                     request.state.user = user  # type: ignore[attr-defined]  # templates hide subscribe when user.wants_updates
             except Exception:
                 request.state.current_action_campaign = None  # type: ignore[attr-defined]
+                request.state.poll_campaign = None  # type: ignore[attr-defined]
                 request.state.user = None  # type: ignore[attr-defined]
         return await call_next(request)
 

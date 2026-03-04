@@ -150,7 +150,7 @@ MARQUEE_IMAGES: list[dict[str, str]] = [
         "alt": "Mercedes Weikal with her 1989 Suzuki Every kei van from Japan",
         "name": "Mercedes Weikal",
         "caption": 'Into tiny cars since 15; now has five imports including her 1989 Suzuki Every from Japan. "They\'re thrifty, easy to park, and bring smiles. If these vehicles remain banned, enthusiasts in Illinois like me will have less choice."',
-        "location": "Lake County",
+        "location": "Crystal Lake",
     },
 ]
 

@@ -1,4 +1,4 @@
-.PHONY: scrape scrape-full dev serve dev-reset install test smoke-outreach lint lint-fix pre-commit clean help minify ml-setup ml-run ml-pipeline ml-resolve ml-predict ml-embed scrape-fulltext scrape-members scrape-full-members snapshot-mocks logs docs docs-serve
+.PHONY: scrape scrape-full dev serve dev-reset install test smoke-outreach lint lint-fix pre-commit clean help minify ml-setup ml-run ml-pipeline ml-resolve ml-predict ml-embed scrape-fulltext scrape-members scrape-full-members snapshot-mocks logs docs docs-serve deactivate-campaigns
 
 # ── Virtual environment ─────────────────────────────────────────────────────
 VENV ?= $(or $(wildcard .venv), $(wildcard venv), $(wildcard src/ilga_graph/.venv))
@@ -171,3 +171,6 @@ seed-outreach: ## Seed outreach DB: real backlog always; mock community data onl
 
 clean-outreach-funky-mama-only: ## One-time: remove all outreach_events not from funky_mama11@gmail.com (dev fresh start). Uses ILGA_DB_PATH.
 	$(PYTHON) scripts/clean_outreach_funky_mama_only.py
+
+deactivate-campaigns: ## Deactivate all outreach campaigns so the 500 poll campaign banner shows.
+	PYTHONPATH=src $(PYTHON) scripts/deactivate_all_campaigns.py

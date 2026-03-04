@@ -1346,7 +1346,7 @@ a:visited {
   padding: 10px 32px 10px 32px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 0 0.5em;
   font-family: var(--font-sans);
@@ -1356,7 +1356,7 @@ a:visited {
   border: 1px solid #f59e0b;
   border-left: 4px solid #f59e0b;
   box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
-  text-align: center;
+  text-align: left;
 }
 
 .beta-banner--dismissed {
@@ -1638,7 +1638,7 @@ a:visited {
   padding: 10px 32px 10px 32px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 0 0.5em;
   font-family: var(--font-sans);
@@ -1648,7 +1648,7 @@ a:visited {
   border: 1px solid #0d9488;
   border-left: 4px solid #0d9488;
   box-shadow: 0 2px 8px rgba(13, 148, 136, 0.2);
-  text-align: center;
+  text-align: left;
 }
 
 .current-action-banner--dismissed {
@@ -1755,6 +1755,15 @@ a:visited {
     height: 44px;
     min-width: 44px;
     min-height: 44px;
+  }
+}
+
+/* Banner text: center on large screens, left on small */
+@media (min-width: 768px) {
+  .beta-banner,
+  .current-action-banner {
+    justify-content: center;
+    text-align: center;
   }
 }
 

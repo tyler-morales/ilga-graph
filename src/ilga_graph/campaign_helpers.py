@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import Request
 from sqlalchemy import func, select, update
 
-from .db_models import Campaign, OutreachEvent
+from .campaign_config import get_campaign_config, get_kei_poll_goal
+from .db_models import Campaign, OutreachEvent, Poll
+from .kei_poll_context import get_distinct_respondent_count
 from .zip_crosswalk import ZipDistrictInfo
 
 if TYPE_CHECKING:
@@ -19,6 +21,39 @@ if TYPE_CHECKING:
 def get_current_action_campaign_for_template(request: Request) -> object | None:
     """Return active campaign from request.state (set by middleware) for use in Jinja globals."""
     return getattr(request.state, "current_action_campaign", None)
+
+
+def get_poll_campaign_for_template(request: Request) -> dict[str, Any] | None:
+    """Return poll campaign context from request.state (set by middleware) for use in Jinja."""
+    return getattr(request.state, "poll_campaign", None)
+
+
+async def build_poll_campaign_context(db: AsyncSession) -> dict[str, Any] | None:
+    """Build poll campaign dict when no outreach campaign is active and goal is set.
+
+    Returns dict with goal, current, title, message, ask, show. show is True when
+    goal > 0 and current < goal (banner hides once goal is met).
+    """
+    goal = get_kei_poll_goal()
+    if goal <= 0:
+        return None
+    cfg = get_campaign_config()
+    poll_slug = cfg.poll_slug or "kei"
+    result = await db.execute(select(Poll).where(Poll.slug == poll_slug))
+    campaign_poll = result.scalar_one_or_none()
+    if not campaign_poll:
+        return None
+    current = await get_distinct_respondent_count(db, campaign_poll.id)
+    show = current < goal
+    return {
+        "goal": goal,
+        "current": current,
+        "title": cfg.poll_campaign_title or "First campaign: 500 voices",
+        "message": cfg.poll_campaign_message
+        or "Your response helps us show legislators who's affected.",
+        "ask": cfg.poll_campaign_ask or "Take the poll",
+        "show": show,
+    }
 
 
 def _as_utc(dt: datetime | None) -> datetime | None:
@@ -119,3 +154,13 @@ async def deactivate_other_campaigns(db: AsyncSession, active_campaign_id: int) 
         update(Campaign).where(Campaign.id != active_campaign_id).values(is_active=False)
     )
     await db.flush()
+
+
+async def deactivate_all_campaigns(db: AsyncSession) -> int:
+    """Set is_active=False for every outreach campaign. Returns count updated.
+
+    Use when you want the poll campaign banner (500 responses) to show instead.
+    """
+    result = await db.execute(update(Campaign).values(is_active=False))
+    await db.flush()
+    return result.rowcount

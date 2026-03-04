@@ -92,6 +92,7 @@ def _make_test_app(db_path: Path) -> FastAPI:
     templates.env.globals["show_beta_banner"] = False
     templates.env.globals["footer_last_updated"] = None
     templates.env.globals["get_current_action_campaign"] = lambda r: None
+    templates.env.globals["get_poll_campaign_for_template"] = lambda r: None
     app.state.templates = templates
     app.include_router(auth_router_mod.router)
     app.include_router(account_router_mod.router)

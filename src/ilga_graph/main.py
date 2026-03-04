@@ -131,7 +131,13 @@ def _get_current_action_campaign(request: Request) -> object | None:
     return getattr(request.state, "current_action_campaign", None)
 
 
+def _get_poll_campaign(request: Request) -> object | None:
+    """Return poll campaign context (set by middleware) for base template poll campaign banner."""
+    return getattr(request.state, "poll_campaign", None)
+
+
 templates.env.globals["get_current_action_campaign"] = _get_current_action_campaign
+templates.env.globals["get_poll_campaign_for_template"] = _get_poll_campaign
 
 
 def _wants_html(request: Request) -> bool:
