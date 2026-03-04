@@ -91,6 +91,7 @@ async def bill_explanation_fragment(request: Request, bill_id: str):
     ml = state.ml
     if not ml or not ml.available or ml.explainer is None:
         return templates.TemplateResponse(
+            request,
             "_explanation_partial.html",
             {"request": request, "explanation": None, "reason": "not_available"},
         )
@@ -98,6 +99,7 @@ async def bill_explanation_fragment(request: Request, bill_id: str):
     row_idx = ml._bill_id_to_row.get(bill_id)
     if row_idx is None:
         return templates.TemplateResponse(
+            request,
             "_explanation_partial.html",
             {"request": request, "explanation": None, "reason": "bill_not_found"},
         )
@@ -112,12 +114,14 @@ async def bill_explanation_fragment(request: Request, bill_id: str):
         )
         _enrich_explanation_factors(result, bill_id, bill, score)
         return templates.TemplateResponse(
+            request,
             "_explanation_partial.html",
             {"request": request, "explanation": result, "reason": None},
         )
     except Exception:
         _LOGGER.exception("SHAP explanation failed for bill %s", bill_id)
         return templates.TemplateResponse(
+            request,
             "_explanation_partial.html",
             {"request": request, "explanation": None, "reason": "error"},
         )

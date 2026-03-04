@@ -11,8 +11,6 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import FastAPI, Request
-
-from tests.async_helpers import run_async
 from fastapi.responses import Response
 from fastapi.templating import Jinja2Templates
 from fastapi.testclient import TestClient
@@ -33,6 +31,7 @@ from ilga_graph.security import (
     CSRF_MAX_AGE_SECONDS,
     generate_csrf_token,
 )
+from tests.async_helpers import run_async
 
 
 def _make_test_app(db_path: Path) -> FastAPI:
@@ -743,11 +742,8 @@ class TestSubscribeUnsubscribeEmail:
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
             importlib.reload(updates_router_mod)
-        resp = client.get(
-            "/updates",
-            params={"prompt": "kei"},
-            cookies={KEI_POLL_VOTED_COOKIE: "1"},
-        )
+        client.cookies.set(KEI_POLL_VOTED_COOKIE, "1")
+        resp = client.get("/updates", params={"prompt": "kei"})
         assert resp.status_code == 200
         html = resp.text
         assert "Results" in html
@@ -899,7 +895,8 @@ class TestPollStandalonePage:
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
             importlib.reload(updates_router_mod)
-        resp = client.get("/poll", cookies={KEI_POLL_VOTED_COOKIE: "1"})
+        client.cookies.set(KEI_POLL_VOTED_COOKIE, "1")
+        resp = client.get("/poll")
         assert resp.status_code == 200
         html = resp.text
         assert 'href="/"' in html
@@ -922,13 +919,9 @@ class TestPollStandalonePage:
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
             importlib.reload(updates_router_mod)
-        resp = client.get(
-            "/poll",
-            cookies={
-                KEI_POLL_VOTED_COOKIE: "1",
-                KEI_POLL_CHOICE_COOKIE: "registered",
-            },
-        )
+        client.cookies.set(KEI_POLL_VOTED_COOKIE, "1")
+        client.cookies.set(KEI_POLL_CHOICE_COOKIE, "registered")
+        resp = client.get("/poll")
         assert resp.status_code == 200
         html = resp.text
         assert "Start outreach" in html
@@ -949,13 +942,9 @@ class TestPollStandalonePage:
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
             importlib.reload(updates_router_mod)
-        resp = client.get(
-            "/poll",
-            cookies={
-                KEI_POLL_VOTED_COOKIE: "1",
-                KEI_POLL_CHOICE_COOKIE: "would_want",
-            },
-        )
+        client.cookies.set(KEI_POLL_VOTED_COOKIE, "1")
+        client.cookies.set(KEI_POLL_CHOICE_COOKIE, "would_want")
+        resp = client.get("/poll")
         assert resp.status_code == 200
         html = resp.text
         assert "Learn about the issue" in html

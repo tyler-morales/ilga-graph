@@ -189,4 +189,4 @@ async def home(
     ctx["kei_poll_wide_net_line"] = KEI_POLL_WIDE_NET_LINE
     ctx["zip_known"] = zip_known_for_user(user)
     ctx["prefill_zip"] = (user.zip_code or "").strip() if user else ""
-    return templates.TemplateResponse("home.html", ctx)
+    return templates.TemplateResponse(request, "home.html", ctx)

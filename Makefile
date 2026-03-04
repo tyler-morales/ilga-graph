@@ -65,6 +65,17 @@ dev-reset: ## Clear dev cache (next make dev uses mocks/dev seed data)
 	rm -rf cache/dev
 	@echo "Dev cache cleared. Next 'make dev' will use mocks/dev/ seed data."
 
+alembic-fix-orphan: ## One-time: fix DB when alembic_version is orphan 20260303000000 (deleted migration). Sets version to head.
+	PYTHONPATH=src ILGA_PROFILE=dev $(PYTHON) -c "\
+from pathlib import Path; import sqlite3; \
+from ilga_graph.config import _env; \
+p = Path(_env('ILGA_DB_PATH', 'data/ilga.db')); \
+p = (Path('.').resolve() / p).resolve() if not p.is_absolute() else p; \
+conn = sqlite3.connect(str(p)); \
+cur = conn.execute(\"UPDATE alembic_version SET version_num = '20260303100000' WHERE version_num = '20260303000000'\"); \
+conn.commit(); n = cur.rowcount; conn.close(); \
+print('Updated' if n else 'No orphan revision (version_num was not 20260303000000)')"
+
 # ── Utilities ──────────────────────────────────────────────────────────────────
 
 install: ## Install project with dev dependencies

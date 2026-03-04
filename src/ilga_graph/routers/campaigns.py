@@ -115,6 +115,7 @@ async def admin_campaigns_list(
         counts[c.id] = await campaign_outreach_count(db, c.id)
     flash = request.query_params.get("flash", "")
     return templates.TemplateResponse(
+        request,
         "admin_campaigns.html",
         {
             "request": request,
@@ -142,6 +143,7 @@ async def admin_campaigns_new(
     """Create campaign form."""
     district_options = _district_options_from_zip_crosswalk()
     return templates.TemplateResponse(
+        request,
         "admin_campaign_form.html",
         {
             "request": request,
@@ -280,6 +282,7 @@ async def admin_campaign_detail(
     district_options = _district_options_from_zip_crosswalk()
     flash = request.query_params.get("flash", "")
     return templates.TemplateResponse(
+        request,
         "admin_campaign_form.html",
         {
             "request": request,

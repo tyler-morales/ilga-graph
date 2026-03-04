@@ -14,8 +14,6 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import FastAPI
-
-from tests.async_helpers import run_async
 from fastapi.testclient import TestClient
 
 import ilga_graph.config as cfg_mod
@@ -28,6 +26,7 @@ from ilga_graph.security import (
     CSRF_MAX_AGE_SECONDS,
     generate_csrf_token,
 )
+from tests.async_helpers import run_async
 
 
 def _make_test_app(db_path: Path) -> FastAPI:
@@ -457,10 +456,14 @@ class TestOutreachStats:
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
             run_async(_add_auth_code(email, code))
-        client.post(
-            "/auth/verify-code",
-            data=_data_with_csrf(client, {"email": email, "code": code}),
-        )
+        with patch(
+            "ilga_graph.routers.auth.rate_limit_verify_code",
+            return_value=True,
+        ):
+            client.post(
+                "/auth/verify-code",
+                data=_data_with_csrf(client, {"email": email, "code": code}),
+            )
         with patch(
             "ilga_graph.routers.outreach.find_member_by_id",
             return_value=object(),
@@ -505,10 +508,14 @@ class TestOutreachMyStats:
             importlib.reload(cfg_mod)
             importlib.reload(db_mod)
             run_async(_add_auth_code(email, code))
-        client.post(
-            "/auth/verify-code",
-            data=_data_with_csrf(client, {"email": email, "code": code}),
-        )
+        with patch(
+            "ilga_graph.routers.auth.rate_limit_verify_code",
+            return_value=True,
+        ):
+            client.post(
+                "/auth/verify-code",
+                data=_data_with_csrf(client, {"email": email, "code": code}),
+            )
         resp = client.get("/outreach/my-stats")
         assert resp.status_code == 200
         data = resp.json()

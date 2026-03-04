@@ -330,6 +330,7 @@ async def report_bug_page(request: Request):
     csrf_token = getattr(request.state, "csrf_token", None) or ""
     turnstile_site_key = None if cfg.TURNSTILE_DISABLED else (cfg.TURNSTILE_SITE_KEY or None)
     return templates.TemplateResponse(
+        request,
         "report_bug.html",
         {
             "request": request,

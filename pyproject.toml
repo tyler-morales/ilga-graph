@@ -81,3 +81,11 @@ select = ["E", "F", "I", "W", "UP"]
 "scripts/seed_outreach.py" = ["E402", "E501"]
 # Alembic: path and dotenv before app imports
 "alembic/env.py" = ["E402"]
+# Tests: long docstrings, selectors, and skip reasons
+"tests/async_helpers.py" = ["E501"]
+"tests/e2e/test_outreach.py" = ["E501"]
+"tests/test_outreach.py" = ["E501"]
+"tests/test_account.py" = ["E501"]
+"tests/test_admin.py" = ["E501"]
+"tests/e2e/test_poll.py" = ["E501"]
+"tests/test_db.py" = ["E402"]

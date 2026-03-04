@@ -50,6 +50,7 @@ templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 async def explore_page(request: Request):
     """Render the interactive Legislative Power Map."""
     return templates.TemplateResponse(
+        request,
         "explore.html",
         {
             "request": request,

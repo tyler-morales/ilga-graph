@@ -168,6 +168,7 @@ async def admin_login_page(
         return RedirectResponse(url="/admin/login?error=forbidden", status_code=302)
     csrf_token = getattr(request.state, "csrf_token", None) or ""
     return templates.TemplateResponse(
+        request,
         "admin_login.html",
         {
             "request": request,
@@ -244,6 +245,7 @@ async def admin_dashboard(
     polls_summary = await _get_active_polls_summary(db)
 
     return templates.TemplateResponse(
+        request,
         "admin_dashboard.html",
         {
             "request": request,
@@ -274,6 +276,7 @@ async def admin_flows_page(
 ):
     """Flow definitions: drawer step slugs and why-you-care steps/branches. Read-only from code."""
     return templates.TemplateResponse(
+        request,
         "admin_flows.html",
         {
             "request": request,
@@ -306,6 +309,7 @@ async def logs_dashboard(request: Request):
         by_name.sort(key=lambda x: x[1], reverse=True)
         bottleneck.append((task, by_name[:5]))
     return templates.TemplateResponse(
+        request,
         "logs.html",
         {
             "request": request,
@@ -337,6 +341,7 @@ async def admin_users_page(
     users = list(result.scalars().all())
     total_pages = (total + ADMIN_USERS_PAGE_SIZE - 1) // ADMIN_USERS_PAGE_SIZE if total else 1
     return templates.TemplateResponse(
+        request,
         "admin_users.html",
         {
             "request": request,
@@ -509,6 +514,7 @@ async def admin_outreach_page(
     """Outreach stats page: conversion rates and volumes (server-rendered)."""
     data = await _get_outreach_conversion_data(db)
     return templates.TemplateResponse(
+        request,
         "admin_outreach.html",
         {"request": request, "conversion_data": data},
     )
@@ -644,6 +650,7 @@ async def admin_polls_list(
     """List all polls with response counts. Link to create, edit, results."""
     polls_data = await _list_polls_with_counts(db)
     return templates.TemplateResponse(
+        request,
         "admin_polls.html",
         {"request": request, "polls": polls_data},
     )
@@ -656,6 +663,7 @@ async def admin_poll_new_form(
 ):
     """Form to create a new poll."""
     return templates.TemplateResponse(
+        request,
         "admin_poll_form.html",
         {
             "request": request,
@@ -732,6 +740,7 @@ async def admin_poll_edit_form(
     if poll is None:
         return RedirectResponse(url="/admin/polls", status_code=302)
     return templates.TemplateResponse(
+        request,
         "admin_poll_form.html",
         {
             "request": request,
@@ -764,6 +773,7 @@ async def admin_poll_update(
     if not options:
         p_with_opts = await _get_poll_by_id(db, poll_id)
         return templates.TemplateResponse(
+            request,
             "admin_poll_form.html",
             {
                 "request": request,
@@ -779,6 +789,7 @@ async def admin_poll_update(
         if existing.scalar_one_or_none():
             p_with_opts = await _get_poll_by_id(db, poll_id)
             return templates.TemplateResponse(
+                request,
                 "admin_poll_form.html",
                 {
                     "request": request,
@@ -826,6 +837,7 @@ async def admin_poll_results_page(
         if impact_poll is not None:
             impact_poll_id = impact_poll.id
     return templates.TemplateResponse(
+        request,
         "admin_poll_results.html",
         {
             "request": request,
@@ -939,6 +951,7 @@ async def mocks_control_panel(
         zip_code = DEFAULT_MOCK_ZIP
     legislators = _resolve_mock_legislators(zip_code) if zip_code in state.zip_to_district else []
     return templates.TemplateResponse(
+        request,
         "admin_mocks.html",
         {
             "request": request,
@@ -958,6 +971,7 @@ async def mocks_resolve(request: Request, zip: str = ""):
     zip_code = (zip or "").strip()
     if not zip_code or not _ZIP_RE.match(zip_code):
         return templates.TemplateResponse(
+            request,
             "admin_mocks_grid.html",
             {
                 "request": request,
@@ -968,6 +982,7 @@ async def mocks_resolve(request: Request, zip: str = ""):
         )
     if zip_code not in state.zip_to_district:
         return templates.TemplateResponse(
+            request,
             "admin_mocks_grid.html",
             {
                 "request": request,
@@ -978,6 +993,7 @@ async def mocks_resolve(request: Request, zip: str = ""):
         )
     legislators = _resolve_mock_legislators(zip_code)
     return templates.TemplateResponse(
+        request,
         "admin_mocks_grid.html",
         {
             "request": request,

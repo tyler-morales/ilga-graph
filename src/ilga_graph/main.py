@@ -134,14 +134,6 @@ def _get_current_action_campaign(request: Request) -> object | None:
 templates.env.globals["get_current_action_campaign"] = _get_current_action_campaign
 
 
-def _get_current_action_campaign(request: Request) -> object | None:
-    """Return active campaign for the request (set by middleware) for base template top bar."""
-    return getattr(request.state, "current_action_campaign", None)
-
-
-templates.env.globals["get_current_action_campaign"] = _get_current_action_campaign
-
-
 def _wants_html(request: Request) -> bool:
     """True if the client prefers an HTML response (e.g. browser navigation)."""
     accept = request.headers.get("accept", "")
@@ -293,12 +285,16 @@ async def _http_exception_handler(request: Request, exc: HTTPException) -> Respo
         if exc.status_code == 403:
             if request.url.path.startswith("/admin"):
                 return RedirectResponse(url="/admin/login?error=forbidden", status_code=302)
-            return templates.TemplateResponse("403.html", {"request": request}, status_code=403)
+            return templates.TemplateResponse(
+                request, "403.html", {"request": request}, status_code=403
+            )
         if exc.status_code == 404:
-            return templates.TemplateResponse("404.html", _404_context(request), status_code=404)
+            return templates.TemplateResponse(
+                request, "404.html", _404_context(request), status_code=404
+            )
         if exc.status_code >= 500:
             return templates.TemplateResponse(
-                "500.html", _error_page_context(request), status_code=exc.status_code
+                request, "500.html", _error_page_context(request), status_code=exc.status_code
             )
     detail = exc.detail if isinstance(exc.detail, (str, dict, list)) else str(exc.detail)
     return JSONResponse(status_code=exc.status_code, content={"detail": detail})
@@ -308,14 +304,18 @@ async def _validation_exception_handler(request: Request, exc: RequestValidation
     if LOGGER.isEnabledFor(logging.DEBUG):
         LOGGER.debug("Request validation failed: %s", exc.errors())
     if _wants_html(request):
-        return templates.TemplateResponse("422.html", {"request": request}, status_code=422)
+        return templates.TemplateResponse(
+            request, "422.html", {"request": request}, status_code=422
+        )
     return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
 
 async def _uncaught_exception_handler(request: Request, exc: Exception) -> Response:
     LOGGER.exception("Uncaught exception while handling %s %s", request.method, request.url.path)
     if _wants_html(request):
-        return templates.TemplateResponse("500.html", _error_page_context(request), status_code=500)
+        return templates.TemplateResponse(
+            request, "500.html", _error_page_context(request), status_code=500
+        )
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
@@ -354,5 +354,7 @@ app.include_router(_outreach_router)
 async def _catch_all_404(request: Request, full_path: str) -> Response:
     """Return custom 404 page or JSON for any path that did not match a route."""
     if _wants_html(request):
-        return templates.TemplateResponse("404.html", _404_context(request), status_code=404)
+        return templates.TemplateResponse(
+            request, "404.html", _404_context(request), status_code=404
+        )
     return JSONResponse(status_code=404, content={"detail": "Not found"})

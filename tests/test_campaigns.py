@@ -18,8 +18,6 @@ from ilga_graph.campaign_helpers import (
     is_campaign_visible_to_zip,
 )
 from ilga_graph.zip_crosswalk import ZipDistrictInfo
-
-
 from tests.async_helpers import run_async as _run
 
 

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
-from typing import Any, Coroutine, TypeVar
+from collections.abc import Coroutine
+from typing import Any, TypeVar
 
 T = TypeVar("T")
 

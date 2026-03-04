@@ -74,7 +74,7 @@ async def dev_playground(request: Request, scene: str | None = None):
     if not cfg.DEV_MODE:
         return JSONResponse(status_code=404, content={"detail": "Not available"})
     ctx = _playground_context(request, scene)
-    return templates.TemplateResponse("dev_playground.html", ctx)
+    return templates.TemplateResponse(request, "dev_playground.html", ctx)
 
 
 @router.get("/playground/{scene_id}", include_in_schema=False)
@@ -83,4 +83,4 @@ async def dev_playground_scene(request: Request, scene_id: str):
     if not cfg.DEV_MODE:
         return JSONResponse(status_code=404, content={"detail": "Not available"})
     ctx = _playground_context(request, scene_id)
-    return templates.TemplateResponse("dev_playground.html", ctx)
+    return templates.TemplateResponse(request, "dev_playground.html", ctx)
