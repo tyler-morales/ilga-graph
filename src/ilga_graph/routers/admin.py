@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -10,7 +11,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import String, cast, delete, desc, func, select
+from sqlalchemy import String, case, cast, delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -136,6 +137,48 @@ async def _outreach_volume_for_window(
     }
 
 
+async def _outreach_by_day(
+    db: AsyncSession, now: datetime, *, days: int = 30
+) -> list[dict[str, Any]]:
+    """Return one row per day for the last `days`: date, label, calls, emails.
+    Uses UTC date; SQLite date(created_at) for grouping. Fills missing days with 0.
+    """
+    window_start = now - timedelta(days=days)
+    day_col = func.date(OutreachEvent.created_at).label("day")
+    q = (
+        select(
+            day_col,
+            func.sum(case((OutreachEvent.kind == "call", 1), else_=0)).label("calls"),
+            func.sum(case((OutreachEvent.kind == "email", 1), else_=0)).label("emails"),
+        )
+        .where(OutreachEvent.created_at >= window_start)
+        .where(OutreachEvent.created_at <= now)
+        .where(OutreachEvent.kind.in_(["call", "email"]))
+        .group_by(day_col)
+    )
+    r = await db.execute(q)
+    by_date: dict[str, tuple[int, int]] = {}
+    for row in r.all():
+        d = row[0]
+        if d:
+            by_date[str(d)] = (row[1] or 0, row[2] or 0)
+    out: list[dict[str, Any]] = []
+    for i in range(days):
+        d = now.date() - timedelta(days=days - 1 - i)
+        date_str = d.isoformat()
+        calls, emails = by_date.get(date_str, (0, 0))
+        label = f"{d.month}/{d.day}"
+        out.append(
+            {
+                "date": date_str,
+                "label": label,
+                "calls": calls,
+                "emails": emails,
+            }
+        )
+    return out
+
+
 async def _latest_sent_update(db: AsyncSession) -> Update | None:
     """Return the most recently sent update, or None."""
     q = select(Update).where(Update.sent_at.isnot(None)).order_by(Update.sent_at.desc()).limit(1)
@@ -230,6 +273,7 @@ async def admin_dashboard(
 
     outreach_trend_7d = await _outreach_volume_for_window(db, now, days=7)
     outreach_trend_30d = await _outreach_volume_for_window(db, now, days=30)
+    outreach_by_day = await _outreach_by_day(db, now, days=30)
 
     last_sent_update = await _latest_sent_update(db)
     last_update_sent_at = last_sent_update.sent_at if last_sent_update else None
@@ -241,6 +285,27 @@ async def admin_dashboard(
     active_campaign_actions = (
         await campaign_outreach_count(db, active_campaign.id) if active_campaign else 0
     )
+    campaign_actions_7d = 0
+    if active_campaign:
+        window_7d_end = now
+        window_7d_start = now - timedelta(days=7)
+        q_7d = (
+            select(func.count(OutreachEvent.id))
+            .where(OutreachEvent.campaign_id == active_campaign.id)
+            .where(OutreachEvent.created_at >= window_7d_start)
+            .where(OutreachEvent.created_at <= window_7d_end)
+        )
+        campaign_actions_7d = (await db.execute(q_7d)).scalar() or 0
+
+    dashboard_conversions = {}
+    if conversion_data.get("conversions"):
+        conv = conversion_data["conversions"]
+        dashboard_conversions = {
+            "drawer_to_outreach_pct": conv.get("drawer_to_outreach", {}).get("conversion_pct"),
+            "signed_in_to_outreach_pct": conv.get("signed_in_to_outreach", {}).get(
+                "conversion_pct"
+            ),
+        }
 
     top_raw = await _top_members_by_outreach_count(db, limit=5)
     top_members_by_contacts = []
@@ -258,6 +323,7 @@ async def admin_dashboard(
         "admin_dashboard.html",
         {
             "request": request,
+            "data_updated_at": now,
             "total_users": total_users,
             "subscribers": subscribers,
             "new_users_7d": new_users_7d,
@@ -267,11 +333,15 @@ async def admin_dashboard(
             "outreach_summary": outreach_summary,
             "outreach_trend_7d": outreach_trend_7d,
             "outreach_trend_30d": outreach_trend_30d,
+            "outreach_by_day": outreach_by_day,
+            "outreach_by_day_json": json.dumps(outreach_by_day),
             "last_update_sent_at": last_update_sent_at,
             "last_update_title": last_update_title,
             "subscriber_rate_pct": subscriber_rate_pct,
             "active_campaign": active_campaign,
             "active_campaign_actions": active_campaign_actions,
+            "campaign_actions_7d": campaign_actions_7d,
+            "dashboard_conversions": dashboard_conversions,
             "polls_summary": polls_summary,
             "poll_campaign_goal": poll_campaign_goal,
             "top_members_by_contacts": top_members_by_contacts,

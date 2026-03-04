@@ -5,153 +5,222 @@
 {% set outreach_total = os.total_calls + os.total_emails %}
 {% set calls_pct = (100 * os.total_calls / outreach_total)|round(1) if outreach_total else 0 %}
 {% set emails_pct = (100 * os.total_emails / outreach_total)|round(1) if outreach_total else 0 %}
+{% set conv = dashboard_conversions or {} %}
 <div class="admin-dashboard">
   <header class="admin-dashboard-header">
     <h1 id="admin-dashboard-heading">Admin</h1>
+    <p class="admin-dashboard-subtitle" id="admin-dashboard-desc">Status of the advocacy effort. Lobbying, communications, grassroots.</p>
+    {% if data_updated_at %}
+    <p class="admin-dashboard-updated" aria-live="polite">
+      Last updated: <time datetime="{{ data_updated_at.isoformat() }}">{{ data_updated_at.strftime('%Y-%m-%d %H:%M') }} UTC</time>
+    </p>
+    {% endif %}
     {% include "_admin_nav.html" %}
   </header>
 
-  <section class="admin-dashboard-stats" aria-labelledby="admin-dashboard-stats-heading">
+  <section class="admin-dashboard-stats" aria-labelledby="admin-dashboard-stats-heading" aria-describedby="admin-dashboard-desc">
     <h2 id="admin-dashboard-stats-heading" class="admin-dashboard-stats-heading">At a glance</h2>
 
-    <h3 id="admin-dashboard-key-heading" class="admin-dashboard-stats-subheading">Key metrics</h3>
-    <div class="admin-dashboard-stats-grid admin-dashboard-stats-grid--primary" aria-labelledby="admin-dashboard-key-heading">
-      <div class="admin-dashboard-stat admin-dashboard-stat--primary">
-        <span class="admin-dashboard-stat-value">{{ total_users }}</span>
-        <span class="admin-dashboard-stat-label">Users</span>
+    <!-- Block 1: Status — are we on track? -->
+    <div class="admin-dashboard-block admin-dashboard-block--status">
+      <div class="admin-dashboard-kpi-row" role="group" aria-label="Headline metrics">
+        <span class="admin-dashboard-kpi"><span class="admin-dashboard-kpi-value">{{ os.total_outreach_actions }}</span> <span class="admin-dashboard-kpi-label">Outreach actions</span><span class="admin-dashboard-kpi-meta">last {{ os.window_days }}d</span></span>
+        <span class="admin-dashboard-kpi"><span class="admin-dashboard-kpi-value">{{ os.users_completed_outreach }}</span> <span class="admin-dashboard-kpi-label">Advocates</span><span class="admin-dashboard-kpi-meta">last {{ os.window_days }}d</span></span>
+        <span class="admin-dashboard-kpi"><span class="admin-dashboard-kpi-value">{{ total_users }}</span> <span class="admin-dashboard-kpi-label">Users</span></span>
+        <span class="admin-dashboard-kpi"><span class="admin-dashboard-kpi-value">{{ subscribers }}</span> <span class="admin-dashboard-kpi-label">Subscribers</span></span>
       </div>
-      <div class="admin-dashboard-stat admin-dashboard-stat--primary">
-        <span class="admin-dashboard-stat-value">{{ subscribers }}</span>
-        <span class="admin-dashboard-stat-label">Subscribers</span>
-      </div>
-      <div class="admin-dashboard-stat admin-dashboard-stat--primary">
-        <span class="admin-dashboard-stat-value">{{ os.total_outreach_actions }}</span>
-        <span class="admin-dashboard-stat-label">Outreach actions</span>
-        <span class="admin-dashboard-stat-sublabel">last {{ os.window_days }}d</span>
-      </div>
-      <div class="admin-dashboard-stat admin-dashboard-stat--primary">
-        <span class="admin-dashboard-stat-value">{{ os.users_completed_outreach }}</span>
-        <span class="admin-dashboard-stat-label">Advocates</span>
-        <span class="admin-dashboard-stat-sublabel">last {{ os.window_days }}d</span>
-      </div>
-    </div>
-
-    <div class="admin-dashboard-charts" aria-label="Charts">
-      <div class="admin-dashboard-chart">
-        <span class="admin-dashboard-chart-label" id="admin-chart-list-label">List health</span>
-        <div class="admin-dashboard-bar-wrap" role="img" aria-labelledby="admin-chart-list-label" aria-valuenow="{{ subscriber_rate_pct }}" aria-valuemin="0" aria-valuemax="100">
-          <div class="admin-dashboard-bar admin-dashboard-bar--fill" style="width: {{ subscriber_rate_pct }}%"></div>
-        </div>
-        <span class="admin-dashboard-chart-caption">{{ subscribers }} of {{ total_users }} subscribed ({{ subscriber_rate_pct }}%)</span>
-      </div>
-      <div class="admin-dashboard-chart">
-        <span class="admin-dashboard-chart-label" id="admin-chart-outreach-label">Outreach mix (last {{ os.window_days }}d)</span>
-        <div class="admin-dashboard-bar admin-dashboard-bar--stacked" role="img" aria-labelledby="admin-chart-outreach-label">
-          <span class="admin-dashboard-bar-segment admin-dashboard-bar-segment--calls" style="width: {{ calls_pct }}%" title="Calls: {{ os.total_calls }}"></span>
-          <span class="admin-dashboard-bar-segment admin-dashboard-bar-segment--emails" style="width: {{ emails_pct }}%" title="Emails: {{ os.total_emails }}"></span>
-        </div>
-        <span class="admin-dashboard-chart-caption">{{ os.total_calls }} calls · {{ os.total_emails }} emails</span>
-      </div>
-    </div>
-
-    <h3 id="admin-dashboard-trend-heading" class="admin-dashboard-stats-subheading">Outreach trend</h3>
-    <div class="admin-dashboard-trend" aria-labelledby="admin-dashboard-trend-heading">
-      <div class="admin-dashboard-trend-row">
-        <span class="admin-dashboard-trend-label">Last 7 days</span>
-        <span class="admin-dashboard-trend-value">{{ outreach_trend_7d.total_calls }} calls · {{ outreach_trend_7d.total_emails }} emails</span>
-      </div>
-      <div class="admin-dashboard-trend-row">
-        <span class="admin-dashboard-trend-label">Last 30 days</span>
-        <span class="admin-dashboard-trend-value">{{ outreach_trend_30d.total_calls }} calls · {{ outreach_trend_30d.total_emails }} emails</span>
-      </div>
-    </div>
-
-    <h3 id="admin-dashboard-campaign-heading" class="admin-dashboard-stats-subheading">Current action</h3>
-    <div class="admin-dashboard-stats-grid admin-dashboard-stats-grid--secondary" aria-labelledby="admin-dashboard-campaign-heading">
-      <div class="admin-dashboard-stat admin-dashboard-stat--secondary">
-        {% if active_campaign %}
-        <span class="admin-dashboard-stat-value">{{ active_campaign_actions }}</span>
-        <span class="admin-dashboard-stat-label">Actions for active campaign</span>
-        <span class="admin-dashboard-stat-sublabel"><a href="/admin/campaigns/{{ active_campaign.id }}">{{ active_campaign.title }}</a></span>
-        <span class="admin-dashboard-stat-sublabel">{% if active_campaign.end_at %}Ends <time datetime="{{ active_campaign.end_at.isoformat() }}">{{ active_campaign.end_at.strftime('%Y-%m-%d') }}</time>{% else %}No end date{% endif %}</span>
+      <div class="admin-dashboard-status-row">
+        {% if active_campaign and campaign_actions_7d == 0 %}
+        <span class="admin-dashboard-status-pill admin-dashboard-status-pill--attention" role="status" aria-live="polite">Needs attention</span>
         {% else %}
-        <span class="admin-dashboard-stat-value">—</span>
-        <span class="admin-dashboard-stat-label">No active campaign</span>
-        <span class="admin-dashboard-stat-sublabel"><a href="/admin/campaigns">Manage campaigns</a></span>
+        <span class="admin-dashboard-status-pill admin-dashboard-status-pill--ok" role="status">On track</span>
         {% endif %}
+        <span class="admin-dashboard-7d-summary">This week: {{ outreach_trend_7d.total_calls }} calls · {{ outreach_trend_7d.total_emails }} emails</span>
       </div>
     </div>
 
-    <h3 id="admin-dashboard-polls-heading" class="admin-dashboard-stats-subheading">Current poll(s)</h3>
-    <div class="admin-dashboard-stats-grid admin-dashboard-stats-grid--secondary" aria-labelledby="admin-dashboard-polls-heading">
-      <div class="admin-dashboard-stat admin-dashboard-stat--secondary">
-        <span class="admin-dashboard-stat-value">{{ polls_summary.active_count }}</span>
-        <span class="admin-dashboard-stat-label">Active poll(s)</span>
-        <span class="admin-dashboard-stat-sublabel">{{ polls_summary.total_responses }} total responses</span>
-        {% if poll_campaign_goal and poll_campaign_goal > 0 %}
-        <span class="admin-dashboard-stat-sublabel">Poll campaign goal: {{ poll_campaign_goal }} — {{ polls_summary.total_responses }} of {{ poll_campaign_goal }} responses</span>
-        {% endif %}
-        <span class="admin-dashboard-stat-sublabel"><a href="/admin/polls">Manage polls</a></span>
-      </div>
-    </div>
+    <!-- Block 2: Outreach & list — what changed? (line chart + key metrics + list/mix) -->
+    <div class="admin-dashboard-block">
+      <h3 id="admin-outreach-period-heading" class="admin-dashboard-stats-subheading">Outreach this period</h3>
+      <figure class="admin-dashboard-outreach-chart-wrap" aria-labelledby="admin-outreach-period-heading" aria-describedby="admin-outreach-chart-desc">
+        <canvas id="admin-outreach-line-chart" class="admin-dashboard-outreach-chart" role="img" aria-labelledby="admin-outreach-period-heading" aria-describedby="admin-outreach-chart-desc"></canvas>
+        <figcaption id="admin-outreach-chart-desc" class="admin-dashboard-outreach-chart-caption">
+          Last 7 days: {{ outreach_trend_7d.total_calls }} calls · {{ outreach_trend_7d.total_emails }} emails. Last 30 days: {{ outreach_trend_30d.total_calls }} calls · {{ outreach_trend_30d.total_emails }} emails.
+        </figcaption>
+      </figure>
 
-    <h3 id="admin-dashboard-email-heading" class="admin-dashboard-stats-subheading">Email</h3>
-    <div class="admin-dashboard-stats-grid admin-dashboard-stats-grid--secondary" aria-labelledby="admin-dashboard-email-heading">
-      <div class="admin-dashboard-stat admin-dashboard-stat--secondary">
-        <span class="admin-dashboard-stat-value">{{ campaigns_sent }}</span>
-        <span class="admin-dashboard-stat-label">Campaigns sent</span>
-      </div>
-      <div class="admin-dashboard-stat admin-dashboard-stat--secondary">
-        <span class="admin-dashboard-stat-value">{{ total_emails_sent }}</span>
-        <span class="admin-dashboard-stat-label">Emails delivered</span>
-      </div>
-      <div class="admin-dashboard-stat admin-dashboard-stat--secondary">
-        <span class="admin-dashboard-stat-value">{{ drafts }}</span>
-        <span class="admin-dashboard-stat-label">Drafts</span>
-      </div>
-    </div>
-    <p class="admin-dashboard-email-last-sent">
-      {% if last_update_sent_at %}
-      Last update sent: <time datetime="{{ last_update_sent_at.isoformat() }}">{{ last_update_sent_at.strftime('%B %d, %Y') }}</time>{% if last_update_title %} — {{ last_update_title }}{% endif %}
-      {% else %}
-      No updates sent yet.
-      {% endif %}
-    </p>
-
-    <h3 id="admin-dashboard-growth-heading" class="admin-dashboard-stats-subheading">Growth & funnel</h3>
-    <div class="admin-dashboard-stats-grid admin-dashboard-stats-grid--supporting" aria-labelledby="admin-dashboard-growth-heading">
-      <div class="admin-dashboard-stat admin-dashboard-stat--supporting">
-        <span class="admin-dashboard-stat-value">{{ new_users_7d }}</span>
-        <span class="admin-dashboard-stat-label">New this week</span>
-      </div>
-      <div class="admin-dashboard-stat admin-dashboard-stat--supporting">
-        <span class="admin-dashboard-stat-value">{{ os.identities_opened_drawer }}</span>
-        <span class="admin-dashboard-stat-label">Drawer opens</span>
-        <span class="admin-dashboard-stat-sublabel">last {{ os.window_days }}d</span>
-      </div>
-    </div>
-    <p class="admin-dashboard-flow-defs"><a href="/admin/flows">Flow definitions</a> — drawer and why-you-care step slugs and branch content.</p>
-
-    <h3 id="admin-dashboard-top-members-heading" class="admin-dashboard-stats-subheading">Top legislators by contact volume</h3>
-    <figure class="admin-dashboard-top-members" aria-labelledby="admin-dashboard-top-members-heading">
-      {% if top_members_by_contacts %}
-      {% set counts = top_members_by_contacts|map(attribute='count')|list %}
-      {% set max_count = (counts|max) if counts else 1 %}
-      <ul class="admin-dashboard-contact-chart" role="list">
-        {% for item in top_members_by_contacts %}
-        <li class="admin-dashboard-contact-chart__row">
-          <span class="admin-dashboard-contact-chart__name" id="admin-chart-name-{{ loop.index }}">{{ item.name or item.member_id }}</span>
-          <div class="admin-dashboard-contact-chart__bar-wrap" role="img" aria-labelledby="admin-chart-name-{{ loop.index }}" aria-label="{{ item.name or item.member_id }}: {{ item.count }} contacts">
-            <div class="admin-dashboard-contact-chart__bar" style="--contact-pct: {{ (100 * item.count / max_count)|round(1) }}%;"></div>
+      <div class="admin-dashboard-charts" aria-label="List and outreach mix">
+        <div class="admin-dashboard-chart">
+          <span class="admin-dashboard-chart-label" id="admin-chart-list-label">List health</span>
+          <div class="admin-dashboard-bar-wrap" role="img" aria-labelledby="admin-chart-list-label" aria-valuenow="{{ subscriber_rate_pct }}" aria-valuemin="0" aria-valuemax="100">
+            <div class="admin-dashboard-bar admin-dashboard-bar--fill" style="width: {{ subscriber_rate_pct }}%"></div>
           </div>
-          <span class="admin-dashboard-contact-chart__count" aria-hidden="true">{{ item.count }}</span>
-        </li>
-        {% endfor %}
-      </ul>
-      {% else %}
-      <p class="admin-dashboard-top-members-empty">No outreach recorded yet.</p>
+          <span class="admin-dashboard-chart-caption">{{ subscribers }} of {{ total_users }} subscribed ({{ subscriber_rate_pct }}%)</span>
+        </div>
+        <div class="admin-dashboard-chart">
+          <span class="admin-dashboard-chart-label" id="admin-chart-outreach-label">Outreach mix (last {{ os.window_days }}d)</span>
+          <div class="admin-dashboard-bar admin-dashboard-bar--stacked" role="img" aria-labelledby="admin-chart-outreach-label">
+            <span class="admin-dashboard-bar-segment admin-dashboard-bar-segment--calls" style="width: {{ calls_pct }}%" title="Calls: {{ os.total_calls }}"></span>
+            <span class="admin-dashboard-bar-segment admin-dashboard-bar-segment--emails" style="width: {{ emails_pct }}%" title="Emails: {{ os.total_emails }}"></span>
+          </div>
+          <span class="admin-dashboard-chart-caption">{{ os.total_calls }} calls · {{ os.total_emails }} emails</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Block 3: Current objective -->
+    <div class="admin-dashboard-block">
+      <h3 id="admin-dashboard-objective-heading" class="admin-dashboard-stats-subheading">Current objective</h3>
+      {% if active_campaign and campaign_actions_7d == 0 %}
+      <div class="admin-dashboard-attention" role="status" aria-live="polite">
+        <p>No actions for current campaign this week—consider a nudge.</p>
+      </div>
       {% endif %}
-    </figure>
+      <div class="admin-dashboard-stats-grid admin-dashboard-stats-grid--secondary" aria-labelledby="admin-dashboard-objective-heading">
+        <div class="admin-dashboard-stat admin-dashboard-stat--secondary">
+          {% if active_campaign %}
+          <span class="admin-dashboard-stat-value">{{ active_campaign_actions }}</span>
+          <span class="admin-dashboard-stat-label">Actions for active campaign</span>
+          <span class="admin-dashboard-stat-sublabel"><a href="/admin/campaigns/{{ active_campaign.id }}">{{ active_campaign.title }}</a></span>
+          <span class="admin-dashboard-stat-sublabel">{% if active_campaign.end_at %}Ends <time datetime="{{ active_campaign.end_at.isoformat() }}">{{ active_campaign.end_at.strftime('%Y-%m-%d') }}</time>{% else %}No end date{% endif %}</span>
+          {% elif poll_campaign_goal and poll_campaign_goal > 0 %}
+          <span class="admin-dashboard-stat-value">{{ polls_summary.total_responses }} / {{ poll_campaign_goal }}</span>
+          <span class="admin-dashboard-stat-label">Current action: poll campaign</span>
+          <span class="admin-dashboard-stat-sublabel">Poll campaign — {{ polls_summary.total_responses }} of {{ poll_campaign_goal }} responses</span>
+          <span class="admin-dashboard-stat-sublabel"><a href="/admin/polls">Manage polls</a> · <a href="/admin/campaigns">Outreach campaigns</a></span>
+          {% else %}
+          <span class="admin-dashboard-stat-value">—</span>
+          <span class="admin-dashboard-stat-label">No active campaign</span>
+          <span class="admin-dashboard-stat-sublabel"><a href="/admin/campaigns">Manage campaigns</a></span>
+          {% endif %}
+        </div>
+        <div class="admin-dashboard-stat admin-dashboard-stat--secondary">
+          <span class="admin-dashboard-stat-value">{{ polls_summary.active_count }}</span>
+          <span class="admin-dashboard-stat-label">Active poll(s)</span>
+          <span class="admin-dashboard-stat-sublabel">{{ polls_summary.total_responses }} total responses</span>
+          {% if poll_campaign_goal and poll_campaign_goal > 0 %}
+          <span class="admin-dashboard-stat-sublabel">Poll campaign goal: {{ poll_campaign_goal }} — {{ polls_summary.total_responses }} of {{ poll_campaign_goal }} responses</span>
+          {% endif %}
+          <span class="admin-dashboard-stat-sublabel"><a href="/admin/polls">Manage polls</a></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Block 4: Funnel -->
+    <div class="admin-dashboard-block">
+      <h3 id="admin-dashboard-funnel-heading" class="admin-dashboard-stats-subheading">Funnel</h3>
+      <div class="admin-dashboard-stats-grid admin-dashboard-stats-grid--supporting" aria-labelledby="admin-dashboard-funnel-heading">
+        <div class="admin-dashboard-stat admin-dashboard-stat--supporting">
+          <span class="admin-dashboard-stat-value">{{ new_users_7d }}</span>
+          <span class="admin-dashboard-stat-label">New this week</span>
+        </div>
+        <div class="admin-dashboard-stat admin-dashboard-stat--supporting">
+          <span class="admin-dashboard-stat-value">{{ os.identities_opened_drawer }}</span>
+          <span class="admin-dashboard-stat-label">Drawer opens</span>
+          <span class="admin-dashboard-stat-sublabel">last {{ os.window_days }}d</span>
+        </div>
+      </div>
+      {% if conv.drawer_to_outreach_pct is not none or conv.signed_in_to_outreach_pct is not none %}
+      <p class="admin-dashboard-funnel-conversion">
+        {% if conv.drawer_to_outreach_pct is not none %}Drawer → completed outreach: {{ conv.drawer_to_outreach_pct }}%{% endif %}
+        {% if conv.signed_in_to_outreach_pct is not none %}{% if conv.drawer_to_outreach_pct is not none %} · {% endif %}Signed in → outreach: {{ conv.signed_in_to_outreach_pct }}%{% endif %}
+        (last {{ os.window_days }}d). <a href="/admin/outreach">Full funnel (Stats)</a>
+      </p>
+      {% else %}
+      <p class="admin-dashboard-flow-defs"><a href="/admin/outreach">Full funnel (Stats)</a></p>
+      {% endif %}
+    </div>
+
+    <!-- Block 5: Communications -->
+    <div class="admin-dashboard-block">
+      <h3 id="admin-dashboard-comms-heading" class="admin-dashboard-stats-subheading">Communications</h3>
+      <div class="admin-dashboard-stats-grid admin-dashboard-stats-grid--secondary" aria-labelledby="admin-dashboard-comms-heading">
+        <div class="admin-dashboard-stat admin-dashboard-stat--secondary">
+          <span class="admin-dashboard-stat-value">{{ campaigns_sent }}</span>
+          <span class="admin-dashboard-stat-label">Campaigns sent</span>
+        </div>
+        <div class="admin-dashboard-stat admin-dashboard-stat--secondary">
+          <span class="admin-dashboard-stat-value">{{ total_emails_sent }}</span>
+          <span class="admin-dashboard-stat-label">Emails delivered</span>
+        </div>
+        <div class="admin-dashboard-stat admin-dashboard-stat--secondary">
+          <span class="admin-dashboard-stat-value">{{ drafts }}</span>
+          <span class="admin-dashboard-stat-label">Drafts</span>
+        </div>
+      </div>
+      <p class="admin-dashboard-email-last-sent">
+        {% if last_update_sent_at %}
+        Last update sent: <time datetime="{{ last_update_sent_at.isoformat() }}">{{ last_update_sent_at.strftime('%B %d, %Y') }}</time>{% if last_update_title %} — {{ last_update_title }}{% endif %}
+        {% else %}
+        No updates sent yet.
+        {% endif %}
+      </p>
+    </div>
+
+    <!-- Block 6: Grassroots & scale of communications -->
+    <div class="admin-dashboard-block">
+      <h3 id="admin-dashboard-grassroots-heading" class="admin-dashboard-stats-subheading">Grassroots / list</h3>
+      <p class="admin-dashboard-grassroots-note">{{ subscribers }} of {{ total_users }} subscribed ({{ subscriber_rate_pct }}%). {{ new_users_7d }} new this week. <a href="/admin/users">Users</a></p>
+
+      <h3 id="admin-dashboard-top-members-heading" class="admin-dashboard-stats-subheading">Scale of communications</h3>
+      <figure class="admin-dashboard-top-members" aria-labelledby="admin-dashboard-top-members-heading">
+        {% if top_members_by_contacts %}
+        {% set counts = top_members_by_contacts|map(attribute='count')|list %}
+        {% set max_count = (counts|max) if counts else 1 %}
+        <ul class="admin-dashboard-contact-chart" role="list">
+          {% for item in top_members_by_contacts %}
+          <li class="admin-dashboard-contact-chart__row">
+            <span class="admin-dashboard-contact-chart__name" id="admin-chart-name-{{ loop.index }}">{{ item.name or item.member_id }}</span>
+            <div class="admin-dashboard-contact-chart__bar-wrap" role="img" aria-labelledby="admin-chart-name-{{ loop.index }}" aria-label="{{ item.name or item.member_id }}: {{ item.count }} contacts">
+              <div class="admin-dashboard-contact-chart__bar" style="--contact-pct: {{ (100 * item.count / max_count)|round(1) }}%;"></div>
+            </div>
+            <span class="admin-dashboard-contact-chart__count" aria-hidden="true">{{ item.count }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="admin-dashboard-top-members-empty">No outreach recorded yet.</p>
+        {% endif %}
+      </figure>
+    </div>
+
+    <!-- Block 7: Follow-up -->
+    <div class="admin-dashboard-block">
+      <p class="admin-dashboard-postmortem">When a campaign ends, run a post-campaign evaluation (survey by function: administration, communications, grassroots, lobbying, etc.). See Hardball Ch 8.</p>
+      <p class="admin-dashboard-flow-defs"><a href="/admin/flows">Flow definitions</a> — drawer and why-you-care step slugs and branch content.</p>
+    </div>
   </section>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+<script>
+(function () {
+  var data = {{ outreach_by_day_json | safe }};
+  if (!data || !data.length) return;
+  var labels = data.map(function (d) { return d.label; });
+  var calls = data.map(function (d) { return d.calls; });
+  var emails = data.map(function (d) { return d.emails; });
+  var ctx = document.getElementById('admin-outreach-line-chart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'Calls', data: calls, borderColor: 'rgb(30, 136, 229)', backgroundColor: 'rgba(30, 136, 229, 0.1)', fill: true, tension: 0.2 },
+        { label: 'Emails', data: emails, borderColor: 'rgb(76, 175, 80)', backgroundColor: 'rgba(76, 175, 80, 0.1)', fill: true, tension: 0.2 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 2.5,
+      plugins: { legend: { position: 'top' } },
+      scales: {
+        y: { beginAtZero: true, ticks: { precision: 0 } },
+        x: { maxTicksLimit: 12 }
+      }
+    }
+  });
+})();
+</script>
 {% endblock %}

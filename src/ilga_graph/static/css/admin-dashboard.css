@@ -8,7 +8,142 @@
 
 .admin-dashboard-header h1 {
   margin-top: 0;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.admin-dashboard-subtitle {
+  margin: 0 0 0.75rem 0;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-muted, #555);
+}
+
+.admin-dashboard-updated {
+  margin: 0 0 0.75rem 0;
+  font-size: var(--font-size-xs, 0.8125rem);
+  color: var(--color-text-quiet, #777);
+}
+
+.admin-dashboard-updated time {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Block spacing (inverted pyramid sections) */
+.admin-dashboard-block {
+  margin-bottom: var(--space-2xl, 1.5rem);
+}
+
+.admin-dashboard-block--status {
+  margin-bottom: var(--space-xl, 1.25rem);
+}
+
+/* Top-rail: headline KPIs + status pill + 7d summary */
+.admin-dashboard-kpi-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-lg, 1rem) var(--space-2xl, 1.5rem);
+  align-items: baseline;
+  margin-bottom: var(--space-sm, 0.5rem);
+}
+
+.admin-dashboard-kpi {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25em;
+}
+
+.admin-dashboard-kpi-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text, #222);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-dashboard-kpi-label {
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-muted, #555);
+}
+
+.admin-dashboard-kpi-meta {
+  font-size: var(--font-size-xs, 0.8125rem);
+  color: var(--color-text-quiet, #777);
+}
+
+.admin-dashboard-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md, 12px);
+}
+
+.admin-dashboard-status-pill {
+  display: inline-block;
+  padding: 0.2em 0.6em;
+  font-size: var(--font-size-sm, 0.875rem);
+  font-weight: 600;
+  border-radius: var(--radius-pill, 999px);
+  border: 1px solid transparent;
+}
+
+.admin-dashboard-status-pill--ok {
+  background: var(--color-success-bg, #ecfdf5);
+  color: var(--color-success, #047857);
+  border-color: var(--color-success, #047857);
+}
+
+.admin-dashboard-status-pill--attention {
+  background: var(--color-warning-bg, #fef3c7);
+  color: var(--color-warning, #d97706);
+  border-color: var(--color-warning, #d97706);
+}
+
+.admin-dashboard-status-pill:focus-visible {
+  outline: 2px solid var(--color-primary, #1e88e5);
+  outline-offset: 2px;
+}
+
+.admin-dashboard-7d-summary {
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-muted, #555);
+}
+
+.admin-dashboard-attention {
+  margin: var(--space-sm, 0.5rem) 0;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-warning-bg, #fef3c7);
+  border-left: 3px solid var(--color-warning, #d97706);
+  font-size: var(--font-size-sm, 0.875rem);
+}
+
+.admin-dashboard-attention p {
+  margin: 0;
+}
+
+.admin-dashboard-funnel-conversion {
+  margin-top: var(--space-sm, 0.5rem);
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-muted, #555);
+}
+
+.admin-dashboard-funnel-conversion a {
+  color: var(--color-primary, #1e88e5);
+}
+
+.admin-dashboard-grassroots-note {
+  margin: var(--space-sm, 0.5rem) 0 0 0;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-muted, #555);
+}
+
+.admin-dashboard-grassroots-note a {
+  color: var(--color-primary, #1e88e5);
+}
+
+.admin-dashboard-postmortem {
+  margin-top: var(--space-lg, 1rem);
+  margin-bottom: 0.25rem;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-muted, #555);
 }
 
 .admin-nav {
@@ -242,6 +377,23 @@
 
 .admin-dashboard-trend-value {
   color: var(--color-text, #222);
+}
+
+/* Outreach this period: line chart (last 30 days) */
+.admin-dashboard-outreach-chart-wrap {
+  margin: var(--space-sm, 0.5rem) 0 var(--space-lg, 1rem) 0;
+  max-width: 42em;
+}
+
+.admin-dashboard-outreach-chart {
+  display: block;
+  max-height: 220px;
+}
+
+.admin-dashboard-outreach-chart-caption {
+  margin-top: var(--space-sm, 0.5rem);
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-quiet, #777);
 }
 
 .admin-dashboard-flow-defs {
