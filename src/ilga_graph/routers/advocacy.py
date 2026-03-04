@@ -914,18 +914,6 @@ async def set_call_pref(
     When pref is 'none' (user declined every contact method in the tree), we do not persist
     and return the tree with a message to select at least one. pref='no' means email-only (valid).
     """
-    # #region agent log
-    try:
-        _dbg = open("/Users/tyler/Projects/Code/hardball/.cursor/debug-4332d0.log", "a")
-        _dbg.write(
-            '{"sessionId":"4332d0","hypothesisId":"H1","location":"advocacy.py:set_call_pref",'
-            '"message":"pref received","data":{"pref":' + repr(pref) + "},"
-            '"timestamp":' + str(__import__("time").time_ns() // 1_000_000) + "}\n"
-        )
-        _dbg.close()
-    except Exception:
-        pass
-    # #endregion
     if pref == "none":
         return templates.TemplateResponse(
             request,
@@ -937,18 +925,6 @@ async def set_call_pref(
             status_code=422,
             detail="pref must be one of: no, yes, call_only, elevator",
         )
-    # #region agent log
-    try:
-        _dbg3 = open("/Users/tyler/Projects/Code/hardball/.cursor/debug-4332d0.log", "a")
-        _dbg3.write(
-            '{"sessionId":"4332d0","hypothesisId":"H1","location":"advocacy.py:set_call_pref",'
-            '"message":"branch: persisting pref (success)","data":{"pref":' + repr(pref) + "},"
-            '"timestamp":' + str(__import__("time").time_ns() // 1_000_000) + "}\n"
-        )
-        _dbg3.close()
-    except Exception:
-        pass
-    # #endregion
     if user:
         user.call_pref = pref
         await db.commit()
