@@ -26,7 +26,7 @@ from fastapi import (
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import advocacy_helpers as ah
@@ -1070,27 +1070,44 @@ async def kei_status_post(
             return RedirectResponse(
                 _kei_status_redirect_url(poll_id, prompt_q, "error=zip"), status_code=303
             )
-    # Idempotent: if user already voted (e.g. anon attributed on sign-in), return success.
+    # Idempotent: if user already voted with same choice, return success. Otherwise allow update.
     if user and getattr(user, "kei_status", None) is not None:
         existing_status = user.kei_status
         existing_impact = getattr(user, "kei_impact_slug", None) or impact_val
-        if request.headers.get("HX-Request"):
-            results = await _get_kei_status_results(db)
-            impact_results = await _get_kei_impact_results(db)
-            if poll_id == "home-kei-poll":
-                why_you_care_branch = get_why_you_care_branch_for_selection(existing_status)
-                wyc_pill_icon_slug = (
-                    "owner"
-                    if existing_status in ("registered", "revoked", "denied")
-                    else existing_status
-                )
+        same_choice = existing_status == validated and existing_impact == impact_val
+        if same_choice:
+            if request.headers.get("HX-Request"):
+                results = await _get_kei_status_results(db)
+                impact_results = await _get_kei_impact_results(db)
+                if poll_id == "home-kei-poll":
+                    why_you_care_branch = get_why_you_care_branch_for_selection(existing_status)
+                    wyc_pill_icon_slug = (
+                        "owner"
+                        if existing_status in ("registered", "revoked", "denied")
+                        else existing_status
+                    )
+                    return templates.TemplateResponse(
+                        request,
+                        "_why_you_care_branch.html",
+                        {
+                            "why_you_care_branch": why_you_care_branch,
+                            "why_you_care_cta_nudge": WHY_YOU_CARE_CTA_NUDGE,
+                            "wyc_pill_icon_slug": wyc_pill_icon_slug,
+                            "kei_status_results": results,
+                            "kei_status_options": KEI_STATUS_OPTIONS,
+                            "kei_status_selected": existing_status,
+                            "kei_impact_selected": existing_impact,
+                            "kei_impact_results": impact_results,
+                            "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
+                            "kei_poll_goal": get_kei_poll_goal(),
+                            "kei_poll_initial_anon": False,
+                            "poll_id": poll_id,
+                        },
+                    )
                 return templates.TemplateResponse(
                     request,
-                    "_why_you_care_branch.html",
+                    "_kei_poll_logged_in_success.html",
                     {
-                        "why_you_care_branch": why_you_care_branch,
-                        "why_you_care_cta_nudge": WHY_YOU_CARE_CTA_NUDGE,
-                        "wyc_pill_icon_slug": wyc_pill_icon_slug,
                         "kei_status_results": results,
                         "kei_status_options": KEI_STATUS_OPTIONS,
                         "kei_status_selected": existing_status,
@@ -1098,32 +1115,19 @@ async def kei_status_post(
                         "kei_impact_results": impact_results,
                         "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
                         "kei_poll_goal": get_kei_poll_goal(),
-                        "kei_poll_initial_anon": False,
+                        "kei_poll_is_owner": (
+                            existing_status in KEI_OWNER_SLUGS if existing_status else False
+                        ),
+                        "why_you_care_branch": (
+                            get_why_you_care_branch_for_selection(existing_status)
+                        ),
                         "poll_id": poll_id,
+                        "hide_outreach_cta": hide_outreach_cta,
                     },
                 )
-            return templates.TemplateResponse(
-                request,
-                "_kei_poll_logged_in_success.html",
-                {
-                    "kei_status_results": results,
-                    "kei_status_options": KEI_STATUS_OPTIONS,
-                    "kei_status_selected": existing_status,
-                    "kei_impact_selected": existing_impact,
-                    "kei_impact_results": impact_results,
-                    "kei_impact_options": KEI_POLL_IMPACT_OPTIONS,
-                    "kei_poll_goal": get_kei_poll_goal(),
-                    "kei_poll_is_owner": (
-                        existing_status in KEI_OWNER_SLUGS if existing_status else False
-                    ),
-                    "why_you_care_branch": get_why_you_care_branch_for_selection(existing_status),
-                    "poll_id": poll_id,
-                    "hide_outreach_cta": hide_outreach_cta,
-                },
+            return RedirectResponse(
+                _kei_status_redirect_url(poll_id, prompt_q, "submitted=1"), status_code=303
             )
-        return RedirectResponse(
-            _kei_status_redirect_url(poll_id, prompt_q, "submitted=1"), status_code=303
-        )
     anon_sid = validate_anon_session_id(session_id) if session_id else None
     zip_val = _normalize_poll_zip(zip_code)
     response_row = KeiPollResponse(
@@ -1144,6 +1148,20 @@ async def kei_status_post(
         await db.execute(select(Poll).where(Poll.slug == poll_slug))
     ).scalar_one_or_none()
     if campaign_poll:
+        if user:
+            await db.execute(
+                delete(PollResponse).where(
+                    PollResponse.poll_id == campaign_poll.id,
+                    PollResponse.user_id == user.id,
+                )
+            )
+        elif anon_sid:
+            await db.execute(
+                delete(PollResponse).where(
+                    PollResponse.poll_id == campaign_poll.id,
+                    PollResponse.session_id == anon_sid,
+                )
+            )
         db.add(
             PollResponse(
                 poll_id=campaign_poll.id,
@@ -1156,6 +1174,20 @@ async def kei_status_post(
         await db.execute(select(Poll).where(Poll.slug == "kei_impact"))
     ).scalar_one_or_none()
     if impact_poll:
+        if user:
+            await db.execute(
+                delete(PollResponse).where(
+                    PollResponse.poll_id == impact_poll.id,
+                    PollResponse.user_id == user.id,
+                )
+            )
+        elif anon_sid:
+            await db.execute(
+                delete(PollResponse).where(
+                    PollResponse.poll_id == impact_poll.id,
+                    PollResponse.session_id == anon_sid,
+                )
+            )
         db.add(
             PollResponse(
                 poll_id=impact_poll.id,

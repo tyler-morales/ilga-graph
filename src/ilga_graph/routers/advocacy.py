@@ -78,6 +78,20 @@ def _visible_steps(steps: list[dict[str, Any]], user_call_pref: str | None) -> l
     return steps
 
 
+def _member_fits_carousel_pref(
+    has_email: bool, has_phone: bool, user_call_pref: str | None
+) -> bool:
+    """True if member appears in carousel for this pref.
+    When unset, require both so 'up next' doesn't force a choice."""
+    if user_call_pref == "no":
+        return has_email
+    if user_call_pref in ("call_only", "elevator"):
+        return has_phone
+    if user_call_pref is not None:
+        return has_phone or has_email
+    return has_email and has_phone
+
+
 def _build_district_steps(
     your_legislators: list[dict[str, Any]],
     user_called_member_ids: set[str],
@@ -458,17 +472,34 @@ async def _build_search_results_context(
         else False
     )
 
-    # District steps (for phase 1 or for "completed goals" in phase 2). Goal steps must iterate
-    # your_legislators in the same Moneyball order as members_for_carousel so goals and cards align.
+    # Which members fit the user's pref (same logic as carousel). Goal steps only include these.
+    call_only_or_elevator_pref = user_call_pref in ("call_only", "elevator")
+    carousel_member_ids: set[str] = set()
+    for item in your_legislators:
+        card = item["card"]
+        he = bool((card.get("email") or "").strip())
+        hp = bool((card.get("phone") or "").strip())
+        if _member_fits_carousel_pref(he, hp, user_call_pref):
+            carousel_member_ids.add(str(card["id"]))
+    for broker_card in broker_cards:
+        he = bool((broker_card.get("email") or "").strip())
+        hp = bool((broker_card.get("phone") or "").strip())
+        if _member_fits_carousel_pref(he, hp, user_call_pref):
+            carousel_member_ids.add(str(broker_card["id"]))
+
+    # District steps (phase 1 or "completed goals" in phase 2). Only steps for members in carousel.
     district_steps = _build_district_steps(
         your_legislators, user_called_member_ids, user_emailed_member_ids
     )
+    district_steps = [s for s in district_steps if s["member_id"] in carousel_member_ids]
     district_goal_done = sum(1 for s in district_steps if s["done"])
     district_goal_total = len(district_steps)
 
     broker_goal_steps = []
     for broker_card in broker_cards:
         bid = str(broker_card["id"])
+        if bid not in carousel_member_ids:
+            continue
         broker_goal_steps.append(
             {
                 "member_id": bid,
@@ -593,26 +624,18 @@ async def _build_search_results_context(
         outreach_heat = {str(mid): int(cnt) for mid, cnt in heat_result.all()}
         total_advocates = sum(outreach_heat.values())
 
-    # Carousel order: higher Moneyball district legislator first, then other, then Power Broker.
+    # Carousel: only show members that fit the user's outreach preference (same set as goal steps).
     members_for_carousel = []
-    call_only_or_elevator = user_call_pref in ("call_only", "elevator")
     for item in your_legislators:
         card = item["card"]
         has_email = bool((card.get("email") or "").strip())
         has_phone = bool((card.get("phone") or "").strip())
-        if user_call_pref == "no":
-            if not has_email:
-                continue
-        elif call_only_or_elevator:
-            if not has_phone:
-                continue
-        else:
-            if not has_phone and not has_email:
-                continue
+        if not _member_fits_carousel_pref(has_email, has_phone, user_call_pref):
+            continue
         mid = str(card["id"])
         if user_call_pref == "no":
             completed = mid in user_emailed_member_ids
-        elif call_only_or_elevator:
+        elif call_only_or_elevator_pref:
             completed = mid in user_called_member_ids
         else:
             completed = mid in user_called_member_ids and mid in user_emailed_member_ids
@@ -627,36 +650,20 @@ async def _build_search_results_context(
     for broker_card in broker_cards:
         has_email = bool((broker_card.get("email") or "").strip())
         has_phone = bool((broker_card.get("phone") or "").strip())
-        if user_call_pref == "no":
-            if has_email:
-                mid = str(broker_card["id"])
-                members_for_carousel.append(
-                    {
-                        "card": broker_card,
-                        "role_label": "Power Broker",
-                        "role_class": "role-broker",
-                        "completed": mid in user_emailed_member_ids,
-                    }
-                )
-        elif call_only_or_elevator:
-            if has_phone:
-                mid = str(broker_card["id"])
-                members_for_carousel.append(
-                    {
-                        "card": broker_card,
-                        "role_label": "Power Broker",
-                        "role_class": "role-broker",
-                        "completed": mid in user_called_member_ids,
-                    }
-                )
-        elif has_phone or has_email:
+        if _member_fits_carousel_pref(has_email, has_phone, user_call_pref):
             mid = str(broker_card["id"])
+            if user_call_pref == "no":
+                completed = mid in user_emailed_member_ids
+            elif user_call_pref in ("call_only", "elevator"):
+                completed = mid in user_called_member_ids
+            else:
+                completed = mid in user_called_member_ids and mid in user_emailed_member_ids
             members_for_carousel.append(
                 {
                     "card": broker_card,
                     "role_label": "Power Broker",
                     "role_class": "role-broker",
-                    "completed": mid in user_called_member_ids and mid in user_emailed_member_ids,
+                    "completed": completed,
                 }
             )
 
@@ -900,20 +907,44 @@ async def set_call_pref(
     db: AsyncSession = Depends(get_db),
 ):
     """Set call preference. Cookie always; DB when logged in. Returns HTMX fragment.
-    When pref is 'no' (user declined all contact methods), we do not persist and return
-    the tree again with a message asking them to select at least one method.
+    When pref is 'none' (user declined every contact method in the tree), we do not persist
+    and return the tree with a message to select at least one. pref='no' means email-only (valid).
     """
-    if pref not in ADV_CALL_PREF_VALUES:
-        raise HTTPException(
-            status_code=422,
-            detail="pref must be one of: no, yes, call_only, elevator",
+    # #region agent log
+    try:
+        _dbg = open("/Users/tyler/Projects/Code/hardball/.cursor/debug-4332d0.log", "a")
+        _dbg.write(
+            '{"sessionId":"4332d0","hypothesisId":"H1","location":"advocacy.py:set_call_pref",'
+            '"message":"pref received","data":{"pref":' + repr(pref) + "},"
+            '"timestamp":' + str(__import__("time").time_ns() // 1_000_000) + "}\n"
         )
-    if pref == "no":
+        _dbg.close()
+    except Exception:
+        pass
+    # #endregion
+    if pref == "none":
         return templates.TemplateResponse(
             request,
             "_advocacy_intro_pref_choose_one.html",
             {"request": request},
         )
+    if pref not in ADV_CALL_PREF_VALUES:
+        raise HTTPException(
+            status_code=422,
+            detail="pref must be one of: no, yes, call_only, elevator",
+        )
+    # #region agent log
+    try:
+        _dbg3 = open("/Users/tyler/Projects/Code/hardball/.cursor/debug-4332d0.log", "a")
+        _dbg3.write(
+            '{"sessionId":"4332d0","hypothesisId":"H1","location":"advocacy.py:set_call_pref",'
+            '"message":"branch: persisting pref (success)","data":{"pref":' + repr(pref) + "},"
+            '"timestamp":' + str(__import__("time").time_ns() // 1_000_000) + "}\n"
+        )
+        _dbg3.close()
+    except Exception:
+        pass
+    # #endregion
     if user:
         user.call_pref = pref
         await db.commit()

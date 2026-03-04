@@ -1978,6 +1978,22 @@ a:visited {
   margin-bottom: 0.35rem;
 }
 
+.fact-sheet-at-a-glance,
+.fact-sheet-sources {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+}
+
+.fact-sheet-at-a-glance li,
+.fact-sheet-sources li {
+  margin-bottom: 0.35rem;
+}
+
+.fact-sheet-sources a {
+  text-decoration: underline;
+}
+
 /* Legislator brief: mobile-first. Default = single column (header → main → Documents). Wide = 3-column grid. */
 .legislator-brief-layout {
   max-width: none;

@@ -34,8 +34,9 @@ from .content_constants import (
     CAMPAIGN_STATUS,
     CONSTITUENT_BRIEF_PATH,
     DOMAIN_GLOSSARY,
+    FACT_SHEET_AT_A_GLANCE,
     FACT_SHEET_ISSUE,
-    FACT_SHEET_PDF_URL,
+    FACT_SHEET_KEI_DEFINITION,
     FACT_SHEET_POSITION,
     FAQ_ADVOCACY,
     FAQ_LAW,
@@ -80,8 +81,9 @@ __all__ = [
     "CAMPAIGN_STATUS",
     "CONSTITUENT_BRIEF_PATH",
     "DOMAIN_GLOSSARY",
+    "FACT_SHEET_AT_A_GLANCE",
     "FACT_SHEET_ISSUE",
-    "FACT_SHEET_PDF_URL",
+    "FACT_SHEET_KEI_DEFINITION",
     "FACT_SHEET_POSITION",
     "FAQ_ADVOCACY",
     "FAQ_LAW",
@@ -658,7 +660,6 @@ async def the_issue_page(
     ctx = {
         "request": request,
         "constituent_brief": constituent_brief,
-        "fact_sheet_pdf_url": FACT_SHEET_PDF_URL,
         "faq_law": FAQ_LAW,
         "faq_advocacy": FAQ_ADVOCACY,
         "faq_session": faq_session,
@@ -755,7 +756,10 @@ async def fact_sheet_page(
         "strategic_five_points": STRATEGIC_FIVE_POINTS,
         "fact_sheet_issue": FACT_SHEET_ISSUE,
         "fact_sheet_position": FACT_SHEET_POSITION,
+        "fact_sheet_kei_definition": FACT_SHEET_KEI_DEFINITION,
+        "fact_sheet_at_a_glance": FACT_SHEET_AT_A_GLANCE,
         "fact_sheet_faq_items": fact_sheet_faq_items,
+        "fact_sheet_sources": BRIEF_SOURCES,
     }
     ctx.update(await get_kei_poll_sidebar_context(request, user, db))
     return templates.TemplateResponse(request, "fact_sheet.html", ctx)

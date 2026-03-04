@@ -5,8 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-CONSTITUENT_BRIEF_PATH = _REPO_ROOT / "Illinois_Kei_Vehicle_Registration_Constituent_Brief.txt"
-LEGISLATOR_BRIEF_PATH = _REPO_ROOT / "IL_Kei_Vehicle_Registration_Fix_Brief 1.txt"
+_CANONICAL_DIR = _REPO_ROOT / "docs" / "canonical"
+CONSTITUENT_BRIEF_PATH = _CANONICAL_DIR / "briefs" / "constituent-brief.txt"
+LEGISLATOR_BRIEF_PATH = _CANONICAL_DIR / "briefs" / "legislator-brief.txt"
 
 STRATEGIC_MISSION = "Fix the statutory gap that prevents road-legal kei vehicles in Illinois."
 STRATEGIC_VISION = (
@@ -201,6 +202,17 @@ FACT_SHEET_POSITION = (
     "federal law may be titled and registered in Illinois under normal requirements "
     "(insurance, equipment, traffic laws). No weakening of safety or enforcement."
 )
+# One-line definition for fact sheet "What are kei vehicles?" (from constituent + legislator brief).
+FACT_SHEET_KEI_DEFINITION = (
+    "Kei vehicles are small, highway-capable vehicles lawfully imported under federal rules "
+    "(e.g. the 25-year rule); Illinois currently blocks their registration under 625 ILCS 5/3-401(c-1)."
+)
+# Key numbers / at-a-glance bullets for fact sheet (canonical only: BRIEF_STATE_STATUS, federal rule, statute).
+FACT_SHEET_AT_A_GLANCE: list[str] = [
+    "21+ states already allow kei vehicle registration—Illinois is the outlier.",
+    "Federal 25-year rule allows lawful import of many kei vehicles; state registration is a separate step.",
+    "The fix is a narrow clarification to 625 ILCS 5/3-401(c-1)—no new regulatory framework.",
+]
 # Documents listed in the legislator brief sidebar (title, url, file_type for icon).
 # Optional: available=False and note="..." for placeholders (disabled style, note under title).
 BRIEF_DOCUMENTS = [

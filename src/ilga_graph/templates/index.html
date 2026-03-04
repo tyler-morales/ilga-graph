@@ -562,6 +562,9 @@
         if (prefValue) {
             var section = document.getElementById('advocacy-intro-pref-section');
             if (!section) return;
+            // #region agent log
+            fetch('http://127.0.0.1:7529/ingest/8e5f0ce1-adfb-445b-8d76-3105199662a9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4332d0'},body:JSON.stringify({sessionId:'4332d0',location:'index.html:pref-tree submit',message:'client sending pref',data:{prefValue:prefValue},timestamp:Date.now(),hypothesisId:'H2'})}).catch(function(){});
+            // #endregion
             section.classList.add('intro-card__pref-section--exiting');
             setTimeout(function () {
                 fetch('/advocacy/set-call-pref', {
@@ -575,6 +578,7 @@
                         if (typeof htmx !== 'undefined') htmx.process(section);
                         section.dispatchEvent(new CustomEvent('htmx:afterSwap', { bubbles: true, detail: { target: section } }));
                     }
+                    document.body.dispatchEvent(new CustomEvent('refreshResults'));
                 }).catch(function () {});
             }, 300);
         }

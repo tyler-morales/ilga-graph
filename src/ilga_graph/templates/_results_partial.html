@@ -431,6 +431,7 @@ user_emailed_member_ids=none, outreach_heat=none, user_call_pref=none) %}
                         </button>
                         {% endif %}
                         {% endif %}
+                        {% if user_call_pref is none or user_call_pref in ['no', 'yes'] %}
                         {% if member.email %}
                         {% if user_emailed %}
                         <button type="button" class="outreach-btn outreach-email outreach-done"
@@ -473,8 +474,11 @@ user_emailed_member_ids=none, outreach_heat=none, user_call_pref=none) %}
                                     <polyline points="22,6 12,13 2,6" />
                                 </svg></span> Emailed!</button>
                         {% endif %}
+                        {% endif %}
                     </div>
-                    {% if not member.email %}
+                    {% if user_call_pref in ['call_only', 'elevator'] %}
+                    <p class="outreach-row-hint">Call to advance.</p>
+                    {% elif not member.email %}
                     <p class="outreach-row-hint">No public email — call to get one, or check their website.</p>
                     {% else %}
                     <p class="outreach-row-hint">Call first, then follow up by email.</p>
@@ -763,8 +767,7 @@ user_emailed_member_ids=none, outreach_heat=none, user_call_pref=none) %}
                             (user_call_pref in ['call_only', 'elevator'] and step.action == 'call') %}
                             <span
                                 class="outreach-goal__bar-dot{% if step.done %} outreach-goal__bar-dot--done{% endif %}"
-                                data-goal-member="{{ step.member_id }}" data-goal-kind="{{ step.action }}"
-                                role="img"
+                                data-goal-member="{{ step.member_id }}" data-goal-kind="{{ step.action }}" role="img"
                                 aria-label="{{ 'Called' if step.action == 'call' and step.done else 'Not yet called' if step.action == 'call' else 'Emailed' if step.done else 'Not yet emailed' }}"></span>
                             {% endif %}
                             {% endfor %}
@@ -812,8 +815,7 @@ user_emailed_member_ids=none, outreach_heat=none, user_call_pref=none) %}
                             (user_call_pref in ['call_only', 'elevator'] and step.action == 'call') %}
                             <span
                                 class="outreach-goal__bar-dot{% if step.done %} outreach-goal__bar-dot--done{% endif %}"
-                                data-goal-member="{{ step.member_id }}" data-goal-kind="{{ step.action }}"
-                                role="img"
+                                data-goal-member="{{ step.member_id }}" data-goal-kind="{{ step.action }}" role="img"
                                 aria-label="{{ 'Called' if step.action == 'call' and step.done else 'Not yet called' if step.action == 'call' else 'Emailed' if step.done else 'Not yet emailed' }}"></span>
                             {% endif %}
                             {% endfor %}
