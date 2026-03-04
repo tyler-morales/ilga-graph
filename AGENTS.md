@@ -17,7 +17,7 @@ This project is **The Land of Kei** (ILGA Graph): a full-stack advocacy app for 
 | **Backend** | FastAPI in `main.py`, routers in `routers/`, state via `app_state` (no new globals). GraphQL in `schema.py`; resolvers use batch loaders (scorecard, moneyball, bill, member). |
 | **Frontend** | Jinja2 templates in `templates/`, HTMX partials; call `htmx.process(container)` after injecting HTML via JS. Styles in `base.html` or `static/css/`; use `.gmail-*`, `.drawer-*` naming. |
 | **Data** | ETL in `etl.py`; scrapers in `src/ilga_graph/scrapers/`; ML/analytics in `analytics.py`, `ml/`. |
-| **Canonical content** | `content.py` (STRATEGIC_*, FAQ_*, BRIEF_*); legislator brief `IL_Kei_Vehicle_Registration_Fix_Brief 1.txt`; constituent brief `Illinois_Kei_Vehicle_Registration_Constituent_Brief.txt`. |
+| **Canonical content** | `content_constants.py` (STRATEGIC_*, FAQ_*, BRIEF_*); briefs in `docs/canonical/briefs/` (legislator-brief.txt, constituent-brief.txt); strategy books in `docs/canonical/books/` (hardball.txt, founding-sales.txt). |
 
 ## Project Agents (`.cursor/agents/`)
 

@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Hardball Spec as Source of Truth
 
-The project’s product and advocacy behavior are defined by **Hardball Lobbying for Nonprofits** (Barry Hessenius). The content is chunked in `docs/hardball-spec/`.
+The project’s product and advocacy behavior are defined by **Hardball Lobbying for Nonprofits** (Barry Hessenius). The content is chunked in `docs/hardball-spec/`. Full book text: `docs/canonical/books/hardball.txt` (regenerate chunks with `scripts/split_hardball_spec.py`).
 
 ## What to do
 
