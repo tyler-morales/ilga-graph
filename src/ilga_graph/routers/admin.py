@@ -54,6 +54,10 @@ from .content_constants import (
 )
 
 router = APIRouter()
+
+# Slug for the impact (Q3) sub-poll; same logical poll as "kei". Excluded from admin list/dashboard.
+_KEI_IMPACT_POLL_SLUG = "kei_impact"
+
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
 templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
 templates.env.globals["dev_available"] = cfg.DEV_MODE
@@ -585,9 +589,11 @@ async def _get_poll_results_all(db: AsyncSession, poll_id: int) -> dict[str, Any
 
 
 async def _list_polls_with_counts(db: AsyncSession) -> list[dict[str, Any]]:
-    """List all polls with distinct respondent count per poll (one per person)."""
+    """List all polls with distinct respondent count per poll (one per person).
+    Excludes kei_impact so the multi-step Kei poll appears as one row.
+    """
     r = await db.execute(select(Poll).order_by(Poll.created_at.desc()))
-    polls = list(r.scalars().all())
+    polls = [p for p in r.scalars().all() if p.slug != _KEI_IMPACT_POLL_SLUG]
     out: list[dict[str, Any]] = []
     for p in polls:
         total = await get_distinct_respondent_count(db, p.id)
@@ -606,9 +612,11 @@ async def _list_polls_with_counts(db: AsyncSession) -> list[dict[str, Any]]:
 
 
 async def _get_active_polls_summary(db: AsyncSession) -> dict[str, Any]:
-    """Active poll count and total distinct respondents (campaign poll only, for dashboard)."""
+    """Active poll count and total distinct respondents (campaign poll only, for dashboard).
+    Excludes kei_impact so the Kei poll is counted as one.
+    """
     r = await db.execute(select(Poll).where(Poll.is_active.is_(True)))
-    active = list(r.scalars().all())
+    active = [p for p in r.scalars().all() if p.slug != _KEI_IMPACT_POLL_SLUG]
     poll_slug = get_campaign_config().poll_slug or "kei"
     campaign_poll = next((p for p in active if p.slug == poll_slug), None)
     total_responses = (
