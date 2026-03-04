@@ -68,8 +68,12 @@ class CampaignConfig:
     brief_pdf_url_path: str = "/advocacy/brief.pdf"
     one_pager_points: list[str] = field(default_factory=_default_one_pager_points)
     poll_slug: str = ""
-    # Poll goal (e.g. 1000). When 0, use content_constants.KEI_POLL_GOAL_RESPONSES.
+    # Poll goal (e.g. 500). When 0, use content_constants.KEI_POLL_GOAL_RESPONSES.
     poll_goal_responses: int = 0
+    # Poll campaign banner copy (first campaign: drive poll responses).
+    poll_campaign_title: str = "First campaign: 500 voices"
+    poll_campaign_message: str = "Your response helps us show legislators who's affected."
+    poll_campaign_ask: str = "Take the poll"
     # White-label: poll prompt + welcome email; when empty, code uses "kei" / issue_summary.
     poll_prompt_query: str = "kei"
     welcome_email_intro: str = ""
@@ -146,6 +150,14 @@ def get_campaign_config() -> CampaignConfig:
             one_pager_points=list(raw.get("one_pager_points", [])),
             poll_slug=raw.get("poll_slug", "").strip(),
             poll_goal_responses=int(raw.get("poll_goal_responses", 0) or 0),
+            poll_campaign_title=(
+                raw.get("poll_campaign_title") or "First campaign: 500 voices"
+            ).strip(),
+            poll_campaign_message=(
+                raw.get("poll_campaign_message")
+                or "Your response helps us show legislators who's affected."
+            ).strip(),
+            poll_campaign_ask=(raw.get("poll_campaign_ask") or "Take the poll").strip(),
             poll_prompt_query=(raw.get("poll_prompt_query") or "kei").strip(),
             welcome_email_intro=(raw.get("welcome_email_intro") or "").strip(),
             welcome_email_poll_link_text=(raw.get("welcome_email_poll_link_text") or "").strip(),

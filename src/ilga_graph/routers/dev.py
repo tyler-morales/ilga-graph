@@ -37,9 +37,13 @@ templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
 templates.env.globals["features"] = cfg.get_client_features()
 
-from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
+from ..campaign_helpers import (  # noqa: E402
+    get_current_action_campaign_for_template,
+    get_poll_campaign_for_template,
+)
 
 templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
+templates.env.globals["get_poll_campaign_for_template"] = get_poll_campaign_for_template
 templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS

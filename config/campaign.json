@@ -34,6 +34,10 @@
     "This affects real Illinois residents who own legal vehicles they can't register."
   ],
   "poll_slug": "kei",
+  "poll_goal_responses": 500,
+  "poll_campaign_title": "First campaign: 500 voices",
+  "poll_campaign_message": "Your response helps us show legislators who's affected.",
+  "poll_campaign_ask": "Take the poll",
   "poll_prompt_query": "kei",
   "welcome_email_intro": "Thanks for signing in. You're now part of the effort to fix kei vehicle registration in Illinois.",
   "welcome_email_poll_link_text": "tell us your kei status",

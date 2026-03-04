@@ -1,0 +1,14 @@
+{% if poll_campaign and poll_campaign.show %}
+<div class="current-action-banner poll-campaign-banner" id="poll-campaign-banner"
+  role="region" aria-label="Poll campaign" data-dismiss-key="ilga_poll_campaign_banner_dismissed">
+  <span class="current-action-banner-emoji" aria-hidden="true">📊</span>
+  <span class="current-action-banner-pill" aria-hidden="true">CAMPAIGN</span>
+  <span class="current-action-banner-text">
+    {{ poll_campaign.title }} —
+    <span class="current-action-banner-milestone">{{ poll_campaign.current }} of {{ poll_campaign.goal }} responses</span> —
+    <a href="/#why-you-care" class="current-action-banner-cta">{{ poll_campaign.ask }}</a>
+  </span>
+  <button type="button" class="current-action-banner-dismiss"
+    aria-label="Dismiss poll campaign notice">&times;</button>
+</div>
+{% endif %}

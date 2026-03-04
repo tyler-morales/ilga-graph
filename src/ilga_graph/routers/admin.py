@@ -17,7 +17,7 @@ from sqlalchemy.orm import selectinload
 from .. import advocacy_helpers as ah
 from .. import config as cfg
 from ..app_state import state
-from ..campaign_config import get_campaign_config
+from ..campaign_config import get_campaign_config, get_kei_poll_goal
 from ..campaign_helpers import campaign_outreach_count, get_active_campaign
 from ..constants import (
     CATEGORY_COMMITTEES,
@@ -75,9 +75,13 @@ templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
 templates.env.globals["features"] = cfg.get_client_features()
 
-from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
+from ..campaign_helpers import (  # noqa: E402
+    get_current_action_campaign_for_template,
+    get_poll_campaign_for_template,
+)
 
 templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
+templates.env.globals["get_poll_campaign_for_template"] = get_poll_campaign_for_template
 templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
@@ -243,6 +247,7 @@ async def admin_dashboard(
         )
 
     polls_summary = await _get_active_polls_summary(db)
+    poll_campaign_goal = get_kei_poll_goal()
 
     return templates.TemplateResponse(
         request,
@@ -264,6 +269,7 @@ async def admin_dashboard(
             "active_campaign": active_campaign,
             "active_campaign_actions": active_campaign_actions,
             "polls_summary": polls_summary,
+            "poll_campaign_goal": poll_campaign_goal,
             "top_members_by_contacts": top_members_by_contacts,
         },
     )

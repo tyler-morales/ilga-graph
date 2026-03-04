@@ -88,6 +88,9 @@
         <span class="admin-dashboard-stat-value">{{ polls_summary.active_count }}</span>
         <span class="admin-dashboard-stat-label">Active poll(s)</span>
         <span class="admin-dashboard-stat-sublabel">{{ polls_summary.total_responses }} total responses</span>
+        {% if poll_campaign_goal and poll_campaign_goal > 0 %}
+        <span class="admin-dashboard-stat-sublabel">Poll campaign goal: {{ poll_campaign_goal }} — {{ polls_summary.total_responses }} of {{ poll_campaign_goal }} responses</span>
+        {% endif %}
         <span class="admin-dashboard-stat-sublabel"><a href="/admin/polls">Manage polls</a></span>
       </div>
     </div>

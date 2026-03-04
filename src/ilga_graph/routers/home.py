@@ -91,9 +91,13 @@ templates.env.globals["why_should_you_care_intro"] = WHY_SHOULD_YOU_CARE_INTRO
 templates.env.globals["why_should_you_care_teaser_items"] = WHY_SHOULD_YOU_CARE_TEASER_ITEMS
 templates.env.globals["why_should_you_care_voice"] = WHY_SHOULD_YOU_CARE_VOICE
 
-from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
+from ..campaign_helpers import (  # noqa: E402
+    get_current_action_campaign_for_template,
+    get_poll_campaign_for_template,
+)
 
 templates.env.globals["get_current_action_campaign"] = get_current_action_campaign_for_template
+templates.env.globals["get_poll_campaign_for_template"] = get_poll_campaign_for_template
 templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
