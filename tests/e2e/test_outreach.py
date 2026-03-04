@@ -6,8 +6,9 @@ import pytest
 
 pytestmark = pytest.mark.e2e
 
-# Dev seed data: 60601 is a good ZIP that returns legislators
-TEST_ZIP = "60601"
+# ZIP that matches mocks/dev (seed notice: 60007, 60016, 60033, 60034, 60068, 60071).
+# 60601 can hit "rep not in current data" with 50-member mock; use 60071 so senator + rep exist.
+TEST_ZIP = "60071"
 # Cookie set by /advocacy/set-call-pref; setting it lets the page load with saved state (no pref tree click).
 ADV_CALL_PREF_COOKIE = "adv_call_pref"
 
@@ -48,11 +49,11 @@ def test_zip_lookup_redirects_to_advocacy(page, base_url):
 
 
 def test_advocacy_page_shows_legislators(page, base_url):
-    """Direct GET /advocacy?zip=60601 shows at least one legislator card."""
-    page.goto(base_url + f"/advocacy?zip={TEST_ZIP}")
-    page.wait_for_load_state("networkidle", timeout=20000)
-    page.locator("#member-carousel").wait_for(state="visible", timeout=15000)
-    # Intro card may be first; at least one member slide or intro
+    """Direct GET /advocacy/?zip=TEST_ZIP shows at least one legislator card."""
+    page.goto(base_url + f"/advocacy/?zip={TEST_ZIP}")
+    page.wait_for_load_state("domcontentloaded", timeout=15000)
+    page.locator("#advocacy-form").wait_for(state="visible", timeout=10000)
+    page.locator("#member-carousel").wait_for(state="visible", timeout=20000)
     slides = page.locator("#member-carousel .member-carousel__slide")
     slides.first.wait_for(state="visible", timeout=5000)
     assert slides.count() >= 1

@@ -10,6 +10,7 @@ import os
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -32,38 +33,47 @@ def _wait_for_port(port: int, timeout: float = 30.0) -> bool:
 
 @pytest.fixture(scope="session")
 def live_server():
-    """Start uvicorn in a subprocess; yield base URL; terminate on teardown."""
+    """Start uvicorn in a subprocess; yield base URL; terminate on teardown.
+
+    Uses an empty ILGA_CACHE_DIR so the app uses mocks/dev (get_data_dir() returns
+    MOCK_DEV_DIR). That ensures 60601 is in zip_to_district and members are loaded
+    for advocacy E2E tests.
+    """
     project_root = Path(__file__).resolve().parent.parent.parent
     env = os.environ.copy()
     env["PYTHONPATH"] = str(project_root / "src")
     env["ILGA_PROFILE"] = "dev"
     env["ILGA_LOAD_ONLY"] = "1"
-    proc = subprocess.Popen(
-        [
-            sys.executable,
-            "-m",
-            "uvicorn",
-            "ilga_graph.main:app",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            str(E2E_PORT),
-        ],
-        cwd=str(project_root),
-        env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-    )
-    try:
-        if not _wait_for_port(E2E_PORT):
-            stderr = proc.stderr.read().decode() if proc.stderr else ""
+    # Empty cache dir → app uses mocks/dev (seed ZIPs + members)
+    # so /advocacy?zip=60601 returns results.
+    with tempfile.TemporaryDirectory(prefix="ilga_e2e_cache_") as tmp:
+        env["ILGA_CACHE_DIR"] = tmp
+        proc = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "uvicorn",
+                "ilga_graph.main:app",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(E2E_PORT),
+            ],
+            cwd=str(project_root),
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+        try:
+            if not _wait_for_port(E2E_PORT):
+                stderr = proc.stderr.read().decode() if proc.stderr else ""
+                proc.terminate()
+                proc.wait(timeout=5)
+                raise RuntimeError(f"Server did not start on port {E2E_PORT}. stderr: {stderr}")
+            yield E2E_BASE_URL
+        finally:
             proc.terminate()
-            proc.wait(timeout=5)
-            raise RuntimeError(f"Server did not start on port {E2E_PORT}. stderr: {stderr}")
-        yield E2E_BASE_URL
-    finally:
-        proc.terminate()
-        proc.wait(timeout=10)
+            proc.wait(timeout=10)
 
 
 @pytest.fixture(scope="session")
