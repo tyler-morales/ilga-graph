@@ -52,7 +52,6 @@ from ..member_lookup import (
     is_constituent_for_zip_member,
 )
 from ..routers.content import (
-    HERO_CLARITY_LINE,
     HERO_URGENCY_LINE,
     INTRO_CARD_WHY_CALL,
     STRATEGIC_FIVE_POINTS,
@@ -201,7 +200,6 @@ def _default_topic() -> str:
 
 templates.env.globals["strategic_five_points"] = _one_pager_points()
 templates.env.globals["hero_urgency_line"] = HERO_URGENCY_LINE
-templates.env.globals["hero_clarity_line"] = HERO_CLARITY_LINE
 templates.env.globals["features"] = cfg.get_client_features()
 
 from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402

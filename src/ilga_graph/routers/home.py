@@ -23,7 +23,6 @@ from ..kei_poll_context import (
 )
 from ..routers.advocacy import DEFAULT_HERO_ZIP, _hero_context
 from ..routers.content import (
-    HERO_CLARITY_LINE,
     HERO_URGENCY_LINE,
     KEI_POLL_WIDE_NET_LINE,
     STRATEGIC_FIVE_POINTS,
@@ -85,7 +84,6 @@ templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
 templates.env.globals["hero_urgency_line"] = HERO_URGENCY_LINE
-templates.env.globals["hero_clarity_line"] = HERO_CLARITY_LINE
 templates.env.globals["features"] = cfg.get_client_features()
 templates.env.globals["marquee_items"] = []  # Overridden per-request when db available
 templates.env.globals["why_should_you_care_heading"] = WHY_SHOULD_YOU_CARE_HEADING
