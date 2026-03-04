@@ -394,7 +394,7 @@
 }
 
 .wyc-pill__icon--revoked {
-  color: #b45309;
+  color: var(--color-hero-cta);
 }
 
 .wyc-pill__icon--revoked svg {
@@ -410,7 +410,7 @@
 }
 
 .wyc-pill__icon--would_want {
-  color: var(--color-hero-cta-hover, #c96608);
+  color: var(--color-hero-cta-hover, #d96b09);
 }
 
 .wyc-pill__icon--would_want svg {
@@ -549,8 +549,8 @@
 
 .wyc-branch-content__ctas .btn.btn--primary:hover {
   background: #fff4e6;
-  border-color: var(--color-hero-cta-hover, #c96608);
-  color: var(--color-hero-cta-hover, #c96608);
+  border-color: var(--color-hero-cta-hover, #d96b09);
+  color: var(--color-hero-cta-hover, #d96b09);
 }
 
 .wyc-branch-content__ctas .btn.btn--primary.why-you-care-link {
@@ -638,8 +638,8 @@
 }
 
 .wyc-branch-content__after-change-cta .wyc-branch-content__ctas .btn.btn--primary:hover {
-  background: var(--color-hero-cta-hover, #c96608);
-  border-color: var(--color-hero-cta-hover, #c96608);
+  background: var(--color-hero-cta-hover, #d96b09);
+  border-color: var(--color-hero-cta-hover, #d96b09);
   color: #fff;
 }
 

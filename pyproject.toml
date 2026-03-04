@@ -34,6 +34,7 @@ dev = [
     "rich",
     "pre-commit",
 ]
+e2e = ["pytest-playwright"]
 docs = [
     "mkdocs>=1.5",
     "mkdocs-material>=9.5",
@@ -52,6 +53,7 @@ ml = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["e2e: browser end-to-end tests (deselect with '-m not e2e')"]
 filterwarnings = [
     "ignore:There is no current event loop:DeprecationWarning:aiosqlite.*",
 ]
@@ -79,3 +81,11 @@ select = ["E", "F", "I", "W", "UP"]
 "scripts/seed_outreach.py" = ["E402", "E501"]
 # Alembic: path and dotenv before app imports
 "alembic/env.py" = ["E402"]
+# Tests: long docstrings, selectors, and skip reasons
+"tests/async_helpers.py" = ["E501"]
+"tests/e2e/test_outreach.py" = ["E501"]
+"tests/test_outreach.py" = ["E501"]
+"tests/test_account.py" = ["E501"]
+"tests/test_admin.py" = ["E501"]
+"tests/e2e/test_poll.py" = ["E501"]
+"tests/test_db.py" = ["E402"]

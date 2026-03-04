@@ -96,8 +96,8 @@
   color: #fff;
 }
 .btn--story:hover {
-  background: var(--color-hero-cta-hover, #c96608);
-  border-color: var(--color-hero-cta-hover, #c96608);
+  background: var(--color-hero-cta-hover, #d96b09);
+  border-color: var(--color-hero-cta-hover, #d96b09);
 }
 .btn--story:focus-visible {
   outline: 2px solid var(--color-hero-cta-focus-ring, #333);

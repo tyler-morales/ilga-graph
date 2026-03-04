@@ -23,7 +23,6 @@ from ..kei_poll_context import (
 )
 from ..routers.advocacy import DEFAULT_HERO_ZIP, _hero_context
 from ..routers.content import (
-    HERO_CLARITY_LINE,
     HERO_URGENCY_LINE,
     KEI_POLL_WIDE_NET_LINE,
     STRATEGIC_FIVE_POINTS,
@@ -72,7 +71,7 @@ templates.env.globals["app_base_url"] = cfg.APP_BASE_URL
 templates.env.globals["site_name"] = cfg.SITE_NAME
 _campaign = get_campaign_config()
 templates.env.globals["campaign_name"] = _campaign.campaign_name or cfg.SITE_NAME
-templates.env.globals["primary_color"] = _campaign.primary_color or "#FF4500"
+templates.env.globals["primary_color"] = _campaign.primary_color or "#e55a1a"
 templates.env.globals["issue_summary"] = _campaign.issue_summary
 templates.env.globals["meta_description"] = cfg.META_DESCRIPTION
 templates.env.globals["og_image_url"] = cfg.OG_IMAGE_URL
@@ -85,7 +84,6 @@ templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
 templates.env.globals["hero_urgency_line"] = HERO_URGENCY_LINE
-templates.env.globals["hero_clarity_line"] = HERO_CLARITY_LINE
 templates.env.globals["features"] = cfg.get_client_features()
 templates.env.globals["marquee_items"] = []  # Overridden per-request when db available
 templates.env.globals["why_should_you_care_heading"] = WHY_SHOULD_YOU_CARE_HEADING
@@ -191,4 +189,4 @@ async def home(
     ctx["kei_poll_wide_net_line"] = KEI_POLL_WIDE_NET_LINE
     ctx["zip_known"] = zip_known_for_user(user)
     ctx["prefill_zip"] = (user.zip_code or "").strip() if user else ""
-    return templates.TemplateResponse("home.html", ctx)
+    return templates.TemplateResponse(request, "home.html", ctx)

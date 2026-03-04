@@ -30,7 +30,7 @@ templates.env.globals["app_base_url"] = cfg.APP_BASE_URL
 templates.env.globals["site_name"] = cfg.SITE_NAME
 _campaign = get_campaign_config()
 templates.env.globals["campaign_name"] = _campaign.campaign_name or cfg.SITE_NAME
-templates.env.globals["primary_color"] = _campaign.primary_color or "#FF4500"
+templates.env.globals["primary_color"] = _campaign.primary_color or "#e55a1a"
 templates.env.globals["issue_summary"] = _campaign.issue_summary
 templates.env.globals["meta_description"] = cfg.META_DESCRIPTION
 templates.env.globals["og_image_url"] = cfg.OG_IMAGE_URL
@@ -73,6 +73,7 @@ async def intelligence_summary(request: Request):
 
     if not available:
         return templates.TemplateResponse(
+            request,
             "intelligence_summary.html",
             {"request": request, "title": "Intelligence", "available": False},
         )
@@ -245,6 +246,7 @@ async def intelligence_summary(request: Request):
                 break
 
     return templates.TemplateResponse(
+        request,
         "intelligence_summary.html",
         {
             "request": request,
@@ -315,6 +317,7 @@ async def intelligence_raw(request: Request):
         }
 
     return templates.TemplateResponse(
+        request,
         "intelligence.html",
         {
             "request": request,
@@ -332,12 +335,14 @@ async def intelligence_predictions(request: Request):
     ml = state.ml
     if not ml or not ml.available:
         return templates.TemplateResponse(
+            request,
             "_intelligence_predictions.html",
             {"request": request, "predictions": [], "ml": None},
         )
 
     predictions = sorted(ml.bill_scores, key=lambda s: -s.prob_advance)
     return templates.TemplateResponse(
+        request,
         "_intelligence_predictions.html",
         {"request": request, "predictions": predictions, "ml": ml},
     )
@@ -349,6 +354,7 @@ async def intelligence_coalitions(request: Request):
     ml = state.ml
     if not ml or not ml.available:
         return templates.TemplateResponse(
+            request,
             "_intelligence_coalitions.html",
             {"request": request, "groups": [], "ml": None},
         )
@@ -382,6 +388,7 @@ async def intelligence_coalitions(request: Request):
         )
 
     return templates.TemplateResponse(
+        request,
         "_intelligence_coalitions.html",
         {"request": request, "groups": coalition_list, "ml": ml},
     )
@@ -393,12 +400,14 @@ async def intelligence_anomalies(request: Request):
     ml = state.ml
     if not ml or not ml.available:
         return templates.TemplateResponse(
+            request,
             "_intelligence_anomalies.html",
             {"request": request, "anomalies": [], "ml": None},
         )
 
     anomalies = sorted(ml.anomalies, key=lambda a: -a.anomaly_score)
     return templates.TemplateResponse(
+        request,
         "_intelligence_anomalies.html",
         {"request": request, "anomalies": anomalies, "ml": ml},
     )
@@ -410,6 +419,7 @@ async def intelligence_influence(request: Request):
     profiles = list(state.influence.values())
     if not profiles:
         return templates.TemplateResponse(
+            request,
             "_intelligence_influence.html",
             {"request": request, "profiles": [], "coalition_influence": []},
         )
@@ -450,6 +460,7 @@ async def intelligence_influence(request: Request):
     ]
 
     return templates.TemplateResponse(
+        request,
         "_intelligence_influence.html",
         {
             "request": request,
@@ -502,6 +513,7 @@ async def intelligence_recruitment(request: Request):
             )
 
     return templates.TemplateResponse(
+        request,
         "intelligence_recruitment.html",
         {
             "request": request,
@@ -521,6 +533,7 @@ async def intelligence_recruitment_topic(
     ml = state.ml
     if not ml or not ml.topic_recruitment:
         return templates.TemplateResponse(
+            request,
             "_recruitment_topic_partial.html",
             {"request": request, "topic": topic, "rankings": []},
         )
@@ -546,6 +559,7 @@ async def intelligence_recruitment_topic(
         )
 
     return templates.TemplateResponse(
+        request,
         "_recruitment_topic_partial.html",
         {"request": request, "topic": topic, "rankings": rankings},
     )
@@ -556,6 +570,7 @@ async def intelligence_committees(request: Request):
     """Tab: committee power dashboard."""
     if not state.committees:
         return templates.TemplateResponse(
+            request,
             "_intelligence_committees.html",
             {
                 "request": request,
@@ -611,6 +626,7 @@ async def intelligence_committees(request: Request):
     )[:10]
 
     return templates.TemplateResponse(
+        request,
         "_intelligence_committees.html",
         {
             "request": request,
@@ -628,11 +644,13 @@ async def intelligence_accuracy(request: Request):
     ml = state.ml
     if not ml or not ml.available:
         return templates.TemplateResponse(
+            request,
             "_intelligence_accuracy.html",
             {"request": request, "history": [], "quality": {}, "ml": None},
         )
 
     return templates.TemplateResponse(
+        request,
         "_intelligence_accuracy.html",
         {
             "request": request,
@@ -649,6 +667,7 @@ async def intelligence_witness_slips(request: Request):
     lookup = getattr(state, "witness_slips_lookup", {})
     if not lookup:
         return templates.TemplateResponse(
+            request,
             "_intelligence_witness_slips.html",
             {
                 "request": request,
@@ -720,6 +739,7 @@ async def intelligence_witness_slips(request: Request):
     top_organizations = sorted(org_global.items(), key=lambda x: -x[1])[:50]
 
     return templates.TemplateResponse(
+        request,
         "_intelligence_witness_slips.html",
         {
             "request": request,
@@ -738,6 +758,7 @@ async def intelligence_member_detail(request: Request, member_id: str):
         member = state.member_lookup.get(member_id)
     if not member:
         return templates.TemplateResponse(
+            request,
             "intelligence_member.html",
             {
                 "request": request,
@@ -868,6 +889,7 @@ async def intelligence_member_detail(request: Request, member_id: str):
             }
 
     return templates.TemplateResponse(
+        request,
         "intelligence_member.html",
         {
             "request": request,
@@ -899,6 +921,7 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
         except Exception:
             bill_to_law_process = []
         return templates.TemplateResponse(
+            request,
             "intelligence_bill.html",
             {
                 "request": request,
@@ -1023,6 +1046,7 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
         bill_to_law_process = []
 
     return templates.TemplateResponse(
+        request,
         "intelligence_bill.html",
         {
             "request": request,

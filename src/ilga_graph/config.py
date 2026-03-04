@@ -331,6 +331,11 @@ if PROFILE == "prod":
 # ── Auth + SMTP ──────────────────────────────────────────────────────────────
 # Session cookie signing key (generate a random string for prod).
 AUTH_SECRET: str = _env("ILGA_AUTH_SECRET", "dev-secret-change-me")
+if PROFILE == "prod" and AUTH_SECRET == "dev-secret-change-me":
+    LOGGER.warning(
+        "ILGA_PROFILE=prod but ILGA_AUTH_SECRET is the dev default. "
+        "Set a strong random secret for production."
+    )
 # Cookie max-age in seconds (default 30 days).
 AUTH_COOKIE_MAX_AGE: int = int(_env("ILGA_AUTH_COOKIE_MAX_AGE", str(60 * 60 * 24 * 30)))
 AUTH_COOKIE_NAME: str = "ilga_session"

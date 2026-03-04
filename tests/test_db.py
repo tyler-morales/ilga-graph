@@ -5,7 +5,6 @@ Uses a temp DB path so the real data/ilga.db is never touched.
 
 from __future__ import annotations
 
-import asyncio
 import importlib
 import os
 from pathlib import Path
@@ -25,8 +24,7 @@ async def _init_db_under_env(db_path: Path) -> None:
         await db_mod.init_db()
 
 
-def _run(coro):
-    return asyncio.run(coro)
+from tests.async_helpers import run_async as _run
 
 
 @pytest.fixture

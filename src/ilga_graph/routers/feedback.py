@@ -79,7 +79,7 @@ templates.env.globals["app_base_url"] = cfg.APP_BASE_URL
 templates.env.globals["site_name"] = cfg.SITE_NAME
 _campaign = get_campaign_config()
 templates.env.globals["campaign_name"] = _campaign.campaign_name or cfg.SITE_NAME
-templates.env.globals["primary_color"] = _campaign.primary_color or "#FF4500"
+templates.env.globals["primary_color"] = _campaign.primary_color or "#e55a1a"
 templates.env.globals["issue_summary"] = _campaign.issue_summary
 templates.env.globals["meta_description"] = cfg.META_DESCRIPTION
 templates.env.globals["og_image_url"] = cfg.OG_IMAGE_URL
@@ -330,6 +330,7 @@ async def report_bug_page(request: Request):
     csrf_token = getattr(request.state, "csrf_token", None) or ""
     turnstile_site_key = None if cfg.TURNSTILE_DISABLED else (cfg.TURNSTILE_SITE_KEY or None)
     return templates.TemplateResponse(
+        request,
         "report_bug.html",
         {
             "request": request,

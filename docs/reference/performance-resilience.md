@@ -7,9 +7,22 @@ How the app improves perceived performance and handles offline or failed request
 ## Static asset caching
 
 - **Path:** `/static` (CSS, JS, images).
-- **Implementation:** The app mounts a custom `StaticFilesWithCache` (in `main.py`) that sets `Cache-Control: public, max-age=3600` (1 hour) on all static file responses.
-- **Effect:** Browsers and CDNs can cache assets for repeat visits; no explicit cache headers were set before, so this improves repeat-load performance.
-- **Future:** If you introduce versioned or hashed asset URLs (e.g. `?v=RELEASE` or hashed filenames), you can extend the subclass to use a longer `max-age` (e.g. 1 year) for those paths and keep a shorter one for unversioned files.
+- **Implementation:** The app mounts a custom `StaticFilesWithCache` (in `main.py`):
+  - **Minified assets** (`.min.css`, `.min.js`): `Cache-Control: public, max-age=31536000, immutable` (1 year). Used in production when `ILGA_PROFILE=prod`.
+  - **All other static files:** `Cache-Control: public, max-age=3600` (1 hour).
+- **Effect:** Browsers and CDNs cache assets for repeat visits; minified production assets are cached long-term.
+
+## Response compression
+
+- **Implementation:** `GZipMiddleware` (Starlette) is registered in `middleware.py`. Responses larger than 500 bytes that the client accepts with `Accept-Encoding: gzip` are compressed.
+- **Effect:** Smaller transfer size for HTML, CSS, and JS, improving FCP and LCP on slow networks.
+- **Production:** A reverse proxy (e.g. Nginx, Caddy) can also enable gzip or Brotli; the app’s middleware ensures compression even when no proxy is used.
+
+## Minified CSS and JS (production)
+
+- **Build:** Run `make minify` (or `npm run minify`) from the project root to generate `.min.css` and `.min.js` under `src/ilga_graph/static/`. Requires Node.js and installs `clean-css` and `terser`.
+- **Serving:** When `ILGA_PROFILE=prod`, the app links to the `.min` assets in `base.html`; when the profile is not prod, it links to the unminified files. Ensure minified files exist before deploying production (run `make minify` in CI or before release).
+- **Effect:** Smaller payloads and faster parsing on the client, improving Lighthouse performance scores.
 
 ---
 

@@ -36,7 +36,7 @@ templates.env.globals["app_base_url"] = cfg.APP_BASE_URL
 templates.env.globals["site_name"] = cfg.SITE_NAME
 _campaign = get_campaign_config()
 templates.env.globals["campaign_name"] = _campaign.campaign_name or cfg.SITE_NAME
-templates.env.globals["primary_color"] = _campaign.primary_color or "#FF4500"
+templates.env.globals["primary_color"] = _campaign.primary_color or "#e55a1a"
 templates.env.globals["issue_summary"] = _campaign.issue_summary
 templates.env.globals["meta_description"] = cfg.META_DESCRIPTION
 templates.env.globals["og_image_url"] = cfg.OG_IMAGE_URL
@@ -115,6 +115,7 @@ async def admin_campaigns_list(
         counts[c.id] = await campaign_outreach_count(db, c.id)
     flash = request.query_params.get("flash", "")
     return templates.TemplateResponse(
+        request,
         "admin_campaigns.html",
         {
             "request": request,
@@ -142,6 +143,7 @@ async def admin_campaigns_new(
     """Create campaign form."""
     district_options = _district_options_from_zip_crosswalk()
     return templates.TemplateResponse(
+        request,
         "admin_campaign_form.html",
         {
             "request": request,
@@ -280,6 +282,7 @@ async def admin_campaign_detail(
     district_options = _district_options_from_zip_crosswalk()
     flash = request.query_params.get("flash", "")
     return templates.TemplateResponse(
+        request,
         "admin_campaign_form.html",
         {
             "request": request,

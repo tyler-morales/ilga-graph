@@ -25,7 +25,10 @@
   bottom: 4rem;
   left: 0;
   z-index: -1;
-  background-image: url("/static/images/kei-truck-illustration.png");
+  background-image: image-set(
+    url("/static/images/kei-truck-illustration.webp") type("image/webp"),
+    url("/static/images/kei-truck-illustration.png") 1x
+  );
   background-size: contain;
   background-position: center;
   background-repeat: no-repeat;

@@ -52,7 +52,6 @@ from ..member_lookup import (
     is_constituent_for_zip_member,
 )
 from ..routers.content import (
-    HERO_CLARITY_LINE,
     HERO_URGENCY_LINE,
     INTRO_CARD_WHY_CALL,
     STRATEGIC_FIVE_POINTS,
@@ -175,7 +174,7 @@ templates.env.globals["app_base_url"] = cfg.APP_BASE_URL
 templates.env.globals["site_name"] = cfg.SITE_NAME
 _campaign = get_campaign_config()
 templates.env.globals["campaign_name"] = _campaign.campaign_name or cfg.SITE_NAME
-templates.env.globals["primary_color"] = _campaign.primary_color or "#FF4500"
+templates.env.globals["primary_color"] = _campaign.primary_color or "#e55a1a"
 templates.env.globals["issue_summary"] = _campaign.issue_summary
 templates.env.globals["meta_description"] = cfg.META_DESCRIPTION
 templates.env.globals["og_image_url"] = cfg.OG_IMAGE_URL
@@ -201,7 +200,6 @@ def _default_topic() -> str:
 
 templates.env.globals["strategic_five_points"] = _one_pager_points()
 templates.env.globals["hero_urgency_line"] = HERO_URGENCY_LINE
-templates.env.globals["hero_clarity_line"] = HERO_CLARITY_LINE
 templates.env.globals["features"] = cfg.get_client_features()
 
 from ..campaign_helpers import get_current_action_campaign_for_template  # noqa: E402
@@ -845,7 +843,7 @@ async def advocacy_index(
     else:
         ctx["active_campaign"] = None
 
-    return templates.TemplateResponse("index.html", ctx)
+    return templates.TemplateResponse(request, "index.html", ctx)
 
 
 @router.get("/test")
@@ -856,6 +854,7 @@ async def advocacy_test(request: Request):
     test_members = ah.test_member_list(state)
     default_zip = DEFAULT_HERO_ZIP
     return templates.TemplateResponse(
+        request,
         "advocacy_test.html",
         {
             "request": request,
@@ -869,6 +868,7 @@ async def advocacy_test(request: Request):
 async def advocacy_letter_template(request: Request):
     """Letter template HTML (print to PDF) — fallback if PDF not provided."""
     return templates.TemplateResponse(
+        request,
         "letter_template.html",
         {"request": request},
     )
@@ -910,6 +910,7 @@ async def set_call_pref(
         )
     if pref == "no":
         return templates.TemplateResponse(
+            request,
             "_advocacy_intro_pref_choose_one.html",
             {"request": request},
         )
@@ -917,6 +918,7 @@ async def set_call_pref(
         user.call_pref = pref
         await db.commit()
     res = templates.TemplateResponse(
+        request,
         "_advocacy_intro_pref_saved.html",
         {"request": request, "pref": pref},
     )
@@ -1015,6 +1017,7 @@ async def advocacy_drawer(
     if view == "email":
         if not has_public_email:
             return templates.TemplateResponse(
+                request,
                 "_advocacy_drawer_no_email.html",
                 {
                     "request": request,
@@ -1084,6 +1087,7 @@ async def advocacy_drawer(
         current_role_label = _role_label_for_member(member)
         c = get_campaign_config()
         return templates.TemplateResponse(
+            request,
             "_advocacy_drawer_email.html",
             {
                 "request": request,
@@ -1128,6 +1132,7 @@ async def advocacy_drawer(
             for slug, label in opts
         ]
         return templates.TemplateResponse(
+            request,
             "_kei_personalize_drawer.html",
             {
                 "request": request,
@@ -1459,6 +1464,7 @@ async def _render_call_drawer(
             if last_call.support_score is not None and 1 <= last_call.support_score <= 5:
                 call_support_score = last_call.support_score
     resp = templates.TemplateResponse(
+        request,
         "_advocacy_drawer_call.html",
         {
             "request": request,
@@ -1558,6 +1564,7 @@ async def advocacy_call_wrapup(
     c = get_campaign_config()
     if recipient:
         return templates.TemplateResponse(
+            request,
             "_advocacy_drawer_email.html",
             {
                 "request": request,
@@ -1589,6 +1596,7 @@ async def advocacy_call_wrapup(
         )
 
     return templates.TemplateResponse(
+        request,
         "_advocacy_drawer_no_email.html",
         {
             "request": request,
@@ -1609,6 +1617,7 @@ async def advocacy_call_no_answer(request: Request, call_id: str):
     member = find_member_by_id(state, member_id) if member_id else None
     legislator_name = member.name if member else ""
     return templates.TemplateResponse(
+        request,
         "_advocacy_drawer_no_answer.html",
         {
             "request": request,
@@ -1737,7 +1746,7 @@ async def advocacy_search(
             except Exception:
                 ctx_error["calls_total"] = 0
                 ctx_error["calls_this_week"] = 0
-        return templates.TemplateResponse(tpl, ctx_error)
+        return templates.TemplateResponse(request, tpl, ctx_error)
 
     district_info = state.zip_to_district.get(zip_code)
     if district_info is None:
@@ -1767,7 +1776,7 @@ async def advocacy_search(
             except Exception:
                 ctx_error["calls_total"] = 0
                 ctx_error["calls_this_week"] = 0
-        return templates.TemplateResponse(tpl, ctx_error)
+        return templates.TemplateResponse(request, tpl, ctx_error)
 
     try:
         agg = await get_outreach_aggregate(db)
@@ -1780,6 +1789,7 @@ async def advocacy_search(
     poll_ctx = await get_kei_poll_sidebar_context(request, user, db)
     tpl = "_results_partial.html" if is_htmx else "results.html"
     return templates.TemplateResponse(
+        request,
         tpl,
         {
             "request": request,

@@ -253,7 +253,7 @@ templates.env.globals["app_base_url"] = cfg.APP_BASE_URL
 templates.env.globals["site_name"] = cfg.SITE_NAME
 _campaign = get_campaign_config()
 templates.env.globals["campaign_name"] = _campaign.campaign_name or cfg.SITE_NAME
-templates.env.globals["primary_color"] = _campaign.primary_color or "#FF4500"
+templates.env.globals["primary_color"] = _campaign.primary_color or "#e55a1a"
 templates.env.globals["issue_summary"] = _campaign.issue_summary
 templates.env.globals["meta_description"] = cfg.META_DESCRIPTION
 templates.env.globals["og_image_url"] = cfg.OG_IMAGE_URL
@@ -311,6 +311,7 @@ async def get_marquee_items(db: AsyncSession) -> list[dict]:
         {
             "type": "image",
             "src": m["src"],
+            "src_webp": m.get("src_webp"),
             "alt": m.get("alt", ""),
             "name": m.get("name", ""),
             "caption": m.get("caption", ""),
@@ -673,7 +674,7 @@ async def the_issue_page(
     }
     ctx.update(await get_kei_poll_sidebar_context(request, user, db))
     ctx["marquee_items"] = await get_marquee_items(db)
-    return templates.TemplateResponse("the_issue.html", ctx)
+    return templates.TemplateResponse(request, "the_issue.html", ctx)
 
 
 def _apply_legislator_brief_glossary(legislator_brief: dict) -> None:
@@ -735,7 +736,7 @@ async def legislator_brief_page(
         "faq": FAQ_LEGISLATORS,
     }
     ctx.update(await get_kei_poll_sidebar_context(request, user, db))
-    return templates.TemplateResponse("legislator_brief.html", ctx)
+    return templates.TemplateResponse(request, "legislator_brief.html", ctx)
 
 
 @router.get("/fact-sheet", include_in_schema=False)
@@ -757,13 +758,14 @@ async def fact_sheet_page(
         "fact_sheet_faq_items": fact_sheet_faq_items,
     }
     ctx.update(await get_kei_poll_sidebar_context(request, user, db))
-    return templates.TemplateResponse("fact_sheet.html", ctx)
+    return templates.TemplateResponse(request, "fact_sheet.html", ctx)
 
 
 @router.get("/coalition", include_in_schema=False)
 async def coalition_page(request: Request):
     """Serve the Supporting legislators / coalition page: recognized offices that engage."""
     return templates.TemplateResponse(
+        request,
         "coalition.html",
         {"request": request},
     )
@@ -820,6 +822,7 @@ async def timeline_page(request: Request):
     month_keys = [mo["key"] for mo in waterfall["months"]]
     now_month_index = _timeline_now_month_index(month_keys)
     return templates.TemplateResponse(
+        request,
         "timeline.html",
         {
             "request": request,
@@ -849,16 +852,16 @@ async def glossary_page(
         "session_schedule_terms": SESSION_SCHEDULE_TERMS,
     }
     ctx.update(await get_kei_poll_sidebar_context(request, user, db))
-    return templates.TemplateResponse("glossary.html", ctx)
+    return templates.TemplateResponse(request, "glossary.html", ctx)
 
 
 @router.get("/privacy", include_in_schema=False)
 async def privacy_page(request: Request):
     """Serve the Privacy policy page."""
-    return templates.TemplateResponse("privacy.html", {"request": request})
+    return templates.TemplateResponse(request, "privacy.html", {"request": request})
 
 
 @router.get("/terms", include_in_schema=False)
 async def terms_page(request: Request):
     """Serve the Terms of use page."""
-    return templates.TemplateResponse("terms.html", {"request": request})
+    return templates.TemplateResponse(request, "terms.html", {"request": request})

@@ -4,9 +4,11 @@
 <div class="session-pill-wrap" role="region" aria-label="Session timeline">
   <button type="button"
     class="session-pill"
-    onclick="this.toggleAttribute('data-expanded'); this.setAttribute('aria-expanded', this.hasAttribute('data-expanded'));"
+    data-short-label="ILGA Session 2027"
+    data-full-label="{{ hero_urgency_line }}{% if next_deadline %} — Next: {{ next_deadline.date }} {{ next_deadline.description }}{% endif %}"
+    onclick="var b=this; b.toggleAttribute('data-expanded'); var exp=b.hasAttribute('data-expanded'); b.setAttribute('aria-expanded', exp); b.setAttribute('aria-label', exp ? (b.getAttribute('data-full-label')||b.getAttribute('data-short-label')) : (b.getAttribute('data-short-label')||'ILGA Session 2027'));"
     aria-expanded="false"
-    aria-label="Session timeline: {{ hero_urgency_line }}{% if next_deadline %} — Next deadline {{ next_deadline.date }}: {{ next_deadline.description }}{% endif %}">
+    aria-label="ILGA Session 2027">
     <span class="session-pill-dot" aria-hidden="true"></span>
     <span class="session-pill-text-slot">
       <span class="session-pill-text-sizer" aria-hidden="true">{{ hero_urgency_line }}{% if next_deadline %} — Next: {{ next_deadline.date }} {{ next_deadline.description }}{% endif %}</span>

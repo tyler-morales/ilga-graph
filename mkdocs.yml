@@ -45,6 +45,7 @@ nav:
     - Project structure: reference/project-structure.md
     - Status report: reference/status-report.md
   - Development:
+    - Design system: development/design-system.md
     - Component playground: development/component-playground.md
     - Data and environments: development/data-and-environments.md
     - Advocacy Test Mode (internals): development/advocacy-test-mode-internals.md

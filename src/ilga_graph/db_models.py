@@ -49,7 +49,9 @@ class Update(Base):
     )
     image_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
-    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
     sent_count: Mapped[int] = mapped_column(Integer, default=0)
 
 
@@ -109,7 +111,9 @@ class OutreachEvent(Base):
     campaign_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("campaigns.id"), nullable=True, index=True
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, index=True
+    )
 
     __table_args__ = (Index("ix_outreach_member_kind", "member_id", "kind"),)
 

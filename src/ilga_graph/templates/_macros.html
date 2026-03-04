@@ -469,7 +469,7 @@
                         </span>
                     </span>
                     {% else %}
-                    <span class="kei-poll-chart__verified-badge" aria-label="Your verified choice">
+                    <span class="kei-poll-chart__verified-badge" role="img" aria-label="Your verified choice">
                         <svg class="kei-poll-chart__verified-icon" width="12" height="12" viewBox="0 0 24 24"
                             fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
                             stroke-linejoin="round" aria-hidden="true">
@@ -487,7 +487,7 @@
                 <span class="kei-poll-chart__bar kei-poll-chart__bar--{{ 'highest' if is_highest else 'other' }}"
                     data-width-pct="{{ pct }}" style="width: {{ pct }}%"></span>
             </div>
-            <span class="visually-hidden" aria-label="{{ count }} responses">{{ count }}</span>
+            <span class="visually-hidden" role="status" aria-label="{{ count }} responses">{{ count }}</span>
         </li>
         {% endfor %}
     </ul>
@@ -531,7 +531,7 @@
     {% endif %}
     <div class="share-section-actions">
         <button type="button" class="share-section-btn share-section-btn-copy" id="{{ share_copy_btn_id }}"
-            aria-label="Copy page link to clipboard" data-copy-default="Copy link" data-copy-done="Copied!">
+            aria-label="Copy link" data-copy-default="Copy link" data-copy-done="Copied!">
             <span class="share-section-btn-icon" aria-hidden="true">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -653,37 +653,37 @@
 ] %}
 <section class="strategic-points strategic-points--home" id="{{ section_id }}" aria-labelledby="{{ h2_id }}">
     <h2 class="strategic-points-heading" id="{{ h2_id }}">{{ h2_text }}</h2>
-    <div class="strategic-points-rows" role="list" aria-label="Our message in 5 points">
-        <div class="strategic-points-row strategic-points-row--top">
+    <div class="strategic-points-rows">
+        <ul class="strategic-points-row strategic-points-row--top">
             {% for point in points[:2] %}
             {% set _card_index = loop.index0 %}
-            <article class="strategic-points-card" role="listitem">
-                <span class="strategic-points-icon" aria-hidden="true">
+            <li class="strategic-points-card">
+                <span class="strategic-points-icon" {% if _five_point_icons[_card_index] != 'states' %}aria-hidden="true" tabindex="-1"{% endif %}>
                     {% if _five_point_icons[_card_index] == 'states' %}
                     {% include "_strategic_states_icon.html" %}
                     {% else %}
-                    <iconify-icon icon="{{ _five_point_icons[_card_index].icon }}" data-color="{{ _five_point_icons[_card_index].color }}"></iconify-icon>
+                    <iconify-icon icon="{{ _five_point_icons[_card_index].icon }}" data-color="{{ _five_point_icons[_card_index].color }}" aria-hidden="true" tabindex="-1"></iconify-icon>
                     {% endif %}
                 </span>
                 <p class="strategic-points-card-text">{{ point|safe }}</p>
-            </article>
+            </li>
             {% endfor %}
-        </div>
-        <div class="strategic-points-row strategic-points-row--bottom">
+        </ul>
+        <ul class="strategic-points-row strategic-points-row--bottom">
             {% for point in points[2:5] %}
             {% set _card_index = loop.index0 + 2 %}
-            <article class="strategic-points-card" role="listitem">
-                <span class="strategic-points-icon" aria-hidden="true">
+            <li class="strategic-points-card">
+                <span class="strategic-points-icon" {% if _five_point_icons[_card_index] != 'states' %}aria-hidden="true" tabindex="-1"{% endif %}>
                     {% if _five_point_icons[_card_index] == 'states' %}
                     {% include "_strategic_states_icon.html" %}
                     {% else %}
-                    <iconify-icon icon="{{ _five_point_icons[_card_index].icon }}" data-color="{{ _five_point_icons[_card_index].color }}"></iconify-icon>
+                    <iconify-icon icon="{{ _five_point_icons[_card_index].icon }}" data-color="{{ _five_point_icons[_card_index].color }}" aria-hidden="true" tabindex="-1"></iconify-icon>
                     {% endif %}
                 </span>
                 <p class="strategic-points-card-text">{{ point|safe }}</p>
-            </article>
+            </li>
             {% endfor %}
-        </div>
+        </ul>
     </div>
 </section>
 {% include "_data_styles_script.html" %}

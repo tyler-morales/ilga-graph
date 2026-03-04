@@ -1,0 +1,14 @@
+{
+  "name": "hardball-assets",
+  "private": true,
+  "description": "Minify CSS and JS for production (Lighthouse performance).",
+  "scripts": {
+    "minify:css": "node scripts/minify-css.js",
+    "minify:js": "node scripts/minify-js.js",
+    "minify": "npm run minify:css && npm run minify:js"
+  },
+  "devDependencies": {
+    "clean-css": "^5.0.0",
+    "terser": "^5.36.0"
+  }
+}

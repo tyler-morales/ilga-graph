@@ -24,7 +24,6 @@ from .routers.auth import router as _auth_router
 from .routers.bills import router as _bills_router
 from .routers.campaigns import router as _campaigns_router
 from .routers.content import (
-    HERO_CLARITY_LINE,
     HERO_URGENCY_LINE,
     STRATEGIC_FIVE_POINTS,
 )
@@ -80,11 +79,14 @@ _TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 
 class StaticFilesWithCache(BaseStaticFiles):
-    """StaticFiles that sets Cache-Control for repeat visits. Unversioned assets use 1h."""
+    """StaticFiles that sets Cache-Control for repeat visits. Minified assets use 1y; others 1h."""
 
     async def get_response(self, path: str, scope: dict) -> Response:
         response = await super().get_response(path, scope)
-        response.headers.setdefault("Cache-Control", "public, max-age=3600")
+        if path.endswith(".min.css") or path.endswith(".min.js"):
+            response.headers.setdefault("Cache-Control", "public, max-age=31536000, immutable")
+        else:
+            response.headers.setdefault("Cache-Control", "public, max-age=3600")
         return response
 
 
@@ -100,7 +102,7 @@ templates.env.globals["site_name"] = cfg.SITE_NAME
 templates.env.globals["meta_description"] = cfg.META_DESCRIPTION
 _campaign = get_campaign_config()
 templates.env.globals["campaign_name"] = _campaign.campaign_name or cfg.SITE_NAME
-templates.env.globals["primary_color"] = _campaign.primary_color or "#FF4500"
+templates.env.globals["primary_color"] = _campaign.primary_color or "#e55a1a"
 templates.env.globals["issue_summary"] = _campaign.issue_summary
 templates.env.globals["strategic_mission"] = _campaign.strategic_mission
 templates.env.globals["mission_attribution"] = _campaign.mission_attribution
@@ -111,25 +113,17 @@ templates.env.globals["umami_website_id"] = cfg.UMAMI_WEBSITE_ID
 templates.env.globals["umami_script_url"] = cfg.UMAMI_SCRIPT_URL
 templates.env.globals["show_beta_banner"] = cfg.BETA_BANNER
 templates.env.globals["beta_banner_feedback_url"] = cfg.BETA_BANNER_REPORT_URL
+templates.env.globals["use_minified_assets"] = cfg.PROFILE == "prod"
 templates.env.globals["footer_last_updated"] = cfg.FOOTER_LAST_UPDATED
 templates.env.globals["footer_last_updated_iso"] = cfg.FOOTER_LAST_UPDATED_ISO
 templates.env.globals["strategic_five_points"] = STRATEGIC_FIVE_POINTS
 templates.env.globals["hero_urgency_line"] = HERO_URGENCY_LINE
-templates.env.globals["hero_clarity_line"] = HERO_CLARITY_LINE
 templates.env.globals["features"] = cfg.get_client_features()
 templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
 
 
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
-
-
-def _get_current_action_campaign(request: Request) -> object | None:
-    """Return active campaign for the request (set by middleware) for base template top bar."""
-    return getattr(request.state, "current_action_campaign", None)
-
-
-templates.env.globals["get_current_action_campaign"] = _get_current_action_campaign
 
 
 def _get_current_action_campaign(request: Request) -> object | None:
@@ -291,12 +285,16 @@ async def _http_exception_handler(request: Request, exc: HTTPException) -> Respo
         if exc.status_code == 403:
             if request.url.path.startswith("/admin"):
                 return RedirectResponse(url="/admin/login?error=forbidden", status_code=302)
-            return templates.TemplateResponse("403.html", {"request": request}, status_code=403)
+            return templates.TemplateResponse(
+                request, "403.html", {"request": request}, status_code=403
+            )
         if exc.status_code == 404:
-            return templates.TemplateResponse("404.html", _404_context(request), status_code=404)
+            return templates.TemplateResponse(
+                request, "404.html", _404_context(request), status_code=404
+            )
         if exc.status_code >= 500:
             return templates.TemplateResponse(
-                "500.html", _error_page_context(request), status_code=exc.status_code
+                request, "500.html", _error_page_context(request), status_code=exc.status_code
             )
     detail = exc.detail if isinstance(exc.detail, (str, dict, list)) else str(exc.detail)
     return JSONResponse(status_code=exc.status_code, content={"detail": detail})
@@ -306,14 +304,18 @@ async def _validation_exception_handler(request: Request, exc: RequestValidation
     if LOGGER.isEnabledFor(logging.DEBUG):
         LOGGER.debug("Request validation failed: %s", exc.errors())
     if _wants_html(request):
-        return templates.TemplateResponse("422.html", {"request": request}, status_code=422)
+        return templates.TemplateResponse(
+            request, "422.html", {"request": request}, status_code=422
+        )
     return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
 
 async def _uncaught_exception_handler(request: Request, exc: Exception) -> Response:
     LOGGER.exception("Uncaught exception while handling %s %s", request.method, request.url.path)
     if _wants_html(request):
-        return templates.TemplateResponse("500.html", _error_page_context(request), status_code=500)
+        return templates.TemplateResponse(
+            request, "500.html", _error_page_context(request), status_code=500
+        )
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
@@ -352,5 +354,7 @@ app.include_router(_outreach_router)
 async def _catch_all_404(request: Request, full_path: str) -> Response:
     """Return custom 404 page or JSON for any path that did not match a route."""
     if _wants_html(request):
-        return templates.TemplateResponse("404.html", _404_context(request), status_code=404)
+        return templates.TemplateResponse(
+            request, "404.html", _404_context(request), status_code=404
+        )
     return JSONResponse(status_code=404, content={"detail": "Not found"})

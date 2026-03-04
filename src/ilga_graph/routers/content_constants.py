@@ -129,6 +129,7 @@ def get_why_you_care_branch_for_selection(kei_status_selected: str | None) -> di
 MARQUEE_IMAGES: list[dict[str, str]] = [
     {
         "src": "/static/images/tyler_morales.png",
+        "src_webp": "/static/images/tyler_morales.webp",
         "alt": "Tyler Morales, kei vehicle owner affected by registration",
         "name": "Tyler Morales",
         "caption": "Followed all proper import rules; the DMV and Secretary of State keep denying his registration.",
@@ -136,6 +137,7 @@ MARQUEE_IMAGES: list[dict[str, str]] = [
     },
     {
         "src": "/static/images/christian-eduardo-huerta.jpg",
+        "src_webp": "/static/images/christian-eduardo-huerta.webp",
         "alt": "Christian Eduardo Huerta, kei vehicle owner affected by registration",
         "name": "Christian Eduardo Huerta",
         "caption": "\"We use our Sambar for our mobile detailing. It's an amazing marketing tool and a gas saver.\" In Illinois, whether you get registration is inconsistent; he's one of the lucky ones who got plates.",
@@ -143,6 +145,7 @@ MARQUEE_IMAGES: list[dict[str, str]] = [
     },
     {
         "src": "/static/images/Mercedes_Weikal%20.jpeg",
+        "src_webp": "/static/images/Mercedes_Weikal%20.webp",
         "alt": "Mercedes Weikal with her 1989 Suzuki Every kei van from Japan",
         "name": "Mercedes Weikal",
         "caption": 'Into tiny cars since 15; now has five imports including her 1989 Suzuki Every from Japan. "They\'re thrifty, easy to park, and bring smiles. If these vehicles remain banned, enthusiasts in Illinois like me will have less choice."',

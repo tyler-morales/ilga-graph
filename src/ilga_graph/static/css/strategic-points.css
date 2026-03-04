@@ -133,6 +133,7 @@
   gap: 0.75rem;
   margin: 0;
   padding: 0;
+  list-style: none;
 }
 
 .strategic-points--home .strategic-points-row .strategic-points-card {

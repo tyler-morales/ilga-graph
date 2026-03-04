@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+    {% set _min = '.min' if use_minified_assets else '' %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
@@ -25,9 +26,9 @@
     {% if umami_enabled %}
     <script defer src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>
     {% endif %}
-    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/variables{{ _min }}.css">
     {% if primary_color and primary_color|lower not in ['#fff', '#ffffff', '#fafafa', '#f5f5f5', '#eee', '#eeeeee',
-    '#f0f0f0', '#e0e0e0'] %}
+    '#f0f0f0', '#e0e0e0', '#ff4500', '#ff6600', '#e55a1a'] %}
     <style>
         :root {
             --color-hero-cta: {{ primary_color }};
@@ -35,31 +36,30 @@
         }
     </style>
     {% endif %}
-    <link rel="stylesheet" href="/static/css/components.css">
-    <link rel="stylesheet" href="/static/css/base.css">
-    <link rel="stylesheet" href="/static/css/advocacy-form.css">
-    <link rel="stylesheet" href="/static/css/advocacy-drawer.css">
-    <link rel="stylesheet" href="/static/css/advocacy-email.css">
-    <link rel="stylesheet" href="/static/css/advocacy-cards.css">
-    <link rel="stylesheet" href="/static/css/magnify-lens.css">
-    <link rel="stylesheet" href="/static/css/why-you-care.css">
-    <link rel="stylesheet" href="/static/css/mission-statement.css">
-    <link rel="stylesheet" href="/static/css/strategic-points.css">
-    <link rel="stylesheet" href="/static/css/timeline.css">
+    <link rel="stylesheet" href="/static/css/components{{ _min }}.css">
+    <link rel="stylesheet" href="/static/css/base{{ _min }}.css">
+    <link rel="stylesheet" href="/static/css/advocacy-form{{ _min }}.css">
+    <link rel="stylesheet" href="/static/css/advocacy-drawer{{ _min }}.css">
+    <link rel="stylesheet" href="/static/css/advocacy-email{{ _min }}.css">
+    <link rel="stylesheet" href="/static/css/advocacy-cards{{ _min }}.css">
+    <link rel="stylesheet" href="/static/css/magnify-lens{{ _min }}.css">
+    <link rel="stylesheet" href="/static/css/why-you-care{{ _min }}.css">
+    <link rel="stylesheet" href="/static/css/mission-statement{{ _min }}.css">
+    <link rel="stylesheet" href="/static/css/strategic-points{{ _min }}.css">
+    <link rel="stylesheet" href="/static/css/timeline{{ _min }}.css">
     {% if features.get('message_marquee') %}
-    <link rel="stylesheet" href="/static/css/message-marquee.css">
+    <link rel="stylesheet" href="/static/css/message-marquee{{ _min }}.css">
     {% endif %}
-    <link rel="stylesheet" href="/static/css/share-section.css">
-    <link rel="stylesheet" href="/static/css/intelligence-dashboard.css">
-    <link rel="stylesheet" href="/static/css/intelligence-tables.css">
-    <link rel="stylesheet" href="/static/css/admin-mocks.css">
-    <link rel="stylesheet" href="/static/css/admin-updates.css">
-    <link rel="stylesheet" href="/static/css/admin-dashboard.css">
-    <link rel="stylesheet" href="/static/css/admin-login.css">
-    <script src="https://unpkg.com/@floating-ui/dom@1.6.11/dist/floating-ui.dom.umd.min.js"
-        crossorigin="anonymous"></script>
-    <script src="https://unpkg.com/@popperjs/core@2" crossorigin="anonymous"></script>
-    <script src="https://unpkg.com/tippy.js@6" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="/static/css/share-section{{ _min }}.css">
+    <link rel="stylesheet" href="/static/css/intelligence-dashboard{{ _min }}.css">
+    <link rel="stylesheet" href="/static/css/intelligence-tables{{ _min }}.css">
+    <link rel="stylesheet" href="/static/css/admin-mocks{{ _min }}.css">
+    <link rel="stylesheet" href="/static/css/admin-updates{{ _min }}.css">
+    <link rel="stylesheet" href="/static/css/admin-dashboard{{ _min }}.css">
+    <link rel="stylesheet" href="/static/css/admin-login{{ _min }}.css">
+    {% block head_extra %}{% endblock %}
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tippy.js@6/dist/tippy.umd.min.js" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/htmx.org@2.0.4"
         integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
         crossorigin="anonymous"></script>
@@ -201,7 +201,7 @@
             }
         })();
     </script>
-    <script src="/static/js/conversation.js"></script>
+    <script src="/static/js/conversation{{ _min }}.js"></script>
     <div class="container">
         {% include "_session_pill.html" %}
         <main id="main-content" role="main">
@@ -296,6 +296,24 @@
                 document.addEventListener('DOMContentLoaded', initStrategicStatesIcon);
             } else {
                 initStrategicStatesIcon();
+            }
+        })();
+    </script>
+    {# Ensure decorative iconify-icons inside aria-hidden spans stay non-focusable after custom element upgrade. #}
+    <script>
+        (function () {
+            function ensureAriaHiddenIconsNonFocusable() {
+                document.querySelectorAll('.strategic-points-icon[aria-hidden="true"] iconify-icon').forEach(function (el) {
+                    el.setAttribute('tabindex', '-1');
+                });
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function () {
+                    ensureAriaHiddenIconsNonFocusable();
+                    setTimeout(ensureAriaHiddenIconsNonFocusable, 500);
+                });
+            } else {
+                ensureAriaHiddenIconsNonFocusable();
             }
         })();
     </script>
@@ -1183,7 +1201,11 @@
                 };
                 var instances = tippy(terms, common);
                 if (typeof tippy.createSingleton === 'function') {
-                    tippy.createSingleton(instances, { moveTransition: 'transform 0.2s ease-out', overrides: ['content', 'placement'] });
+                    try {
+                        tippy.createSingleton(instances, { moveTransition: 'transform 0.2s ease-out', overrides: ['content', 'placement'] });
+                    } catch (err) {
+                        /* UMD bundle can have undefined applyStyles in createSingleton; tooltips still work */
+                    }
                 }
             }
             if (document.readyState === 'loading') {
@@ -1302,7 +1324,7 @@
             document.addEventListener('DOMContentLoaded', updateSubmitState);
         })();
     </script>
-    <script src="/static/js/hero-auth-strip.js"></script>
+    <script src="/static/js/hero-auth-strip{{ _min }}.js"></script>
     {% block extra_scripts %}{% endblock %}
 </body>
 

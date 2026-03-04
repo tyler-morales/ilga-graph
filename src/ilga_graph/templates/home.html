@@ -2,6 +2,10 @@
 
 {% block title %}{{ site_name }}{% endblock %}
 {% block body_class %}page-home{% endblock %}
+{% block meta_extra %}
+    <link rel="preload" as="image" href="/static/images/truck-hero-400w.webp" type="image/webp" media="(max-width: 600px)">
+    <link rel="preload" as="image" href="/static/images/truck-hero.webp" type="image/webp" media="(min-width: 601px)">
+{% endblock %}
 
 {% block content %}
 {# ── Home: shared hero with "Learn about the issue? / for legislators"; form redirects to /advocacy/ ── #}

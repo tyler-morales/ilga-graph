@@ -23,7 +23,7 @@ templates.env.globals["app_base_url"] = cfg.APP_BASE_URL
 templates.env.globals["site_name"] = cfg.SITE_NAME
 _campaign = get_campaign_config()
 templates.env.globals["campaign_name"] = _campaign.campaign_name or cfg.SITE_NAME
-templates.env.globals["primary_color"] = _campaign.primary_color or "#FF4500"
+templates.env.globals["primary_color"] = _campaign.primary_color or "#e55a1a"
 templates.env.globals["issue_summary"] = _campaign.issue_summary
 templates.env.globals["meta_description"] = cfg.META_DESCRIPTION
 templates.env.globals["og_image_url"] = cfg.OG_IMAGE_URL
@@ -74,7 +74,7 @@ async def dev_playground(request: Request, scene: str | None = None):
     if not cfg.DEV_MODE:
         return JSONResponse(status_code=404, content={"detail": "Not available"})
     ctx = _playground_context(request, scene)
-    return templates.TemplateResponse("dev_playground.html", ctx)
+    return templates.TemplateResponse(request, "dev_playground.html", ctx)
 
 
 @router.get("/playground/{scene_id}", include_in_schema=False)
@@ -83,4 +83,4 @@ async def dev_playground_scene(request: Request, scene_id: str):
     if not cfg.DEV_MODE:
         return JSONResponse(status_code=404, content={"detail": "Not available"})
     ctx = _playground_context(request, scene_id)
-    return templates.TemplateResponse("dev_playground.html", ctx)
+    return templates.TemplateResponse(request, "dev_playground.html", ctx)

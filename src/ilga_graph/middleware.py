@@ -10,6 +10,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy import select
+from starlette.middleware.gzip import GZipMiddleware
 
 from . import config as cfg
 from .campaign_helpers import get_active_campaign
@@ -48,6 +49,7 @@ def _build_csp_directive() -> str:
 
 def register_middleware(app: FastAPI) -> None:
     """Add CORS, API key auth, CSRF cookie, security headers, and request logging."""
+    app.add_middleware(GZipMiddleware, minimum_size=500)
     origins = [o.strip() for o in cfg.CORS_ORIGINS.split(",") if o.strip()]
     app.add_middleware(
         CORSMiddleware,
@@ -148,6 +150,7 @@ def register_middleware(app: FastAPI) -> None:
             response.headers["X-Content-Type-Options"] = "nosniff"
             response.headers["X-Frame-Options"] = "DENY"
             response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+            response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
             csp = _build_csp_directive()
             if cfg.CSP_ENFORCE:
                 response.headers["Content-Security-Policy"] = csp
