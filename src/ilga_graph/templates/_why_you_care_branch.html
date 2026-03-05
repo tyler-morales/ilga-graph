@@ -15,7 +15,7 @@
             {{ why_you_care_branch.secondary_cta_label }}
         </button>
         {% else %}
-        <a href="{{ why_you_care_branch.secondary_cta_href }}" class="btn btn--secondary wyc-branch-content__secondary" data-wyc-step="wyc_clicked_to_advocacy">
+        <a href="{{ why_you_care_branch.secondary_cta_href }}" class="btn btn--secondary wyc-branch-content__secondary" data-wyc-step="wyc_clicked_to_advocacy"{% if why_you_care_branch.secondary_cta_href is defined and why_you_care_branch.secondary_cta_href and '/advocacy' in why_you_care_branch.secondary_cta_href %} data-scroll-to-results{% endif %}>
             <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
             {{ why_you_care_branch.secondary_cta_label }}
         </a>
@@ -62,7 +62,7 @@
         <p class="wyc-branch-content__cta-nudge" id="wyc-cta-nudge">{{ why_you_care_cta_nudge }}</p>
         {% endif %}
         <div class="wyc-branch-content__ctas">
-            <a href="{{ why_you_care_branch.primary_cta_href }}" class="btn btn--primary wyc-branch-content__cta-primary why-you-care-link" data-wyc-step="{% if why_you_care_branch.primary_cta_href == '/advocacy' %}wyc_clicked_to_advocacy{% else %}wyc_clicked_to_the_issue{% endif %}">
+            <a href="{{ why_you_care_branch.primary_cta_href }}" class="btn btn--primary wyc-branch-content__cta-primary why-you-care-link" data-wyc-step="{% if why_you_care_branch.primary_cta_href == '/advocacy' %}wyc_clicked_to_advocacy{% else %}wyc_clicked_to_the_issue{% endif %}"{% if why_you_care_branch.primary_cta_href is defined and why_you_care_branch.primary_cta_href and '/advocacy' in why_you_care_branch.primary_cta_href %} data-scroll-to-results{% endif %}>
                 <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
                 {{ why_you_care_branch.primary_cta_label }}
             </a>

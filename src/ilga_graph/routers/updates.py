@@ -50,11 +50,13 @@ from ..kei_poll_context import (
     KEI_POLL_CHOICE_COOKIE,
     KEI_POLL_VOTED_COOKIE,
     KEI_POLL_VOTED_MAX_AGE,
+    KEI_POLL_ZIP_COOKIE,
     STANDALONE_KEI_POLL_ID,
     _get_kei_impact_results,
     _get_kei_status_results,
     _validate_kei_poll_impact,
     _validate_kei_status,
+    ensure_campaign_polls,
     get_kei_poll_ids,
     get_kei_poll_initial_state,
     get_kei_poll_sidebar_context,
@@ -1147,6 +1149,7 @@ async def kei_status_post(
         if zip_val and not (user.zip_code or "").strip():
             user.zip_code = zip_val
     # Dual-write to poll_responses so admin Polls list and per-poll results stay in sync.
+    await ensure_campaign_polls(db)
     poll_slug = get_campaign_config().poll_slug or "kei"
     campaign_poll = (
         await db.execute(select(Poll).where(Poll.slug == poll_slug))
@@ -1219,7 +1222,7 @@ async def kei_status_post(
                 wyc_pill_icon_slug = (
                     validated if validated in ("registered", "revoked", "denied") else branch_slug
                 )
-                return templates.TemplateResponse(
+                resp = templates.TemplateResponse(
                     request,
                     "_why_you_care_branch.html",
                     {
@@ -1237,7 +1240,16 @@ async def kei_status_post(
                         "poll_id": poll_id,
                     },
                 )
-            return templates.TemplateResponse(
+                if zip_val:
+                    resp.set_cookie(
+                        KEI_POLL_ZIP_COOKIE,
+                        zip_val,
+                        max_age=KEI_POLL_VOTED_MAX_AGE,
+                        path="/",
+                        samesite="lax",
+                    )
+                return resp
+            resp = templates.TemplateResponse(
                 request,
                 "_kei_poll_logged_in_success.html",
                 {
@@ -1254,9 +1266,27 @@ async def kei_status_post(
                     "hide_outreach_cta": hide_outreach_cta,
                 },
             )
-        return RedirectResponse(
+            if zip_val:
+                resp.set_cookie(
+                    KEI_POLL_ZIP_COOKIE,
+                    zip_val,
+                    max_age=KEI_POLL_VOTED_MAX_AGE,
+                    path="/",
+                    samesite="lax",
+                )
+            return resp
+        redir = RedirectResponse(
             _kei_status_redirect_url(poll_id, prompt_q, "submitted=1"), status_code=303
         )
+        if zip_val:
+            redir.set_cookie(
+                KEI_POLL_ZIP_COOKIE,
+                zip_val,
+                max_age=KEI_POLL_VOTED_MAX_AGE,
+                path="/",
+                samesite="lax",
+            )
+        return redir
     # Anonymous: set cookies for results/selection on next visit; return fragment or redirect
     results = await _get_kei_status_results(db)
     impact_results = await _get_kei_impact_results(db)
@@ -1266,6 +1296,8 @@ async def kei_status_post(
         {"key": KEI_POLL_CHOICE_COOKIE, "value": validated, **cookie_opts},
         {"key": KEI_IMPACT_SLUG_COOKIE, "value": impact_val, **cookie_opts},
     ]
+    if zip_val:
+        cookies_to_set.append({"key": KEI_POLL_ZIP_COOKIE, "value": zip_val, **cookie_opts})
     if request.headers.get("HX-Request"):
         if poll_id == "home-kei-poll":
             why_you_care_branch = get_why_you_care_branch_for_selection(validated)

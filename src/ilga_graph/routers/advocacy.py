@@ -44,6 +44,7 @@ from ..kei_poll_context import (
     KEI_POLL_CHOICE_COOKIE,
     KEI_POLL_VOTED_COOKIE,
     KEI_POLL_VOTED_MAX_AGE,
+    KEI_POLL_ZIP_COOKIE,
     get_kei_poll_sidebar_context,
 )
 from ..member_lookup import (
@@ -795,6 +796,10 @@ async def advocacy_index(
         saved = (user.zip_code or "").strip()
         if _ZIP_RE.match(saved) and saved in state.zip_to_district:
             zip_param = saved
+    if not zip_param:
+        cookie_zip = (request.cookies.get(KEI_POLL_ZIP_COOKIE) or "").strip()
+        if cookie_zip and _ZIP_RE.match(cookie_zip) and cookie_zip in state.zip_to_district:
+            zip_param = cookie_zip
     in_district = zip_param in state.zip_to_district if zip_param else False
     member_count = len(state.members)
     zip_count = len(state.zip_to_district)

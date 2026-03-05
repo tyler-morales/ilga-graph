@@ -189,6 +189,14 @@
                 document.body.addEventListener('htmx:sendError', showConnectionError);
             }
 
+            document.body.addEventListener('click', function (e) {
+                var a = e.target && e.target.closest && e.target.closest('a[data-scroll-to-results]');
+                if (!a) return;
+                var href = (a.getAttribute('href') || '').split('?')[0];
+                if (href !== '/advocacy' && href !== '/advocacy/') return;
+                if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('__ilga_scroll_to_results', '1');
+            });
+
             window.showConnectionError = showConnectionError;
 
             if (offlineEl && typeof navigator !== 'undefined' && 'onLine' in navigator) {
