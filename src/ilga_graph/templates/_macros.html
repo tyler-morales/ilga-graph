@@ -229,9 +229,96 @@
 </div>
 {% endmacro %}
 
-{% macro kei_poll(poll_id="footer-kei-poll", show_email=false, kei_status_total=none, kei_impact_options=none, kei_poll_goal=none, zip_known=true, show_intro=true, prefill_zip='', poll_on_advocacy_page=false) %}
-<div class="kei-poll kei-poll-card" id="{{ poll_id }}-wrap" aria-labelledby="{{ poll_id }}-heading"
-    data-kei-poll-branch>
+{% macro kei_poll(poll_id="footer-kei-poll", show_email=false, kei_status_total=none, kei_impact_options=none, kei_poll_goal=none, zip_known=true, show_intro=true, prefill_zip='', poll_on_advocacy_page=false, variant="card", swap_target_id=none) %}
+{% if variant == "inline" %}
+<div class="wyc-inline-poll kei-poll-container" id="{{ poll_id }}-wrap" data-kei-poll-branch data-kei-poll-inline data-variant="inline" aria-labelledby="{{ poll_id }}-heading">
+    <form id="{{ poll_id }}-form" action="/updates/kei-status" method="post" class="wyc-inline-poll__form"
+        hx-post="/updates/kei-status" hx-target="#{{ swap_target_id if swap_target_id else poll_id ~ '-wrap' }}" hx-swap="innerHTML"
+        aria-label="Your kei status">
+        <input type="hidden" name="csrf_token" value="{{ (request.state.csrf_token or '') if request is defined else '' }}">
+        <input type="hidden" name="poll_id" value="{{ poll_id }}">
+        <input type="hidden" name="kei_impact_slug" id="{{ poll_id }}-impact-input" value="">
+        <div class="wyc-inline-question" role="group" aria-label="Do you have a kei vehicle?">
+            <p class="wyc-inline-question__label" id="{{ poll_id }}-heading">Do you have a kei vehicle?</p>
+            <div class="wyc-inline-question__branch-btns" role="group">
+                <button type="button" class="wyc-inline-question__btn wyc-inline-question__btn--branch" data-branch="yes"
+                    aria-pressed="false">Yes</button>
+                <button type="button" class="wyc-inline-question__btn wyc-inline-question__btn--branch" data-branch="no"
+                    aria-pressed="false">No</button>
+            </div>
+        </div>
+        <div class="wyc-inline-poll__step2 wyc-inline-poll__step2--hidden" id="{{ poll_id }}-panel-have"
+            data-branch="yes" aria-hidden="true">
+            <p class="wyc-inline-poll__step2-legend">What's your registration status?</p>
+            <div class="wyc-inline-poll__options" role="group" aria-label="What's your registration status?">
+                <label class="wyc-inline-poll__option"><input type="radio" name="kei_status" value="registered"
+                    required>Registered</label>
+                <label class="wyc-inline-poll__option"><input type="radio" name="kei_status" value="revoked">Had one;
+                    registration was revoked</label>
+                <label class="wyc-inline-poll__option"><input type="radio" name="kei_status" value="denied">Was denied
+                    registration</label>
+            </div>
+        </div>
+        <div class="wyc-inline-poll__step2 wyc-inline-poll__step2--hidden" id="{{ poll_id }}-panel-no"
+            data-branch="no" aria-hidden="true">
+            <p class="wyc-inline-poll__step2-legend">Would you want one?</p>
+            <div class="wyc-inline-poll__options" role="group" aria-label="Would you want one?">
+                <label class="wyc-inline-poll__option"><input type="radio" name="kei_status" value="would_want">Yes, I'd
+                    want one</label>
+                <label class="wyc-inline-poll__option"><input type="radio" name="kei_status" value="would_not_want">No, I
+                    wouldn't want one</label>
+            </div>
+        </div>
+        <div class="wyc-inline-poll__step3 wyc-inline-poll__step3--hidden" id="{{ poll_id }}-panel-impact" aria-hidden="true">
+            <p class="wyc-inline-poll__step2-legend">What would this fix mean for you?</p>
+            <div class="wyc-inline-poll__options" role="group" aria-label="What would this fix mean for you?">
+                {% for slug, label in (kei_impact_options or []) %}
+                <label class="wyc-inline-poll__option"><input type="radio" name="kei_impact_radio" value="{{ slug }}"
+                        data-kei-impact-slug>{{ label }}</label>
+                {% endfor %}
+            </div>
+        </div>
+        <p class="wyc-inline-poll__back-wrap wyc-inline-poll__back-wrap--hidden" id="{{ poll_id }}-back-wrap" aria-hidden="true">
+            <button type="button" class="wyc-inline-poll__back wyc-inline-poll__back--link" aria-label="Back to previous question">Back</button>
+        </p>
+        <div class="wyc-inline-poll__zip-panel kei-poll__zip-panel kei-poll__zip-panel--hidden" id="{{ poll_id }}-panel-zip" data-kei-poll-step="zip" aria-hidden="true">
+            <p class="kei-poll__zip-intro">Last thing — your ZIP code helps us tell your legislator exactly how many of their constituents are affected.</p>
+            <label for="{{ poll_id }}-zip-inline" class="visually-hidden">Your ZIP code</label>
+            <input type="text" id="{{ poll_id }}-zip-inline" name="zip_code" class="kei-poll__zip-input input" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" placeholder="ZIP code" autocomplete="postal-code" aria-required="true" value="{{ prefill_zip|default('')|e }}">
+        </div>
+        {% if turnstile_site_key %}
+        <div id="{{ poll_id }}-turnstile-wrap" class="wyc-inline-poll__turnstile-wrap kei-poll__turnstile-wrap kei-poll__turnstile-wrap--hidden">
+            <div id="{{ poll_id }}-turnstile-container"
+                data-sitekey="{{ turnstile_site_key }}" aria-describedby="{{ poll_id }}-turnstile-hint" aria-live="polite">
+            </div>
+            <span id="{{ poll_id }}-turnstile-hint" class="visually-hidden">Security check so your vote counts.</span>
+            <p class="kei-poll__turnstile-hint">This check helps us count real responses.</p>
+        </div>
+        {% endif %}
+        <footer class="wyc-inline-poll__footer">
+            <span class="wyc-inline-poll__submit-wrap wyc-inline-poll__submit-wrap--hidden" aria-hidden="true">
+                <button type="submit" class="wyc-inline-poll__submit btn btn--success" aria-label="Submit and see results"
+                    disabled>Submit and see results</button>
+            </span>
+            {% if kei_poll_goal is not none and kei_poll_goal > 0 %}
+            {% set _goal_pct = [((kei_status_total or 0) / kei_poll_goal * 100)|round(1), 100]|min %}
+            <div class="kei-poll-goal wyc-inline-poll__goal" role="status" aria-live="polite">
+                <p class="kei-poll-goal__label" id="{{ poll_id }}-goal-label">{{ (kei_status_total or 0) }} of {{ kei_poll_goal }} responses</p>
+                <div class="kei-poll-goal__bar" role="progressbar" id="{{ poll_id }}-goal-bar"
+                    aria-valuenow="{{ kei_status_total or 0 }}" aria-valuemin="0" aria-valuemax="{{ kei_poll_goal }}"
+                    aria-labelledby="{{ poll_id }}-goal-label">
+                    <div class="kei-poll-goal__bar-fill" data-width-pct="{{ _goal_pct }}" style="width: {{ _goal_pct }}%"></div>
+                </div>
+            </div>
+            {% else %}
+            <span class="wyc-inline-poll__total" aria-hidden="true">Total Votes: {{ kei_status_total if kei_status_total is not none else '—' }}</span>
+            {% endif %}
+        </footer>
+    </form>
+</div>
+{% else %}
+<div class="kei-poll kei-poll-card kei-poll-container" id="{{ poll_id }}-wrap" aria-labelledby="{{ poll_id }}-heading"
+    data-kei-poll-branch data-variant="{{ variant }}">
     <div class="kei-poll__header-strip">
         <h2 id="{{ poll_id }}-heading" class="kei-poll__heading">Poll: Question 1 of 3</h2>
     </div>
@@ -338,98 +425,13 @@
         </form>
     </div>
 </div>
+{% endif %}
 {% include "_data_styles_script.html" %}
 {% endmacro %}
 
-{# Inline variant for Why-you-care adventure flow: no card chrome, no progress dots. Question + Yes/No pills + sub-options + step 3 impact.
-   swap_target_id: element id whose innerHTML is replaced on submit (e.g. why-you-care-flow). #}
+{# Thin wrapper: inline variant of kei_poll for Why-you-care flow (swap_target_id replaces flow container). #}
 {% macro kei_poll_inline(poll_id="home-kei-poll", kei_status_total=none, swap_target_id="why-you-care-flow", kei_impact_options=none, kei_poll_goal=none, zip_known=true, prefill_zip='') %}
-<div class="wyc-inline-poll" data-kei-poll-branch data-kei-poll-inline aria-labelledby="{{ poll_id }}-heading">
-    <form id="{{ poll_id }}-form" action="/updates/kei-status" method="post" class="wyc-inline-poll__form"
-        hx-post="/updates/kei-status" hx-target="#{{ swap_target_id }}" hx-swap="innerHTML"
-        aria-label="Your kei status">
-        <input type="hidden" name="csrf_token" value="{{ (request.state.csrf_token or '') if request is defined else '' }}">
-        <input type="hidden" name="poll_id" value="{{ poll_id }}">
-        <input type="hidden" name="kei_impact_slug" id="{{ poll_id }}-impact-input" value="">
-        <div class="wyc-inline-question" role="group" aria-label="Do you have a kei vehicle?">
-            <p class="wyc-inline-question__label" id="{{ poll_id }}-heading">Do you have a kei vehicle?</p>
-            <div class="wyc-inline-question__branch-btns" role="group">
-                <button type="button" class="wyc-inline-question__btn wyc-inline-question__btn--branch" data-branch="yes"
-                    aria-pressed="false">Yes</button>
-                <button type="button" class="wyc-inline-question__btn wyc-inline-question__btn--branch" data-branch="no"
-                    aria-pressed="false">No</button>
-            </div>
-        </div>
-        <div class="wyc-inline-poll__step2 wyc-inline-poll__step2--hidden" id="{{ poll_id }}-panel-have"
-            data-branch="yes" aria-hidden="true">
-            <p class="wyc-inline-poll__step2-legend">What's your registration status?</p>
-            <div class="wyc-inline-poll__options" role="group" aria-label="What's your registration status?">
-                <label class="wyc-inline-poll__option"><input type="radio" name="kei_status" value="registered"
-                    required>Registered</label>
-                <label class="wyc-inline-poll__option"><input type="radio" name="kei_status" value="revoked">Had one;
-                    registration was revoked</label>
-                <label class="wyc-inline-poll__option"><input type="radio" name="kei_status" value="denied">Was denied
-                    registration</label>
-            </div>
-        </div>
-        <div class="wyc-inline-poll__step2 wyc-inline-poll__step2--hidden" id="{{ poll_id }}-panel-no"
-            data-branch="no" aria-hidden="true">
-            <p class="wyc-inline-poll__step2-legend">Would you want one?</p>
-            <div class="wyc-inline-poll__options" role="group" aria-label="Would you want one?">
-                <label class="wyc-inline-poll__option"><input type="radio" name="kei_status" value="would_want">Yes, I'd
-                    want one</label>
-                <label class="wyc-inline-poll__option"><input type="radio" name="kei_status" value="would_not_want">No, I
-                    wouldn't want one</label>
-            </div>
-        </div>
-        <div class="wyc-inline-poll__step3 wyc-inline-poll__step3--hidden" id="{{ poll_id }}-panel-impact" aria-hidden="true">
-            <p class="wyc-inline-poll__step2-legend">What would this fix mean for you?</p>
-            <div class="wyc-inline-poll__options" role="group" aria-label="What would this fix mean for you?">
-                {% for slug, label in (kei_impact_options or []) %}
-                <label class="wyc-inline-poll__option"><input type="radio" name="kei_impact_radio" value="{{ slug }}"
-                        data-kei-impact-slug>{{ label }}</label>
-                {% endfor %}
-            </div>
-        </div>
-        <p class="wyc-inline-poll__back-wrap wyc-inline-poll__back-wrap--hidden" id="{{ poll_id }}-back-wrap" aria-hidden="true">
-            <button type="button" class="wyc-inline-poll__back wyc-inline-poll__back--link" aria-label="Back to previous question">Back</button>
-        </p>
-        <div class="wyc-inline-poll__zip-panel kei-poll__zip-panel kei-poll__zip-panel--hidden" id="{{ poll_id }}-panel-zip" data-kei-poll-step="zip" aria-hidden="true">
-            <p class="kei-poll__zip-intro">Last thing — your ZIP code helps us tell your legislator exactly how many of their constituents are affected.</p>
-            <label for="{{ poll_id }}-zip-inline" class="visually-hidden">Your ZIP code</label>
-            <input type="text" id="{{ poll_id }}-zip-inline" name="zip_code" class="kei-poll__zip-input input" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" placeholder="ZIP code" autocomplete="postal-code" aria-required="true" value="{{ prefill_zip|default('')|e }}">
-        </div>
-        {% if turnstile_site_key %}
-        <div id="{{ poll_id }}-turnstile-wrap" class="wyc-inline-poll__turnstile-wrap kei-poll__turnstile-wrap kei-poll__turnstile-wrap--hidden">
-            <div id="{{ poll_id }}-turnstile-container"
-                data-sitekey="{{ turnstile_site_key }}" aria-describedby="{{ poll_id }}-turnstile-hint" aria-live="polite">
-            </div>
-            <span id="{{ poll_id }}-turnstile-hint" class="visually-hidden">Security check so your vote counts.</span>
-            <p class="kei-poll__turnstile-hint">This check helps us count real responses.</p>
-        </div>
-        {% endif %}
-        <footer class="wyc-inline-poll__footer">
-            <span class="wyc-inline-poll__submit-wrap wyc-inline-poll__submit-wrap--hidden" aria-hidden="true">
-                <button type="submit" class="wyc-inline-poll__submit btn btn--success" aria-label="Submit and see results"
-                    disabled>Submit and see results</button>
-            </span>
-            {% if kei_poll_goal is not none and kei_poll_goal > 0 %}
-            {% set _goal_pct = [((kei_status_total or 0) / kei_poll_goal * 100)|round(1), 100]|min %}
-            <div class="kei-poll-goal wyc-inline-poll__goal" role="status" aria-live="polite">
-                <p class="kei-poll-goal__label" id="{{ poll_id }}-goal-label">{{ (kei_status_total or 0) }} of {{ kei_poll_goal }} responses</p>
-                <div class="kei-poll-goal__bar" role="progressbar" id="{{ poll_id }}-goal-bar"
-                    aria-valuenow="{{ kei_status_total or 0 }}" aria-valuemin="0" aria-valuemax="{{ kei_poll_goal }}"
-                    aria-labelledby="{{ poll_id }}-goal-label">
-                    <div class="kei-poll-goal__bar-fill" data-width-pct="{{ _goal_pct }}" style="width: {{ _goal_pct }}%"></div>
-                </div>
-            </div>
-            {% else %}
-            <span class="wyc-inline-poll__total" aria-hidden="true">Total Votes: {{ kei_status_total if kei_status_total is not none else '—' }}</span>
-            {% endif %}
-        </footer>
-    </form>
-</div>
-{% include "_data_styles_script.html" %}
+{{ kei_poll(poll_id, show_email=false, kei_status_total=kei_status_total, kei_impact_options=kei_impact_options, kei_poll_goal=kei_poll_goal, zip_known=zip_known, show_intro=false, prefill_zip=prefill_zip, variant="inline", swap_target_id=swap_target_id) }}
 {% endmacro %}
 
 {% macro kei_poll_results_chart(kei_status_results, kei_status_options, selected_slug=none, offer_save_choice=false) %}

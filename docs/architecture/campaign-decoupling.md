@@ -22,7 +22,7 @@ All scrapers operate on generic Illinois General Assembly (ILGA) data:
 | **User** | Campaign-specific columns: `kei_status` (e.g. "registered", "would_want") and `kei_impact_slug` (how it affects you: support_cause, know_someone, civic_duty, other). For white-label these would be campaign-scoped. |
 | **Campaign, Update, AuthCode** | Generic. |
 | **KeiPollResponse** | Legacy table; new flow uses **Poll** + **PollResponse** (generic). KeiPollResponse kept for backfill/compat. |
-| **Polls** | Two seeded for Kei: `kei` (status: have/don't have → 5 options) and `kei_impact` (how it affects you: 4 options). Impact is stored on User and in PollResponse for the kei_impact poll. |
+| **Polls** | One campaign poll (slug from `campaign_config.poll_slug`, default `kei`) plus `kei_impact` (Q3). All submissions dual-write to KeiPollResponse and PollResponse for that poll; results always from PollResponse (single source of truth). Campaign and impact polls are created at runtime if missing (`ensure_campaign_polls`). UI: one `kei_poll` macro with variant (inline | card | standalone); placements: home inline, sidebar card, standalone /poll, updates page. |
 | **KeiInterestStatement** | Kei-named; content is campaign-specific. Concept is generic; name could be generalized later. |
 
 **User profile:** A single read/edit surface at GET/POST `/account` shows and updates User fields (email read-only, ZIP, newsletter toggle, "Your answers" from kei_status/kei_impact_slug/kei_personal_note). Campaign-specific columns are displayed as "your answers" and will be scoped by campaign when we add multi-campaign.
