@@ -16,9 +16,10 @@ from .constants import (
     KEI_OWNER_SLUGS,
     KEI_POLL_IMPACT_OPTIONS,
     KEI_POLL_IMPACT_SLUGS,
+    KEI_STATUS_OPTIONS,
     KEI_STATUS_SLUGS,
 )
-from .db_models import Poll, PollResponse, User
+from .db_models import Poll, PollOption, PollResponse, User
 
 SIDEBAR_KEI_POLL_ID = "sidebar-kei-poll"
 STANDALONE_KEI_POLL_ID = "standalone-kei-poll"
@@ -33,6 +34,7 @@ _KEI_POLL_IDS = frozenset(
 )
 KEI_POLL_VOTED_COOKIE = "kei_poll_voted"
 KEI_POLL_CHOICE_COOKIE = "kei_poll_choice"
+KEI_POLL_ZIP_COOKIE = "ilga_poll_zip"
 KEI_POLL_VOTED_MAX_AGE = 365 * 24 * 60 * 60  # 1 year
 
 
@@ -198,3 +200,34 @@ async def get_kei_poll_sidebar_context(
 def get_kei_poll_ids() -> frozenset[str]:
     """Return the set of valid poll IDs (for routes that validate poll_id)."""
     return _KEI_POLL_IDS
+
+
+async def ensure_campaign_polls(db: AsyncSession) -> None:
+    """Ensure campaign poll and kei_impact poll exist; create with options if missing.
+    Idempotent: called before dual-write so prod always has a valid poll (single source of truth).
+    """
+    poll_slug = get_campaign_config().poll_slug or "kei"
+    campaign = (await db.execute(select(Poll).where(Poll.slug == poll_slug))).scalar_one_or_none()
+    if not campaign:
+        campaign = Poll(
+            slug=poll_slug,
+            title="State of kei",
+            is_active=True,
+            placement=None,
+        )
+        db.add(campaign)
+        await db.flush()
+        for i, (slug, label) in enumerate(KEI_STATUS_OPTIONS):
+            db.add(PollOption(poll_id=campaign.id, slug=slug, label=label, sort_order=i))
+    impact = (await db.execute(select(Poll).where(Poll.slug == "kei_impact"))).scalar_one_or_none()
+    if not impact:
+        impact = Poll(
+            slug="kei_impact",
+            title="How does this affect you?",
+            is_active=True,
+            placement=None,
+        )
+        db.add(impact)
+        await db.flush()
+        for i, (slug, label) in enumerate(KEI_POLL_IMPACT_OPTIONS):
+            db.add(PollOption(poll_id=impact.id, slug=slug, label=label, sort_order=i))

@@ -709,6 +709,47 @@ class TestSubscribeUnsubscribeEmail:
             importlib.reload(db_mod)
             run_async(check())
 
+    def test_kei_status_dual_writes_to_poll_response_single_source_of_truth(
+        self, client: TestClient, test_db_path: Path
+    ) -> None:
+        """POST kei-status writes to PollResponse for campaign poll so results show everywhere."""
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(cfg_mod)
+            importlib.reload(db_mod)
+            importlib.reload(updates_router_mod)
+        with patch.object(
+            updates_router_mod, "_verify_turnstile", new_callable=AsyncMock, return_value=True
+        ):
+            resp = client.post(
+                "/updates/kei-status",
+                data=_data_with_csrf(
+                    client, {"kei_status": "would_want", "kei_impact_slug": "support_cause"}
+                ),
+                headers={"HX-Request": "true"},
+            )
+        assert resp.status_code == 200
+        assert b"change your answer" in resp.content or b"Need to change" in resp.content
+
+        async def check():
+            from ilga_graph.campaign_config import get_campaign_config
+            from ilga_graph.db_models import Poll, PollResponse
+
+            async with db_mod.async_session_factory() as session:
+                slug = get_campaign_config().poll_slug or "kei"
+                r = await session.execute(select(Poll).where(Poll.slug == slug))
+                campaign = r.scalar_one_or_none()
+                assert campaign is not None, "campaign poll must exist (ensure_campaign_polls)"
+                pr = await session.execute(
+                    select(PollResponse).where(PollResponse.poll_id == campaign.id)
+                )
+                rows = list(pr.scalars().all())
+                assert len(rows) >= 1, "PollResponse must have at least one row for results"
+                assert any(r.option_slug == "would_want" for r in rows)
+
+        with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
+            importlib.reload(db_mod)
+            run_async(check())
+
     def test_kei_status_anonymous_sets_voted_cookie(
         self, client: TestClient, test_db_path: Path
     ) -> None:

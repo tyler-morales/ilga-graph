@@ -24,7 +24,6 @@ from ..constants import (
     CATEGORY_COMMITTEES,
     GENERAL_COMMITTEE_CODES,
     KEI_STATUS_OPTIONS,
-    KEI_STATUS_SLUGS,
 )
 from ..db import get_db
 from ..db_models import (
@@ -598,22 +597,6 @@ async def admin_outreach_page(
         "admin_outreach.html",
         {"request": request, "conversion_data": data},
     )
-
-
-async def _get_kei_poll_results(db: AsyncSession) -> dict[str, Any]:
-    """Verified-only kei poll counts (from User). For admin display."""
-    result = await db.execute(
-        select(User.kei_status, func.count())
-        .where(User.kei_status.isnot(None))
-        .where(User.last_login_at.isnot(None))
-        .group_by(User.kei_status)
-    )
-    by_status: dict[str, int] = {row[0]: row[1] for row in result.all()}
-    total = sum(by_status.values())
-    return {
-        "by_status": {slug: by_status.get(slug, 0) for slug in KEI_STATUS_SLUGS},
-        "total_responses": total,
-    }
 
 
 # --- Poll (Poll/PollOption/PollResponse) helpers ---

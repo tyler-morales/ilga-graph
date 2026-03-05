@@ -129,7 +129,7 @@
 </div>
 
 <script>
-    /* ── Auto-scroll to member cards when user just submitted zip (home or advocacy hero) ── */
+    /* ── Auto-scroll to goal section when user just submitted zip or came from poll CTA (home or advocacy hero) ── */
     (function () {
         var results = document.getElementById('results');
         if (!results || results.getAttribute('data-has-initial-results') !== 'true') return;
@@ -144,7 +144,7 @@
         requestAnimationFrame(function () {
             var drawer = document.getElementById('advocacy-drawer');
             if ((drawer && drawer.classList.contains('open')) || (typeof shouldSkipResultsScroll === 'function' && shouldSkipResultsScroll())) return;
-            var scrollTarget = results.querySelector('#member-carousel') || results;
+            var scrollTarget = results.querySelector('.outreach-goal') || results.querySelector('#member-carousel') || results;
             scrollTarget.scrollIntoView({
                 behavior: reduceMotion ? 'auto' : 'smooth',
                 block: 'start'
