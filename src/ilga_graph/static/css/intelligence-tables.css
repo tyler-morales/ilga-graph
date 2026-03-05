@@ -426,86 +426,77 @@ margin-left: 6px;
 font-weight: 600;
 }
 .bill-pipeline {
-margin: 1.5em 0;
+  margin: 1.5em 0;
 }
-.bill-pipeline-visual {
-display: flex;
-gap: 0;
-margin: 0.5em 0;
-overflow-x: auto;
+.bill-pipeline-track-wrap {
+  margin: 0.5em 0;
 }
-.pipeline-step {
-display: flex;
-flex-direction: column;
-align-items: center;
-flex: 1;
-min-width: 80px;
-position: relative;
+.bill-pipeline-track {
+  position: relative;
+  height: 24px;
+  background: #e5e5e5;
+  border-radius: 4px;
+  overflow: visible;
 }
-.pipeline-step::after {
-content: "";
-position: absolute;
-top: 10px;
-right: 0;
-width: 50%;
-height: 2px;
-background: #ddd;
+.bill-pipeline-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: #2d8659;
+  border-radius: 4px 0 0 4px;
+  transition: width 0.2s ease;
 }
-.pipeline-step::before {
-content: "";
-position: absolute;
-top: 10px;
-left: 0;
-width: 50%;
-height: 2px;
-background: #ddd;
-}
-.pipeline-step:first-child::before {
-display: none;
-}
-.pipeline-step:last-child::after {
-display: none;
-}
-.pipeline-step-done::before,
-.pipeline-step-done::after {
-background: #2d8659;
-}
-.pipeline-step-current::before {
-background: #2d8659;
-}
+/* Dots at exact positions (0, 1/6, 2/6, 3/6, 4/6, 5/6, 1) so circles align with labels */
 .pipeline-step-dot {
-width: 12px;
-height: 12px;
-border-radius: 50%;
-background: #ddd;
-border: 2px solid #ddd;
-z-index: 1;
-margin-bottom: 4px;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ccc;
+  border: 2px solid #ccc;
+  z-index: 2;
+  box-sizing: border-box;
 }
-.pipeline-step-done .pipeline-step-dot {
-background: #2d8659;
-border-color: #2d8659;
+.pipeline-step-dot.pipeline-dot-0 { left: 0%; }
+.pipeline-step-dot.pipeline-dot-1 { left: 16.666%; }
+.pipeline-step-dot.pipeline-dot-2 { left: 33.333%; }
+.pipeline-step-dot.pipeline-dot-3 { left: 50%; }
+.pipeline-step-dot.pipeline-dot-4 { left: 66.666%; }
+.pipeline-step-dot.pipeline-dot-5 { left: 83.333%; }
+.pipeline-step-dot.pipeline-dot-6 { left: 100%; }
+.pipeline-step-dot.pipeline-step-done {
+  background: #2d8659;
+  border-color: #2d8659;
 }
-.pipeline-step-current .pipeline-step-dot {
-background: #fff;
-border-color: #4285f4;
-box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.3);
+.pipeline-step-dot.pipeline-step-current {
+  background: #fff;
+  border-color: #4285f4;
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.3);
 }
-.pipeline-step-label {
-font-size: var(--font-size-xs);
-color: #888;
-text-align: center;
+.bill-pipeline-labels {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+  margin-top: 6px;
+  text-align: center;
 }
-.pipeline-step-current .pipeline-step-label {
-color: #4285f4;
-font-weight: 600;
+.pipeline-label {
+  font-size: var(--font-size-xs);
+  color: #888;
 }
-.pipeline-step-done .pipeline-step-label {
-color: #2d8659;
+.pipeline-label.pipeline-step-current {
+  color: #4285f4;
+  font-weight: 600;
+}
+.pipeline-label.pipeline-step-done {
+  color: #2d8659;
 }
 .bill-pipeline-status {
-font-size: var(--font-size-label);
-color: #555;
+  font-size: var(--font-size-label);
+  color: #555;
 }
 .bill-sponsor-context,
 .bill-slips,
@@ -806,7 +797,7 @@ color: #856404;
 }
 
 @media (max-width: 480px) {
-  .pipeline-step-label,
+  .pipeline-label,
   .action-category-badge,
   .action-signal-badge,
   .action-rule-ref,

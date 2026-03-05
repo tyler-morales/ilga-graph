@@ -90,16 +90,22 @@
     </div>
 
     {# ── Pipeline progress ── #}
+    {% set pipeline_stages = ['Filed', 'In Committee', 'Passed Committee', 'Floor Vote', 'Crossed Chambers', 'Passed Both Houses', 'Signed into Law'] %}
+    {% set current_index = pipeline_stages.index(bill.stage_label) if bill.stage_label in pipeline_stages else 0 %}
     <div class="bill-pipeline">
         <h2>Pipeline Progress</h2>
-        <div class="bill-pipeline-visual">
-            {% set stages = ['Filed', 'In Committee', 'Passed Committee', 'Floor Vote', 'Crossed Chambers', 'Passed Both', 'Signed'] %}
-            {% for s in stages %}
-            <div class="pipeline-step {% if bill.stage_label == s %}pipeline-step-current{% elif bill.stage_label in stages and stages.index(s) < stages.index(bill.stage_label) %}pipeline-step-done{% endif %}">
-                <div class="pipeline-step-dot"></div>
-                <span class="pipeline-step-label">{{ s }}</span>
+        <div class="bill-pipeline-track-wrap">
+            <div class="bill-pipeline-track" role="progressbar" aria-valuenow="{{ current_index + 1 }}" aria-valuemin="1" aria-valuemax="7" aria-label="Bill pipeline stage">
+                <div class="bill-pipeline-fill" style="width: {{ (current_index / 6 * 100) }}%;"></div>
+                {% for s in pipeline_stages %}
+                <div class="pipeline-step-dot pipeline-dot-{{ loop.index0 }} {% if bill.stage_label == s %}pipeline-step-current{% elif bill.stage_label in pipeline_stages and pipeline_stages.index(bill.stage_label) > loop.index0 %}pipeline-step-done{% endif %}" aria-hidden="true"></div>
+                {% endfor %}
             </div>
-            {% endfor %}
+            <div class="bill-pipeline-labels" aria-hidden="true">
+                {% for s in pipeline_stages %}
+                <span class="pipeline-label pipeline-label-{{ loop.index0 }} {% if bill.stage_label == s %}pipeline-step-current{% elif bill.stage_label in pipeline_stages and pipeline_stages.index(bill.stage_label) > loop.index0 %}pipeline-step-done{% endif %}">{{ s }}</span>
+                {% endfor %}
+            </div>
         </div>
         <p class="bill-pipeline-status" {% if bill.rule_context %}title="{{ bill.rule_context }}"{% endif %}>
             Current stage: <strong>{{ bill.stage_label }}</strong>

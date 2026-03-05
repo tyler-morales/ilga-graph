@@ -20,9 +20,16 @@ from ..intelligence_helpers import (
 from ..ml.rule_engine import get_bill_to_law_process
 from ..models import Bill
 from ..routers.content import STRATEGIC_FIVE_POINTS
-from ..session_schedule import get_milestone_by_id, get_next_deadline_safe
+from ..session_schedule import (
+    get_milestone_by_id,
+    get_next_deadline_safe,
+    get_session_date_range,
+    session_label,
+)
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+PROCESSED_DIR = _REPO_ROOT / "processed"
 router = APIRouter()
 templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
 templates.env.globals["dev_available"] = cfg.DEV_MODE
@@ -67,6 +74,89 @@ _PROCEDURAL_COMMITTEE_NAMES = frozenset(
         "rules committee",
     }
 )
+
+
+def _get_productive_days() -> tuple[list[dict], str | None]:
+    """Aggregate bill actions by date for the current session; return (rows, error).
+
+    Each row has: date, total_actions, unique_bills, by_chamber (House/Senate counts).
+    If parquet or schedule is missing, returns ([], error_message).
+    """
+    try:
+        import polars as pl
+    except ImportError:
+        return [], "Polars not installed (run 'make ml-setup')."
+
+    actions_path = PROCESSED_DIR / "fact_bill_actions.parquet"
+    if not actions_path.exists():
+        return [], "Run the ML pipeline (make ml-run) to generate action data."
+
+    try:
+        df = pl.read_parquet(actions_path)
+    except Exception as e:
+        return [], f"Could not read action data: {e!s}"
+
+    if df.is_empty() or "date" not in df.columns:
+        return [], None
+
+    # Filter to session date range
+    try:
+        date_range = get_session_date_range()
+    except (FileNotFoundError, ValueError):
+        date_range = None
+    if date_range:
+        min_date, max_date = date_range
+        df = df.filter(
+            pl.col("date").is_not_null()
+            & (pl.col("date") >= min_date)
+            & (pl.col("date") <= max_date)
+        )
+    else:
+        # No Session events in schedule: use actions that have a valid date
+        df = df.filter(pl.col("date").is_not_null())
+
+    if df.is_empty():
+        return [], None
+
+    # Aggregate by date: total actions, unique bills, and chamber counts
+    if "chamber" in df.columns:
+        agg = (
+            df.group_by("date")
+            .agg(
+                pl.len().alias("total_actions"),
+                pl.col("bill_id").n_unique().alias("unique_bills"),
+                pl.col("chamber").eq("House").sum().alias("house_actions"),
+                pl.col("chamber").eq("Senate").sum().alias("senate_actions"),
+            )
+            .sort("total_actions", descending=True)
+        )
+    else:
+        agg = (
+            df.group_by("date")
+            .agg(
+                pl.len().alias("total_actions"),
+                pl.col("bill_id").n_unique().alias("unique_bills"),
+            )
+            .sort("total_actions", descending=True)
+        )
+        agg = agg.with_columns(
+            pl.lit(0).alias("house_actions"),
+            pl.lit(0).alias("senate_actions"),
+        )
+
+    rows = [
+        {
+            "date": r["date"],
+            "total_actions": r["total_actions"],
+            "unique_bills": r["unique_bills"],
+            "by_chamber": {
+                "House": r.get("house_actions", 0),
+                "Senate": r.get("senate_actions", 0),
+            },
+        }
+        for r in agg.to_dicts()
+    ]
+    return rows, None
 
 
 @router.get("/")
@@ -329,6 +419,38 @@ async def intelligence_raw(request: Request):
             "available": available,
             "summary": summary,
             "ml": ml,
+        },
+    )
+
+
+@router.get("/productive-days")
+async def intelligence_productive_days(request: Request):
+    """Most productive days: bill actions per calendar day for the current session."""
+    productive_days, error = _get_productive_days()
+    session_label_str = session_label() if not error else ""
+
+    if request.query_params.get("format") == "json" or "application/json" in (
+        request.headers.get("accept") or ""
+    ):
+        from fastapi.responses import JSONResponse
+
+        return JSONResponse(
+            content={
+                "session_label": session_label_str,
+                "productive_days": productive_days,
+                "error": error,
+            }
+        )
+
+    return templates.TemplateResponse(
+        request,
+        "intelligence_productive_days.html",
+        {
+            "request": request,
+            "title": "Most Productive Days",
+            "productive_days": productive_days,
+            "session_label": session_label_str,
+            "error": error,
         },
     )
 

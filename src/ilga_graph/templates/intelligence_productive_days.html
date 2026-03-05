@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} — Legislative Intelligence{% endblock %}
+
+{% block content %}
+<div class="intel-nav">
+    <a href="/intelligence">&larr; Intelligence Overview</a> &middot;
+    <a href="/intelligence/raw">Raw Data Tables</a> &middot;
+    <a href="/explore">Power Map</a> &middot;
+    <a href="/advocacy">Advocacy Portal</a>
+</div>
+<h1>Most Productive Days</h1>
+<p class="intel-subtitle">Bill actions per calendar day for the current legislative session. Days are ranked by total actions (then by unique bills that moved).</p>
+
+{% if error %}
+<div class="intel-empty">
+    <h2>No Data Available</h2>
+    <p>{{ error }}</p>
+    <p>Session calendar is built from <code>processed/fact_bill_actions.parquet</code> and <code>reference/session_schedule.json</code>.</p>
+</div>
+{% elif not productive_days %}
+<div class="intel-empty">
+    <h2>No Actions in Session Range</h2>
+    <p>No bill actions found for the current session date range. Run the ML pipeline and ensure the session schedule includes Session events.</p>
+</div>
+{% else %}
+{% if session_label %}
+<p class="intel-session-label"><strong>Session:</strong> {{ session_label }}</p>
+{% endif %}
+
+<table class="intel-table productive-days-table" role="table" aria-label="Most productive days by bill actions">
+    <thead>
+        <tr>
+            <th scope="col">Date</th>
+            <th scope="col">Total actions</th>
+            <th scope="col">Unique bills</th>
+            <th scope="col">House</th>
+            <th scope="col">Senate</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in productive_days %}
+        <tr>
+            <td>{{ row.date }}</td>
+            <td>{{ row.total_actions }}</td>
+            <td>{{ row.unique_bills }}</td>
+            <td>{{ row.by_chamber.House|default(0) }}</td>
+            <td>{{ row.by_chamber.Senate|default(0) }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

@@ -41,6 +41,7 @@ PUBLIC_GET_PAGES = [
     "/advocacy/",
     "/intelligence",
     "/intelligence/",
+    "/intelligence/productive-days",
     "/explore",
     "/the-issue",
     "/legislator-brief",

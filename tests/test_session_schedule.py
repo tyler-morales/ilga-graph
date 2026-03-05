@@ -6,6 +6,7 @@ from ilga_graph.session_schedule import (
     get_all_deadlines,
     get_events_by_chamber,
     get_events_by_type,
+    get_session_date_range,
     load_schedule,
     next_deadline_on_or_after,
     session_label,
@@ -82,3 +83,16 @@ def test_session_label() -> None:
     label = session_label()
     assert "104" in label
     assert "2026" in label
+
+
+def test_get_session_date_range() -> None:
+    """get_session_date_range returns (min_date, max_date) from all Session events."""
+    result = get_session_date_range()
+    assert result is not None
+    min_date, max_date = result
+    assert min_date <= max_date
+    assert len(min_date) == 10 and min_date[4] == "-" and min_date[7] == "-"
+    assert len(max_date) == 10 and max_date[4] == "-" and max_date[7] == "-"
+    # Schedule has Session events from 2026-01-13 through 2026-05-31
+    assert "2026" in min_date
+    assert "2026" in max_date
