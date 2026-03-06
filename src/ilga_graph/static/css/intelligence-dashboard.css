@@ -114,6 +114,11 @@ border-bottom: 2px solid #fff;
 color: #222;
 font-weight: bold;
 }
+/* Tab content: contain overflow so wide tables scroll inside this area */
+#intel-content {
+  overflow-x: hidden;
+  min-width: 0;
+}
 /* ── Committee insights grid ── */
 .committee-insights-grid {
 display: grid;
@@ -805,4 +810,162 @@ color: #666;
   .coalition-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── Activity by Day heatmap ── */
+.activity-calendar-section {
+  margin-bottom: var(--space-2xl);
+}
+.activity-calendar-section h3 {
+  font-size: var(--font-size-body);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+/* Month timeline row: one cell per week, aligned with heatmap columns */
+.activity-calendar-month-row {
+  display: flex;
+  flex-direction: row;
+  gap: 2px;
+  margin-bottom: 6px;
+  min-height: 16px;
+  align-items: flex-end;
+}
+.activity-month-cell {
+  width: 12px;
+  min-width: 12px;
+  height: 16px;
+  font-size: 9px;
+  line-height: 1.2;
+  color: var(--color-text-tertiary, #666);
+  white-space: nowrap;
+  overflow: visible;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+}
+.activity-month-cell:not(:empty) {
+  font-weight: 500;
+}
+.activity-calendar-heatmap {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 12px 0;
+}
+.activity-calendar-row {
+  display: flex;
+  flex-direction: row;
+  gap: 2px;
+}
+.activity-cell {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--color-bg-muted, #ebedf0);
+}
+.activity-cell-inner {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
+}
+.activity-cell-empty {
+  background: transparent;
+}
+/* In-session days: yellow outline so they stand out */
+.activity-cell.activity-cell-session {
+  outline: 2px solid var(--color-session-outline, #eab308);
+  outline-offset: 1px;
+  z-index: 1;
+}
+.activity-level-0 {
+  background: var(--color-bg-muted, #ebedf0);
+}
+.activity-level-1 {
+  background: rgba(39, 174, 96, 0.25);
+}
+.activity-level-2 {
+  background: rgba(39, 174, 96, 0.5);
+}
+.activity-level-3 {
+  background: rgba(39, 174, 96, 0.75);
+}
+.activity-level-4 {
+  background: rgb(39, 174, 96);
+}
+.activity-calendar-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary, #666);
+}
+.activity-legend-label {
+  margin-right: 4px;
+}
+.activity-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+.activity-days-table {
+  margin-top: 8px;
+}
+
+/* Day details panel (below heatmap, shown when a day is clicked) */
+.activity-day-details {
+  margin-top: var(--space-lg);
+  padding: var(--space-md);
+  background: var(--color-bg-muted, #f5f5f5);
+  border-radius: 6px;
+  border: 1px solid var(--color-border, #e0e0e0);
+}
+.activity-day-details .activity-day-details-placeholder {
+  color: var(--color-text-tertiary, #666);
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+.activity-day-details .activity-day-details-content[hidden] {
+  display: none;
+}
+.activity-day-details-content {
+  margin-top: 8px;
+}
+.activity-day-details-content h4 {
+  font-size: var(--font-size-body);
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.activity-day-details-content .day-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-bottom: 12px;
+  font-size: var(--font-size-sm);
+}
+.activity-day-details-content .day-actions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  font-size: var(--font-size-sm);
+}
+.activity-day-details-content .day-actions-list li {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--color-border, #eee);
+}
+.activity-day-details-content .day-actions-list li:last-child {
+  border-bottom: none;
+}
+.activity-day-details-content .day-actions-list .bill-id {
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+.intel-session-label {
+  font-size: var(--font-size-body);
+  margin: 4px 0 8px;
+  color: var(--color-text-secondary, #555);
 }

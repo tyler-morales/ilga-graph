@@ -7,6 +7,7 @@ from ilga_graph.session_schedule import (
     get_events_by_chamber,
     get_events_by_type,
     get_session_date_range,
+    get_session_dates_set,
     load_schedule,
     next_deadline_on_or_after,
     session_label,
@@ -96,3 +97,13 @@ def test_get_session_date_range() -> None:
     # Schedule has Session events from 2026-01-13 through 2026-05-31
     assert "2026" in min_date
     assert "2026" in max_date
+
+
+def test_get_session_dates_set() -> None:
+    """get_session_dates_set returns set of Session-day dates (ISO YYYY-MM-DD)."""
+    s = get_session_dates_set()
+    assert isinstance(s, set)
+    assert all(isinstance(d, str) and len(d) == 10 and d[4] == "-" and d[7] == "-" for d in s)
+    # Schedule has Session events; House 2026-01-14 and both chambers 2026-05-31
+    assert "2026-01-14" in s
+    assert "2026-05-31" in s

@@ -33,7 +33,7 @@
         {% for a in anomalies %}
         <tr class="anomaly-row {% if a.is_anomaly %}anomaly-flagged{% endif %}"
             data-flagged="{{ 'true' if a.is_anomaly else 'false' }}">
-            <td class="bill-num"><strong>{{ a.bill_number }}</strong></td>
+            <td class="bill-num"><a href="/intelligence/bill/{{ a.bill_id }}">{{ a.bill_number }}</a></td>
             <td class="desc-cell" title="{{ a.description }}">{{ a.description[:60] }}{% if a.description|length > 60 %}&hellip;{% endif %}</td>
             <td style="text-align:right">{{ a.total_slips }}</td>
             <td>

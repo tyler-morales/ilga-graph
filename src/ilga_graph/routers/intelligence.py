@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, Request
@@ -24,6 +24,7 @@ from ..session_schedule import (
     get_milestone_by_id,
     get_next_deadline_safe,
     get_session_date_range,
+    get_session_dates_set,
     session_label,
 )
 
@@ -157,6 +158,228 @@ def _get_productive_days() -> tuple[list[dict], str | None]:
         for r in agg.to_dicts()
     ]
     return rows, None
+
+
+def _get_actions_by_day_all_days() -> tuple[
+    list[list[dict | None]],
+    list[dict],
+    str | None,
+    str | None,
+    str | None,
+    list[str | None],
+]:
+    """Aggregate bill actions by date for all days in parquet (session + non-session).
+
+    Returns (heatmap_grid, days_table, date_range_start, date_range_end, error, month_labels).
+    heatmap_grid: 7 rows (Sunday–Saturday), each row list of cell dicts or None per week.
+    days_table: list of day dicts (date, total_actions, unique_bills, by_chamber, is_session_day).
+    month_labels: one label per week column for the month timeline (None where no month starts).
+    """
+    empty_months: list[str | None] = []
+    try:
+        import polars as pl
+    except ImportError:
+        return [], [], "", "", "Polars not installed (run 'make ml-setup').", empty_months
+
+    actions_path = PROCESSED_DIR / "fact_bill_actions.parquet"
+    if not actions_path.exists():
+        return (
+            [],
+            [],
+            "",
+            "",
+            "Run the ML pipeline (make ml-run) to generate action data.",
+            empty_months,
+        )
+
+    try:
+        df = pl.read_parquet(actions_path)
+    except Exception as e:
+        return [], [], "", "", f"Could not read action data: {e!s}", empty_months
+
+    if df.is_empty() or "date" not in df.columns:
+        return [], [], "", "", None, empty_months
+
+    df = df.filter(pl.col("date").is_not_null())
+    if df.is_empty():
+        return [], [], "", "", None, empty_months
+
+    try:
+        session_dates = get_session_dates_set()
+    except (FileNotFoundError, ValueError):
+        session_dates = set()
+
+    if "chamber" in df.columns:
+        agg = df.group_by("date").agg(
+            pl.len().alias("total_actions"),
+            pl.col("bill_id").n_unique().alias("unique_bills"),
+            pl.col("chamber").eq("House").sum().alias("house_actions"),
+            pl.col("chamber").eq("Senate").sum().alias("senate_actions"),
+        )
+    else:
+        agg = df.group_by("date").agg(
+            pl.len().alias("total_actions"),
+            pl.col("bill_id").n_unique().alias("unique_bills"),
+        )
+        agg = agg.with_columns(
+            pl.lit(0).alias("house_actions"),
+            pl.lit(0).alias("senate_actions"),
+        )
+
+    counts_by_date: dict[str, dict] = {}
+    for r in agg.to_dicts():
+        d = r["date"]
+        if d:
+            counts_by_date[d] = {
+                "total_actions": r["total_actions"],
+                "unique_bills": r["unique_bills"],
+                "house_actions": r.get("house_actions", 0),
+                "senate_actions": r.get("senate_actions", 0),
+            }
+
+    dates_sorted = sorted(counts_by_date.keys())
+    if not dates_sorted:
+        return [], [], "", "", None, []
+
+    min_date_str = dates_sorted[0]
+    max_date_str = dates_sorted[-1]
+    start_d = datetime.strptime(min_date_str, "%Y-%m-%d").date()
+    end_d = datetime.strptime(max_date_str, "%Y-%m-%d").date()
+    span_days = (end_d - start_d).days + 1
+    if span_days > 366:
+        start_d = end_d - timedelta(days=365)
+        span_days = 366
+
+    n_weeks = (span_days + 6) // 7
+    if n_weeks < 1:
+        n_weeks = 1
+
+    grid: list[list[dict | None]] = [[None] * n_weeks for _ in range(7)]
+
+    days_table: list[dict] = []
+    current = start_d
+    end_inclusive = start_d + timedelta(days=span_days - 1)
+
+    while current <= end_inclusive:
+        d_str = current.isoformat()
+        info = counts_by_date.get(d_str)
+        if info:
+            total = info["total_actions"]
+            unique = info["unique_bills"]
+            house = info["house_actions"]
+            senate = info["senate_actions"]
+        else:
+            total = unique = house = senate = 0
+
+        is_session = d_str in session_dates
+        cell = {
+            "date": d_str,
+            "total_actions": total,
+            "unique_bills": unique,
+            "is_session_day": is_session,
+            "by_chamber": {"House": house, "Senate": senate},
+        }
+        days_table.append(cell)
+
+        week_idx = (current - start_d).days // 7
+        dow = (current.weekday() + 1) % 7
+        if week_idx < n_weeks:
+            grid[dow][week_idx] = cell
+
+        current += timedelta(days=1)
+
+    days_table.sort(key=lambda x: x["date"])
+
+    # Month timeline: label at the first week of each month for heatmap orientation
+    month_labels: list[str | None] = [None] * n_weeks
+    prev_year: int | None = None
+    month_start = start_d.replace(day=1)
+    while month_start <= end_inclusive:
+        first_in_range = month_start if month_start >= start_d else start_d
+        week_idx = (first_in_range - start_d).days // 7
+        if week_idx < n_weeks:
+            year = month_start.year
+            label = (
+                month_start.strftime("%b %Y") if year != prev_year else month_start.strftime("%b")
+            )
+            prev_year = year
+            month_labels[week_idx] = label
+        if month_start.month == 12:
+            month_start = month_start.replace(year=month_start.year + 1, month=1)
+        else:
+            month_start = month_start.replace(month=month_start.month + 1)
+
+    return (
+        grid,
+        days_table,
+        start_d.isoformat(),
+        end_inclusive.isoformat(),
+        None,
+        month_labels,
+    )
+
+
+def _get_day_details(date_str: str) -> dict:
+    """Return summary + actions for one day. Always 200; empty data if parquet missing."""
+    try:
+        session_dates = get_session_dates_set()
+    except (FileNotFoundError, ValueError):
+        session_dates = set()
+    is_session = date_str in session_dates
+    empty_payload = {
+        "date": date_str,
+        "total_actions": 0,
+        "unique_bills": 0,
+        "by_chamber": {"House": 0, "Senate": 0},
+        "is_session_day": is_session,
+        "actions": [],
+    }
+    try:
+        import polars as pl
+    except ImportError:
+        return empty_payload
+    actions_path = PROCESSED_DIR / "fact_bill_actions.parquet"
+    if not actions_path.exists():
+        return empty_payload
+    try:
+        df = pl.read_parquet(actions_path)
+    except Exception:
+        return empty_payload
+    if df.is_empty() or "date" not in df.columns:
+        return empty_payload
+    day_df = df.filter(pl.col("date").cast(pl.Utf8) == date_str)
+    if day_df.is_empty():
+        return {
+            "date": date_str,
+            "total_actions": 0,
+            "unique_bills": 0,
+            "by_chamber": {"House": 0, "Senate": 0},
+            "is_session_day": is_session,
+            "actions": [],
+        }
+    total = len(day_df)
+    unique = day_df["bill_id"].n_unique()
+    house = day_df.filter(pl.col("chamber") == "House").height if "chamber" in day_df.columns else 0
+    senate = (
+        day_df.filter(pl.col("chamber") == "Senate").height if "chamber" in day_df.columns else 0
+    )
+    actions = []
+    for r in day_df.select(["bill_id", "chamber", "action_text"]).to_dicts():
+        actions.append(
+            {
+                "bill_id": r.get("bill_id", ""),
+                "chamber": r.get("chamber", ""),
+                "action_text": (r.get("action_text") or "")[:200],
+            }
+        )
+    return {
+        "date": date_str,
+        "total_actions": total,
+        "unique_bills": unique,
+        "by_chamber": {"House": house, "Senate": senate},
+        "is_session_day": is_session,
+        "actions": actions,
+    }
 
 
 @router.get("/")
@@ -410,6 +633,14 @@ async def intelligence_raw(request: Request):
             ),
         }
 
+    # Vote summary (from state; not ML-dependent)
+    deciding_vote_events = sum(
+        1 for e in state.vote_events if abs(len(e.yea_votes) - len(e.nay_votes)) == 1
+    )
+    summary["bills_with_votes"] = len(state.vote_lookup)
+    summary["total_vote_events"] = len(state.vote_events)
+    summary["deciding_vote_events"] = deciding_vote_events
+
     return templates.TemplateResponse(
         request,
         "intelligence.html",
@@ -419,6 +650,129 @@ async def intelligence_raw(request: Request):
             "available": available,
             "summary": summary,
             "ml": ml,
+        },
+    )
+
+
+def _event_sort_key(ev: dict) -> tuple[str, int, str]:
+    """Sort vote events: chamber, then committee before floor, then date."""
+    chamber = (ev.get("chamber") or "").lower()
+    vote_type = ev.get("vote_type") or "floor"
+    committee_first = 0 if vote_type == "committee" else 1
+    date_str = ev.get("date") or ""
+    return (chamber, committee_first, date_str)
+
+
+def _vote_events_for_bill(bill_number: str) -> list[dict]:
+    """Build sorted list of vote event dicts (with deciding_voters) for a single bill."""
+    events = state.vote_lookup.get(bill_number, [])
+    if not events:
+        return []
+    event_dicts = []
+    for e in events:
+        yea = len(e.yea_votes)
+        nay = len(e.nay_votes)
+        margin = abs(yea - nay)
+        outcome = "passed" if yea > nay else ("lost" if yea < nay else "tied")
+        deciding_voters = []
+        if margin == 1:
+            deciding_voters = list(e.yea_votes) if yea > nay else list(e.nay_votes)
+        event_dicts.append(
+            {
+                "date": e.date,
+                "chamber": e.chamber,
+                "vote_type": e.vote_type,
+                "description": e.description,
+                "yea": yea,
+                "nay": nay,
+                "present": len(e.present_votes),
+                "nv": len(e.nv_votes),
+                "outcome": outcome,
+                "margin": margin,
+                "deciding_voters": deciding_voters,
+            }
+        )
+    event_dicts.sort(key=_event_sort_key)
+    return event_dicts
+
+
+def _bills_with_votes_data():
+    """Build list of bills with vote events and per-event deciding voters for the Votes tab."""
+    bills_list = []
+    for bill_number, events in state.vote_lookup.items():
+        bill = state.bill_lookup.get(bill_number)
+        bill_id = bill.leg_id if bill else bill_number
+
+        event_dicts = []
+        for e in events:
+            yea = len(e.yea_votes)
+            nay = len(e.nay_votes)
+            margin = abs(yea - nay)
+            outcome = "passed" if yea > nay else ("lost" if yea < nay else "tied")
+            deciding_voters = []
+            if margin == 1:
+                deciding_voters = list(e.yea_votes) if yea > nay else list(e.nay_votes)
+            event_dicts.append(
+                {
+                    "date": e.date,
+                    "chamber": e.chamber,
+                    "vote_type": e.vote_type,
+                    "description": e.description,
+                    "yea": yea,
+                    "nay": nay,
+                    "present": len(e.present_votes),
+                    "nv": len(e.nv_votes),
+                    "outcome": outcome,
+                    "margin": margin,
+                    "deciding_voters": deciding_voters,
+                }
+            )
+
+        event_dicts.sort(key=_event_sort_key)
+
+        # Most recent vote date for bill sort (across events)
+        latest_date = max((ed["date"] for ed in event_dicts), default="")
+
+        bills_list.append(
+            {
+                "bill_number": bill_number,
+                "bill_id": bill_id,
+                "events": event_dicts,
+                "latest_date": latest_date,
+            }
+        )
+
+    bills_list.sort(key=lambda b: (b["latest_date"], b["bill_number"]), reverse=True)
+    return bills_list
+
+
+@router.get("/votes")
+async def intelligence_votes(request: Request):
+    """Tab: bills with vote data, totals per event, deciding voters (margin-of-one)."""
+    if not state.vote_events:
+        return templates.TemplateResponse(
+            request,
+            "_intelligence_votes.html",
+            {
+                "request": request,
+                "bills_with_votes": [],
+                "total_vote_events": 0,
+                "deciding_vote_events": 0,
+            },
+        )
+
+    deciding_count = sum(
+        1 for e in state.vote_events if abs(len(e.yea_votes) - len(e.nay_votes)) == 1
+    )
+    bills_with_votes = _bills_with_votes_data()
+    return templates.TemplateResponse(
+        request,
+        "_intelligence_votes.html",
+        {
+            "request": request,
+            "bills_with_votes": bills_with_votes,
+            "total_vote_events": len(state.vote_events),
+            "deciding_vote_events": deciding_count,
         },
     )
 
@@ -453,6 +807,46 @@ async def intelligence_productive_days(request: Request):
             "error": error,
         },
     )
+
+
+@router.get("/activity-calendar")
+async def intelligence_activity_calendar(request: Request):
+    """Activity by Day: heatmap and table of bill actions per day (session + non-session)."""
+    heatmap_grid, days_table, date_range_start, date_range_end, error, month_labels = (
+        _get_actions_by_day_all_days()
+    )
+    session_label_str = session_label() if not error else ""
+
+    return templates.TemplateResponse(
+        request,
+        "_intelligence_activity_calendar.html",
+        {
+            "request": request,
+            "heatmap_grid": heatmap_grid,
+            "days_table": days_table,
+            "date_range_start": date_range_start,
+            "date_range_end": date_range_end,
+            "session_label": session_label_str,
+            "error": error,
+            "month_labels": month_labels,
+        },
+    )
+
+
+@router.get("/activity-calendar/day")
+async def intelligence_activity_calendar_day(date: str):
+    """JSON: summary + actions for one calendar day (heatmap click). Always 200 for valid date."""
+    if not date or len(date) != 10:
+        from fastapi.responses import JSONResponse
+
+        return JSONResponse({"error": "Invalid date"}, status_code=400)
+    try:
+        datetime.strptime(date, "%Y-%m-%d")
+    except ValueError:
+        from fastapi.responses import JSONResponse
+
+        return JSONResponse({"error": "Invalid date format"}, status_code=400)
+    return _get_day_details(date)
 
 
 @router.get("/predictions")
@@ -1037,7 +1431,7 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
     bill = None
     if ml and ml.available:
         for s in ml.bill_scores:
-            if s.bill_id == bill_id:
+            if s.bill_id == bill_id or s.bill_number == bill_id:
                 bill = s
                 break
 
@@ -1055,6 +1449,7 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
                 "sponsor_influence": None,
                 "anomaly": None,
                 "bill_to_law_process": bill_to_law_process,
+                "bill_votes": [],
             },
         )
 
@@ -1083,7 +1478,7 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
     anomaly = None
     if ml and ml.anomalies:
         for a in ml.anomalies:
-            if a.bill_id == bill_id:
+            if a.bill_id == bill_id or a.bill_number == bill_id:
                 anomaly = {
                     "total_slips": a.total_slips,
                     "n_proponent": a.n_proponent,
@@ -1171,6 +1566,8 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
     except Exception:
         bill_to_law_process = []
 
+    bill_votes = _vote_events_for_bill(bill.bill_number)
+
     return templates.TemplateResponse(
         request,
         "intelligence_bill.html",
@@ -1181,5 +1578,6 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
             "anomaly": anomaly,
             "action_history": action_history,
             "bill_to_law_process": bill_to_law_process,
+            "bill_votes": bill_votes,
         },
     )

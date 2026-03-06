@@ -46,6 +46,7 @@
     </div>
 </div>
 
+<div class="intel-table-scroll-wrap" role="region" aria-label="Bill predictions table">
 <table class="intel-table" id="predictions-table">
     <thead>
         <tr>
@@ -76,7 +77,7 @@
             data-stuck="{{ p.stuck_status|lower }}"
             data-stage="{{ p.current_stage }}"
             data-lifecycle="{{ p.lifecycle_status|lower }}">
-            <td class="bill-num"><strong>{{ p.bill_number }}</strong></td>
+            <td class="bill-num"><a href="/intelligence/bill/{{ p.bill_id }}">{{ p.bill_number }}</a></td>
             <td class="desc-cell" title="{{ p.description }}">{{ p.description[:70] }}{% if p.description|length > 70 %}&hellip;{% endif %}</td>
             <td>{{ p.sponsor }}</td>
             <td data-sort-value="{{ p.prob_advance }}">
@@ -180,5 +181,6 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 
 {% endif %}

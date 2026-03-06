@@ -1,0 +1,111 @@
+{# Activity by Day tab: heatmap and table of bill actions per day (session + non-session) #}
+{% if error %}
+<div class="intel-empty">
+    <h2>No Data Available</h2>
+    <p>{{ error }}</p>
+    <p>Activity is built from <code>processed/fact_bill_actions.parquet</code>. Session days come from <code>reference/session_schedule.json</code>.</p>
+</div>
+{% elif not heatmap_grid and not days_table %}
+<div class="intel-empty">
+    <h2>No Action Data</h2>
+    <p>No bill actions found in the pipeline output. Run the ML pipeline and ensure bills have action history.</p>
+</div>
+{% else %}
+
+<div class="intel-section-header">
+    <h2>Activity by Day</h2>
+    <p class="intel-subtitle">Bill actions per calendar day from the latest scraped data — session and non-session days. Each cell is one day; color intensity shows how many actions occurred.</p>
+    {% if session_label %}
+    <p class="intel-session-label"><strong>Session:</strong> {{ session_label }}</p>
+    {% endif %}
+    {% if date_range_start and date_range_end %}
+    <p class="intel-subtitle">Range: {{ date_range_start }} to {{ date_range_end }}</p>
+    {% endif %}
+</div>
+
+<div class="activity-calendar-section">
+    <h3>Action heatmap</h3>
+    <p class="intel-subtitle">Rows: Sunday–Saturday. Columns: weeks. Hover for date and count.</p>
+    {% if month_labels %}
+    <div class="activity-calendar-month-row" role="presentation" aria-hidden="true">
+        {% for label in month_labels %}
+        <div class="activity-month-cell">{{ label or "" }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <div class="activity-calendar-heatmap" role="img" aria-label="Calendar heatmap of bill actions by day">
+        {% for row in heatmap_grid %}
+        <div class="activity-calendar-row">
+            {% for cell in row %}
+            {% if cell %}
+            {% set n = cell.total_actions %}
+            {% if n == 0 %}{% set level = 0 %}
+            {% elif n <= 2 %}{% set level = 1 %}
+            {% elif n <= 5 %}{% set level = 2 %}
+            {% elif n <= 10 %}{% set level = 3 %}
+            {% else %}{% set level = 4 %}{% endif %}
+            <div class="activity-cell activity-level-{{ level }}{% if cell.is_session_day %} activity-cell-session{% endif %}"
+                data-date="{{ cell.date }}"
+                data-actions="{{ cell.total_actions }}"
+                data-bills="{{ cell.unique_bills }}"
+                data-session="{{ 'yes' if cell.is_session_day else 'no' }}"
+                data-tippy-content="{{ cell.date }} — {{ cell.total_actions }} actions, {{ cell.unique_bills }} bills — {{ 'Session day' if cell.is_session_day else 'Non-session day' }}"
+                tabindex="0"
+                role="button"
+                aria-label="{{ cell.date }}: {{ cell.total_actions }} actions. Click for details.">
+                <span class="activity-cell-inner"></span>
+            </div>
+            {% else %}
+            <div class="activity-cell activity-cell-empty" aria-hidden="true"><span class="activity-cell-inner"></span></div>
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+    <div class="activity-calendar-legend" role="presentation">
+        <span class="activity-legend-label">Less</span>
+        <span class="activity-legend-swatch activity-level-0" title="0 actions"></span>
+        <span class="activity-legend-swatch activity-level-1" title="1–2 actions"></span>
+        <span class="activity-legend-swatch activity-level-2" title="3–5 actions"></span>
+        <span class="activity-legend-swatch activity-level-3" title="6–10 actions"></span>
+        <span class="activity-legend-swatch activity-level-4" title="11+ actions"></span>
+        <span class="activity-legend-label">More</span>
+    </div>
+    <div id="activity-day-details" class="activity-day-details" aria-live="polite" aria-atomic="true">
+        <p class="activity-day-details-placeholder">Click a day in the heatmap to see details.</p>
+        <div class="activity-day-details-content" hidden></div>
+    </div>
+</div>
+
+<div class="intel-section">
+    <h3>Breakdown by day</h3>
+    <p class="intel-subtitle">Every day in range with total actions, unique bills, and chamber split. Session = chamber met that day.</p>
+    <div class="intel-table-scroll-wrap" role="region" aria-label="Daily action counts table">
+        <table class="intel-table activity-days-table" role="table" aria-label="Bill actions by calendar day">
+            <thead>
+                <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Total actions</th>
+                    <th scope="col">Unique bills</th>
+                    <th scope="col">House</th>
+                    <th scope="col">Senate</th>
+                    <th scope="col">Session</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in days_table %}
+                <tr>
+                    <td>{{ row.date }}</td>
+                    <td>{{ row.total_actions }}</td>
+                    <td>{{ row.unique_bills }}</td>
+                    <td>{{ row.by_chamber.House|default(0) }}</td>
+                    <td>{{ row.by_chamber.Senate|default(0) }}</td>
+                    <td>{{ 'Y' if row.is_session_day else 'N' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endif %}

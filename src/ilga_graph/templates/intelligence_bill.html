@@ -177,6 +177,73 @@
     </div>
     {% endif %}
 
+    {# ── Roll-call votes (when bill has vote data) ── #}
+    {% if bill_votes %}
+    <div class="bill-votes-section">
+        <h2>Roll-call votes</h2>
+        <p class="bill-votes-note">Total votes and outcome per event. <strong>Deciding vote</strong> = margin of 1; those voters on the winning side could have changed the outcome by flipping.</p>
+        <div class="bill-votes-table-wrap">
+            <table class="intel-table bill-votes-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Date</th>
+                        <th scope="col">Chamber</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Description</th>
+                        <th scope="col">Yea</th>
+                        <th scope="col">Nay</th>
+                        <th scope="col">Present</th>
+                        <th scope="col">NV</th>
+                        <th scope="col">Outcome</th>
+                        <th scope="col">Margin</th>
+                        <th scope="col">Deciding voters</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in bill_votes %}
+                    <tr class="vote-event-row">
+                        <td>{{ event.date }}</td>
+                        <td>{{ event.chamber }}</td>
+                        <td>
+                            {% if event.vote_type == "committee" %}
+                            <span class="vote-type-badge vote-type-committee">Committee</span>
+                            {% else %}
+                            <span class="vote-type-badge vote-type-floor">Floor</span>
+                            {% endif %}
+                        </td>
+                        <td class="desc-cell" title="{{ event.description }}">{{ event.description[:50] }}{% if event.description|length > 50 %}&hellip;{% endif %}</td>
+                        <td style="text-align:right">{{ event.yea }}</td>
+                        <td style="text-align:right">{{ event.nay }}</td>
+                        <td style="text-align:right">{{ event.present }}</td>
+                        <td style="text-align:right">{{ event.nv }}</td>
+                        <td>
+                            {% if event.outcome == "passed" %}
+                            <span class="vote-outcome vote-outcome-passed">Passed</span>
+                            {% elif event.outcome == "lost" %}
+                            <span class="vote-outcome vote-outcome-lost">Lost</span>
+                            {% else %}
+                            <span class="vote-outcome vote-outcome-tied">Tied</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align:right">{{ event.margin }}</td>
+                        <td class="deciding-voters-cell">
+                            {% if event.deciding_voters %}
+                            {% set show = event.deciding_voters[:5] %}
+                            {% set rest = event.deciding_voters[5:] %}
+                            <span class="deciding-voters-list">{{ show|join(", ") }}{% if rest %}<span class="deciding-voters-more" title="{{ rest|join(', ') }}"> +{{ rest|length }} more</span>{% endif %}</span>
+                            {% if event.vote_type == "floor" %}<span class="deciding-floor-tag" title="Deciding vote on floor">(floor)</span>{% endif %}
+                            {% else %}
+                            <span class="intel-empty-inline">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
     {# ── Action History (timeline + full table; last action date from this list) ── #}
     {% if action_history %}
     <div class="bill-action-history">

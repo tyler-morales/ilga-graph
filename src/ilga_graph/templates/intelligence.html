@@ -51,6 +51,11 @@
         <div class="intel-summary-detail">{{ summary.active_committees|default(0) }} with 10+ bills</div>
     </div>
     <div class="intel-summary-card">
+        <div class="intel-summary-value">{{ summary.bills_with_votes|default(0) }}</div>
+        <div class="intel-summary-label">Bills w/ votes</div>
+        <div class="intel-summary-detail">{{ summary.total_vote_events|default(0) }} vote events &middot; {{ summary.deciding_vote_events|default(0) }} deciding</div>
+    </div>
+    <div class="intel-summary-card">
         <div class="intel-summary-value">
             {% if summary.roc_auc %}{{ "%.3f"|format(summary.roc_auc) }}{% else %}--{% endif %}
         </div>
@@ -81,6 +86,10 @@
         hx-swap="innerHTML" hx-indicator="#intel-spinner" onclick="setActiveTab(this)">Witness Slips</button>
     <button class="intel-tab" role="tab" hx-get="/intelligence/committees" hx-target="#intel-content"
         hx-swap="innerHTML" hx-indicator="#intel-spinner" onclick="setActiveTab(this)">Committees</button>
+    <button class="intel-tab" role="tab" hx-get="/intelligence/activity-calendar" hx-target="#intel-content"
+        hx-swap="innerHTML" hx-indicator="#intel-spinner" onclick="setActiveTab(this)">Activity by Day</button>
+    <button class="intel-tab" role="tab" hx-get="/intelligence/votes" hx-target="#intel-content" hx-swap="innerHTML"
+        hx-indicator="#intel-spinner" onclick="setActiveTab(this)" aria-label="Roll-call votes by bill">Votes</button>
     <button class="intel-tab" role="tab" hx-get="/intelligence/accuracy" hx-target="#intel-content" hx-swap="innerHTML"
         hx-indicator="#intel-spinner" onclick="setActiveTab(this)">Model Quality &amp; Accuracy</button>
     <span id="intel-spinner" class="htmx-indicator">Loading&hellip;</span>
@@ -195,15 +204,96 @@
         for (var r = 0; r < rows.length; r++) tbody.appendChild(rows[r]);
     }
 
+    function initActivityCalendar(container) {
+        if (!container) return;
+        var heatmap = container.querySelector('.activity-calendar-heatmap');
+        if (!heatmap) return;
+        var cells = container.querySelectorAll('.activity-cell[data-date]');
+        var detailsEl = container.querySelector('#activity-day-details');
+        var placeholderEl = detailsEl && detailsEl.querySelector('.activity-day-details-placeholder');
+        var contentEl = detailsEl && detailsEl.querySelector('.activity-day-details-content');
+        if (!detailsEl || !contentEl) return;
+
+        function showDayDetails(dateStr) {
+            contentEl.hidden = true;
+            if (placeholderEl) placeholderEl.style.display = '';
+            contentEl.innerHTML = '<p class="intel-loading">Loading…</p>';
+            contentEl.hidden = false;
+            if (placeholderEl) placeholderEl.style.display = 'none';
+            var url = '/intelligence/activity-calendar/day?date=' + encodeURIComponent(dateStr);
+            fetch(url, { headers: { Accept: 'application/json' } })
+                .then(function (r) {
+                    if (!r.ok) throw new Error('No data');
+                    return r.json();
+                })
+                .then(function (data) {
+                    var sessionLabel = data.is_session_day ? 'Session day' : 'Non-session day';
+                    var html = '<h4>' + data.date + ' — ' + sessionLabel + '</h4>';
+                    html += '<div class="day-stats">';
+                    html += '<span><strong>' + data.total_actions + '</strong> actions</span>';
+                    html += '<span><strong>' + data.unique_bills + '</strong> unique bills</span>';
+                    html += '<span>House: ' + (data.by_chamber && data.by_chamber.House != null ? data.by_chamber.House : 0) + '</span>';
+                    html += '<span>Senate: ' + (data.by_chamber && data.by_chamber.Senate != null ? data.by_chamber.Senate : 0) + '</span>';
+                    html += '</div>';
+                    if (data.actions && data.actions.length) {
+                        html += '<p><strong>Actions:</strong></p><ul class="day-actions-list">';
+                        data.actions.forEach(function (a) {
+                            html += '<li><span class="bill-id">' + escapeHtml(a.bill_id || '') + '</span> ' + (a.chamber ? '[' + escapeHtml(a.chamber) + '] ' : '') + escapeHtml((a.action_text || '').substring(0, 120)) + (a.action_text && a.action_text.length > 120 ? '…' : '') + '</li>';
+                        });
+                        html += '</ul>';
+                    } else {
+                        html += '<p>No bill actions recorded for this day.</p>';
+                    }
+                    contentEl.innerHTML = html;
+                })
+                .catch(function () {
+                    contentEl.innerHTML = '<p>Could not load details for this day.</p>';
+                });
+        }
+        function escapeHtml(s) {
+            var div = document.createElement('div');
+            div.textContent = s;
+            return div.innerHTML;
+        }
+
+        cells.forEach(function (cell) {
+            var dateStr = cell.getAttribute('data-date');
+            if (!dateStr) return;
+            cell.addEventListener('click', function () { showDayDetails(dateStr); });
+            cell.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    showDayDetails(dateStr);
+                }
+            });
+        });
+
+        if (typeof tippy !== 'undefined') {
+            cells.forEach(function (el) {
+                var text = el.getAttribute('data-tippy-content');
+                if (!text) return;
+                tippy(el, {
+                    content: text,
+                    theme: 'light',
+                    placement: 'top',
+                    arrow: true,
+                    trigger: 'mouseenter focus',
+                    appendTo: document.body
+                });
+            });
+        }
+    }
+
     document.body.addEventListener('htmx:afterSettle', function (ev) {
         if (ev.detail && ev.detail.target && ev.detail.target.id === 'intel-content') {
+            var target = ev.detail.target;
             var searchEl = document.getElementById('predictions-search');
             if (searchEl && !searchEl._predictionsBound) {
                 searchEl._predictionsBound = true;
                 searchEl.addEventListener('input', filterPredictions);
             }
-            // Run filter once so totals display with comma formatting and correct visible count
             if (document.getElementById('predictions-table')) filterPredictions();
+            if (target.querySelector('.activity-calendar-heatmap')) initActivityCalendar(target);
         }
     });
 </script>
