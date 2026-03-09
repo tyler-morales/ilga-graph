@@ -173,7 +173,7 @@
         <tbody>
             {% for m in latest.biggest_misses[:10] %}
             <tr>
-                <td><strong>{{ m.get('bill_number', '') }}</strong></td>
+                <td><a href="/intelligence/bill/{{ m.get('bill_number', '') }}">{{ m.get('bill_number', '') }}</a></td>
                 <td><span class="intel-outcome intel-outcome-{{ m.get('predicted', '')|lower }}">{{ m.get('predicted', '') }}</span></td>
                 <td><span class="intel-outcome intel-outcome-{{ m.get('actual', '')|lower }}">{{ m.get('actual', '') }}</span></td>
                 <td>{{ "%.0f"|format(m.get('confidence', 0) * 100) }}%</td>

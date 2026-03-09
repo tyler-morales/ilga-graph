@@ -302,6 +302,8 @@ TEST_MEMBER_CHAMBER: str = _env("ILGA_TEST_MEMBER_CHAMBER", "Senate").strip() or
 # ── Security / network ──────────────────────────────────────────────────────
 CORS_ORIGINS: str = _env("ILGA_CORS_ORIGINS").strip()
 API_KEY: str = _env("ILGA_API_KEY").strip()
+# Optional: X/Twitter API v2 Bearer token for legislator follower counts (intelligence raw table).
+TWITTER_BEARER_TOKEN: str = os.getenv("TWITTER_BEARER_TOKEN", "").strip()
 
 # CSP: report-only by default; set ILGA_CSP_ENFORCE=1 to send enforcing header.
 CSP_ENFORCE: bool = _env("ILGA_CSP_ENFORCE", "0") == "1"

@@ -81,6 +81,26 @@ def get_events_by_type(event_type: str) -> list[tuple[str, dict]]:
     return out
 
 
+def get_session_date_range() -> tuple[str, str] | None:
+    """Return (min_date, max_date) for the current session from all Session-type events.
+
+    Dates are ISO YYYY-MM-DD. Returns None if no Session events exist.
+    """
+    session_events = get_events_by_type("Session")
+    if not session_events:
+        return None
+    dates = [ev.get("date", "") for _chamber, ev in session_events if ev.get("date")]
+    if not dates:
+        return None
+    return (min(dates), max(dates))
+
+
+def get_session_dates_set() -> set[str]:
+    """Return the set of calendar dates that are Session days (any chamber). ISO YYYY-MM-DD."""
+    session_events = get_events_by_type("Session")
+    return {ev.get("date", "") for _chamber, ev in session_events if ev.get("date")}
+
+
 def get_all_deadlines() -> list[tuple[str, dict]]:
     """Return (chamber, event) for every Deadline in the schedule."""
     return get_events_by_type("Deadline")

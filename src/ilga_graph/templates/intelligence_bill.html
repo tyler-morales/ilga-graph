@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import score_bar %}
 
-{% block title %}{{ bill.bill_number }} — Bill Intelligence{% endblock %}
+{% block title %}{{ bill.bill_number if bill else 'Bill' }} — Bill Intelligence{% endblock %}
 
 {% block content %}
 <div class="intel-nav">
@@ -12,8 +12,22 @@
 <div class="bill-profile">
     {# ── Header ── #}
     <div class="bill-profile-header">
-        <h1>{{ bill.bill_number }}</h1>
-        <p class="bill-profile-desc">{{ bill.description }}</p>
+        <div class="bill-profile-title-row">
+            {% if bill %}
+            <button type="button" class="intel-star-btn bill-page-star" data-bill-id="{{ bill.bill_id }}" aria-pressed="false" aria-label="Star this bill to bookmark (saved in browser)" title="Star to bookmark (saved in browser)">☆</button>
+            {% endif %}
+            <h1>{{ bill.bill_number if bill else 'Bill not found' }}</h1>
+            {% if bill and ilga_bill_url %}
+            <a href="{{ ilga_bill_url }}" target="_blank" rel="noopener noreferrer" class="bill-ilga-link" aria-label="View this bill on the Illinois General Assembly website">View on ILGA</a>
+            {% endif %}
+        </div>
+        <p class="bill-profile-desc">{{ bill.description if bill else '' }}</p>
+        {% if bill.synopsis %}
+        <section class="bill-synopsis" aria-labelledby="synopsis-heading">
+            <h2 id="synopsis-heading" class="bill-synopsis-heading">What this bill does</h2>
+            <p class="bill-synopsis-text">{{ bill.synopsis }}</p>
+        </section>
+        {% endif %}
         <div class="bill-profile-meta">
             <span>Sponsor: <strong>
                 {% if bill.sponsor_id %}
@@ -23,7 +37,7 @@
                 {% endif %}
             </strong></span>
             <span>Chamber: {{ bill.chamber_origin }}</span>
-            <span>Introduced: {{ bill.introduction_date or 'Unknown' }}</span>
+            <span>Introduced: {% if bill.introduction_date %}<span class="{% if is_session_date(bill.introduction_date, session_dates) %}session-date{% endif %}" {% if is_session_date(bill.introduction_date, session_dates) %}title="Session day (House/Senate calendar)"{% endif %}>{{ bill.introduction_date }}</span>{% else %}Unknown{% endif %}</span>
         </div>
     </div>
 
@@ -90,16 +104,22 @@
     </div>
 
     {# ── Pipeline progress ── #}
+    {% set pipeline_stages = ['Filed', 'In Committee', 'Passed Committee', 'Floor Vote', 'Crossed Chambers', 'Passed Both Houses', 'Signed into Law'] %}
+    {% set current_index = pipeline_stages.index(bill.stage_label) if bill.stage_label in pipeline_stages else 0 %}
     <div class="bill-pipeline">
         <h2>Pipeline Progress</h2>
-        <div class="bill-pipeline-visual">
-            {% set stages = ['Filed', 'In Committee', 'Passed Committee', 'Floor Vote', 'Crossed Chambers', 'Passed Both', 'Signed'] %}
-            {% for s in stages %}
-            <div class="pipeline-step {% if bill.stage_label == s %}pipeline-step-current{% elif bill.stage_label in stages and stages.index(s) < stages.index(bill.stage_label) %}pipeline-step-done{% endif %}">
-                <div class="pipeline-step-dot"></div>
-                <span class="pipeline-step-label">{{ s }}</span>
+        <div class="bill-pipeline-track-wrap">
+            <div class="bill-pipeline-track" role="progressbar" aria-valuenow="{{ current_index + 1 }}" aria-valuemin="1" aria-valuemax="7" aria-label="Bill pipeline stage">
+                <div class="bill-pipeline-fill" style="width: {{ (current_index / 6 * 100) }}%;"></div>
+                {% for s in pipeline_stages %}
+                <div class="pipeline-step-dot pipeline-dot-{{ loop.index0 }} {% if bill.stage_label == s %}pipeline-step-current{% elif bill.stage_label in pipeline_stages and pipeline_stages.index(bill.stage_label) > loop.index0 %}pipeline-step-done{% endif %}" aria-hidden="true"></div>
+                {% endfor %}
             </div>
-            {% endfor %}
+            <div class="bill-pipeline-labels" aria-hidden="true">
+                {% for s in pipeline_stages %}
+                <span class="pipeline-label pipeline-label-{{ loop.index0 }} {% if bill.stage_label == s %}pipeline-step-current{% elif bill.stage_label in pipeline_stages and pipeline_stages.index(bill.stage_label) > loop.index0 %}pipeline-step-done{% endif %}">{{ s }}</span>
+                {% endfor %}
+            </div>
         </div>
         <p class="bill-pipeline-status" {% if bill.rule_context %}title="{{ bill.rule_context }}"{% endif %}>
             Current stage: <strong>{{ bill.stage_label }}</strong>
@@ -171,18 +191,127 @@
     </div>
     {% endif %}
 
+    {# ── Witness slips table ── #}
+    {% if witness_slips %}
+    <div class="bill-witness-slips-section">
+        <h2>Witness slips</h2>
+        <p class="bill-witness-slips-note">{{ witness_slips|length }} slip{{ 's' if witness_slips|length != 1 else '' }} filed. Proponent / opponent / no position as filed with the committee.</p>
+        <div class="bill-witness-slips-table-wrap">
+            <table class="intel-table bill-witness-slips-table" aria-label="Witness slips for this bill">
+                <thead>
+                    <tr>
+                        <th scope="col">Name</th>
+                        <th scope="col">Organization</th>
+                        <th scope="col">Representing</th>
+                        <th scope="col">Position</th>
+                        <th scope="col">Hearing committee</th>
+                        <th scope="col">Hearing date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for slip in witness_slips %}
+                    <tr>
+                        <td>{{ slip.name }}</td>
+                        <td>{{ slip.organization }}</td>
+                        <td>{{ slip.representing }}</td>
+                        <td>
+                            {% if slip.position == 'Proponent' %}
+                            <span class="slip-position slip-proponent">Proponent</span>
+                            {% elif slip.position == 'Opponent' %}
+                            <span class="slip-position slip-opponent">Opponent</span>
+                            {% else %}
+                            <span class="slip-position slip-no-position">{{ slip.position or 'No position' }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ slip.hearing_committee }}</td>
+                        <td>{{ slip.hearing_date }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Roll-call votes (when bill has vote data) ── #}
+    {% if bill_votes %}
+    <div class="bill-votes-section">
+        <h2>Roll-call votes</h2>
+        <p class="bill-votes-note">Total votes and outcome per event. <strong>Deciding vote</strong> = margin of 1; those voters on the winning side could have changed the outcome by flipping.</p>
+        <div class="bill-votes-table-wrap">
+            <table class="intel-table bill-votes-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Date</th>
+                        <th scope="col">Chamber</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Description</th>
+                        <th scope="col">Yea</th>
+                        <th scope="col">Nay</th>
+                        <th scope="col">Present</th>
+                        <th scope="col">NV</th>
+                        <th scope="col">Outcome</th>
+                        <th scope="col">Margin</th>
+                        <th scope="col">Deciding voters</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in bill_votes %}
+                    <tr class="vote-event-row">
+                        <td class="{% if is_session_date(event.date, session_dates) %}session-date-cell{% endif %}" {% if is_session_date(event.date, session_dates) %}title="Session day (House/Senate calendar)"{% endif %}>{{ event.date }}</td>
+                        <td>{{ event.chamber }}</td>
+                        <td>
+                            {% if event.vote_type == "committee" %}
+                            <span class="vote-type-badge vote-type-committee">Committee</span>
+                            {% else %}
+                            <span class="vote-type-badge vote-type-floor">Floor</span>
+                            {% endif %}
+                        </td>
+                        <td class="desc-cell" title="{{ event.description }}">{{ event.description[:50] }}{% if event.description|length > 50 %}&hellip;{% endif %}</td>
+                        <td style="text-align:right">{{ event.yea }}</td>
+                        <td style="text-align:right">{{ event.nay }}</td>
+                        <td style="text-align:right">{{ event.present }}</td>
+                        <td style="text-align:right">{{ event.nv }}</td>
+                        <td>
+                            {% if event.outcome == "passed" %}
+                            <span class="vote-outcome vote-outcome-passed">Passed</span>
+                            {% elif event.outcome == "lost" %}
+                            <span class="vote-outcome vote-outcome-lost">Lost</span>
+                            {% else %}
+                            <span class="vote-outcome vote-outcome-tied">Tied</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align:right">{{ event.margin }}</td>
+                        <td class="deciding-voters-cell">
+                            {% if event.deciding_voters %}
+                            {% set show = event.deciding_voters[:5] %}
+                            {% set rest = event.deciding_voters[5:] %}
+                            <span class="deciding-voters-list">{{ show|join(", ") }}{% if rest %}<span class="deciding-voters-more" title="{{ rest|join(', ') }}"> +{{ rest|length }} more</span>{% endif %}</span>
+                            {% if event.vote_type == "floor" %}<span class="deciding-floor-tag" title="Deciding vote on floor">(floor)</span>{% endif %}
+                            {% else %}
+                            <span class="intel-empty-inline">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
     {# ── Action History (timeline + full table; last action date from this list) ── #}
     {% if action_history %}
     <div class="bill-action-history">
         <h2>Action History</h2>
-        <p class="action-history-note">{{ action_history|length }} actions recorded. <strong>Last action:</strong> {{ bill.last_action_date }} — {{ bill.last_action_text }}. Each action's meaning and outcome signal are classified automatically.</p>
+        <p class="action-history-note">{{ action_history|length }} actions recorded. <strong>Last action:</strong> {% if bill.last_action_date %}<span class="{% if is_session_date(bill.last_action_date, session_dates) %}session-date{% endif %}" {% if is_session_date(bill.last_action_date, session_dates) %}title="Session day (House/Senate calendar)"{% endif %}>{{ bill.last_action_date }}</span>{% else %}{{ bill.last_action_date }}{% endif %} — {{ bill.last_action_text }}. Each action's meaning and outcome signal are classified automatically.</p>
         <div class="action-timeline">
             {% for act in action_history %}
             <div class="action-timeline-item action-signal-{{ act.outcome_signal|replace('_', '-') }}">
                 <div class="action-timeline-dot"></div>
                 <div class="action-timeline-content">
                     <div class="action-timeline-header">
-                        <span class="action-date">{{ act.date }}</span>
+                        <span class="action-date {% if is_session_date(act.date, session_dates) %}session-date{% endif %}" {% if is_session_date(act.date, session_dates) %}title="Session day (House/Senate calendar)"{% endif %}>{{ act.date }}</span>
                         <span class="action-category-badge action-cat-{{ act.action_category }}">{{ act.action_category_label or act.action_category }}</span>
                         {% if act.outcome_signal and act.outcome_signal != 'neutral' %}
                         <span class="action-signal-badge signal-{{ act.outcome_signal|replace('_', '-') }}">
@@ -219,7 +348,7 @@
                 <tbody>
                     {% for act in action_history %}
                     <tr class="action-signal-{{ act.outcome_signal|replace('_', '-') }}">
-                        <td class="action-date-cell">{{ act.date }}</td>
+                        <td class="action-date-cell {% if is_session_date(act.date, session_dates) %}session-date-cell{% endif %}" {% if is_session_date(act.date, session_dates) %}title="Session day (House/Senate calendar)"{% endif %}>{{ act.date }}</td>
                         <td>{% if act.chamber == 'S' %}Senate{% elif act.chamber == 'H' %}House{% else %}{{ act.chamber }}{% endif %}</td>
                         <td>{{ act.action }}{% if act.rule_reference %} <span class="action-rule-ref" title="{{ act.rule_reference }}">{{ act.rule_reference }}</span>{% endif %}</td>
                         <td><span class="action-category-badge action-cat-{{ act.action_category }}">{{ act.action_category_label or act.action_category }}</span></td>
@@ -247,8 +376,49 @@
     {% elif bill.last_action_text %}
     <div class="bill-last-action">
         <h2>Last Action</h2>
-        <p><strong>{{ bill.last_action_date or '' }}</strong>: {{ bill.last_action_text }}</p>
+        <p>{% if bill.last_action_date %}<strong class="{% if is_session_date(bill.last_action_date, session_dates) %}session-date{% endif %}" {% if is_session_date(bill.last_action_date, session_dates) %}title="Session day (House/Senate calendar)"{% endif %}>{{ bill.last_action_date }}</strong>{% else %}<strong>{{ bill.last_action_date or '' }}</strong>{% endif %}: {{ bill.last_action_text }}</p>
     </div>
     {% endif %}
 </div>
+
+{% if bill %}
+<script>
+(function () {
+    var STARRED_BILLS_KEY = 'intelligence_starred_bills';
+    function getStarredBills() {
+        try {
+            var raw = localStorage.getItem(STARRED_BILLS_KEY);
+            return raw ? JSON.parse(raw) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+    function setStarredBills(ids) {
+        try {
+            localStorage.setItem(STARRED_BILLS_KEY, JSON.stringify(ids));
+        } catch (e) {}
+    }
+    var btn = document.querySelector('.bill-page-star');
+    if (!btn) return;
+    var billId = btn.getAttribute('data-bill-id');
+    if (!billId) return;
+    var starred = getStarredBills();
+    var isStarred = starred.indexOf(billId) !== -1;
+    btn.setAttribute('aria-pressed', isStarred ? 'true' : 'false');
+    btn.textContent = isStarred ? '\u2605' : '\u2606';
+    btn.title = isStarred ? 'Unstar' : 'Star to bookmark (saved in browser)';
+    btn.addEventListener('click', function () {
+        var list = getStarredBills();
+        var idx = list.indexOf(billId);
+        if (idx === -1) list.push(billId);
+        else list.splice(idx, 1);
+        setStarredBills(list);
+        var nowStarred = idx === -1;
+        btn.setAttribute('aria-pressed', nowStarred ? 'true' : 'false');
+        btn.textContent = nowStarred ? '\u2605' : '\u2606';
+        btn.title = nowStarred ? 'Unstar' : 'Star to bookmark (saved in browser)';
+    });
+})();
+</script>
+{% endif %}
 {% endblock %}

@@ -1338,6 +1338,22 @@
         })();
     </script>
     <script src="/static/js/hero-auth-strip{{ _min }}.js"></script>
+    <script type="module">
+        (function () {
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            var btn = document.getElementById('find-btn');
+            if (!btn) return;
+            import('https://esm.sh/web-haptics@0.0.6').then(function (m) {
+                if (!m.WebHaptics || !m.WebHaptics.isSupported) return;
+                var haptics = new m.WebHaptics();
+                btn.addEventListener('click', function () {
+                    var form = btn.closest('form');
+                    if (form && !form.checkValidity()) return;
+                    haptics.trigger('success');
+                });
+            }).catch(function () {});
+        })();
+    </script>
     {% block extra_scripts %}{% endblock %}
 </body>
 

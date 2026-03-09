@@ -1027,10 +1027,12 @@ a:visited {
   text-decoration: none;
   transition: color 0.15s ease;
 }
+
 .kei-poll-change-btn:hover {
   color: var(--color-text, #111);
   text-decoration: underline;
 }
+
 .kei-poll-change-btn:focus-visible {
   outline: 2px solid var(--color-border-focus, #333);
   outline-offset: 2px;
@@ -1061,14 +1063,17 @@ a:visited {
   font-weight: 700;
   margin-bottom: 0.5rem;
 }
+
 .poll-standalone__logo:hover {
   text-decoration: underline;
   color: var(--color-link-hover, #1765cc);
 }
+
 .poll-standalone__logo:focus-visible {
   outline: 2px solid var(--color-border-focus, #333);
   outline-offset: 2px;
 }
+
 .poll-standalone__logo--title {
   font-size: 1.5rem;
   line-height: 1.3;
@@ -1079,17 +1084,20 @@ a:visited {
   margin-top: 1.5rem;
   margin-bottom: 0;
 }
+
 .poll-standalone-cta .btn.btn--primary {
   background: #2563eb;
   border-color: #2563eb;
   color: #fff;
   text-decoration: none;
 }
+
 .poll-standalone-cta .btn.btn--primary:hover {
   background: #1d4ed8;
   border-color: #1d4ed8;
   color: #fff;
 }
+
 .poll-standalone-cta .btn.btn--primary:focus-visible {
   outline-color: #2563eb;
 }
@@ -1655,6 +1663,53 @@ a:visited {
   display: none;
 }
 
+/* Advocacy: outside call hours (9am–5pm) — small notice so users expect voicemail */
+.advocacy-call-hours-banner {
+  position: relative;
+  max-width: 1120px;
+  margin: 0 auto 10px auto;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 0 0.5em;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-label);
+  color: #134e4a;
+  background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 50%, #99f6e4 100%);
+  border: 1px solid #0d9488;
+  border-left: 4px solid #0d9488;
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.2);
+  text-align: left;
+}
+
+.advocacy-call-hours-banner-icon {
+  flex: 0 0 auto;
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.advocacy-call-hours-banner-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+@media (max-width: 1024px) {
+  .advocacy-call-hours-banner {
+    padding-left: 16px;
+    padding-right: 20px;
+  }
+}
+
+@media (min-width: 768px) {
+  .advocacy-call-hours-banner {
+    justify-content: center;
+    text-align: center;
+  }
+}
+
 .current-action-banner-emoji {
   flex: 0 0 auto;
   font-size: 1.1em;
@@ -1760,6 +1815,7 @@ a:visited {
 
 /* Banner text: center on large screens, left on small */
 @media (min-width: 768px) {
+
   .beta-banner,
   .current-action-banner {
     justify-content: center;
@@ -2766,10 +2822,12 @@ a:visited {
   padding: 0.5rem 0.75rem;
   border-radius: 4px;
 }
+
 .account-flash--success {
   background: #e8f5e9;
   color: #1b5e20;
 }
+
 .account-flash--error {
   background: #ffebee;
   color: #b71c1c;
@@ -2780,6 +2838,7 @@ a:visited {
   padding-top: 1.75rem;
   border-top: 1px solid var(--color-border-light, #e5e7eb);
 }
+
 .account-section:first-of-type {
   margin-top: 0;
   padding-top: 0;
@@ -2789,6 +2848,7 @@ a:visited {
 .account-profile-email {
   margin-bottom: 1rem;
 }
+
 .account-read-only {
   font-weight: normal;
   color: var(--color-text-secondary, #555);
@@ -2798,35 +2858,43 @@ a:visited {
   margin-right: 0.5rem;
   margin-bottom: 0.5rem;
 }
+
 .account-field {
   margin-bottom: 1.25rem;
 }
+
 .account-field-desc {
   font-size: var(--font-size-sm, 0.875rem);
   color: var(--color-text-secondary, #555);
   margin-top: 0.25rem;
   margin-bottom: 0.35rem;
 }
+
 .account-hint {
   font-size: var(--font-size-sm, 0.875rem);
   color: var(--color-text-secondary, #555);
   margin-top: 0.25rem;
   margin-bottom: 0.75rem;
 }
+
 .account-checkbox-label {
   display: block;
   margin-bottom: 0.5rem;
 }
+
 .account-checkbox {
   margin-right: 0.5rem;
 }
+
 .account-dl {
   margin: 0.5rem 0 1rem;
 }
+
 .account-dl dt {
   font-weight: 600;
   margin-top: 0.5rem;
 }
+
 .account-dl dd {
   margin-left: 0;
   margin-bottom: 0.25rem;
@@ -2839,14 +2907,17 @@ a:visited {
   font-size: var(--font-size-sm, 0.875rem);
   color: var(--color-text-secondary, #555);
 }
+
 .account-footer .account-meta,
 .account-footer .account-privacy {
   margin-top: 0.5rem;
   margin-bottom: 0;
 }
+
 .account-footer .account-privacy:not(:first-child) {
   margin-top: 0.25rem;
 }
+
 .account-meta,
 .account-privacy {
   font-size: var(--font-size-sm, 0.875rem);

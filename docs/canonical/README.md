@@ -55,7 +55,11 @@ All canonical copy and strategy books live under **`docs/canonical/`**. Brief te
 - **Where:** `content.py` — `BRIEF_STATE_STATUS`, `BRIEF_BILLS_PASSED`, `BRIEF_BILLS_CURRENT`, `BRIEF_SOURCES`, `BRIEF_DOCUMENTS`
 - **Rule:** Any state/bill/source list or doc link must come from these. Do not invent states, bill titles, or URLs.
 
-### 8. Session schedule (House/Senate) — reference data
+### 8. Legislator Twitter / X handles — reference data
+
+- **Where:** `docs/canonical/legislator_twitter_handles.json` — JSON object mapping `member_id` (ILGA member id) to X/Twitter username (no `@`). Merged into `Member.twitter_handle` at app startup. Used by the Intelligence Raw Data tab "Legislator Twitter" for the follower-rank table. Refresh follower counts with `TWITTER_BEARER_TOKEN` set and `make refresh-twitter-followers` (or `scripts/refresh_twitter_followers.py`).
+
+### 9. Session schedule (House/Senate) — reference data
 
 - **Where:** `reference/session_schedule.json` — single source of truth for Illinois General Assembly session dates, deadlines, and holidays (104th GA Spring 2026). Loaded at runtime by `src/ilga_graph/session_schedule.py` (`load_schedule()`, `get_all_deadlines()`, `session_label()`, etc.).
 - **Used on:** The Issue page (FAQ “Session calendar & deadlines” and key-deadlines list), the **Timeline page** (`/timeline` — "Key session deadlines" section), and any future reminders or date-driven copy.

@@ -324,6 +324,7 @@ def _member_metadata_dict(m: Member) -> dict:
         "roles": m.roles,
         "sponsored_bill_ids": m.sponsored_bill_ids,
         "co_sponsor_bill_ids": m.co_sponsor_bill_ids,
+        "twitter_handle": (m.twitter_handle or "").strip() or "",
     }
 
 
@@ -418,6 +419,7 @@ def load_normalized_cache() -> tuple[list[Member], dict[str, Bill]] | None:
             roles=d.get("roles", []),
             sponsored_bill_ids=d.get("sponsored_bill_ids", []),
             co_sponsor_bill_ids=d.get("co_sponsor_bill_ids", []),
+            twitter_handle=(d.get("twitter_handle") or "").strip() or None,
         )
         members.append(m)
 
@@ -486,6 +488,7 @@ def load_normalized_cache_from_dir(
             roles=d.get("roles", []),
             sponsored_bill_ids=d.get("sponsored_bill_ids", []),
             co_sponsor_bill_ids=d.get("co_sponsor_bill_ids", []),
+            twitter_handle=(d.get("twitter_handle") or "").strip() or None,
         )
         members.append(m)
 

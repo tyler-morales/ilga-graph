@@ -1,0 +1,99 @@
+{# Votes tab partial: bills with vote data, totals per event, deciding voters (margin-of-one) #}
+{% if not bills_with_votes %}
+<div class="intel-empty">
+    <h2>No vote data available</h2>
+    <p>Bills with vote data are loaded from scraped bill status pages. Run the scraper with vote collection enabled to see roll-call votes and deciding voters here.</p>
+</div>
+{% else %}
+
+<div class="intel-section-header">
+    <h2>Roll-call votes</h2>
+    <p class="intel-subtitle">
+        Bills with at least one vote event. Total votes (yea/nay/present/NV) and outcome per event. <strong>Deciding vote</strong> = margin of 1; those voters on the winning side could have changed the outcome by flipping.
+    </p>
+    <p>
+        Bills with votes: <strong>{{ bills_with_votes|length }}</strong> &middot;
+        Total vote events: <strong>{{ total_vote_events }}</strong> &middot;
+        Events with deciding vote: <strong>{{ deciding_vote_events }}</strong>
+    </p>
+</div>
+
+<div class="intel-table-scroll-wrap" role="region" aria-label="Votes by bill and event">
+    <table class="intel-table" id="votes-table">
+        <thead>
+            <tr>
+                <th scope="col">Bill</th>
+                <th scope="col">Date</th>
+                <th scope="col">Chamber</th>
+                <th scope="col">Type</th>
+                <th scope="col">Description</th>
+                <th scope="col">Yea</th>
+                <th scope="col">Nay</th>
+                <th scope="col">Present</th>
+                <th scope="col">NV</th>
+                <th scope="col">Outcome</th>
+                <th scope="col">Margin</th>
+                <th scope="col">Deciding voters</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bill in bills_with_votes %}
+                {% for event in bill.events %}
+                <tr class="vote-event-row"
+                    data-bill="{{ bill.bill_number }}"
+                    data-chamber="{{ event.chamber|lower }}"
+                    data-type="{{ event.vote_type }}"
+                    data-margin="{{ event.margin }}">
+                    <td class="bill-num">
+                        {% if loop.first %}
+                        <a href="/intelligence/bill/{{ bill.bill_id }}">{{ bill.bill_number }}</a>
+                        {% else %}
+                        <span class="intel-same-bill" aria-hidden="true">—</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ event.date }}</td>
+                    <td>{{ event.chamber }}</td>
+                    <td>
+                        {% if event.vote_type == "committee" %}
+                        <span class="vote-type-badge vote-type-committee">Committee</span>
+                        {% else %}
+                        <span class="vote-type-badge vote-type-floor">Floor</span>
+                        {% endif %}
+                    </td>
+                    <td class="desc-cell" title="{{ event.description }}">{{ event.description[:50] }}{% if event.description|length > 50 %}&hellip;{% endif %}</td>
+                    <td style="text-align:right">{{ event.yea }}</td>
+                    <td style="text-align:right">{{ event.nay }}</td>
+                    <td style="text-align:right">{{ event.present }}</td>
+                    <td style="text-align:right">{{ event.nv }}</td>
+                    <td>
+                        {% if event.outcome == "passed" %}
+                        <span class="vote-outcome vote-outcome-passed">Passed</span>
+                        {% elif event.outcome == "lost" %}
+                        <span class="vote-outcome vote-outcome-lost">Lost</span>
+                        {% else %}
+                        <span class="vote-outcome vote-outcome-tied">Tied</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align:right">{{ event.margin }}</td>
+                    <td class="deciding-voters-cell">
+                        {% if event.deciding_voters %}
+                        {% set show = event.deciding_voters[:5] %}
+                        {% set rest = event.deciding_voters[5:] %}
+                        <span class="deciding-voters-list">
+                            {{ show|join(", ") }}{% if rest %}<span class="deciding-voters-more" title="{{ rest|join(', ') }}"> +{{ rest|length }} more</span>{% endif %}
+                        </span>
+                        {% if event.vote_type == "floor" %}
+                        <span class="deciding-floor-tag" title="Deciding vote on floor">(floor)</span>
+                        {% endif %}
+                        {% else %}
+                        <span class="intel-empty-inline">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endif %}

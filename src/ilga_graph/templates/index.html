@@ -20,6 +20,13 @@
 {# ── Hero section: advocacy-centered hero only (no "what's happening" block) ── #}
 {% include "_hero_advocacy.html" %}
 <div class="hero-results-sep" aria-hidden="true"></div>
+{% if user_call_pref is defined and user_call_pref in ['yes', 'call_only', 'elevator'] %}
+<div id="advocacy-call-hours-banner" class="advocacy-call-hours-banner" role="status" aria-live="polite" hidden
+    aria-hidden="true">
+    <span class="advocacy-call-hours-banner-icon" aria-hidden="true">&#128222;</span>
+    <span class="advocacy-call-hours-banner-text">Outside typical office hours (9am–5pm). Calls may go to voicemail — you can still leave a message or try email.</span>
+</div>
+{% endif %}
 <div id="results" role="region" aria-label="Search results" {% if your_legislators is defined %}
     data-has-initial-results="true" {% endif %}>
     {% if error and your_legislators is not defined %}<div class="error-msg" role="alert">{{ error }}</div>{% endif %}
@@ -337,12 +344,29 @@
         if (!block || _ilgaUserEmail) return;
         if (zip && typeof updateGoalBlockFromStorage === 'function') updateGoalBlockFromStorage(zip);
     }
+    /** Show/hide advocacy call-hours banner based on local time (9am–5pm = hidden). */
+    function updateAdvocacyCallHoursBanner() {
+        var banner = document.getElementById('advocacy-call-hours-banner');
+        if (!banner) return;
+        var hour = new Date().getHours();
+        var outsideHours = hour < 9 || hour >= 17;
+        if (outsideHours) {
+            banner.removeAttribute('hidden');
+            banner.setAttribute('aria-hidden', 'false');
+        } else {
+            banner.setAttribute('hidden', '');
+            banner.setAttribute('aria-hidden', 'true');
+        }
+    }
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () {
             if (typeof logGoalListDiagnostic === 'function') logGoalListDiagnostic('load');
             applyCardBioOverflow();
             initRecommendationChipTooltips();
             initGoalBlockFromStorage();
+            updateAdvocacyCallHoursBanner();
+            setInterval(updateAdvocacyCallHoursBanner, 60000);
             var resultsEl = document.getElementById('results');
             if (resultsEl && typeof initMemberCarousel === 'function') initMemberCarousel(resultsEl);
         });
@@ -350,6 +374,8 @@
         applyCardBioOverflow();
         initRecommendationChipTooltips();
         initGoalBlockFromStorage();
+        updateAdvocacyCallHoursBanner();
+        setInterval(updateAdvocacyCallHoursBanner, 60000);
         var resultsEl = document.getElementById('results');
         if (resultsEl && typeof initMemberCarousel === 'function') initMemberCarousel(resultsEl);
     }
@@ -2737,16 +2763,10 @@
             });
         }
 
-        /* ── Mailto handler ── */
+        /* ── Mailto handler: one-click, no gate; anchor click for Chrome/Gmail compatibility ── */
         var mailtoBtn = wrap.querySelector('#gmail-mailto-btn');
         if (mailtoBtn) {
             mailtoBtn.onclick = function () {
-                if (guide.step <= 2 && blanks.length > 0 && !allBlanksValid(blanks)) {
-                    guide.setStep(2);
-                    var first = firstUnfilledBlank(blanks);
-                    if (first) first.focus();
-                    return;
-                }
                 var drawer = document.getElementById('advocacy-drawer');
                 var memberId = (drawer && drawer.getAttribute('data-member-id')) || '';
                 if (memberId && typeof recordOutreachStep === 'function') recordOutreachStep(memberId, 'email', 'send_clicked');
@@ -2754,14 +2774,19 @@
                 var url = 'mailto:' + (recipient ? encodeURIComponent(recipient) : '') +
                     '?subject=' + encodeURIComponent(getSubject()) +
                     '&body=' + encodeURIComponent(getBody());
-                window.location.href = url;
+                var a = document.createElement('a');
+                a.href = url;
+                a.setAttribute('target', '_blank');
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
                 guide._mailtoClicked = true;
-                if (sentBtn) sentBtn.disabled = false;
                 guide.jumpTo('confirm_sent');
             };
         }
 
-        /* ── "I sent it!" button (enabled only after opening email client) ── */
+        /* ── "I sent it!" button ── */
         var sentBtn = wrap.querySelector('#gmail-sent-email-btn');
         if (sentBtn) {
             sentBtn.onclick = function () {

@@ -55,7 +55,7 @@
                 <tbody>
                     {% for b in g.signature_bills %}
                     <tr>
-                        <td class="bill-num"><strong>{{ b.get('bill_number', '') }}</strong></td>
+                        <td class="bill-num"><a href="/intelligence/bill/{{ b.get('bill_number', '') }}">{{ b.get('bill_number', '') }}</a></td>
                         <td>{{ b.get('description', '')[:60] }}</td>
                         <td style="text-align:right">{{ b.get('yes_votes', 0) }}</td>
                     </tr>
