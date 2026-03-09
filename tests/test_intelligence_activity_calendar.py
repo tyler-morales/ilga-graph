@@ -37,16 +37,12 @@ def test_activity_calendar_response_contains_expected_structure(client: TestClie
     resp = client.get("/intelligence/activity-calendar", headers={"Accept": "text/html"})
     assert resp.status_code == 200
     body = resp.text
+    # Empty state (no ML data, e.g. in CI): template shows intel-empty only, no "Activity by Day"
+    if "intel-empty" in body and ("No Data Available" in body or "No Action Data" in body):
+        assert "activity-calendar-heatmap" not in body
+        return
     assert "Activity by Day" in body
-    # Either heatmap/table or empty/error message
-    assert (
-        "activity-calendar-heatmap" in body
-        or "activity-days-table" in body
-        or "intel-empty" in body
-        or "No Data Available" in body
-        or "No Action Data" in body
-    )
-    # When heatmap is present, month timeline row is present for temporal orientation
+    assert "activity-calendar-heatmap" in body or "activity-days-table" in body
     if "activity-calendar-heatmap" in body:
         assert "activity-calendar-month-row" in body
 
