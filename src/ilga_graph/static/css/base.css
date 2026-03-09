@@ -1663,6 +1663,53 @@ a:visited {
   display: none;
 }
 
+/* Advocacy: outside call hours (9am–5pm) — small notice so users expect voicemail */
+.advocacy-call-hours-banner {
+  position: relative;
+  max-width: 1120px;
+  margin: 0 auto 10px auto;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 0 0.5em;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-label);
+  color: #134e4a;
+  background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 50%, #99f6e4 100%);
+  border: 1px solid #0d9488;
+  border-left: 4px solid #0d9488;
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.2);
+  text-align: left;
+}
+
+.advocacy-call-hours-banner-icon {
+  flex: 0 0 auto;
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.advocacy-call-hours-banner-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+@media (max-width: 1024px) {
+  .advocacy-call-hours-banner {
+    padding-left: 16px;
+    padding-right: 20px;
+  }
+}
+
+@media (min-width: 768px) {
+  .advocacy-call-hours-banner {
+    justify-content: center;
+    text-align: center;
+  }
+}
+
 .current-action-banner-emoji {
   flex: 0 0 auto;
   font-size: 1.1em;

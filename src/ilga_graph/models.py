@@ -93,6 +93,8 @@ class Member:
     seat_ring: int | None = None  # 1-4
     seatmate_names: list[str] = field(default_factory=list)  # canonical Member.name of neighbors
     seatmate_affinity: float = 0.0  # fraction of member's bills co-sponsored by >= 1 seatmate
+    # X/Twitter username only (no @ or URL); used for follower-rank table on intelligence raw.
+    twitter_handle: str | None = None
 
     @property
     def bills(self) -> list[Bill]:

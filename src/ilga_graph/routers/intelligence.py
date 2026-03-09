@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -27,6 +28,33 @@ from ..session_schedule import (
     get_session_dates_set,
     session_label,
 )
+from ..twitter_followers import load_follower_counts
+
+
+def _is_session_date(date_str: str, session_dates: set[str]) -> bool:
+    """True if date_str (YYYY-MM-DD or M/D/YYYY) falls on a House/Senate session day."""
+    if not date_str or not session_dates:
+        return False
+    dt = parse_action_date(date_str)
+    if dt == datetime.min:
+        return False
+    return dt.strftime("%Y-%m-%d") in session_dates
+
+
+def _ilga_bill_url(bill_number: str, leg_id: str | None = None) -> str:
+    """Build ILGA BillStatus URL from bill number (e.g. SB0005) and optional leg_id."""
+    m = re.match(r"^([A-Z]+)(\d+)$", (bill_number or "").strip())
+    if not m:
+        return ""
+    doc_type, doc_num = m.group(1), m.group(2)
+    url = (
+        f"{cfg.BASE_URL}Legislation/BillStatus?DocNum={doc_num}&GAID={cfg.GA_ID}"
+        f"&DocTypeID={doc_type}&SessionID={cfg.SESSION_ID}"
+    )
+    if leg_id:
+        url += f"&LegId={leg_id}"
+    return url
+
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -62,6 +90,7 @@ templates.env.globals["get_poll_campaign_for_template"] = get_poll_campaign_for_
 templates.env.globals["get_milestone_by_id"] = get_milestone_by_id
 templates.env.globals["get_next_deadline"] = get_next_deadline_safe
 templates.env.globals["kei_status_options"] = KEI_STATUS_OPTIONS
+templates.env.globals["is_session_date"] = _is_session_date
 
 # Procedural/routing committees: bills are assigned here after passing substantive
 # committees (e.g. "Referred to Rules * Reports"). "Advanced" in our pipeline
@@ -696,6 +725,23 @@ def _vote_events_for_bill(bill_number: str) -> list[dict]:
     return event_dicts
 
 
+def _witness_slips_for_bill(bill_number: str) -> list[dict]:
+    """Build list of witness slip dicts for template (name, organization, position, etc.)."""
+    slips = getattr(state, "witness_slips_lookup", {}).get(bill_number, [])
+    return [
+        {
+            "name": getattr(ws, "name", "") or "",
+            "organization": getattr(ws, "organization", "") or "",
+            "representing": getattr(ws, "representing", "") or "",
+            "position": getattr(ws, "position", "") or "",
+            "hearing_committee": getattr(ws, "hearing_committee", "") or "",
+            "hearing_date": getattr(ws, "hearing_date", "") or "",
+            "testimony_type": getattr(ws, "testimony_type", "") or "",
+        }
+        for ws in slips
+    ]
+
+
 def _bills_with_votes_data():
     """Build list of bills with vote events and per-event deciding voters for the Votes tab."""
     bills_list = []
@@ -1181,6 +1227,45 @@ async def intelligence_accuracy(request: Request):
     )
 
 
+@router.get("/legislator-twitter")
+async def intelligence_legislator_twitter(request: Request):
+    """Tab: legislators with Twitter/X handle and follower count, rankable by followers."""
+    counts = load_follower_counts()
+    rows = []
+    for m in state.members:
+        handle = (getattr(m, "twitter_handle", None) or "").strip().lstrip("@")
+        if not handle:
+            continue
+        followers = counts.get(handle)
+        rows.append(
+            {
+                "member_id": m.id,
+                "name": m.name,
+                "chamber": m.chamber,
+                "party": m.party,
+                "district": m.district,
+                "twitter_handle": handle,
+                "followers_count": followers,
+                "member_url": getattr(m, "member_url", "") or "",
+            }
+        )
+    rows.sort(key=lambda r: (-(r["followers_count"] or 0), (r["name"] or "").lower()))
+    for i, r in enumerate(rows, start=1):
+        r["rank"] = i
+        r["followers_display"] = (
+            f"{r['followers_count']:,}" if r.get("followers_count") is not None else None
+        )
+    return templates.TemplateResponse(
+        request,
+        "_intelligence_legislator_twitter.html",
+        {
+            "request": request,
+            "rows": rows,
+            "twitter_configured": bool(cfg.TWITTER_BEARER_TOKEN),
+        },
+    )
+
+
 @router.get("/witness-slips")
 async def intelligence_witness_slips(request: Request):
     """Tab: witness slips and organization/lobbying influence on bills."""
@@ -1440,6 +1525,10 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
             bill_to_law_process = get_bill_to_law_process()
         except Exception:
             bill_to_law_process = []
+        try:
+            session_dates = get_session_dates_set()
+        except (FileNotFoundError, ValueError):
+            session_dates = set()
         return templates.TemplateResponse(
             request,
             "intelligence_bill.html",
@@ -1448,8 +1537,11 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
                 "bill": None,
                 "sponsor_influence": None,
                 "anomaly": None,
+                "action_history": [],
                 "bill_to_law_process": bill_to_law_process,
                 "bill_votes": [],
+                "witness_slips": [],
+                "session_dates": session_dates,
             },
         )
 
@@ -1497,6 +1589,7 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
             self.bill_id = score.bill_id
             self.bill_number = score.bill_number
             self.description = score.description
+            self.synopsis = ""  # Set from bill_obj when resolved
             self.sponsor = score.sponsor
             self.prob_advance = score.prob_advance
             self.prob_law = getattr(score, "prob_law", 0.0)
@@ -1538,6 +1631,8 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
                 return max(parse_action_date(ae.date) for ae in b.action_history)
 
             bill_obj = max(candidates, key=_latest_action_date)
+    if bill_obj:
+        bill_ctx.synopsis = getattr(bill_obj, "synopsis", "") or ""
     if bill_obj and bill_obj.action_history:
         for ae in bill_obj.action_history:
             action_history.append(
@@ -1567,6 +1662,18 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
         bill_to_law_process = []
 
     bill_votes = _vote_events_for_bill(bill.bill_number)
+    witness_slips = _witness_slips_for_bill(bill.bill_number)
+    try:
+        session_dates = get_session_dates_set()
+    except (FileNotFoundError, ValueError):
+        session_dates = set()
+
+    ilga_bill_url = ""
+    if bill_obj and getattr(bill_obj, "status_url", ""):
+        ilga_bill_url = bill_obj.status_url
+    else:
+        leg_id = getattr(bill_obj, "leg_id", None) if bill_obj else None
+        ilga_bill_url = _ilga_bill_url(bill.bill_number, leg_id)
 
     return templates.TemplateResponse(
         request,
@@ -1574,10 +1681,13 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
         {
             "request": request,
             "bill": bill_ctx,
+            "ilga_bill_url": ilga_bill_url,
             "sponsor_influence": sponsor_influence,
             "anomaly": anomaly,
             "action_history": action_history,
             "bill_to_law_process": bill_to_law_process,
             "bill_votes": bill_votes,
+            "witness_slips": witness_slips,
+            "session_dates": session_dates,
         },
     )

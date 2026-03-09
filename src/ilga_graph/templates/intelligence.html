@@ -53,7 +53,8 @@
     <div class="intel-summary-card">
         <div class="intel-summary-value">{{ summary.bills_with_votes|default(0) }}</div>
         <div class="intel-summary-label">Bills w/ votes</div>
-        <div class="intel-summary-detail">{{ summary.total_vote_events|default(0) }} vote events &middot; {{ summary.deciding_vote_events|default(0) }} deciding</div>
+        <div class="intel-summary-detail">{{ summary.total_vote_events|default(0) }} vote events &middot; {{
+            summary.deciding_vote_events|default(0) }} deciding</div>
     </div>
     <div class="intel-summary-card">
         <div class="intel-summary-value">
@@ -86,6 +87,8 @@
         hx-swap="innerHTML" hx-indicator="#intel-spinner" onclick="setActiveTab(this)">Witness Slips</button>
     <button class="intel-tab" role="tab" hx-get="/intelligence/committees" hx-target="#intel-content"
         hx-swap="innerHTML" hx-indicator="#intel-spinner" onclick="setActiveTab(this)">Committees</button>
+    <button class="intel-tab" role="tab" hx-get="/intelligence/legislator-twitter" hx-target="#intel-content"
+        hx-swap="innerHTML" hx-indicator="#intel-spinner" onclick="setActiveTab(this)">Legislator Twitter</button>
     <button class="intel-tab" role="tab" hx-get="/intelligence/activity-calendar" hx-target="#intel-content"
         hx-swap="innerHTML" hx-indicator="#intel-spinner" onclick="setActiveTab(this)">Activity by Day</button>
     <button class="intel-tab" role="tab" hx-get="/intelligence/votes" hx-target="#intel-content" hx-swap="innerHTML"
@@ -105,10 +108,57 @@
         el.classList.add('active');
     }
 
+    var STARRED_BILLS_KEY = 'intelligence_starred_bills';
+    function getStarredBills() {
+        try {
+            var raw = localStorage.getItem(STARRED_BILLS_KEY);
+            return raw ? JSON.parse(raw) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+    function setStarredBills(ids) {
+        try {
+            localStorage.setItem(STARRED_BILLS_KEY, JSON.stringify(ids));
+        } catch (e) { }
+    }
+    function initStarredButtons() {
+        var starred = getStarredBills();
+        var table = document.getElementById('predictions-table');
+        if (!table) return;
+        table.querySelectorAll('.intel-star-btn').forEach(function (btn) {
+            var billId = btn.getAttribute('data-bill-id');
+            if (!billId) return;
+            var isStarred = starred.indexOf(billId) !== -1;
+            btn.setAttribute('aria-pressed', isStarred ? 'true' : 'false');
+            btn.textContent = isStarred ? '\u2605' : '\u2606';
+            btn.title = isStarred ? 'Unstar' : 'Star to bookmark (saved in browser)';
+            var row = btn.closest('tr');
+            var cell = btn.closest('td');
+            if (row) row.setAttribute('data-starred', isStarred ? 'true' : 'false');
+            if (cell) cell.setAttribute('data-sort-value', isStarred ? '1' : '0');
+            btn.onclick = function () {
+                var id = this.getAttribute('data-bill-id');
+                var list = getStarredBills();
+                var idx = list.indexOf(id);
+                if (idx === -1) list.push(id);
+                else list.splice(idx, 1);
+                setStarredBills(list);
+                var nowStarred = idx === -1;
+                this.setAttribute('aria-pressed', nowStarred ? 'true' : 'false');
+                this.textContent = nowStarred ? '\u2605' : '\u2606';
+                this.title = nowStarred ? 'Unstar' : 'Star to bookmark (saved in browser)';
+                if (row) row.setAttribute('data-starred', nowStarred ? 'true' : 'false');
+                if (cell) cell.setAttribute('data-sort-value', nowStarred ? '1' : '0');
+                filterPredictions();
+            };
+        });
+    }
+
     function filterPredictions() {
         var searchEl = document.getElementById('predictions-search');
         var textQuery = (searchEl && searchEl.value) ? searchEl.value.trim().toLowerCase() : '';
-        var forecastOnly = document.getElementById('filter-forecasts') && document.getElementById('filter-forecasts').checked;
+        var starredOnly = document.getElementById('filter-starred') && document.getElementById('filter-starred').checked;
         var highConf = document.getElementById('filter-high-conf') && document.getElementById('filter-high-conf').checked;
         var lowConf = document.getElementById('filter-low-conf') && document.getElementById('filter-low-conf').checked;
         // Destination filters
@@ -138,7 +188,7 @@
                 var words = textQuery.split(/\s+/).filter(Boolean);
                 if (words.length && !words.every(function (w) { return searchable.indexOf(w) !== -1; })) show = false;
             }
-            if (forecastOnly && row.dataset.forecast !== 'true') show = false;
+            if (starredOnly && row.dataset.starred !== 'true') show = false;
             if (highConf && parseFloat(row.dataset.confidence) < 0.8) show = false;
             if (lowConf && parseFloat(row.dataset.confidence) >= 0.7) show = false;
             if (hasDestFilter) {
@@ -292,7 +342,10 @@
                 searchEl._predictionsBound = true;
                 searchEl.addEventListener('input', filterPredictions);
             }
-            if (document.getElementById('predictions-table')) filterPredictions();
+            if (document.getElementById('predictions-table')) {
+                initStarredButtons();
+                filterPredictions();
+            }
             if (target.querySelector('.activity-calendar-heatmap')) initActivityCalendar(target);
         }
     });

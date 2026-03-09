@@ -1,0 +1,113 @@
+{# Legislator Twitter / X tab — loaded via HTMX into #intel-content #}
+
+{% if not rows %}
+<div class="intel-section">
+    <h2>Legislator Twitter / X</h2>
+    <p class="intel-empty-tab">
+        No Twitter handles configured. Add handles to <code>docs/canonical/legislator_twitter_handles.json</code>
+        (member_id → username) or to <code>members.json</code> (<code>twitter_handle</code> per member).
+        Restart the app (or reload cache) so handles are merged at startup. Then run
+        <code>scripts/refresh_twitter_followers.py</code> (with <code>TWITTER_BEARER_TOKEN</code> set) to fetch follower counts.
+    </p>
+</div>
+{% else %}
+
+<div class="intel-section">
+    <h2>Legislator Twitter / X</h2>
+    <p class="intel-subtitle">
+        Legislators with a configured X/Twitter handle, ranked by follower count. Follower counts are cached;
+        run <code>scripts/refresh_twitter_followers.py</code> to refresh. Set <code>TWITTER_BEARER_TOKEN</code> to enable fetching.
+    </p>
+    {% if not twitter_configured %}
+    <p class="intel-subtitle" style="color: #888;">
+        Follower counts show when <code>TWITTER_BEARER_TOKEN</code> is set and the refresh script has been run.
+    </p>
+    {% endif %}
+
+    <div style="margin-bottom: 0.5em; color: #666; font-size: 0.85em;">
+        Showing <strong>{{ rows|length }}</strong> legislators with Twitter handle
+    </div>
+
+    <table class="intel-table" id="legislator-twitter-table">
+        <thead>
+            <tr>
+                <th class="sortable" onclick="sortLegislatorTwitterTable(0, 'number')">Rank <span class="sort-arrow"></span></th>
+                <th class="sortable" onclick="sortLegislatorTwitterTable(1, 'string')">Name <span class="sort-arrow"></span></th>
+                <th class="sortable" onclick="sortLegislatorTwitterTable(2, 'string')">Chamber <span class="sort-arrow"></span></th>
+                <th class="sortable" onclick="sortLegislatorTwitterTable(3, 'string')">Party <span class="sort-arrow"></span></th>
+                <th class="sortable" onclick="sortLegislatorTwitterTable(4, 'string')">District <span class="sort-arrow"></span></th>
+                <th>Twitter</th>
+                <th class="sortable" onclick="sortLegislatorTwitterTable(6, 'number')">Followers <span class="sort-arrow"></span></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in rows %}
+            <tr class="legislator-twitter-row"
+                data-rank="{{ r.rank }}"
+                data-followers="{{ r.followers_count or '' }}"
+                data-name="{{ r.name|lower }}"
+                data-chamber="{{ r.chamber|lower }}"
+                data-party="{{ r.party|lower }}"
+                data-district="{{ r.district|lower }}">
+                <td data-sort-value="{{ r.rank }}">{{ r.rank }}</td>
+                <td data-sort-value="{{ r.name }}">
+                    {% if r.member_url %}
+                    <a href="/intelligence/member/{{ r.member_id }}">{{ r.name }}</a>
+                    {% else %}
+                    {{ r.name }}
+                    {% endif %}
+                </td>
+                <td data-sort-value="{{ r.chamber }}">{{ r.chamber }}</td>
+                <td data-sort-value="{{ r.party }}">{{ r.party }}</td>
+                <td data-sort-value="{{ r.district }}">{{ r.district }}</td>
+                <td>
+                    <a href="https://x.com/{{ r.twitter_handle }}" target="_blank" rel="noopener noreferrer">@{{ r.twitter_handle }}</a>
+                </td>
+                <td data-sort-value="{{ r.followers_count or -1 }}">
+                    {% if r.followers_display %}
+                    {{ r.followers_display }}
+                    {% else %}
+                    <span style="color: #888;" title="Run refresh script with TWITTER_BEARER_TOKEN">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+var _ltSortCol = -1, _ltSortAsc = true;
+function sortLegislatorTwitterTable(colIdx, dataType) {
+    var table = document.getElementById('legislator-twitter-table');
+    if (!table) return;
+    var tbody = table.querySelector('tbody');
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr.legislator-twitter-row'));
+    var headers = table.querySelectorAll('thead th');
+    if (_ltSortCol === colIdx) _ltSortAsc = !_ltSortAsc;
+    else { _ltSortAsc = dataType === 'number' ? false : true; _ltSortCol = colIdx; }
+    for (var h = 0; h < headers.length; h++) {
+        var arrow = headers[h].querySelector('.sort-arrow');
+        if (arrow) arrow.textContent = '';
+    }
+    var activeArrow = headers[colIdx] && headers[colIdx].querySelector('.sort-arrow');
+    if (activeArrow) activeArrow.textContent = _ltSortAsc ? ' \u25B2' : ' \u25BC';
+    rows.sort(function(a, b) {
+        var cellA = a.children[colIdx], cellB = b.children[colIdx];
+        var valA, valB;
+        if (dataType === 'number') {
+            valA = parseFloat(cellA.getAttribute('data-sort-value') || cellA.textContent.replace(/[^0-9.\-]/g, '') || '0');
+            valB = parseFloat(cellB.getAttribute('data-sort-value') || cellB.textContent.replace(/[^0-9.\-]/g, '') || '0');
+            if (isNaN(valA)) valA = 0; if (isNaN(valB)) valB = 0;
+        } else {
+            valA = (cellA.getAttribute('data-sort-value') || cellA.textContent).trim().toLowerCase();
+            valB = (cellB.getAttribute('data-sort-value') || cellB.textContent).trim().toLowerCase();
+        }
+        if (valA < valB) return _ltSortAsc ? -1 : 1;
+        if (valA > valB) return _ltSortAsc ? 1 : -1;
+        return 0;
+    });
+    for (var r = 0; r < rows.length; r++) tbody.appendChild(rows[r]);
+}
+</script>
+{% endif %}

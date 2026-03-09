@@ -432,6 +432,23 @@
   max-width: 800px;
 }
 
+.bill-profile-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.bill-profile-title-row .bill-page-star {
+  flex-shrink: 0;
+}
+.bill-profile-title-row .bill-ilga-link {
+  margin-left: auto;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+.bill-profile-title-row .bill-ilga-link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
 .bill-profile-header h1 {
   margin: 0 0 0.2em 0;
 }
@@ -440,6 +457,28 @@
   color: #333;
   font-size: var(--font-size-body);
   margin: 0 0 0.5em 0;
+}
+
+.bill-synopsis {
+  margin: 1em 0 0.75em 0;
+  padding: 0.75em 1em;
+  background: #f5f7fa;
+  border-left: 4px solid #4a6fa5;
+  border-radius: 0 4px 4px 0;
+}
+
+.bill-synopsis-heading {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.35em 0;
+  color: #334155;
+}
+
+.bill-synopsis-text {
+  margin: 0;
+  font-size: var(--font-size-body);
+  line-height: 1.5;
+  color: #475569;
 }
 
 .bill-profile-meta {
@@ -486,6 +525,36 @@
 .bill-prediction-confidence {
   font-size: var(--font-size-label);
   color: #555;
+}
+
+/* Star column: predictions table bookmark (localStorage) */
+.intel-star-col {
+  width: 2.5rem;
+  text-align: center;
+}
+.intel-star-cell {
+  vertical-align: middle;
+  text-align: center;
+}
+.intel-star-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 2px 4px;
+  color: #888;
+  border-radius: 3px;
+}
+.intel-star-btn:hover {
+  color: #d4a017;
+}
+.intel-star-btn[aria-pressed="true"] {
+  color: #d4a017;
+}
+.intel-star-btn:focus-visible {
+  outline: 2px solid var(--color-focus, #0645ad);
+  outline-offset: 2px;
 }
 
 .bill-forecast-tag {
@@ -856,6 +925,18 @@
   color: #666;
 }
 
+/* Session calendar: gold border for dates that fall on House/Senate session days */
+.session-date,
+.session-date-cell {
+  border: 2px solid #c9a227;
+  border-radius: 4px;
+  padding: 2px 6px;
+  background: linear-gradient(to bottom, #fffef7, #fffbe8);
+}
+.session-date-cell {
+  display: table-cell;
+}
+
 .action-rule-ref {
   font-size: var(--font-size-xs);
   padding: 1px 4px;
@@ -1047,4 +1128,53 @@
   -webkit-overflow-scrolling: touch;
   max-width: 100%;
   min-width: 0;
+}
+
+/* Witness slips table (bill page) */
+.bill-witness-slips-section {
+  margin-top: 1.5em;
+}
+
+.bill-witness-slips-note {
+  color: #666;
+  font-size: 0.95rem;
+  margin-bottom: 0.75em;
+}
+
+.bill-witness-slips-table-wrap {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  max-height: 60vh;
+  min-width: 0;
+}
+
+.bill-witness-slips-table-wrap .bill-witness-slips-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fff;
+  box-shadow: 0 1px 0 0 #e2e8f0;
+}
+
+.slip-position {
+  font-size: 0.85em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.slip-proponent {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.slip-opponent {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.slip-no-position {
+  background: #f1f5f9;
+  color: #475569;
 }

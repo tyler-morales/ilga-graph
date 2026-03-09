@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 
@@ -30,6 +32,7 @@ from .moneyball import build_cosponsor_edges
 from .run_log import append_startup_run
 from .seating import process_seating
 from .startup_banner import _Colors, format_startup_table, log_startup_timing
+from .twitter_followers import load_follower_counts
 from .vote_name_normalizer import normalize_vote_events
 from .voting_record import (
     build_all_category_bill_sets,
@@ -62,6 +65,33 @@ def _collect_unique_bills_by_number(bills_lookup: dict[str, Bill]) -> dict[str, 
         if b.bill_number not in unique:
             unique[b.bill_number] = b
     return unique
+
+
+def _merge_legislator_twitter_handles() -> None:
+    """If legislator_twitter_handles.json exists, overlay handles onto state.members."""
+    project_root = Path(__file__).resolve().parent.parent.parent
+    path = project_root / "docs" / "canonical" / "legislator_twitter_handles.json"
+    if not path.exists():
+        return
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError) as e:
+        LOGGER.warning("Could not load legislator Twitter handles from %s: %s", path, e)
+        return
+    if not isinstance(data, dict):
+        return
+    merged = 0
+    for member_id, username in data.items():
+        if not isinstance(username, str) or not username.strip():
+            continue
+        handle = username.strip().lstrip("@")
+        member = state.member_lookup_by_id.get(member_id)
+        if member is not None:
+            member.twitter_handle = handle
+            merged += 1
+    if merged:
+        LOGGER.info("Merged %d Twitter handles from %s", merged, path.name)
 
 
 @asynccontextmanager
@@ -232,6 +262,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     state.member_lookup = {m.name: m for m in state.members}
     state.member_lookup_by_id = {m.id: m for m in state.members}
     state.bill_lookup = _collect_unique_bills_by_number(data.bills_lookup)
+    state.twitter_follower_counts = load_follower_counts()
+    _merge_legislator_twitter_handles()
     state.bills_lookup = data.bills_lookup
     state.bills = list(state.bill_lookup.values())
     state.committees = data.committees

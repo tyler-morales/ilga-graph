@@ -38,6 +38,8 @@ class AppState:
         self.sponsor_pull: dict = {}
         self.influence: dict = {}
         self.coalition_influence: list = []
+        # username -> followers_count for Legislator Twitter tab (from cache, refreshed by script).
+        self.twitter_follower_counts: dict[str, int] = {}
 
 
 state = AppState()

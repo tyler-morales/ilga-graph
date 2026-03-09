@@ -131,6 +131,9 @@ scrape-full-members: ## Re-fetch full member roster from ILGA (~177). Removes ca
 refresh-photos: ## Refresh member photo_url from ILGA detail pages only (requires existing cache/members.json and bills.json).
 	ILGA_PROFILE=prod PYTHONPATH=src $(PYTHON) scripts/refresh_member_photos.py
 
+refresh-twitter-followers: ## Refresh cached X/Twitter follower counts for legislators (requires TWITTER_BEARER_TOKEN and members with twitter_handle).
+	PYTHONPATH=src $(PYTHON) scripts/refresh_twitter_followers.py
+
 scrape-fulltext: ## Scrape full bill text PDFs (incremental, resumable)
 	ILGA_PROFILE=prod PYTHONPATH=src $(PYTHON) scripts/scrape_fulltext.py \
 		$(if $(LIMIT),--limit $(LIMIT),--limit 100) \
