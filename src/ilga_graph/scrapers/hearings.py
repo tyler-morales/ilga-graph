@@ -79,8 +79,11 @@ def _parse_schedule_table(soup: BeautifulSoup, chamber: str) -> list[Hearing]:
         # Look for columns that suggest a hearing schedule (time, committee, location, subject)
         has_time = any("time" in h or "date" in h for h in header_cells)
         has_committee = any("committee" in h for h in header_cells)
-        has_subject = any("subject" in h or "matter" in h for h in header_cells)
-        if not (has_time and (has_committee or has_subject)):
+        has_subject = any(
+            "subject" in h or "matter" in h or "legislation" in h for h in header_cells
+        )
+        has_location = any("location" in h or "room" in h or "place" in h for h in header_cells)
+        if not (has_time and (has_committee or has_subject or has_location)):
             continue
 
         for tr in rows[1:]:
@@ -160,24 +163,36 @@ def _parse_schedule_table(soup: BeautifulSoup, chamber: str) -> list[Hearing]:
     return hearings
 
 
+# ILGA schedule URLs: hearings.asp with Scheduled=M (month) or W (week) returns HTML tables.
+_SCHEDULE_URLS = {
+    "Senate": "senate/schedules/hearings.asp?Scheduled=M",
+    "House": "house/schedules/hearings.asp?Scheduled=W",
+}
+
+
 def scrape_hearing_schedules(
     chambers: list[str] | None = None,
     session: requests.Session | None = None,
     timeout: int = 20,
     request_delay: float = 0.5,
 ) -> list[Hearing]:
-    """Scrape Senate and/or House schedule pages (Month view) and return hearings.
+    """Scrape Senate and/or House schedule pages (Month/Week view) and return hearings.
 
-    ILGA schedule pages may show Today/Week/Month via tabs. We fetch the schedule
-    URL and parse any table that looks like a hearing list. Bill numbers are
-    extracted from Subject Matter (or full row) for use as re-scrape signals.
+    ILGA uses hearings.asp?Scheduled=M (Senate month) and hearings.asp?Scheduled=W
+    (House week). We parse tables that look like a hearing list and extract bill
+    numbers from Subject Matter (or full row) for re-scrape signals.
     """
     chambers = chambers or ["Senate", "House"]
     sess = session or _build_session(request_delay=request_delay)
     all_hearings: list[Hearing] = []
+    base = BASE_URL.rstrip("/") + "/"
 
     for chamber in chambers:
-        url = f"{BASE_URL.rstrip('/')}/{chamber}/Schedules"
+        path = _SCHEDULE_URLS.get(chamber)
+        if not path:
+            LOGGER.warning("Unknown chamber %r, skipping schedule.", chamber)
+            continue
+        url = base + path
         try:
             if request_delay > 0:
                 time.sleep(request_delay)

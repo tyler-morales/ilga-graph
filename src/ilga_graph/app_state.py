@@ -1,7 +1,7 @@
 """Global application state populated at startup. Used by routers and GraphQL."""
 
 from .analytics import CommitteeStats, MemberScorecard
-from .models import Bill, Committee, CommitteeMemberRole, Member, VoteEvent, WitnessSlip
+from .models import Bill, Committee, CommitteeMemberRole, Hearing, Member, VoteEvent, WitnessSlip
 from .moneyball import MoneyballReport
 from .voting_record import VotingSummary
 from .zip_crosswalk import ZipDistrictInfo
@@ -38,6 +38,8 @@ class AppState:
         self.sponsor_pull: dict = {}
         self.influence: dict = {}
         self.coalition_influence: list = []
+        self.hearings: list[Hearing] = []
+        self.hearings_by_bill: dict[str, list[Hearing]] = {}
         # username -> followers_count for Legislator Twitter tab (from cache, refreshed by script).
         self.twitter_follower_counts: dict[str, int] = {}
 

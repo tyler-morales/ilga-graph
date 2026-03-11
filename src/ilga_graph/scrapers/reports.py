@@ -19,11 +19,10 @@ from .hearings import extract_bill_numbers_from_text
 
 LOGGER = logging.getLogger(__name__)
 
-# Common report paths (ILGA may use different paths; these are typical patterns).
-# Session and GA are often query params.
+# Common report paths. ILGA uses GaId/SessionId (same as BillStatus and legislation index).
 _REPORT_PATHS = [
-    f"legislation/PassedBills.asp?GA={GA_ID + 86}&SessionID={SESSION_ID}",
-    f"legislation/PendingBills.asp?GA={GA_ID + 86}&SessionID={SESSION_ID}",
+    f"legislation/PassedBills.asp?GaId={GA_ID}&SessionId={SESSION_ID}",
+    f"legislation/PendingBills.asp?GaId={GA_ID}&SessionId={SESSION_ID}",
 ]
 
 

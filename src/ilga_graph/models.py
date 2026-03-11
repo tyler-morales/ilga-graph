@@ -49,6 +49,8 @@ class Bill:
     # Per-bill vote events and witness slips (populated during scrape or cache load)
     vote_events: list[VoteEvent] = field(default_factory=list)
     witness_slips: list[WitnessSlip] = field(default_factory=list)
+    # Hearings from Bill Status (e.g. "Executive Hearing Mar 11 2026 1:00PM Capitol 212")
+    bill_hearings: list[str] = field(default_factory=list)
     # Full bill text (as introduced), scraped from FullText tab PDF
     full_text: str = ""
 

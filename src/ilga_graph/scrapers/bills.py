@@ -731,6 +731,30 @@ def _parse_synopsis(soup: BeautifulSoup) -> str:
     return item.get_text(strip=True)
 
 
+def _parse_bill_status_hearings(soup: BeautifulSoup) -> list[str]:
+    """Extract the Hearings section from a BillStatus page (one line per hearing).
+
+    ILGA uses the same ``h5`` → ``div.list-group`` → ``span.list-group-item``
+    pattern as Last Action and Synopsis. Falls back to raw text when the
+    list-group structure is absent.
+    """
+    hearings_h5 = soup.find("h5", string=re.compile(r"^Hearings$", re.IGNORECASE))
+    if not hearings_h5:
+        return []
+    # Same pattern as _parse_synopsis: find the next list-group div
+    list_group = hearings_h5.find_next("div", class_="list-group")
+    if list_group:
+        items = list_group.find_all("span", class_="list-group-item")
+        if items:
+            return [s.get_text(" ", strip=True) for s in items if s.get_text(strip=True)]
+    # Fallback: next sibling element, treat as raw text
+    container = hearings_h5.find_next_sibling()
+    if not container:
+        return []
+    text = container.get_text("\n", strip=True)
+    return [line.strip() for line in text.splitlines() if line.strip()]
+
+
 def _parse_action_history(soup: BeautifulSoup) -> list[ActionEntry]:
     """Parse the Actions table from a BillStatus page."""
     actions_h5 = soup.find("h5", string=re.compile(r"^Actions$", re.IGNORECASE))
@@ -824,6 +848,7 @@ def _scrape_bill_status_with_html(
 
     synopsis = _parse_synopsis(soup)
     action_history = _parse_action_history(soup)
+    bill_hearings = _parse_bill_status_hearings(soup)
 
     bill = Bill(
         bill_number=bill_number,
@@ -838,6 +863,7 @@ def _scrape_bill_status_with_html(
         sponsor_ids=senate_ids,
         house_sponsor_ids=house_ids,
         action_history=action_history,
+        bill_hearings=bill_hearings,
     )
     return bill, raw_html
 
@@ -1161,6 +1187,7 @@ def _bill_from_dict(d: dict) -> Bill:
         action_history=action_history,
         vote_events=vote_events,
         witness_slips=witness_slips,
+        bill_hearings=d.get("bill_hearings") if isinstance(d.get("bill_hearings"), list) else [],
         full_text=d.get("full_text", ""),
     )
 

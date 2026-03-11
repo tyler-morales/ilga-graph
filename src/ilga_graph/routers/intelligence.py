@@ -31,6 +31,165 @@ from ..session_schedule import (
 from ..twitter_followers import load_follower_counts
 
 
+def _get_hearing_insights() -> dict:
+    """Build hearing insights from cached schedule data for the intelligence pages.
+
+    Returns dict with keys: upcoming_hearings, committee_workload, bills_no_hearing.
+    """
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    hearings = state.hearings or []
+
+    # ── Upcoming hearings (next 14 days, not canceled) ────────────────
+    upcoming: list[dict] = []
+    for h in hearings:
+        if h.status == "canceled" or h.date < today_str:
+            continue
+        try:
+            hearing_dt = datetime.strptime(h.date, "%Y-%m-%d")
+            today_midnight = datetime.now().replace(
+                hour=0,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
+            days_until = (hearing_dt - today_midnight).days
+        except ValueError:
+            days_until = 999
+        if days_until > 14:
+            continue
+        bills_with_desc = []
+        for bn in h.bills:
+            bill = state.bill_lookup.get(bn)
+            bills_with_desc.append(
+                {
+                    "bill_number": bn,
+                    "bill_id": bill.leg_id if bill else "",
+                    "description": (bill.description or "")[:80] if bill else "",
+                }
+            )
+        upcoming.append(
+            {
+                "date": h.date,
+                "time": h.time,
+                "location": h.location,
+                "committee_name": h.committee_name,
+                "chamber": h.chamber,
+                "status": h.status,
+                "bills": bills_with_desc,
+                "days_until": max(0, days_until),
+            }
+        )
+    upcoming.sort(key=lambda x: (x["date"], x["time"]))
+
+    # ── Committee workload (hearings per committee) ───────────────────
+    committee_counts: dict[str, dict] = {}
+    for h in hearings:
+        if h.status == "canceled":
+            continue
+        key = h.committee_name
+        if key not in committee_counts:
+            committee_counts[key] = {
+                "committee_name": key,
+                "chamber": h.chamber,
+                "hearing_count": 0,
+                "bill_count": 0,
+                "bill_numbers": set(),
+                "total_lead_days": 0,
+                "lead_count": 0,
+            }
+        entry = committee_counts[key]
+        entry["hearing_count"] += 1
+        entry["bill_numbers"].update(h.bills)
+        if h.posting_date and h.date:
+            try:
+                post_dt = datetime.strptime(h.posting_date[:10], "%Y-%m-%d")
+                hear_dt = datetime.strptime(h.date, "%Y-%m-%d")
+                lead = (hear_dt - post_dt).days
+                if 0 <= lead <= 60:
+                    entry["total_lead_days"] += lead
+                    entry["lead_count"] += 1
+            except ValueError:
+                pass
+
+    workload = []
+    for entry in committee_counts.values():
+        entry["bill_count"] = len(entry["bill_numbers"])
+        avg_lead = (
+            round(entry["total_lead_days"] / entry["lead_count"], 1)
+            if entry["lead_count"] > 0
+            else None
+        )
+        workload.append(
+            {
+                "committee_name": entry["committee_name"],
+                "chamber": entry["chamber"],
+                "hearing_count": entry["hearing_count"],
+                "bill_count": entry["bill_count"],
+                "avg_lead_days": avg_lead,
+            }
+        )
+    workload.sort(key=lambda x: -x["hearing_count"])
+
+    # ── Bills with no hearing (open, in committee, never scheduled) ──
+    all_scheduled_bills = set()
+    for h in hearings:
+        all_scheduled_bills.update(h.bills)
+    bills_no_hearing: list[dict] = []
+    if state.ml and state.ml.available:
+        for s in state.ml.bill_scores:
+            if s.lifecycle_status != "OPEN" or s.current_stage not in ("FILED", "IN_COMMITTEE"):
+                continue
+            if s.bill_number in all_scheduled_bills:
+                continue
+            bill_obj = state.bill_lookup.get(s.bill_number)
+            if bill_obj and getattr(bill_obj, "bill_hearings", []):
+                continue
+            bills_no_hearing.append(
+                {
+                    "bill_number": s.bill_number,
+                    "bill_id": s.bill_id,
+                    "description": (s.description or "")[:80],
+                    "stage": s.stage_label,
+                }
+            )
+            if len(bills_no_hearing) >= 10:
+                break
+
+    return {
+        "upcoming_hearings": upcoming[:12],
+        "committee_workload": workload[:8],
+        "bills_no_hearing": bills_no_hearing,
+    }
+
+
+def _upcoming_hearings_for_bill(bill_number: str) -> list[dict]:
+    """Return upcoming (not canceled, date >= today) schedule hearings for a specific bill."""
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    result = []
+    for h in state.hearings_by_bill.get(bill_number, []):
+        if h.status == "canceled" or h.date < today_str:
+            continue
+        try:
+            hearing_dt = datetime.strptime(h.date, "%Y-%m-%d")
+            days_until = (
+                hearing_dt - datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            ).days
+        except ValueError:
+            days_until = 999
+        result.append(
+            {
+                "date": h.date,
+                "time": h.time,
+                "location": h.location,
+                "committee_name": h.committee_name,
+                "chamber": h.chamber,
+                "days_until": max(0, days_until),
+            }
+        )
+    result.sort(key=lambda x: x["date"])
+    return result
+
+
 def _is_session_date(date_str: str, session_dates: set[str]) -> bool:
     """True if date_str (YYYY-MM-DD or M/D/YYYY) falls on a House/Senate session day."""
     if not date_str or not session_dates:
@@ -591,6 +750,8 @@ async def intelligence_summary(request: Request):
             if len(top_anomalies) >= 5:
                 break
 
+    hearing_insights = _get_hearing_insights()
+
     return templates.TemplateResponse(
         request,
         "intelligence_summary.html",
@@ -608,6 +769,9 @@ async def intelligence_summary(request: Request):
             "power_movers": power_movers,
             "coalitions_summary": coalitions_summary,
             "top_anomalies": top_anomalies,
+            "upcoming_hearings": hearing_insights["upcoming_hearings"],
+            "committee_workload": hearing_insights["committee_workload"],
+            "bills_no_hearing": hearing_insights["bills_no_hearing"],
             "last_run": ml.last_run_date,
         },
     )
@@ -1541,6 +1705,7 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
                 "bill_to_law_process": bill_to_law_process,
                 "bill_votes": [],
                 "witness_slips": [],
+                "bill_hearings": [],
                 "session_dates": session_dates,
             },
         )
@@ -1663,6 +1828,14 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
 
     bill_votes = _vote_events_for_bill(bill.bill_number)
     witness_slips = _witness_slips_for_bill(bill.bill_number)
+    bill_hearings = list(getattr(bill_obj, "bill_hearings", [])) if bill_obj else []
+    next_hearings = _upcoming_hearings_for_bill(bill.bill_number)
+    has_no_hearing = (
+        not bill_hearings
+        and not next_hearings
+        and not state.hearings_by_bill.get(bill.bill_number)
+        and bill.current_stage in ("FILED", "IN_COMMITTEE")
+    )
     try:
         session_dates = get_session_dates_set()
     except (FileNotFoundError, ValueError):
@@ -1688,6 +1861,9 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
             "bill_to_law_process": bill_to_law_process,
             "bill_votes": bill_votes,
             "witness_slips": witness_slips,
+            "bill_hearings": bill_hearings,
+            "next_hearings": next_hearings,
+            "has_no_hearing": has_no_hearing,
             "session_dates": session_dates,
         },
     )
