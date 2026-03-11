@@ -25,7 +25,12 @@ from ..config import BASE_URL, CACHE_DIR, GA_ID, SESSION_ID
 from ..data_source import get_data_dir
 from ..models import ActionEntry, Bill, VoteEvent, WitnessSlip
 from ..normalize import normalize_chamber, normalize_date, validate_bill_cache
-from ._log import log_phase, log_progress
+from ._log import fmt_duration, log_phase, log_progress
+from .hearings import (
+    hearings_to_bill_numbers,
+    save_hearings_cache,
+    scrape_hearing_schedules,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -1310,12 +1315,14 @@ def incremental_bill_scrape(
     timeout: int = 20,
     request_delay: float = 0.5,
     max_workers: int = 10,
-    rescrape_recent_days: int = 30,
+    rescrape_recent_days: int = 14,
     force_full: bool = False,
     include_votes: bool = True,
     include_slips: bool = True,
     include_fulltext: bool = False,
     checkpoint_interval: int = 50,
+    use_hearing_signals: bool = True,
+    use_report_signals: bool = True,
 ) -> dict[str, Bill]:
     """Unified incremental scrape — metadata + votes + slips in one pass.
 
@@ -1430,13 +1437,50 @@ def incremental_bill_scrape(
                 rescrape_recent_days,
             )
 
+    # ── Phase 0: Signal collection (hearings, reports) ─────────────────────
+    signal_bill_numbers: set[str] = set()
+    if use_hearing_signals and existing:
+        t_sig = time.perf_counter()
+        try:
+            hearings = scrape_hearing_schedules(
+                chambers=["Senate", "House"],
+                session=sess,
+                timeout=timeout,
+                request_delay=request_delay,
+            )
+            signal_bill_numbers |= hearings_to_bill_numbers(hearings)
+            save_hearings_cache(hearings)
+            if signal_bill_numbers:
+                LOGGER.info(
+                    "Hearing signals: %d bill numbers from %d hearings (in %s)",
+                    len(signal_bill_numbers),
+                    len(hearings),
+                    fmt_duration(time.perf_counter() - t_sig),
+                )
+        except Exception as e:
+            LOGGER.warning("Hearing signal scrape failed (continuing): %s", e)
+    if use_report_signals and existing:
+        try:
+            from .reports import reports_to_bill_numbers, scrape_common_reports
+
+            report_bills = reports_to_bill_numbers(
+                scrape_common_reports(session=sess, timeout=timeout, request_delay=request_delay)
+            )
+            signal_bill_numbers |= report_bills
+            if report_bills:
+                LOGGER.info("Report signals: %d bill numbers", len(report_bills))
+        except Exception as e:
+            LOGGER.warning("Report signal scrape failed (continuing): %s", e)
+
     # ── Build scrape list ─────────────────────────────────────────────────
     to_scrape: list[BillIndexEntry] = []
+    already_queued: set[str] = set()
 
     to_scrape.extend(e for e in index if e.leg_id in new_ids)
+    already_queued |= new_ids
 
     for lid in rescrape_ids:
-        if lid in new_ids:
+        if lid in already_queued:
             continue
         bill = existing.get(lid)
         if bill and bill.status_url:
@@ -1450,6 +1494,25 @@ def incremental_bill_scrape(
                     status_url=bill.status_url,
                 )
             )
+            already_queued.add(lid)
+
+    # Bills from hearing/report signals (in cache but not yet queued)
+    bill_number_to_bill = {b.bill_number: b for b in existing.values()}
+    for bn in signal_bill_numbers:
+        bill = bill_number_to_bill.get(bn)
+        if not bill or bill.leg_id in already_queued or not bill.status_url:
+            continue
+        dt_match = re.match(r"([A-Z]+)", bill.bill_number)
+        to_scrape.append(
+            BillIndexEntry(
+                bill_number=bill.bill_number,
+                leg_id=bill.leg_id,
+                description=bill.description or "",
+                doc_type=dt_match.group(1) if dt_match else "",
+                status_url=bill.status_url,
+            )
+        )
+        already_queued.add(bill.leg_id)
 
     if not to_scrape:
         LOGGER.info("Incremental: nothing to scrape, cache is up to date.")

@@ -96,6 +96,16 @@ def main() -> None:
         action="store_true",
         help="Only fetch members (and committees). Load bills from cache.",
     )
+    parser.add_argument(
+        "--no-hearing-signals",
+        action="store_true",
+        help="Disable hearing schedule scrape for re-scrape queue (incremental only).",
+    )
+    parser.add_argument(
+        "--no-report-signals",
+        action="store_true",
+        help="Disable common reports scrape for re-scrape queue (incremental only).",
+    )
 
     # ── Tuning ────────────────────────────────────────────────────────────
     parser.add_argument(
@@ -187,6 +197,8 @@ def main() -> None:
                 include_slips=include_slips,
                 include_fulltext=include_fulltext,
                 max_workers=args.workers,
+                use_hearing_signals=not args.no_hearing_signals,
+                use_report_signals=not args.no_report_signals,
             )
             logger.info(
                 "  %d members, %d committees, %d bills.",

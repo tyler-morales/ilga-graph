@@ -8,12 +8,12 @@ when ``ILGA_LOAD_ONLY`` is set. Scraping is done out-of-process via
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from . import config as cfg
 from .analytics import MemberScorecard, compute_all_scorecards
 from .exporter import ObsidianExporter
-from .models import Bill, Committee, CommitteeMemberRole, Member
+from .models import Bill, Committee, CommitteeMemberRole, Hearing, Member
 from .moneyball import MoneyballReport, compute_moneyball, populate_member_roles
 from .scraper import ILGAScraper, load_normalized_cache, save_normalized_cache
 from .scrapers.bills import (
@@ -22,6 +22,7 @@ from .scrapers.bills import (
     scrape_all_bill_indexes,
     scrape_all_bills,
 )
+from .scrapers.hearings import load_hearings_cache
 
 LOGGER = logging.getLogger(__name__)
 
@@ -35,6 +36,7 @@ class ScrapedData:
     committees: list[Committee]
     committee_rosters: dict[str, list[CommitteeMemberRole]]
     committee_bills: dict[str, list[str]]
+    hearings: list[Hearing] = field(default_factory=list)  # from schedule (cache/hearings.json)
 
 
 def _link_members_to_bills(
@@ -98,11 +100,13 @@ def load_from_cache() -> ScrapedData | None:
         committees, committee_rosters, committee_bills = [], {}, {}
 
     _link_members_to_bills(members, bills_lookup)
+    hearings = load_hearings_cache() or []
     LOGGER.info(
-        "Loaded from cache: %d members, %d bills, %d committees.",
+        "Loaded from cache: %d members, %d bills, %d committees, %d hearings.",
         len(members),
         len(bills_lookup),
         len(committees),
+        len(hearings),
     )
     return ScrapedData(
         members=members,
@@ -110,6 +114,7 @@ def load_from_cache() -> ScrapedData | None:
         committees=committees,
         committee_rosters=committee_rosters,
         committee_bills=committee_bills,
+        hearings=hearings,
     )
 
 
@@ -140,12 +145,14 @@ def load_stale_cache_fallback() -> ScrapedData:
         raise RuntimeError("No usable cache data found for stale-cache fallback.")
 
     _link_members_to_bills(members, bills_lookup)
+    hearings = load_hearings_cache() or []
     return ScrapedData(
         members=members,
         bills_lookup=bills_lookup,
         committees=committees,
         committee_rosters=committee_rosters,
         committee_bills=committee_bills,
+        hearings=hearings,
     )
 
 
@@ -163,6 +170,8 @@ def load_or_scrape_data(
     include_slips: bool = True,
     include_fulltext: bool = False,
     max_workers: int = 10,
+    use_hearing_signals: bool = True,
+    use_report_signals: bool = True,
 ) -> ScrapedData:
     """Load data from cache/seed or scrape from ilga.gov.
 
@@ -210,11 +219,13 @@ def load_or_scrape_data(
             hb_limit=hb_limit,
             request_delay=request_delay,
             max_workers=max_workers,
-            rescrape_recent_days=30,
+            rescrape_recent_days=14,
             force_full=force_full_index,
             include_votes=include_votes,
             include_slips=include_slips,
             include_fulltext=include_fulltext,
+            use_hearing_signals=use_hearing_signals,
+            use_report_signals=use_report_signals,
         )
     else:
         bills_lookup = load_bill_cache()
@@ -245,12 +256,14 @@ def load_or_scrape_data(
     if save_cache:
         save_normalized_cache(members, bills_lookup)
 
+    hearings = load_hearings_cache() or []
     return ScrapedData(
         members=members,
         bills_lookup=bills_lookup,
         committees=committees,
         committee_rosters=committee_rosters,
         committee_bills=committee_bills,
+        hearings=hearings,
     )
 
 

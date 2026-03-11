@@ -391,11 +391,59 @@ The workflow runs `cd ~/ilga-graph && bash scripts/deploy-on-server.sh`. If your
 
 ---
 
+## Automated daily scrape (offload from your Mac)
+
+You can run the incremental scrape on the Vultr server on a schedule so you don’t have to run it on your Mac.
+
+**1. One-time: allow the app user to restart the service without a password**
+
+If you haven’t already (e.g. for CI deploy), add a sudoers rule so the user that runs cron can restart the app:
+
+```bash
+sudo visudo -f /etc/sudoers.d/ilga-graph-deploy
+```
+
+Add one line (replace `linuxuser` with your server user):
+
+```
+linuxuser ALL=(ALL) NOPASSWD: /bin/systemctl restart ilga-graph
+```
+
+**2. Optional: create a log directory**
+
+```bash
+mkdir -p ~/ilga-graph/logs
+```
+
+**3. Install a cron job**
+
+Run `crontab -e` as the same user that owns the repo (e.g. `linuxuser`). Add a line to run the scrape daily (e.g. 3:00 AM server time):
+
+```cron
+0 3 * * * /home/linuxuser/ilga-graph/scripts/scrape-on-server.sh >> /home/linuxuser/ilga-graph/logs/scrape.log 2>&1
+```
+
+Adjust paths if your project lives elsewhere (e.g. `/home/YOUR_USER/ilga-graph`).
+
+**What the script does**
+
+- `scripts/scrape-on-server.sh`: activates the project venv, runs `scripts/scrape.py --fast` (incremental: members + bills + votes + slips, no full re-scrape), optionally runs the ML pipeline, then runs `sudo systemctl restart ilga-graph` so the app reloads the updated cache.
+
+**Notes**
+
+- The app loads cache only at startup, so restarting after the scrape is required for new data to appear.
+- Scrape and ML use `|| true` so a failure does not block the restart.
+- To run the scrape once by hand: `cd ~/ilga-graph && ./scripts/scrape-on-server.sh`.
+
+---
+
 ## Useful commands
 
 | Task | Command |
 |------|--------|
 | Restart the app | `sudo systemctl restart ilga-graph` |
+| Run scrape once (then restart) | `cd ~/ilga-graph && ./scripts/scrape-on-server.sh` |
+| View scrape log (if cron configured) | `tail -f ~/ilga-graph/logs/scrape.log` |
 | View app logs (live) | `sudo journalctl -u ilga-graph -f` |
 | Last 80 log lines | `sudo journalctl -u ilga-graph -n 80 --no-pager` |
 | After pulling new code (manual) | `cd ~/ilga-graph && bash scripts/deploy-on-server.sh` (or `git pull && sudo systemctl restart ilga-graph`) |
