@@ -49,6 +49,8 @@ class Bill:
     # Per-bill vote events and witness slips (populated during scrape or cache load)
     vote_events: list[VoteEvent] = field(default_factory=list)
     witness_slips: list[WitnessSlip] = field(default_factory=list)
+    # Hearings from Bill Status (e.g. "Executive Hearing Mar 11 2026 1:00PM Capitol 212")
+    bill_hearings: list[str] = field(default_factory=list)
     # Full bill text (as introduced), scraped from FullText tab PDF
     full_text: str = ""
 
@@ -134,3 +136,18 @@ class CommitteeMemberRole:
     member_name: str
     member_url: str
     role: str
+
+
+@dataclass
+class Hearing:
+    """Committee hearing from Senate/House schedule (Month view)."""
+
+    date: str  # e.g. "2026-03-12"
+    time: str  # e.g. "9:00 AM"
+    location: str  # e.g. "400 Capitol Springfield, IL"
+    committee_name: str
+    committee_id: str  # from URL or roster
+    bills: list[str]  # bill numbers from subject matter, e.g. ["SB4076", "SB4132"]
+    posting_date: str  # when hearing was posted
+    status: str  # "normal", "changed", "canceled"
+    chamber: str  # "Senate" or "House"

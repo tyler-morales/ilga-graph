@@ -285,6 +285,10 @@ def _bill_from_dict(b: dict) -> Bill:
                 )
             )
 
+    bill_hearings = b.get("bill_hearings", [])
+    if not isinstance(bill_hearings, list):
+        bill_hearings = []
+
     return Bill(
         bill_number=b["bill_number"],
         leg_id=b["leg_id"],
@@ -300,6 +304,8 @@ def _bill_from_dict(b: dict) -> Bill:
         action_history=action_history,
         vote_events=vote_events,
         witness_slips=witness_slips,
+        bill_hearings=bill_hearings,
+        full_text=b.get("full_text", ""),
     )
 
 

@@ -14,11 +14,14 @@
     <div class="bill-profile-header">
         <div class="bill-profile-title-row">
             {% if bill %}
-            <button type="button" class="intel-star-btn bill-page-star" data-bill-id="{{ bill.bill_id }}" aria-pressed="false" aria-label="Star this bill to bookmark (saved in browser)" title="Star to bookmark (saved in browser)">☆</button>
+            <button type="button" class="intel-star-btn bill-page-star" data-bill-id="{{ bill.bill_id }}"
+                aria-pressed="false" aria-label="Star this bill to bookmark (saved in browser)"
+                title="Star to bookmark (saved in browser)">☆</button>
             {% endif %}
             <h1>{{ bill.bill_number if bill else 'Bill not found' }}</h1>
             {% if bill and ilga_bill_url %}
-            <a href="{{ ilga_bill_url }}" target="_blank" rel="noopener noreferrer" class="bill-ilga-link" aria-label="View this bill on the Illinois General Assembly website">View on ILGA</a>
+            <a href="{{ ilga_bill_url }}" target="_blank" rel="noopener noreferrer" class="bill-ilga-link"
+                aria-label="View this bill on the Illinois General Assembly website">View on ILGA</a>
             {% endif %}
         </div>
         <p class="bill-profile-desc">{{ bill.description if bill else '' }}</p>
@@ -30,14 +33,17 @@
         {% endif %}
         <div class="bill-profile-meta">
             <span>Sponsor: <strong>
-                {% if bill.sponsor_id %}
-                <a href="/intelligence/member/{{ bill.sponsor_id }}">{{ bill.sponsor }}</a>
-                {% else %}
-                {{ bill.sponsor }}
-                {% endif %}
-            </strong></span>
+                    {% if bill.sponsor_id %}
+                    <a href="/intelligence/member/{{ bill.sponsor_id }}">{{ bill.sponsor }}</a>
+                    {% else %}
+                    {{ bill.sponsor }}
+                    {% endif %}
+                </strong></span>
             <span>Chamber: {{ bill.chamber_origin }}</span>
-            <span>Introduced: {% if bill.introduction_date %}<span class="{% if is_session_date(bill.introduction_date, session_dates) %}session-date{% endif %}" {% if is_session_date(bill.introduction_date, session_dates) %}title="Session day (House/Senate calendar)"{% endif %}>{{ bill.introduction_date }}</span>{% else %}Unknown{% endif %}</span>
+            <span>Introduced: {% if bill.introduction_date %}<span
+                    class="{% if is_session_date(bill.introduction_date, session_dates) %}session-date{% endif %}" {% if
+                    is_session_date(bill.introduction_date, session_dates) %}title="Session day (House/Senate calendar)"
+                    {% endif %}>{{ bill.introduction_date }}</span>{% else %}Unknown{% endif %}</span>
         </div>
     </div>
 
@@ -50,7 +56,8 @@
             <div class="bill-prediction-outcome outcome-vetoed">VETOED</div>
             {% else %}
             <div class="bill-prediction-outcome">
-                <span class="dest-badge dest-{{ bill.predicted_destination|lower|replace('→ ', '')|replace(' ', '-') }}">
+                <span
+                    class="dest-badge dest-{{ bill.predicted_destination|lower|replace('→ ', '')|replace(' ', '-') }}">
                     {{ bill.predicted_destination }}
                 </span>
             </div>
@@ -59,27 +66,37 @@
                     <div>
                         <strong style="font-size: 1rem;">P(Advance)</strong>
                         <div class="score-bar-container" style="width: 180px;">
-                            {{ score_bar((bill.prob_advance * 100)|int, "%.1f"|format(bill.prob_advance * 100) ~ '%', 100, 'md', 'score-high' if bill.prob_advance >= 0.7 else 'score-mid' if bill.prob_advance >= 0.4 else 'score-low') }}
+                            {{ score_bar((bill.prob_advance * 100)|int, "%.1f"|format(bill.prob_advance * 100) ~ '%',
+                            100, 'md', 'score-high' if bill.prob_advance >= 0.7 else 'score-mid' if bill.prob_advance >=
+                            0.4 else 'score-low') }}
                         </div>
-                        <small style="display: block; color: #666; max-width: 200px; margin-top: 2px;">Chance it ever reaches a milestone (committee, floor, etc.). Not “next step.”</small>
+                        <small style="display: block; color: #666; max-width: 200px; margin-top: 2px;">Chance it ever
+                            reaches a milestone (committee, floor, etc.). Not “next step.”</small>
                     </div>
                     <div>
                         <strong style="font-size: 1rem;">P(Law)</strong>
                         <div class="score-bar-container" style="width: 180px;">
-                            {{ score_bar((bill.prob_law * 100)|int, "%.1f"|format(bill.prob_law * 100) ~ '%', 100, 'md', 'score-high' if bill.prob_law >= 0.5 else 'score-mid' if bill.prob_law >= 0.2 else 'score-low') }}
+                            {{ score_bar((bill.prob_law * 100)|int, "%.1f"|format(bill.prob_law * 100) ~ '%', 100, 'md',
+                            'score-high' if bill.prob_law >= 0.5 else 'score-mid' if bill.prob_law >= 0.2 else
+                            'score-low') }}
                         </div>
-                        <small style="display: block; color: #666; max-width: 200px; margin-top: 2px;">Chance it becomes law given where it is now (stage, momentum).</small>
+                        <small style="display: block; color: #666; max-width: 200px; margin-top: 2px;">Chance it becomes
+                            law given where it is now (stage, momentum).</small>
                     </div>
                     {% if bill.forecast_score > 0 %}
                     <div>
                         <strong style="font-size: 1rem;">Forecast</strong>
                         <div class="score-bar-container" style="width: 180px;">
-                            {{ score_bar((bill.forecast_score * 100)|int, "%.1f"|format(bill.forecast_score * 100) ~ '%', 100, 'md', 'score-high' if bill.forecast_score >= 0.5 else 'score-mid' if bill.forecast_score >= 0.2 else 'score-low') }}
+                            {{ score_bar((bill.forecast_score * 100)|int, "%.1f"|format(bill.forecast_score * 100) ~
+                            '%', 100, 'md', 'score-high' if bill.forecast_score >= 0.5 else 'score-mid' if
+                            bill.forecast_score >= 0.2 else 'score-low') }}
                         </div>
                         {% if bill.forecast_confidence %}
-                        <small class="forecast-conf forecast-{{ bill.forecast_confidence|lower }}">{{ bill.forecast_confidence }}</small>
+                        <small class="forecast-conf forecast-{{ bill.forecast_confidence|lower }}">{{
+                            bill.forecast_confidence }}</small>
                         {% endif %}
-                        <small style="display: block; color: #666; max-width: 200px; margin-top: 2px;">P(law) at intro — sponsor &amp; topic only; no progress or delay.</small>
+                        <small style="display: block; color: #666; max-width: 200px; margin-top: 2px;">P(law) at intro —
+                            sponsor &amp; topic only; no progress or delay.</small>
                     </div>
                     {% endif %}
                 </div>
@@ -96,32 +113,35 @@
 
     {# ── Prediction Drivers (SHAP) ── #}
     <div class="bill-prediction-drivers"
-         style="margin-top: 16px; padding: 14px 18px; background: #fafafa; border: 1px solid #e5e5e5; border-radius: 4px;"
-         hx-get="/api/bills/{{ bill.bill_id }}/explanation"
-         hx-trigger="load"
-         hx-swap="innerHTML">
+        style="margin-top: 16px; padding: 14px 18px; background: #fafafa; border: 1px solid #e5e5e5; border-radius: 4px;"
+        hx-get="/api/bills/{{ bill.bill_id }}/explanation" hx-trigger="load" hx-swap="innerHTML">
         <p style="color: #999; font-style: italic; font-size: 0.95rem;">Calculating prediction drivers...</p>
     </div>
 
     {# ── Pipeline progress ── #}
-    {% set pipeline_stages = ['Filed', 'In Committee', 'Passed Committee', 'Floor Vote', 'Crossed Chambers', 'Passed Both Houses', 'Signed into Law'] %}
+    {% set pipeline_stages = ['Filed', 'In Committee', 'Passed Committee', 'Floor Vote', 'Crossed Chambers', 'Passed
+    Both Houses', 'Signed into Law'] %}
     {% set current_index = pipeline_stages.index(bill.stage_label) if bill.stage_label in pipeline_stages else 0 %}
     <div class="bill-pipeline">
         <h2>Pipeline Progress</h2>
         <div class="bill-pipeline-track-wrap">
-            <div class="bill-pipeline-track" role="progressbar" aria-valuenow="{{ current_index + 1 }}" aria-valuemin="1" aria-valuemax="7" aria-label="Bill pipeline stage">
+            <div class="bill-pipeline-track" role="progressbar" aria-valuenow="{{ current_index + 1 }}"
+                aria-valuemin="1" aria-valuemax="7" aria-label="Bill pipeline stage">
                 <div class="bill-pipeline-fill" style="width: {{ (current_index / 6 * 100) }}%;"></div>
                 {% for s in pipeline_stages %}
-                <div class="pipeline-step-dot pipeline-dot-{{ loop.index0 }} {% if bill.stage_label == s %}pipeline-step-current{% elif bill.stage_label in pipeline_stages and pipeline_stages.index(bill.stage_label) > loop.index0 %}pipeline-step-done{% endif %}" aria-hidden="true"></div>
+                <div class="pipeline-step-dot pipeline-dot-{{ loop.index0 }} {% if bill.stage_label == s %}pipeline-step-current{% elif bill.stage_label in pipeline_stages and pipeline_stages.index(bill.stage_label) > loop.index0 %}pipeline-step-done{% endif %}"
+                    aria-hidden="true"></div>
                 {% endfor %}
             </div>
             <div class="bill-pipeline-labels" aria-hidden="true">
                 {% for s in pipeline_stages %}
-                <span class="pipeline-label pipeline-label-{{ loop.index0 }} {% if bill.stage_label == s %}pipeline-step-current{% elif bill.stage_label in pipeline_stages and pipeline_stages.index(bill.stage_label) > loop.index0 %}pipeline-step-done{% endif %}">{{ s }}</span>
+                <span
+                    class="pipeline-label pipeline-label-{{ loop.index0 }} {% if bill.stage_label == s %}pipeline-step-current{% elif bill.stage_label in pipeline_stages and pipeline_stages.index(bill.stage_label) > loop.index0 %}pipeline-step-done{% endif %}">{{
+                    s }}</span>
                 {% endfor %}
             </div>
         </div>
-        <p class="bill-pipeline-status" {% if bill.rule_context %}title="{{ bill.rule_context }}"{% endif %}>
+        <p class="bill-pipeline-status" {% if bill.rule_context %}title="{{ bill.rule_context }}" {% endif %}>
             Current stage: <strong>{{ bill.stage_label }}</strong>
             {% if bill.days_since_action > 0 %}
             &middot; Last action {{ bill.days_since_action }} days ago
@@ -134,8 +154,10 @@
 
     {# ── How a bill becomes law (from reference model) ── #}
     {% if bill_to_law_process %}
-    <details class="bill-to-law-process" style="margin-top: 20px; padding: 14px 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px;">
-        <summary style="cursor: pointer; font-weight: 600; color: #334155;">How does a bill become law in Illinois?</summary>
+    <details class="bill-to-law-process"
+        style="margin-top: 20px; padding: 14px 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px;">
+        <summary style="cursor: pointer; font-weight: 600; color: #334155;">How does a bill become law in Illinois?
+        </summary>
         <ol class="bill-to-law-steps" style="margin: 14px 0 0 0; padding-left: 1.4em; list-style: decimal;">
             {% for s in bill_to_law_process %}
             <li style="margin-bottom: 10px;">
@@ -167,7 +189,8 @@
             {% endif %}
             {% if sponsor_influence.sponsor_lift > 0 %}
             <p class="sponsor-lift-note">
-                Bills sponsored by {{ bill.sponsor }} advance {{ "%.0f"|format(sponsor_influence.sponsor_lift * 100) }}% more often than the chamber average.
+                Bills sponsored by {{ bill.sponsor }} advance {{ "%.0f"|format(sponsor_influence.sponsor_lift * 100) }}%
+                more often than the chamber average.
             </p>
             {% endif %}
         </div>
@@ -191,11 +214,43 @@
     </div>
     {% endif %}
 
+    {# ── Hearings ── #}
+    {% if next_hearings or bill_hearings or has_no_hearing %}
+    <div class="bill-hearings-section">
+        <h2 id="hearings-heading">Hearings</h2>
+
+        {% if next_hearings %}
+        {% for nh in next_hearings %}
+        <div class="hearing-alert" role="status">
+            <strong>Next hearing:</strong> {{ nh.committee_name }} on {{ nh.date }} at {{ nh.time }}
+            {% if nh.location %}&mdash; {{ nh.location }}{% endif %}
+            <span class="hearing-days-until">{% if nh.days_until == 0 %}Today{% elif nh.days_until == 1 %}Tomorrow{%
+                else %}in {{ nh.days_until }} days{% endif %}</span>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% if has_no_hearing %}
+        <p class="hearing-no-hearing-note">This bill has not been scheduled for a committee hearing.</p>
+        {% endif %}
+
+        {% if bill_hearings %}
+        <p class="bill-hearings-note">Committee hearings for this bill (from ILGA Bill Status).</p>
+        <ul class="bill-hearings-list" aria-labelledby="hearings-heading">
+            {% for hearing in bill_hearings %}
+            <li>{{ hearing }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+    {% endif %}
+
     {# ── Witness slips table ── #}
     {% if witness_slips %}
     <div class="bill-witness-slips-section">
         <h2>Witness slips</h2>
-        <p class="bill-witness-slips-note">{{ witness_slips|length }} slip{{ 's' if witness_slips|length != 1 else '' }} filed. Proponent / opponent / no position as filed with the committee.</p>
+        <p class="bill-witness-slips-note">{{ witness_slips|length }} slip{{ 's' if witness_slips|length != 1 else '' }}
+            filed. Proponent / opponent / no position as filed with the committee.</p>
         <div class="bill-witness-slips-table-wrap">
             <table class="intel-table bill-witness-slips-table" aria-label="Witness slips for this bill">
                 <thead>
@@ -237,7 +292,8 @@
     {% if bill_votes %}
     <div class="bill-votes-section">
         <h2>Roll-call votes</h2>
-        <p class="bill-votes-note">Total votes and outcome per event. <strong>Deciding vote</strong> = margin of 1; those voters on the winning side could have changed the outcome by flipping.</p>
+        <p class="bill-votes-note">Total votes and outcome per event. <strong>Deciding vote</strong> = margin of 1;
+            those voters on the winning side could have changed the outcome by flipping.</p>
         <div class="bill-votes-table-wrap">
             <table class="intel-table bill-votes-table">
                 <thead>
@@ -258,7 +314,9 @@
                 <tbody>
                     {% for event in bill_votes %}
                     <tr class="vote-event-row">
-                        <td class="{% if is_session_date(event.date, session_dates) %}session-date-cell{% endif %}" {% if is_session_date(event.date, session_dates) %}title="Session day (House/Senate calendar)"{% endif %}>{{ event.date }}</td>
+                        <td class="{% if is_session_date(event.date, session_dates) %}session-date-cell{% endif %}" {%
+                            if is_session_date(event.date, session_dates) %}title="Session day (House/Senate calendar)"
+                            {% endif %}>{{ event.date }}</td>
                         <td>{{ event.chamber }}</td>
                         <td>
                             {% if event.vote_type == "committee" %}
@@ -267,7 +325,8 @@
                             <span class="vote-type-badge vote-type-floor">Floor</span>
                             {% endif %}
                         </td>
-                        <td class="desc-cell" title="{{ event.description }}">{{ event.description[:50] }}{% if event.description|length > 50 %}&hellip;{% endif %}</td>
+                        <td class="desc-cell" title="{{ event.description }}">{{ event.description[:50] }}{% if
+                            event.description|length > 50 %}&hellip;{% endif %}</td>
                         <td style="text-align:right">{{ event.yea }}</td>
                         <td style="text-align:right">{{ event.nay }}</td>
                         <td style="text-align:right">{{ event.present }}</td>
@@ -286,8 +345,11 @@
                             {% if event.deciding_voters %}
                             {% set show = event.deciding_voters[:5] %}
                             {% set rest = event.deciding_voters[5:] %}
-                            <span class="deciding-voters-list">{{ show|join(", ") }}{% if rest %}<span class="deciding-voters-more" title="{{ rest|join(', ') }}"> +{{ rest|length }} more</span>{% endif %}</span>
-                            {% if event.vote_type == "floor" %}<span class="deciding-floor-tag" title="Deciding vote on floor">(floor)</span>{% endif %}
+                            <span class="deciding-voters-list">{{ show|join(", ") }}{% if rest %}<span
+                                    class="deciding-voters-more" title="{{ rest|join(', ') }}"> +{{ rest|length }}
+                                    more</span>{% endif %}</span>
+                            {% if event.vote_type == "floor" %}<span class="deciding-floor-tag"
+                                title="Deciding vote on floor">(floor)</span>{% endif %}
                             {% else %}
                             <span class="intel-empty-inline">—</span>
                             {% endif %}
@@ -304,15 +366,24 @@
     {% if action_history %}
     <div class="bill-action-history">
         <h2>Action History</h2>
-        <p class="action-history-note">{{ action_history|length }} actions recorded. <strong>Last action:</strong> {% if bill.last_action_date %}<span class="{% if is_session_date(bill.last_action_date, session_dates) %}session-date{% endif %}" {% if is_session_date(bill.last_action_date, session_dates) %}title="Session day (House/Senate calendar)"{% endif %}>{{ bill.last_action_date }}</span>{% else %}{{ bill.last_action_date }}{% endif %} — {{ bill.last_action_text }}. Each action's meaning and outcome signal are classified automatically.</p>
+        <p class="action-history-note">{{ action_history|length }} actions recorded. <strong>Last action:</strong> {% if
+            bill.last_action_date %}<span
+                class="{% if is_session_date(bill.last_action_date, session_dates) %}session-date{% endif %}" {% if
+                is_session_date(bill.last_action_date, session_dates) %}title="Session day (House/Senate calendar)" {%
+                endif %}>{{ bill.last_action_date }}</span>{% else %}{{ bill.last_action_date }}{% endif %} — {{
+            bill.last_action_text }}. Each action's meaning and outcome signal are classified automatically.</p>
         <div class="action-timeline">
             {% for act in action_history %}
             <div class="action-timeline-item action-signal-{{ act.outcome_signal|replace('_', '-') }}">
                 <div class="action-timeline-dot"></div>
                 <div class="action-timeline-content">
                     <div class="action-timeline-header">
-                        <span class="action-date {% if is_session_date(act.date, session_dates) %}session-date{% endif %}" {% if is_session_date(act.date, session_dates) %}title="Session day (House/Senate calendar)"{% endif %}>{{ act.date }}</span>
-                        <span class="action-category-badge action-cat-{{ act.action_category }}">{{ act.action_category_label or act.action_category }}</span>
+                        <span
+                            class="action-date {% if is_session_date(act.date, session_dates) %}session-date{% endif %}"
+                            {% if is_session_date(act.date, session_dates) %}title="Session day (House/Senate calendar)"
+                            {% endif %}>{{ act.date }}</span>
+                        <span class="action-category-badge action-cat-{{ act.action_category }}">{{
+                            act.action_category_label or act.action_category }}</span>
                         {% if act.outcome_signal and act.outcome_signal != 'neutral' %}
                         <span class="action-signal-badge signal-{{ act.outcome_signal|replace('_', '-') }}">
                             {% if act.outcome_signal == 'positive_terminal' %}Law
@@ -325,7 +396,8 @@
                         </span>
                         {% endif %}
                     </div>
-                    <div class="action-text">{{ act.action }}{% if act.rule_reference %} <span class="action-rule-ref" title="{{ act.rule_reference }}">{{ act.rule_reference }}</span>{% endif %}</div>
+                    <div class="action-text">{{ act.action }}{% if act.rule_reference %} <span class="action-rule-ref"
+                            title="{{ act.rule_reference }}">{{ act.rule_reference }}</span>{% endif %}</div>
                     {% if act.meaning %}
                     <div class="action-meaning">{{ act.meaning }}</div>
                     {% endif %}
@@ -348,10 +420,15 @@
                 <tbody>
                     {% for act in action_history %}
                     <tr class="action-signal-{{ act.outcome_signal|replace('_', '-') }}">
-                        <td class="action-date-cell {% if is_session_date(act.date, session_dates) %}session-date-cell{% endif %}" {% if is_session_date(act.date, session_dates) %}title="Session day (House/Senate calendar)"{% endif %}>{{ act.date }}</td>
-                        <td>{% if act.chamber == 'S' %}Senate{% elif act.chamber == 'H' %}House{% else %}{{ act.chamber }}{% endif %}</td>
-                        <td>{{ act.action }}{% if act.rule_reference %} <span class="action-rule-ref" title="{{ act.rule_reference }}">{{ act.rule_reference }}</span>{% endif %}</td>
-                        <td><span class="action-category-badge action-cat-{{ act.action_category }}">{{ act.action_category_label or act.action_category }}</span></td>
+                        <td class="action-date-cell {% if is_session_date(act.date, session_dates) %}session-date-cell{% endif %}"
+                            {% if is_session_date(act.date, session_dates) %}title="Session day (House/Senate calendar)"
+                            {% endif %}>{{ act.date }}</td>
+                        <td>{% if act.chamber == 'S' %}Senate{% elif act.chamber == 'H' %}House{% else %}{{ act.chamber
+                            }}{% endif %}</td>
+                        <td>{{ act.action }}{% if act.rule_reference %} <span class="action-rule-ref"
+                                title="{{ act.rule_reference }}">{{ act.rule_reference }}</span>{% endif %}</td>
+                        <td><span class="action-category-badge action-cat-{{ act.action_category }}">{{
+                                act.action_category_label or act.action_category }}</span></td>
                         <td>
                             {% if act.outcome_signal and act.outcome_signal != 'neutral' %}
                             <span class="action-signal-badge signal-{{ act.outcome_signal|replace('_', '-') }}">
@@ -376,49 +453,50 @@
     {% elif bill.last_action_text %}
     <div class="bill-last-action">
         <h2>Last Action</h2>
-        <p>{% if bill.last_action_date %}<strong class="{% if is_session_date(bill.last_action_date, session_dates) %}session-date{% endif %}" {% if is_session_date(bill.last_action_date, session_dates) %}title="Session day (House/Senate calendar)"{% endif %}>{{ bill.last_action_date }}</strong>{% else %}<strong>{{ bill.last_action_date or '' }}</strong>{% endif %}: {{ bill.last_action_text }}</p>
+        <p>{% if bill.last_action_date %}<strong
+                class="{% if is_session_date(bill.last_action_date, session_dates) %}session-date{% endif %}" {% if
+                is_session_date(bill.last_action_date, session_dates) %}title="Session day (House/Senate calendar)" {%
+                endif %}>{{ bill.last_action_date }}</strong>{% else %}<strong>{{ bill.last_action_date or ''
+                }}</strong>{% endif %}: {{ bill.last_action_text }}</p>
     </div>
     {% endif %}
 </div>
 
 {% if bill %}
 <script>
-(function () {
-    var STARRED_BILLS_KEY = 'intelligence_starred_bills';
-    function getStarredBills() {
-        try {
-            var raw = localStorage.getItem(STARRED_BILLS_KEY);
-            return raw ? JSON.parse(raw) : [];
-        } catch (e) {
-            return [];
+    (function () {
+        var STARRED_BILLS_KEY = 'int        gence_starred_bills';
+                   n getS                ) {
+            try {
+                var raw = loc                tItem(STARRED_BILLS_KEY);
+                     eturn raw ? JS                ) : [];
+                }        ch         {
+                return [];
+                }
+                      function setStarredBills(ids) {
+            try {
+                    localStorage. se        m(        RED_BILLS_KEY, JSON.stringify(ids));
+            } ca        (e) { }
         }
-    }
-    function setStarredBills(ids) {
-        try {
-            localStorage.setItem(STARRED_BILLS_KEY, JSON.stringify(ids));
-        } catch (e) {}
-    }
-    var btn = document.querySelector('.bill-page-star');
-    if (!btn) return;
-    var billId = btn.getAttribute('data-bill-id');
-    if (!billId) return;
-    var starred = getStarredBills();
-    var isStarred = starred.indexOf(billId) !== -1;
-    btn.setAttribute('aria-pressed', isStarred ? 'true' : 'false');
-    btn.textContent = isStarred ? '\u2605' : '\u2606';
-    btn.title = isStarred ? 'Unstar' : 'Star to bookmark (saved in browser)';
-    btn.addEventListener('click', function () {
-        var list = getStarredBills();
-        var idx = list.indexOf(billId);
-        if (idx === -1) list.push(billId);
-        else list.splice(idx, 1);
-        setStarredBills(list);
-        var nowStarred = idx === -1;
-        btn.setAttribute('aria-pressed', nowStarred ? 'true' : 'false');
-        btn.textContent = nowStarred ? '\u2605' : '\u2606';
-        btn.title = nowStarred ? 'Unstar' : 'Star to bookmark (saved in browser)';
-    });
-})();
+            var btn = document.querySelector('.bill-pag        ar');
+        if (!bt        eturn;
+        var billId = btn.g        tribute('data-bill-id');
+        if (!billId) re        ;
+        var starred = getStarredBills();
+        var isStarred        tarred.indexOf(billId) !== -1;
+        btn.setAttri        ('aria-pressed', isStarred ? 'true' : 'false');
+        btn.textContent =         arred ? '\u2605' : '\u2606';
+        btn.tit            tarred ? 'Unstar' : 'Star to b            (saved in browser)';
+        btn            tListener('click', function () {
+                var list = getStarredBil                      var idx = lis            f(billId);
+            if (id            ) list.push(billId);
+            else list.splice(idx, 1);
+                  tStarredBills(list);
+            var nowStarred = id            ;
+            btn.setAttribute('aria-pressed', nowStarred ? 'true' : 'false                        t = nowStarred ? '\u2605' : '\u2606';
+            btn.title = nowStarred ? 'Unstar' : 'Star to bookmark (saved in browser)';
+        });
+    })();
 </script>
 {% endif %}
 {% endblock %}

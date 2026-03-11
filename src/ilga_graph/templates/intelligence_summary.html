@@ -81,6 +81,81 @@
     {% endif %}
 </div>
 
+{# ── Upcoming Hearings ───────────────────────────────────────────── #}
+<div class="story-section">
+    <h2>Upcoming Hearings</h2>
+    <p class="story-subtitle">Committee hearings scheduled in the next 14 days &mdash; key moments for witness slips and
+        constituent contact.</p>
+
+    {% if upcoming_hearings %}
+    <div class="story-card-grid">
+        {% for h in upcoming_hearings %}
+        <div class="story-card hearing-card">
+            <div class="story-card-header">
+                <span class="hearing-chamber-badge hearing-chamber-{{ h.chamber|lower }}">{{ h.chamber }}</span>
+                <span class="hearing-days-until">{% if h.days_until == 0 %}Today{% elif h.days_until == 1 %}Tomorrow{%
+                    else %}{{ h.days_until }}d{% endif %}</span>
+            </div>
+            <h3 class="story-card-title">{{ h.committee_name }}</h3>
+            <p class="story-card-meta">
+                {{ h.date }} &middot; {{ h.time }}
+                {% if h.status == 'changed' %}<span class="hearing-status-changed">Changed</span>{% endif %}
+            </p>
+            {% if h.location %}<p class="hearing-location">{{ h.location }}</p>{% endif %}
+            {% if h.bills %}
+            <ul class="hearing-bills-list">
+                {% for b in h.bills %}
+                <li>{% if b.bill_id %}<a href="/intelligence/bill/{{ b.bill_id }}">{{ b.bill_number }}</a>{% else %}{{
+                    b.bill_number }}{% endif %}{% if b.description %} &mdash; {{ b.description }}{% if
+                    b.description|length >= 80 %}&hellip;{% endif %}{% endif %}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="intel-empty-inline">No upcoming hearings in the schedule.</p>
+    {% endif %}
+
+    {% if committee_workload %}
+    <div class="hearing-workload-section">
+        <h3>Committee Workload</h3>
+        <div class="hearing-workload-grid">
+            {% for cw in committee_workload %}
+            <div class="hearing-workload-card">
+                <strong>{{ cw.committee_name }}</strong>
+                <span class="hearing-chamber-badge hearing-chamber-{{ cw.chamber|lower }}">{{ cw.chamber }}</span>
+                <div class="hearing-workload-stats">
+                    <span>{{ cw.hearing_count }} hearing{{ 's' if cw.hearing_count != 1 else '' }}</span>
+                    <span>&middot; {{ cw.bill_count }} bill{{ 's' if cw.bill_count != 1 else '' }}</span>
+                    {% if cw.avg_lead_days is not none %}
+                    <span>&middot; {{ cw.avg_lead_days }}d avg lead time</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if bills_no_hearing %}
+    <details class="hearing-no-hearing-details">
+        <summary class="hearing-no-hearing-summary">{{ bills_no_hearing|length }} open bill{{ 's' if
+            bills_no_hearing|length != 1 else '' }} in committee {% if bills_no_hearing|length == 10 %}(or more) {%
+            endif
+            %}never scheduled for a hearing</summary>
+        <ul class="hearing-no-hearing-list">
+            {% for b in bills_no_hearing %}
+            <li><a href="/intelligence/bill/{{ b.bill_id }}">{{ b.bill_number }}</a>{% if b.description %} &mdash; {{
+                b.description }}{% if b.description|length >= 80 %}&hellip;{% endif %}{% endif %} <span
+                    class="hearing-no-hearing-stage">{{ b.stage }}</span></li>
+            {% endfor %}
+        </ul>
+    </details>
+    {% endif %}
+</div>
+
 {# ── Power Movers ────────────────────────────────────────────────── #}
 <div class="story-section">
     <h2>Power Movers</h2>

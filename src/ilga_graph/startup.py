@@ -343,6 +343,17 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     except Exception:
         LOGGER.exception("Witness slip loading failed; slip data will be empty.")
 
+    # ── Step 5b: Populate schedule hearings from cache ─────────────────
+    state.hearings = data.hearings or []
+    for h in state.hearings:
+        for bn in h.bills:
+            state.hearings_by_bill.setdefault(bn, []).append(h)
+    LOGGER.info(
+        "Schedule hearings: %d hearings, %d bills indexed.",
+        len(state.hearings),
+        len(state.hearings_by_bill),
+    )
+
     # ── Step 6: Load ZIP-to-district crosswalk ───────────────────────────
     try:
         t_zip = _time.perf_counter()

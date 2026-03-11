@@ -25,7 +25,12 @@ from ..config import BASE_URL, CACHE_DIR, GA_ID, SESSION_ID
 from ..data_source import get_data_dir
 from ..models import ActionEntry, Bill, VoteEvent, WitnessSlip
 from ..normalize import normalize_chamber, normalize_date, validate_bill_cache
-from ._log import log_phase, log_progress
+from ._log import fmt_duration, log_phase, log_progress
+from .hearings import (
+    hearings_to_bill_numbers,
+    save_hearings_cache,
+    scrape_hearing_schedules,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -726,6 +731,30 @@ def _parse_synopsis(soup: BeautifulSoup) -> str:
     return item.get_text(strip=True)
 
 
+def _parse_bill_status_hearings(soup: BeautifulSoup) -> list[str]:
+    """Extract the Hearings section from a BillStatus page (one line per hearing).
+
+    ILGA uses the same ``h5`` → ``div.list-group`` → ``span.list-group-item``
+    pattern as Last Action and Synopsis. Falls back to raw text when the
+    list-group structure is absent.
+    """
+    hearings_h5 = soup.find("h5", string=re.compile(r"^Hearings$", re.IGNORECASE))
+    if not hearings_h5:
+        return []
+    # Same pattern as _parse_synopsis: find the next list-group div
+    list_group = hearings_h5.find_next("div", class_="list-group")
+    if list_group:
+        items = list_group.find_all("span", class_="list-group-item")
+        if items:
+            return [s.get_text(" ", strip=True) for s in items if s.get_text(strip=True)]
+    # Fallback: next sibling element, treat as raw text
+    container = hearings_h5.find_next_sibling()
+    if not container:
+        return []
+    text = container.get_text("\n", strip=True)
+    return [line.strip() for line in text.splitlines() if line.strip()]
+
+
 def _parse_action_history(soup: BeautifulSoup) -> list[ActionEntry]:
     """Parse the Actions table from a BillStatus page."""
     actions_h5 = soup.find("h5", string=re.compile(r"^Actions$", re.IGNORECASE))
@@ -819,6 +848,7 @@ def _scrape_bill_status_with_html(
 
     synopsis = _parse_synopsis(soup)
     action_history = _parse_action_history(soup)
+    bill_hearings = _parse_bill_status_hearings(soup)
 
     bill = Bill(
         bill_number=bill_number,
@@ -833,6 +863,7 @@ def _scrape_bill_status_with_html(
         sponsor_ids=senate_ids,
         house_sponsor_ids=house_ids,
         action_history=action_history,
+        bill_hearings=bill_hearings,
     )
     return bill, raw_html
 
@@ -1156,6 +1187,7 @@ def _bill_from_dict(d: dict) -> Bill:
         action_history=action_history,
         vote_events=vote_events,
         witness_slips=witness_slips,
+        bill_hearings=d.get("bill_hearings") if isinstance(d.get("bill_hearings"), list) else [],
         full_text=d.get("full_text", ""),
     )
 
@@ -1310,12 +1342,14 @@ def incremental_bill_scrape(
     timeout: int = 20,
     request_delay: float = 0.5,
     max_workers: int = 10,
-    rescrape_recent_days: int = 30,
+    rescrape_recent_days: int = 14,
     force_full: bool = False,
     include_votes: bool = True,
     include_slips: bool = True,
     include_fulltext: bool = False,
     checkpoint_interval: int = 50,
+    use_hearing_signals: bool = True,
+    use_report_signals: bool = True,
 ) -> dict[str, Bill]:
     """Unified incremental scrape — metadata + votes + slips in one pass.
 
@@ -1430,13 +1464,50 @@ def incremental_bill_scrape(
                 rescrape_recent_days,
             )
 
+    # ── Phase 0: Signal collection (hearings, reports) ─────────────────────
+    signal_bill_numbers: set[str] = set()
+    if use_hearing_signals and existing:
+        t_sig = time.perf_counter()
+        try:
+            hearings = scrape_hearing_schedules(
+                chambers=["Senate", "House"],
+                session=sess,
+                timeout=timeout,
+                request_delay=request_delay,
+            )
+            signal_bill_numbers |= hearings_to_bill_numbers(hearings)
+            save_hearings_cache(hearings)
+            if signal_bill_numbers:
+                LOGGER.info(
+                    "Hearing signals: %d bill numbers from %d hearings (in %s)",
+                    len(signal_bill_numbers),
+                    len(hearings),
+                    fmt_duration(time.perf_counter() - t_sig),
+                )
+        except Exception as e:
+            LOGGER.warning("Hearing signal scrape failed (continuing): %s", e)
+    if use_report_signals and existing:
+        try:
+            from .reports import reports_to_bill_numbers, scrape_common_reports
+
+            report_bills = reports_to_bill_numbers(
+                scrape_common_reports(session=sess, timeout=timeout, request_delay=request_delay)
+            )
+            signal_bill_numbers |= report_bills
+            if report_bills:
+                LOGGER.info("Report signals: %d bill numbers", len(report_bills))
+        except Exception as e:
+            LOGGER.warning("Report signal scrape failed (continuing): %s", e)
+
     # ── Build scrape list ─────────────────────────────────────────────────
     to_scrape: list[BillIndexEntry] = []
+    already_queued: set[str] = set()
 
     to_scrape.extend(e for e in index if e.leg_id in new_ids)
+    already_queued |= new_ids
 
     for lid in rescrape_ids:
-        if lid in new_ids:
+        if lid in already_queued:
             continue
         bill = existing.get(lid)
         if bill and bill.status_url:
@@ -1450,6 +1521,25 @@ def incremental_bill_scrape(
                     status_url=bill.status_url,
                 )
             )
+            already_queued.add(lid)
+
+    # Bills from hearing/report signals (in cache but not yet queued)
+    bill_number_to_bill = {b.bill_number: b for b in existing.values()}
+    for bn in signal_bill_numbers:
+        bill = bill_number_to_bill.get(bn)
+        if not bill or bill.leg_id in already_queued or not bill.status_url:
+            continue
+        dt_match = re.match(r"([A-Z]+)", bill.bill_number)
+        to_scrape.append(
+            BillIndexEntry(
+                bill_number=bill.bill_number,
+                leg_id=bill.leg_id,
+                description=bill.description or "",
+                doc_type=dt_match.group(1) if dt_match else "",
+                status_url=bill.status_url,
+            )
+        )
+        already_queued.add(bill.leg_id)
 
     if not to_scrape:
         LOGGER.info("Incremental: nothing to scrape, cache is up to date.")
