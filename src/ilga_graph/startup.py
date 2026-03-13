@@ -441,6 +441,16 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     except Exception:
         LOGGER.exception("Influence engine failed (non-critical).")
 
+    # ── Step 9: Initialize Legislative Ontology SDK ───────────────────────
+    try:
+        from .ontology import MappingService, OntologySDK
+
+        state.ontology_sdk = OntologySDK(MappingService(state))
+        LOGGER.info("Ontology SDK initialized.")
+    except Exception:
+        LOGGER.exception("Ontology SDK initialization failed (non-critical).")
+        state.ontology_sdk = None
+
     # ── Print startup summary table ──────────────────────────────────────
     elapsed_total = _time.perf_counter() - t_startup_begin
     exported_bill_count = (

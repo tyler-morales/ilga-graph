@@ -4,19 +4,21 @@ This project is **The Land of Kei** (ILGA Graph): a full-stack advocacy app for 
 
 ## Core Principles
 
-1. **Hardball spec is source of truth** — Advocacy, lobbying, and legislator outreach behavior come from `docs/hardball-spec/`. Read the relevant chunk before implementing or changing advocacy features.
-2. **No hallucination of content** — Substantive copy, key points, FAQs, and brief text come only from canonical sources: `content.py`, legislator/constituent brief `.txt` files, and approved templates. See `.cursor/rules/no-hallucination-content.mdc`.
-3. **Agent-first** — Delegate to specialized agents for domain tasks (planning, backend, frontend, tests, a11y).
-4. **Test-driven** — Write tests before implementation; 80%+ coverage for logic. Use existing fixtures and `tests/async_helpers.run_async()` when in an event loop.
-5. **Simplify and delete** — Prefer removing or consolidating code over adding. After adding a feature, remove duplicate logic, dead code, and redundant UI.
+1. **Ontology is the foundational semantic layer** — Legislative and advocacy data are modeled as objects (nouns), links (relationships), actions (verbs), and logic (ML/rules). The application plane consumes the **Ontology SDK (OSDK)** in `src/ilga_graph/ontology/`; prefer the OSDK over raw `state.member_lookup` / `state.bills_lookup` for object and link semantics. See `docs/architecture/legislative-ontology.md`.
+2. **Hardball spec is source of truth** — Advocacy, lobbying, and legislator outreach behavior come from `docs/hardball-spec/`. Read the relevant chunk before implementing or changing advocacy features.
+3. **No hallucination of content** — Substantive copy, key points, FAQs, and brief text come only from canonical sources: `content.py`, legislator/constituent brief `.txt` files, and approved templates. See `.cursor/rules/no-hallucination-content.mdc`.
+4. **Agent-first** — Delegate to specialized agents for domain tasks (planning, backend, frontend, tests, a11y).
+5. **Test-driven** — Write tests before implementation; 80%+ coverage for logic. Use existing fixtures and `tests/async_helpers.run_async()` when in an event loop.
+6. **Simplify and delete** — Prefer removing or consolidating code over adding. After adding a feature, remove duplicate logic, dead code, and redundant UI.
 
 ## Stack and Layout
 
 | Area | Details |
 |------|---------|
-| **Backend** | FastAPI in `main.py`, routers in `routers/`, state via `app_state` (no new globals). GraphQL in `schema.py`; resolvers use batch loaders (scorecard, moneyball, bill, member). |
+| **Ontology** | Foundational semantic layer in `src/ilga_graph/ontology/`: objects, links, actions, mapping, logic, OSDK. Application and GraphQL consume `state.ontology_sdk` for object/link/action semantics. See `docs/architecture/legislative-ontology.md`. |
+| **Backend** | FastAPI in `main.py`, routers in `routers/`, state via `app_state` (no new globals). GraphQL in `schema.py`; resolvers use batch loaders (scorecard, moneyball, bill, member) and ontology queries. |
 | **Frontend** | Jinja2 templates in `templates/`, HTMX partials; call `htmx.process(container)` after injecting HTML via JS. Styles in `base.html` or `static/css/`; use `.gmail-*`, `.drawer-*` naming. |
-| **Data** | ETL in `etl.py`; scrapers in `src/ilga_graph/scrapers/`; ML/analytics in `analytics.py`, `ml/`. |
+| **Data** | ETL in `etl.py`; scrapers in `src/ilga_graph/scrapers/`; ML/analytics in `analytics.py`, `ml/`. Data plane feeds the ontology mapping layer. |
 | **Canonical content** | `content_constants.py` (STRATEGIC_*, FAQ_*, BRIEF_*); briefs in `docs/canonical/briefs/` (legislator-brief.txt, constituent-brief.txt); strategy books in `docs/canonical/books/` (hardball.txt, founding-sales.txt). |
 
 ## Project Agents (`.cursor/agents/`)

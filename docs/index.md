@@ -12,7 +12,7 @@ Documentation for the **ILGA Graph** proof-of-concept: Illinois General Assembly
 
 ## Features & user guides
 
-- [**App overview**](features/app-overview.md) — What’s in the app: Advocacy, Power Map, Intelligence, GraphQL. Paths and one-liners.
+- [**App overview**](features/app-overview.md) — What- [**Legislative Ontology**](architecture/legislative-ontology.md) — Foundational semantic layer: objects, links, actions, logic, and the Ontology SDK (OSDK).’s in the app: Advocacy, Power Map, Intelligence, GraphQL. Paths and one-liners.
 - [**Pitch one-pagers**](pitch/) — Audience-specific one-pagers: [advocacy/nonprofit](pitch/advocacy-nonprofit.md), [lobbyist](pitch/lobbyist.md), [candidate](pitch/candidate.md), [investor](pitch/investor.md).
 - [**Dev Bar**](user-guide/advocacy-test-mode.md) — Floating dev toolbar activated by `?dev` on any URL. Quick-access to call scripts, email drawers, intelligence sub-pages, and deep-link bookmarks.
 

@@ -180,6 +180,19 @@ async def record_outreach(
     )
 
     await db.commit()
+    if state.ontology_sdk is not None:
+        from ..ontology import outreach_event_to_action
+
+        action = outreach_event_to_action(
+            event_id=event.id,
+            kind=kind,
+            member_id=mid,
+            user_id=user.id,
+            created_at=event.created_at,
+            outcome=outcome.strip() or None,
+            campaign_id=campaign_id_val,
+        )
+        state.ontology_sdk.execute_action(action)
     LOGGER.info("Outreach recorded: user=%s member=%s kind=%s", user.email, member_id, kind)
     return {"ok": True, "event_id": event.id}
 

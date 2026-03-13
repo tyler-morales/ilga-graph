@@ -42,6 +42,10 @@ class AppState:
         self.hearings_by_bill: dict[str, list[Hearing]] = {}
         # username -> followers_count for Legislator Twitter tab (from cache, refreshed by script).
         self.twitter_follower_counts: dict[str, int] = {}
+        # Legislative Ontology SDK (initialized in startup after data and influence are loaded).
+        self.ontology_sdk: object | None = None
+        # In-memory log of ontology actions (calls, emails, no_answer). Cleared on restart.
+        self.ontology_actions: list = []
 
 
 state = AppState()
