@@ -244,6 +244,29 @@ def _bill_score_to_type(s) -> BillPredictionType:
 # ── Query ───────────────────────────────────────────────────────────────────
 
 
+# ── Ontology (OSDK) GraphQL types ───────────────────────────────────────────
+
+
+@strawberry.type
+class OntologyLinkType:
+    """A single link from one ontology object to another."""
+
+    target_id: str
+    target_type: str
+    link_type: str
+
+
+@strawberry.type
+class OntologyActionType:
+    """A traceable advocacy action (call, email, no_answer) from the ontology."""
+
+    action_id: str
+    action_type: str
+    actor_id: str | None
+    timestamp: str | None
+    outcome: str | None
+
+
 @strawberry.type
 class Query:
     @strawberry.field(description="Look up a single member by exact name.")
@@ -832,4 +855,53 @@ class Query:
                 ],
             )
             for r in runs
+        ]
+
+    @strawberry.field(
+        description="Ontology links for an object (legislator, bill, committee). Returns empty list if SDK unavailable."
+    )
+    def ontology_links(
+        self,
+        object_id: str,
+        object_type: str,
+    ) -> list[OntologyLinkType]:
+        sdk = getattr(state, "ontology_sdk", None)
+        if sdk is None:
+            return []
+        obj = None
+        ot = (object_type or "").strip().lower()
+        if ot == "legislator":
+            obj = sdk.get_legislator(object_id.strip())
+        elif ot == "bill":
+            obj = sdk.get_bill(object_id.strip())
+        elif ot == "committee":
+            obj = sdk.get_committee(object_id.strip())
+        if obj is None or not getattr(obj, "links", None):
+            return []
+        return [
+            OntologyLinkType(
+                target_id=l.target_id,
+                target_type=l.target_type,
+                link_type=l.link_type,
+            )
+            for l in obj.links
+        ]
+
+    @strawberry.field(
+        description="Advocacy action history for a legislator (calls, emails). In-memory only until next restart."
+    )
+    def ontology_action_history(self, member_id: str) -> list[OntologyActionType]:
+        sdk = getattr(state, "ontology_sdk", None)
+        if sdk is None:
+            return []
+        actions = sdk.action_history((member_id or "").strip())
+        return [
+            OntologyActionType(
+                action_id=a.action_id,
+                action_type=a.action_type,
+                actor_id=a.actor_id,
+                timestamp=a.timestamp.isoformat() if a.timestamp else None,
+                outcome=a.outcome,
+            )
+            for a in actions
         ]
