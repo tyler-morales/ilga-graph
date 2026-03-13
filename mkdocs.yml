@@ -32,6 +32,8 @@ nav:
   - Getting started: getting-started.md
   - Features:
     - App overview: features/app-overview.md
+  - Architecture:
+    - Legislative Ontology: architecture/legislative-ontology.md
   - User guide:
     - Advocacy Test Mode: user-guide/advocacy-test-mode.md
   - Reference:
