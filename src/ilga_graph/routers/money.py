@@ -13,7 +13,9 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..app_state import state
 from ..db import get_db
+from ..intelligence_helpers import campaign_finance_summary_view, is_sample_scale_finance
 from ..money_leads import (
     MONEY_LEAD_ROLES,
     STATUS_MESSAGES,
@@ -50,6 +52,9 @@ def _signup_page_context(
     return {
         "request": request,
         "title": "Money intel signup",
+        "is_sample_scale_finance": is_sample_scale_finance(
+            campaign_finance_summary_view(state.campaign_finance)
+        ),
         **signup_form_context(status=status, form_values=form_values),
     }
 

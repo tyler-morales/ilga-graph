@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from typing import Any
 
 from .app_state import state
@@ -118,6 +119,22 @@ def campaign_finance_summary_view(index: Any) -> dict[str, Any] | None:
         "members_matched": int(stats.get("members_matched") or 0),
         "receipts_indexed": int(stats.get("receipts_indexed") or 0),
     }
+
+
+# Bundled mocks/dev is 15 members / 140 receipts. Statewide ingest is on the
+# order of a full General Assembly and tens of thousands of receipts. Hide
+# fixture copy only when both floors clear so a larger sample cannot pass as live.
+_FULL_SCALE_MIN_MEMBERS = 50
+_FULL_SCALE_MIN_RECEIPTS = 1000
+
+
+def is_sample_scale_finance(summary: Mapping[str, Any] | None) -> bool:
+    """True when the loaded finance index is fixture/dev-scale or missing."""
+    if not summary:
+        return True
+    members = int(summary.get("members_matched") or 0)
+    receipts = int(summary.get("receipts_indexed") or 0)
+    return members < _FULL_SCALE_MIN_MEMBERS or receipts < _FULL_SCALE_MIN_RECEIPTS
 
 
 def _committee_dict(committee: Any) -> dict[str, Any]:

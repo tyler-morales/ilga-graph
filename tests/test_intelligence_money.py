@@ -16,6 +16,7 @@ from ilga_graph.campaign_finance.parse import parse_sbe_dir
 from ilga_graph.intelligence_helpers import (
     bill_money_context_view,
     campaign_finance_summary_view,
+    is_sample_scale_finance,
     member_money_trail_view,
     top_funded_member_rows,
 )
@@ -124,6 +125,18 @@ def test_campaign_finance_summary_view_success(finance_index) -> None:
 
 def test_campaign_finance_summary_view_none_when_index_missing() -> None:
     assert campaign_finance_summary_view(None) is None
+
+
+def test_is_sample_scale_finance_true_for_fixture_counts() -> None:
+    assert is_sample_scale_finance(None) is True
+    assert is_sample_scale_finance({"members_matched": 15, "receipts_indexed": 140}) is True
+    assert is_sample_scale_finance({"members_matched": 49, "receipts_indexed": 20000}) is True
+    assert is_sample_scale_finance({"members_matched": 170, "receipts_indexed": 999}) is True
+
+
+def test_is_sample_scale_finance_false_for_statewide_counts() -> None:
+    assert is_sample_scale_finance({"members_matched": 50, "receipts_indexed": 1000}) is False
+    assert is_sample_scale_finance({"members_matched": 170, "receipts_indexed": 31729}) is False
 
 
 def test_member_money_trail_view_success(finance_index, sitting_members: list[Member]) -> None:

@@ -178,6 +178,16 @@ class TestMoneyPages:
         assert "SOS" not in resp.text
         assert "expenditure" not in resp.text.lower()
 
+    def test_signup_page_hides_fixture_note_when_statewide(self, client: TestClient) -> None:
+        statewide = {"members_matched": 170, "receipts_indexed": 31729}
+        with patch.object(
+            money_router_mod, "campaign_finance_summary_view", return_value=statewide
+        ):
+            resp = client.get("/intelligence/money/signup", headers={"Accept": "text/html"})
+        assert resp.status_code == 200
+        assert "fixture / dev-scale" not in resp.text
+        assert "Current seeds are fixture / dev-scale" not in resp.text
+
 
 class TestMoneyEngineKeepsUi:
     """Full app: /intelligence/money stays the Follow-the-money engine plus a waitlist CTA."""
