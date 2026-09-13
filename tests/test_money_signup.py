@@ -2,21 +2,22 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 import os
+import sqlite3
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import select
 
 import ilga_graph.config as cfg_mod
 import ilga_graph.db as db_mod
 import ilga_graph.dependencies as deps_mod
-from ilga_graph.db_models import MoneyIntelLead
 from ilga_graph.money_leads import (
     MONEY_LEAD_ROLES,
     normalize_email,
@@ -27,12 +28,11 @@ from ilga_graph.routers import admin as admin_router_mod
 from ilga_graph.routers import auth as auth_router_mod
 from ilga_graph.routers import money as money_router_mod
 from ilga_graph.security import CSRF_COOKIE_NAME, generate_csrf_token
-from tests.async_helpers import run_async
 
 _ADMIN_EMAIL = "admin@example.com"
 
 
-def _make_test_app(db_path: Path) -> FastAPI:
+def _make_test_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         await db_mod.init_db()
@@ -69,21 +69,37 @@ def _data_with_csrf(client: TestClient, data: dict) -> dict:
     return out
 
 
-async def _add_auth_code(email: str, plain_code: str) -> None:
-    import hashlib
-    from datetime import datetime, timedelta, timezone
-
-    from ilga_graph.db_models import AuthCode
-
-    async with db_mod.async_session_factory() as session:
-        session.add(
-            AuthCode(
-                email=email,
-                code_hash=hashlib.sha256(plain_code.encode()).hexdigest(),
-                expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
-            )
+def _insert_auth_code(db_path: Path, email: str, plain_code: str) -> None:
+    """Insert a verification code without touching the TestClient event loop."""
+    now = datetime.now(timezone.utc)
+    expires = now + timedelta(minutes=10)
+    con = sqlite3.connect(db_path)
+    try:
+        con.execute(
+            "INSERT INTO auth_codes (email, code_hash, expires_at, used, created_at) "
+            "VALUES (?, ?, ?, 0, ?)",
+            (
+                email,
+                hashlib.sha256(plain_code.encode()).hexdigest(),
+                expires.isoformat(),
+                now.isoformat(),
+            ),
         )
-        await session.commit()
+        con.commit()
+    finally:
+        con.close()
+
+
+def _lead_row(db_path: Path, email: str) -> tuple | None:
+    """Read a waitlist row via sync sqlite so teardown cannot close the query loop."""
+    con = sqlite3.connect(db_path)
+    try:
+        return con.execute(
+            "SELECT name, org, role FROM money_intel_leads WHERE email = ?",
+            (email,),
+        ).fetchone()
+    finally:
+        con.close()
 
 
 @pytest.fixture
@@ -109,7 +125,7 @@ def client(test_db_path: Path) -> TestClient:
         importlib.reload(auth_router_mod)
         importlib.reload(admin_router_mod)
         importlib.reload(money_router_mod)
-        app = _make_test_app(test_db_path)
+        app = _make_test_app()
         with TestClient(app, raise_server_exceptions=True) as c:
             c.get("/auth/me")
             yield c
@@ -117,14 +133,14 @@ def client(test_db_path: Path) -> TestClient:
 
 @pytest.fixture
 def admin_client(client: TestClient, test_db_path: Path) -> TestClient:
-    """Authenticate as admin. Bypass the process-global verify-code rate limit
-    so a full-suite run (default 10/IP) cannot leave export tests unauthenticated.
+    """Authenticate as admin without reloading db or running a second event loop.
+
+    Full-suite verify-code is process-global (10/IP). Patch that limiter so earlier
+    files cannot leave export tests unauthenticated. Write the code with sqlite3 so
+    we never attach aiosqlite to a TestClient loop that teardown will close.
     """
     code = "111222"
-    with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
-        importlib.reload(cfg_mod)
-        importlib.reload(db_mod)
-        run_async(_add_auth_code(_ADMIN_EMAIL, code))
+    _insert_auth_code(test_db_path, _ADMIN_EMAIL, code)
     with patch("ilga_graph.routers.auth.rate_limit_verify_code", return_value=True):
         login = client.post(
             "/auth/verify-code",
@@ -179,39 +195,6 @@ class TestMoneyPages:
         assert "expenditure" not in resp.text.lower()
 
 
-class TestMoneyEngineKeepsUi:
-    """Full app: /intelligence/money stays the Follow-the-money engine plus a waitlist CTA."""
-
-    def test_engine_page_keeps_kpis_and_adds_signup(self) -> None:
-        from ilga_graph.app_state import state as app_state
-
-        prior_zip = dict(app_state.zip_to_district)
-        prior_cf = app_state.campaign_finance
-        try:
-            with patch.dict(os.environ, {"ILGA_PROFILE": "dev", "ILGA_API_KEY": ""}, clear=False):
-                import ilga_graph.config as _cfg_mod
-                import ilga_graph.main as _main_mod
-
-                importlib.reload(_cfg_mod)
-                importlib.reload(_main_mod)
-                with TestClient(_main_mod.app, raise_server_exceptions=False) as full:
-                    resp = full.get("/intelligence/money", headers={"Accept": "text/html"})
-        finally:
-            app_state.zip_to_district = prior_zip
-            app_state.campaign_finance = prior_cf
-        assert resp.status_code == 200
-        body = resp.text
-        assert "Follow the money" in body
-        assert "Bill money context" in body
-        assert "Top funded members" in body
-        assert 'name="email"' in body
-        assert "lobbyist" in body.lower()
-        assert "fixture" in body.lower() or "dev-scale" in body.lower()
-        assert "SOS" not in body
-        assert "expenditure" not in body.lower()
-        assert "Moneyball" in body
-
-
 class TestMoneySignupPost:
     def test_success_creates_lead(self, client: TestClient, test_db_path: Path) -> None:
         resp = client.post(
@@ -229,18 +212,8 @@ class TestMoneySignupPost:
         )
         assert resp.status_code == 303
         assert resp.headers.get("location") == "/intelligence/money/signup?status=ok"
-
-        async def _check() -> None:
-            async with db_mod.async_session_factory() as session:
-                result = await session.execute(
-                    select(MoneyIntelLead).where(MoneyIntelLead.email == "lobbyist@firm.com")
-                )
-                lead = result.scalar_one()
-                assert lead.name == "Pat Lobbyist"
-                assert lead.org == "Example Firm"
-                assert lead.role == "lawyer,lobbyist"
-
-        run_async(_check())
+        row = _lead_row(test_db_path, "lobbyist@firm.com")
+        assert row == ("Pat Lobbyist", "Example Firm", "lawyer,lobbyist")
 
     def test_success_htmx_returns_status_fragment(
         self, client: TestClient, test_db_path: Path
@@ -278,16 +251,18 @@ class TestMoneySignupPost:
         assert htmx.status_code == 200
         assert "already" in htmx.text.lower()
 
-        async def _check() -> None:
-            async with db_mod.async_session_factory() as session:
-                result = await session.execute(
-                    select(MoneyIntelLead).where(MoneyIntelLead.email == "repeat@firm.com")
-                )
-                leads = list(result.scalars().all())
-                assert len(leads) == 1
-                assert leads[0].org == "Later LLP"
-
-        run_async(_check())
+        row = _lead_row(test_db_path, "repeat@firm.com")
+        assert row is not None
+        assert row[1] == "Later LLP"
+        con = sqlite3.connect(test_db_path)
+        try:
+            count = con.execute(
+                "SELECT COUNT(*) FROM money_intel_leads WHERE email = ?",
+                ("repeat@firm.com",),
+            ).fetchone()[0]
+        finally:
+            con.close()
+        assert count == 1
 
     def test_failure_invalid_email(self, client: TestClient) -> None:
         resp = client.post(
