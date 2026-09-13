@@ -1150,3 +1150,51 @@ Intelligence Story Pages
   margin: 4px 0 8px;
   color: var(--color-text-secondary, #555);
 }
+
+/* Money intel waitlist */
+.money-intel-fixture-note {
+  max-width: 42rem;
+  margin: 0 0 1.25rem;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-secondary, #555);
+}
+
+.money-intel-demo,
+.money-signup {
+  max-width: 36rem;
+  margin: 1.5rem 0;
+}
+
+.money-intel-demo-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.money-intel-demo-list a:focus-visible,
+.money-signup a:focus-visible,
+.money-signup-form button:focus-visible {
+  outline: 2px solid var(--color-hero-cta, #c2410c);
+  outline-offset: 2px;
+}
+
+.money-signup-form .account-input {
+  display: block;
+  width: 100%;
+  max-width: 24rem;
+}
+
+.money-signup-roles {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.money-signup-roles legend {
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.money-signup-required {
+  font-weight: 400;
+  color: var(--color-text-secondary, #555);
+}

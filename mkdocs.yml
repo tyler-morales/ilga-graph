@@ -33,6 +33,7 @@ nav:
   - Features:
     - App overview: features/app-overview.md
     - Campaign finance: features/campaign-finance.md
+    - Money intel waitlist: features/money-intel-signup.md
   - User guide:
     - Advocacy Test Mode: user-guide/advocacy-test-mode.md
   - Reference:

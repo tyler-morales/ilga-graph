@@ -24,6 +24,7 @@ from ..intelligence_helpers import (
 )
 from ..ml.rule_engine import get_bill_to_law_process
 from ..models import Bill
+from ..money_leads import signup_form_context
 from ..routers.content import STRATEGIC_FIVE_POINTS
 from ..session_schedule import (
     get_milestone_by_id,
@@ -835,6 +836,7 @@ async def intelligence_money(request: Request, bill: str = ""):
     bill_record = _lookup_bill_record(bill_query) if bill_query else None
     bill_money = _money_context_for_bill(bill_record) if bill_record else None
     bill_not_found = bool(bill_query) and bill_record is None
+    signup_status = request.query_params.get("status")
     return templates.TemplateResponse(
         request,
         "intelligence_money.html",
@@ -847,6 +849,7 @@ async def intelligence_money(request: Request, bill: str = ""):
             "bill_record": bill_record,
             "bill_money": bill_money,
             "bill_not_found": bill_not_found,
+            **signup_form_context(status=signup_status),
         },
     )
 

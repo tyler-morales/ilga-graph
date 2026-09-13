@@ -364,6 +364,25 @@ class SbeIngestRun(Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
+class MoneyIntelLead(Base):
+    """Waitlist lead for follow-the-money intel (lobbyist / adjacent buyers).
+
+    Not a User account and not the campaign-update subscriber list.
+    """
+
+    __tablename__ = "money_intel_leads"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False)
+    name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    org: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # comma-joined allowlist: lobbyist, lawyer, nonprofit
+    role: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, index=True
+    )
+
+
 class BugReport(Base):
     """In-app bug report from the beta banner (no GitHub/email required)."""
 
