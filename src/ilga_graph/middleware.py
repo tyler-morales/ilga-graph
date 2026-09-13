@@ -116,6 +116,7 @@ def register_middleware(app: FastAPI) -> None:
                 and not path.startswith("/report-bug")
                 and not path.startswith("/explore")
                 and not path.startswith("/intelligence")
+                and not path.startswith("/money")
                 and not path.startswith("/api/graph")
                 and not path.startswith("/api/dev")
                 # HTMX bill deep-dive fragment: Accept is typically */*, so browser_get misses it.

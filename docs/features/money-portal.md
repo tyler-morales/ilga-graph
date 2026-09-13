@@ -15,7 +15,7 @@ Per Hardball Ch 3 (`docs/hardball-spec/04-ch3-decision-making.md`), campaign mon
 | `GET/POST /money/signup` | Canonical waitlist. Same `money_intel_leads` store, CSRF, and per-IP rate limit as before. |
 | `GET/POST /intelligence/money/signup` | Redirects to `/money/signup` (GET 302, POST 307). |
 
-The research engine at `/intelligence/money` is unchanged. It soft-links **Buyer portal → /money**.
+The research engine at `/intelligence/money` is unchanged (`intelligence.py` not modified). `/money` is exempt in `api_key_middleware` (same prefix pattern as `/intelligence`) so HTMX on the portal waitlist does not 401.
 
 ## Design
 
@@ -32,4 +32,4 @@ Own layout: `templates/money_portal_base.html` + `static/css/money-portal.css`. 
 - Not expenditures, independent expenditures, 527s, or federal overlays
 - Receipts are not earmarked to bills
 
-Ingest, match, and GraphQL money resolvers are not modified. See [Campaign finance](campaign-finance.md) and [Money intel waitlist](money-intel-signup.md).
+Ingest, match, GraphQL money resolvers, and `/admin/money-leads` are not modified. No new GraphQL field. No shared-route rename. See [Campaign finance](campaign-finance.md) and [Money intel waitlist](money-intel-signup.md).

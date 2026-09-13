@@ -241,7 +241,6 @@ class TestMoneyEngineKeepsUi:
         assert "SOS" not in body
         assert "expenditure" not in body.lower()
         assert "Moneyball" in body
-        assert 'href="/money"' in body
 
 
 class TestMoneySignupPost:

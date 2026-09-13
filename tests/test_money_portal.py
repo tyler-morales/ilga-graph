@@ -132,7 +132,8 @@ def test_intelligence_engine_still_200(client: TestClient) -> None:
     resp = client.get("/intelligence/money", headers={"Accept": "text/html"})
     assert resp.status_code == 200
     assert "Follow the money" in resp.text
-    assert 'href="/money"' in resp.text
+    assert "Bill money context" in resp.text
+    assert "money-portal" not in resp.text
 
 
 def test_legacy_signup_redirects_on_full_app(client: TestClient) -> None:
