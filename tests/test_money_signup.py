@@ -157,24 +157,52 @@ class TestNormalizeRoles:
 
 
 class TestMoneyPages:
-    def test_money_landing_returns_200_with_form(self, client: TestClient) -> None:
+    def test_money_router_does_not_claim_engine_get(self, client: TestClient) -> None:
+        """Signup router must not steal GET /money (engine lives in intelligence.py)."""
         resp = client.get("/intelligence/money", headers={"Accept": "text/html"})
-        assert resp.status_code == 200
-        body = resp.text
-        assert "Follow the money" in body or "follow-the-money" in body.lower()
-        assert 'name="email"' in body
-        assert "lobbyist" in body.lower()
-        assert "Moneyball" in body
-        assert "SOS" not in body
-        assert "expenditure" not in body.lower()
-        assert "/intelligence/member/3268" in body
-        assert "SB0341" in body
+        assert resp.status_code == 404
 
     def test_signup_page_returns_200_with_form(self, client: TestClient) -> None:
         resp = client.get("/intelligence/money/signup", headers={"Accept": "text/html"})
         assert resp.status_code == 200
         assert 'name="email"' in resp.text
         assert 'id="money-signup-wrap"' in resp.text
+        assert "fixture" in resp.text.lower()
+        assert "SOS" not in resp.text
+        assert "expenditure" not in resp.text.lower()
+
+
+class TestMoneyEngineKeepsUi:
+    """Full app: /intelligence/money stays the Follow-the-money engine plus a waitlist CTA."""
+
+    def test_engine_page_keeps_kpis_and_adds_signup(self) -> None:
+        from ilga_graph.app_state import state as app_state
+
+        prior_zip = dict(app_state.zip_to_district)
+        prior_cf = app_state.campaign_finance
+        try:
+            with patch.dict(os.environ, {"ILGA_PROFILE": "dev", "ILGA_API_KEY": ""}, clear=False):
+                import ilga_graph.config as _cfg_mod
+                import ilga_graph.main as _main_mod
+
+                importlib.reload(_cfg_mod)
+                importlib.reload(_main_mod)
+                with TestClient(_main_mod.app, raise_server_exceptions=False) as full:
+                    resp = full.get("/intelligence/money", headers={"Accept": "text/html"})
+        finally:
+            app_state.zip_to_district = prior_zip
+            app_state.campaign_finance = prior_cf
+        assert resp.status_code == 200
+        body = resp.text
+        assert "Follow the money" in body
+        assert "Bill money context" in body
+        assert "Top funded members" in body
+        assert 'name="email"' in body
+        assert "lobbyist" in body.lower()
+        assert "fixture" in body.lower() or "dev-scale" in body.lower()
+        assert "SOS" not in body
+        assert "expenditure" not in body.lower()
+        assert "Moneyball" in body
 
 
 class TestMoneySignupPost:

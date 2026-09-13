@@ -1,7 +1,7 @@
 """Add money_intel_leads table for lobbyist / buyer waitlist.
 
 Revision ID: 20260913140000
-Revises: 20260303100000
+Revises: 20260913100000
 Create Date: 2026-09-13
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "20260913140000"
-down_revision: str | None = "20260303100000"
+down_revision: str | None = "20260913100000"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

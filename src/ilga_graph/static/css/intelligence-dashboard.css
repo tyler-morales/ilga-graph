@@ -1152,6 +1152,13 @@ Intelligence Story Pages
 }
 
 /* Money intel waitlist */
+.money-intel-fixture-note {
+  max-width: 42rem;
+  margin: 0 0 1.25rem;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-secondary, #555);
+}
+
 .money-intel-demo,
 .money-signup {
   max-width: 36rem;

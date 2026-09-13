@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} — {{ site_name }}{% endblock %}
+{% block meta_description %}Join the waitlist for Illinois follow-the-money intel: member trails and bill sponsor funding context.{% endblock %}
+{% block body_class %}page-money-intel-signup{% endblock %}
+
+{% block content %}
+<div class="intel-nav">
+    <a href="/intelligence/money">&larr; Follow the money</a> &middot;
+    <a href="/intelligence">&larr; Intelligence Overview</a>
+</div>
+
+<div class="money-intel-page">
+    <p class="money-intel-kicker">Illinois Influence Graph</p>
+    <h1>Get money-intel updates</h1>
+    <p class="intel-subtitle">
+        Follow-the-money context for Illinois: member contribution trails and bill sponsor
+        funding. For lobbyists, lawyers, and nonprofits who need that picture as the graph grows.
+        Moneyball on this site is a separate legislative-power score, not a finance product.
+    </p>
+    <p class="money-intel-fixture-note" role="note">
+        Live lookup seeds (member 3268 Don Harmon, bill SB0341) are <strong>fixture / dev-scale</strong>,
+        not a full statewide buyer-ready ingest.
+    </p>
+    {% set dedicated = true %}
+    {% include "_money_signup_section.html" %}
+</div>
+{% endblock %}

@@ -48,6 +48,7 @@ _SITEMAP_PATHS = (
     "/advocacy",
     "/intelligence/",
     "/intelligence/money",
+    "/intelligence/money/signup",
     "/explore",
     "/the-issue",
     "/legislator-brief",

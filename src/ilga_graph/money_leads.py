@@ -21,7 +21,41 @@ _NAME_MAX_LEN = 120
 _ORG_MAX_LEN = 200
 
 MONEY_LEAD_ROLES: tuple[str, ...] = ("lobbyist", "lawyer", "nonprofit")
+ROLE_CHOICES: tuple[tuple[str, str], ...] = (
+    ("lobbyist", "Lobbyist"),
+    ("lawyer", "Lawyer"),
+    ("nonprofit", "Nonprofit"),
+)
+STATUS_MESSAGES: dict[str, str] = {
+    "ok": "You're on the list. We'll email when follow-the-money intel expands.",
+    "already": "You're already on the list. We'll keep you posted.",
+    "invalid": "Please enter a valid email address.",
+    "csrf": "Invalid or expired security token. Reload the page and try again.",
+    "rate": "Too many signup attempts. Try again later.",
+}
 SignupResult = Literal["created", "already"]
+
+
+def signup_form_context(
+    *,
+    status: str | None = None,
+    form_values: dict[str, str | list[str]] | None = None,
+) -> dict[str, object]:
+    """Jinja context for the waitlist form (engine CTA and /money/signup)."""
+    values = form_values or {}
+    roles = values.get("roles") or []
+    if isinstance(roles, str):
+        roles = [roles]
+    return {
+        "status": status or "",
+        "status_message": STATUS_MESSAGES.get(status or "", ""),
+        "status_is_error": status in ("invalid", "csrf", "rate"),
+        "role_choices": ROLE_CHOICES,
+        "form_email": values.get("email", ""),
+        "form_name": values.get("name", ""),
+        "form_org": values.get("org", ""),
+        "form_roles": roles,
+    }
 
 
 def normalize_email(raw: str) -> str | None:

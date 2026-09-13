@@ -90,7 +90,7 @@ The app serves several user-facing pages in addition to the GraphQL API:
 | `/` (redirects to `/advocacy`) | Landing page |
 | `/advocacy` | **Advocacy tool** — enter a ZIP code to find your senator, representative, and a high-impact power broker. Opens a call or email drawer with a pre-written script. Tracks outreach actions in the database (requires sign-in). |
 | `/intelligence` | **Intelligence dashboard** — bill analytics, win-probability predictions, voting coalitions, witness slip heat, True Influence scores, and anomaly detection. |
-| `/intelligence/money` | **Money intel waitlist** — follow-the-money intel for IL (member trails, bill sponsor funding). Signup form; dedicated page at `/intelligence/money/signup`. |
+| `/intelligence/money` | **Follow the money** — SBE campaign-finance engine (member trails, bill sponsor funding context, KPIs). Waitlist CTA on the page; shareable form at `/intelligence/money/signup`. |
 | `/intelligence/member/<name>` | Deep-dive page for a single legislator (full scorecard, Moneyball profile, vote history). |
 | `/intelligence/bill/<number>` | Deep-dive page for a single bill (timeline, vote events, witness slips). |
 | `/explore` | **Legislative Power Map** — interactive visualization of member influence and network relationships. |
@@ -139,7 +139,7 @@ ilga-graph/
 │   ├── routers/              # FastAPI route groups
 │   │   ├── advocacy.py       #   /advocacy — landing, search, drawer
 │   │   ├── intelligence.py   #   /intelligence — dashboard + deep-dives
-│   │   ├── money.py          #   /intelligence/money — waitlist signup
+│   │   ├── money.py          #   /intelligence/money/signup — waitlist only
 │   │   ├── explore.py        #   /explore — Legislative Power Map
 │   │   ├── bills.py          #   /bills — bill SHAP / analytics endpoints
 │   │   ├── outreach.py       #   /outreach — stats aggregation

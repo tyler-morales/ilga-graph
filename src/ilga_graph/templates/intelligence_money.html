@@ -16,6 +16,11 @@
         Official Illinois State Board of Elections campaign receipts matched to sitting
         legislators. This is campaign finance — not Moneyball (legislative-effectiveness scoring).
     </p>
+    <p class="money-intel-fixture-note" role="note">
+        Figures and lookup seeds on this page are <strong>fixture / dev-scale</strong>
+        (bundled sample: member 3268 Don Harmon, bill SB0341). Not a full statewide,
+        buyer-ready ingest.
+    </p>
 
     {% if not finance_summary %}
     <div class="intel-empty" role="status">
@@ -126,6 +131,8 @@
         {% endif %}
     </section>
     {% endif %}
+
+    {% include "_money_signup_section.html" %}
 </div>
 
 <script>

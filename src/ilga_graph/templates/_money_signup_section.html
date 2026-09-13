@@ -1,0 +1,20 @@
+{% set dedicated = dedicated|default(false) %}
+<section class="money-signup story-section" aria-labelledby="money-signup-heading">
+    <h2 id="money-signup-heading">Get updates as this grows</h2>
+    <p>
+        Follow-the-money intel for Illinois: member contribution trails and bill sponsor
+        funding context. We’ll email when that picture expands. This list is for that
+        intel only — not a disclosure-data join, and not a finance version of Moneyball.
+        Current seeds are fixture / dev-scale, not a full statewide feed.
+    </p>
+    <div id="money-signup-wrap">
+        {% if status in ('ok', 'already') and status_message %}
+        <p class="subscribe-email-success" role="status">{{ status_message }}</p>
+        {% else %}
+        {% include "_money_signup_form.html" %}
+        {% endif %}
+    </div>
+    {% if not dedicated %}
+    <p class="account-hint"><a href="/intelligence/money/signup">Signup-only page</a> if you want to share a short link.</p>
+    {% endif %}
+</section>
