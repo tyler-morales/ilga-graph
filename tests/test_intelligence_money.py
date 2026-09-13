@@ -196,6 +196,13 @@ def test_money_page_returns_200(client: TestClient) -> None:
     assert "Follow the money" in body
     assert "campaign finance" in body.lower()
     assert "Moneyball" in body
+    assert "Bill money context" in body
+    assert "Top funded members" in body
+    assert 'name="email"' in body
+    assert "lobbyist" in body.lower()
+    assert "fixture" in body.lower() or "dev-scale" in body.lower()
+    assert "SOS" not in body
+    assert "expenditure" not in body.lower()
 
 
 def test_money_page_shows_dev_fixture_summary(client: TestClient) -> None:
