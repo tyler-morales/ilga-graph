@@ -33,6 +33,7 @@ from .routers.explore import router as _explore_router
 from .routers.feedback import router as _feedback_router
 from .routers.home import router as _home_router
 from .routers.intelligence import router as _intelligence_router
+from .routers.money import router as _money_router
 from .routers.outreach import router as _outreach_router
 from .routers.stories import router as _stories_router
 from .routers.updates import router as _updates_router
@@ -348,6 +349,7 @@ app.include_router(_feedback_router)
 app.include_router(_bills_router, prefix="/api")
 app.include_router(_explore_router)
 app.include_router(_intelligence_router, prefix="/intelligence")
+app.include_router(_money_router, prefix="/intelligence")
 app.include_router(_outreach_router)
 
 

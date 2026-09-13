@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 import re
 from datetime import datetime, timedelta, timezone
@@ -9,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import String, case, cast, delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,6 +29,7 @@ from ..constants import (
 )
 from ..db import get_db
 from ..db_models import (
+    MoneyIntelLead,
     OutreachEvent,
     OutreachStepEvent,
     Poll,
@@ -1195,3 +1198,40 @@ async def mocks_apply(
         "events_created": created,
         "heat_created": heat_created,
     }
+
+
+@router.get("/admin/money-leads", include_in_schema=False)
+async def admin_money_leads_page(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+):
+    """List money-intel waitlist leads (lobbyist / adjacent buyers)."""
+    result = await db.execute(select(MoneyIntelLead).order_by(MoneyIntelLead.created_at.desc()))
+    leads = list(result.scalars().all())
+    return templates.TemplateResponse(
+        request,
+        "admin_money_leads.html",
+        {"request": request, "leads": leads},
+    )
+
+
+@router.get("/admin/money-leads.csv", include_in_schema=False)
+async def admin_money_leads_csv(
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+) -> Response:
+    """CSV export of money-intel waitlist leads."""
+    result = await db.execute(select(MoneyIntelLead).order_by(MoneyIntelLead.created_at.asc()))
+    leads = list(result.scalars().all())
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["email", "name", "org", "role", "created_at"])
+    for lead in leads:
+        created = lead.created_at.isoformat() if lead.created_at else ""
+        writer.writerow([lead.email, lead.name or "", lead.org or "", lead.role or "", created])
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=money-intel-leads.csv"},
+    )

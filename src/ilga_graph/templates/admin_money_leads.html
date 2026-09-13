@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Money intel leads — Admin — {{ site_name }}{% endblock %}
+{% block content %}
+<div class="admin-users-page">
+  <header class="admin-users-header">
+    <h1 id="admin-money-leads-heading">Money intel leads</h1>
+    {% include "_admin_nav.html" %}
+  </header>
+
+  <section class="admin-users-section" aria-labelledby="admin-money-leads-heading">
+    <p class="admin-users-meta">{{ leads|length }} lead{% if leads|length != 1 %}s{% endif %} on the waitlist.
+      <a href="/admin/money-leads.csv">Download CSV</a>
+    </p>
+    {% if leads %}
+    <div class="admin-users-table-wrap">
+      <table class="admin-users-table">
+        <thead>
+          <tr>
+            <th scope="col">Email</th>
+            <th scope="col">Name</th>
+            <th scope="col">Org / firm</th>
+            <th scope="col">Role</th>
+            <th scope="col">Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for lead in leads %}
+          <tr>
+            <td>{{ lead.email }}</td>
+            <td>{{ lead.name or "—" }}</td>
+            <td>{{ lead.org or "—" }}</td>
+            <td>{{ lead.role or "—" }}</td>
+            <td>{{ lead.created_at.strftime('%Y-%m-%d') if lead.created_at else "—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p>No money-intel leads yet.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

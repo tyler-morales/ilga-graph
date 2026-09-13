@@ -148,6 +148,15 @@ def rate_limit_statement_submit(client_ip: str) -> bool:
     )
 
 
+def rate_limit_money_lead(client_ip: str) -> bool:
+    """Allow if under money-intel waitlist signup limit (per IP)."""
+    return rate_limit_check(
+        f"money_lead:{client_ip}",
+        window_seconds=3600,
+        max_count=cfg.RATE_LIMIT_SUBSCRIBE_EMAIL_PER_HOUR,
+    )
+
+
 # Anonymous funnel: session id from client (sessionStorage ilga_anon_sid).
 _ANON_SESSION_ID_RE = re.compile(r"^[a-zA-Z0-9\-]{1,64}$")
 

@@ -14,6 +14,7 @@ Documentation for the **ILGA Graph** proof-of-concept: Illinois General Assembly
 
 - [**App overview**](features/app-overview.md) — What’s in the app: Advocacy, Power Map, Intelligence, GraphQL. Paths and one-liners.
 - [**Campaign finance (SBE money layer)**](features/campaign-finance.md) — Committees + Receipts ingest, member matching, `memberMoneyTrail` / `billMoneyContext`.
+- [**Money intel waitlist**](features/money-intel-signup.md) — Lobbyist/buyer email signup CTA on `/intelligence/money` and shareable `/intelligence/money/signup`; how to export leads.
 - [**Pitch one-pagers**](pitch/) — Audience-specific one-pagers: [advocacy/nonprofit](pitch/advocacy-nonprofit.md), [lobbyist](pitch/lobbyist.md), [candidate](pitch/candidate.md), [investor](pitch/investor.md).
 - [**Dev Bar**](user-guide/advocacy-test-mode.md) — Floating dev toolbar activated by `?dev` on any URL. Quick-access to call scripts, email drawers, intelligence sub-pages, and deep-link bookmarks.
 
@@ -48,4 +49,5 @@ Documentation for the **ILGA Graph** proof-of-concept: Illinois General Assembly
 | Power Map (graph) | `/explore` |
 | ML Intelligence | `/intelligence` |
 | Follow the money (SBE campaign finance) | `/intelligence/money` |
+| Money intel waitlist | `/intelligence/money` (CTA on engine page), `/intelligence/money/signup` |
 | GraphQL playground | `/graphql` |
