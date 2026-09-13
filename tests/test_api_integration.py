@@ -131,6 +131,26 @@ class TestAPIKeyAuth:
         resp = secured.get("/health")
         assert resp.status_code == 200
 
+    def test_bill_explanation_htmx_get_exempt_from_auth(self) -> None:
+        """HTMX bill deep-dive sends Accept */* (no text/html); fragment must not 401."""
+        secured = _make_client(ILGA_API_KEY="secret-key-123")
+        resp = secured.get(
+            "/api/bills/157832/explanation",
+            headers={"Accept": "*/*", "HX-Request": "true"},
+        )
+        assert resp.status_code != 401
+        assert resp.status_code == 200
+        assert "text/html" in resp.headers.get("content-type", "")
+
+    def test_bill_explanation_accept_star_exempt_without_hx_request(self) -> None:
+        secured = _make_client(ILGA_API_KEY="secret-key-123")
+        resp = secured.get(
+            "/api/bills/157832/explanation",
+            headers={"Accept": "*/*"},
+        )
+        assert resp.status_code == 200
+        assert "Invalid or missing API key" not in resp.text
+
 
 # ── GraphQL queries (against empty state) ─────────────────────────────────────
 
