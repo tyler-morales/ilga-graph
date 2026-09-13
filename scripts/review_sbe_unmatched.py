@@ -7,7 +7,8 @@ committee is unmatched and a gold stub you can confirm by hand.
 Usage::
 
     PYTHONPATH=src python scripts/review_sbe_unmatched.py --from-dir tests/fixtures/sbe
-    PYTHONPATH=src python scripts/review_sbe_unmatched.py --unmatched-json processed/campaign_finance/unmatched.json
+    PYTHONPATH=src python scripts/review_sbe_unmatched.py \\
+        --unmatched-json processed/campaign_finance/unmatched.json
 """
 
 from __future__ import annotations

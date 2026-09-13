@@ -417,9 +417,7 @@ def _pick_unresolved(scored: list[MemberMatch], members: list[Member]) -> Member
     return max(scored, key=_rank)
 
 
-def _near_misses_for(
-    cands: list[SbeCandidateRow], members: list[Member]
-) -> list[dict[str, str]]:
+def _near_misses_for(cands: list[SbeCandidateRow], members: list[Member]) -> list[dict[str, str]]:
     last_keys = {_last_key(c.last_name) for c in cands if c.last_name}
     hits: list[dict[str, str]] = []
     seen: set[str] = set()
@@ -441,9 +439,7 @@ def _near_misses_for(
                     f"SBE {chamber} {sbe_district} vs sitting {member.chamber} {member.district}"
                 )
             elif sbe_district and sbe_district != _district_key(member.district):
-                blockers.append(
-                    f"SBE district {sbe_district} vs sitting {member.district}"
-                )
+                blockers.append(f"SBE district {sbe_district} vs sitting {member.district}")
             if not _first_overlap(member, cand):
                 blockers.append(
                     f"first names do not overlap (sbe={cand.first_name!r} member={_first!r})"
@@ -460,7 +456,9 @@ def _near_misses_for(
     return hits
 
 
-def _gold_stub(committee_id: str, committee_name: str, near_misses: list[dict[str, str]]) -> dict[str, str]:
+def _gold_stub(
+    committee_id: str, committee_name: str, near_misses: list[dict[str, str]]
+) -> dict[str, str]:
     member_id = ""
     if len(near_misses) == 1:
         member_id = near_misses[0]["member_id"]
@@ -542,9 +540,8 @@ def unmatched_review_rows(report: MatchReport) -> list[dict[str, Any]]:
                 "near_misses": match.near_misses,
                 "candidates_considered": match.candidates_considered,
                 "how_to_promote": match.how_to_promote,
-                "gold_stub": match.gold_stub or _gold_stub(
-                    match.committee_id, match.committee_name, match.near_misses
-                ),
+                "gold_stub": match.gold_stub
+                or _gold_stub(match.committee_id, match.committee_name, match.near_misses),
             }
         )
     return rows
@@ -558,8 +555,7 @@ def format_unmatched_review(rows: list[dict[str, Any]]) -> str:
     for row in rows:
         lines.append(f"{row.get('committee_id')}  {row.get('committee_name')}")
         lines.append(
-            f"  candidate: {row.get('candidate_name')}  "
-            f"{row.get('office')} {row.get('district')}"
+            f"  candidate: {row.get('candidate_name')}  {row.get('office')} {row.get('district')}"
         )
         lines.append(f"  reason: {row.get('unmatched_reason')}")
         lines.append(f"  why: {row.get('notes')}")
