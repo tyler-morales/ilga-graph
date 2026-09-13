@@ -30,7 +30,7 @@ Where to find things in the repo.
 
 | Module / path | Purpose |
 |----------------|---------|
-| `main.py` | FastAPI app, lifespan/ETL, mounts routers (home, admin, campaigns, dev, advocacy, auth, content, updates, feedback, bills, explore, intelligence, outreach). |
+| `main.py` | FastAPI app, lifespan/ETL, mounts routers (home, admin, campaigns, dev, advocacy, auth, content, updates, feedback, bills, explore, intelligence, money portal, outreach). |
 | `routers/home.py` | Home (/) and site-level routes: favicon, sitemap.xml, robots.txt, /advocacy and /intelligence redirects. |
 | `routers/content.py` | Content pages: the-issue, legislator-brief, fact-sheet, glossary, timeline, privacy, terms; imports constants from content_constants, view helpers (glossary, timeline waterfall) and route handlers here. |
 | `routers/content_constants.py` | Canonical copy and data: STRATEGIC_*, FAQ_*, glossaries, TIMELINE_PHASES, MARQUEE_IMAGES, BRIEF_STATE_STATUS, etc. No FastAPI or DB. |

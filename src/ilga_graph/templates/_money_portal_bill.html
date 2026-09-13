@@ -1,0 +1,95 @@
+<section class="mp-section" aria-labelledby="bill-money-heading">
+    <h2 id="bill-money-heading">Who funded the people on this bill</h2>
+
+    {% if bill_money is none %}
+    <p class="mp-empty-inline" role="status">Campaign-finance index is not loaded.</p>
+    {% elif not bill_money.sponsor_trails %}
+    <p class="mp-empty-inline" role="status">
+        No matched SBE receipts for sponsors or voters on this bill{% if bill_money.window_start %}
+        ({{ bill_money.window_start }} – {{ bill_money.window_end }}){% endif %}.
+    </p>
+    {% else %}
+    <p class="mp-note" role="note">
+        {{ bill_money.match_notes }}
+        Window {{ bill_money.window_start }} – {{ bill_money.window_end }}.
+        Not earmarked to the bill.
+    </p>
+    <div class="mp-kpis" role="group" aria-label="Bill money context totals">
+        <div class="mp-kpi">
+            <span class="mp-kpi-value">{{ bill_money.total_received_across_sponsors_display }}</span>
+            <span class="mp-kpi-label">Across sponsors / voters</span>
+        </div>
+        <div class="mp-kpi">
+            <span class="mp-kpi-value">{{ bill_money.sponsor_trails|length }}</span>
+            <span class="mp-kpi-label">Members with trails</span>
+        </div>
+        <div class="mp-kpi">
+            <span class="mp-kpi-value">{{ bill_money.overlapping_donors|length }}</span>
+            <span class="mp-kpi-label">Overlapping donors</span>
+        </div>
+    </div>
+
+    <h3 class="mp-subhead">Sponsor and voter funding</h3>
+    <div class="mp-table-wrap">
+        <table class="mp-table" aria-label="Funding trails for sponsors and voters">
+            <thead>
+                <tr>
+                    <th scope="col">Member</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Receipts</th>
+                    <th scope="col">Total received</th>
+                    <th scope="col">Top donors</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in bill_money.sponsor_trails %}
+                <tr>
+                    <td><a href="/money/member/{{ s.member_id }}">{{ s.member_name }}</a></td>
+                    <td>{{ s.role_label }}</td>
+                    <td>{{ s.receipt_count }}</td>
+                    <td>{{ s.total_received_display }}</td>
+                    <td>
+                        {% for d in s.top_donors[:3] %}
+                        {{ d.name }} ({{ d.total_amount_display }}){% if not loop.last %}; {% endif %}
+                        {% else %}—{% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if bill_money.overlapping_donors %}
+    <h3 class="mp-subhead">Overlapping donors</h3>
+    <p class="mp-note">Donors who gave to more than one sponsor or voter. Still not earmarked to the bill.</p>
+    <div class="mp-table-wrap">
+        <table class="mp-table" aria-label="Donors who gave to more than one member">
+            <thead>
+                <tr>
+                    <th scope="col">Donor</th>
+                    <th scope="col">Members</th>
+                    <th scope="col">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in bill_money.overlapping_donors %}
+                <tr>
+                    <td>{{ d.name }}</td>
+                    <td>
+                        {% for mid in d.member_ids %}
+                        {% if loop.index0 < d.member_names|length %}
+                        <a href="/money/member/{{ mid }}">{{ d.member_names[loop.index0] }}</a>{% if not loop.last %}, {% endif %}
+                        {% else %}
+                        <a href="/money/member/{{ mid }}">{{ mid }}</a>{% if not loop.last %}, {% endif %}
+                        {% endif %}
+                        {% endfor %}
+                    </td>
+                    <td>{{ d.total_amount_display }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    {% endif %}
+</section>

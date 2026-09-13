@@ -2,7 +2,7 @@
 
 Marketing / waitlist capture for Illinois lobbyists and adjacent buyers (lawyers, nonprofits) who want **follow-the-money intel**: member contribution trails and bill sponsor funding context.
 
-The Follow-the-money **engine** stays at `/intelligence/money` (SBE KPIs, bill lookup, top-funded members). This waitlist is a CTA on that page plus a shareable form at `/intelligence/money/signup`. It does not replace the engine UI.
+The Follow-the-money **engine** stays at `/intelligence/money` (SBE KPIs, bill lookup, top-funded members). The **buyer waitlist** lives at `/money/signup` (Illinois Influence portal). `/intelligence/money/signup` redirects there. The engine page still has a CTA that posts to the same `money_intel_leads` store.
 
 This is **not** the SOS/lobbyist disclosure data join, not an expenditure feed, and not Moneyball-as-finance. Moneyball on this site remains a legislative-power score.
 
@@ -12,10 +12,10 @@ Aligns with Hardball Ch 7 (listservs created by website subscribe) and Founding 
 
 ## How to view
 
-| Environment | Engine + CTA | Signup-only page |
-|-------------|--------------|------------------|
-| **Local** (`make dev`) | http://127.0.0.1:8000/intelligence/money | http://127.0.0.1:8000/intelligence/money/signup |
-| **Prod** (landofkei.org) | https://landofkei.org/intelligence/money | https://landofkei.org/intelligence/money/signup |
+| Environment | Engine + CTA | Buyer portal / waitlist |
+|-------------|--------------|-------------------------|
+| **Local** (`make dev`) | http://127.0.0.1:8000/intelligence/money | http://127.0.0.1:8000/money · `/money/demo` · `/money/signup` |
+| **Prod** (landofkei.org) | https://landofkei.org/intelligence/money | https://landofkei.org/money · `/money/demo` · `/money/signup` |
 
 Form fields: required email; optional name, organization/firm, role checkboxes (lobbyist / lawyer / nonprofit).
 

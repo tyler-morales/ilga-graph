@@ -1,0 +1,147 @@
+{% extends "money_portal_base.html" %}
+{% block title %}Demo — {{ portal_name }}{% endblock %}
+{% block body_class %}mp-page-demo{% endblock %}
+
+{% block content %}
+<header class="mp-page-head">
+    <p class="mp-kicker">Buyer demo</p>
+    <h1>The spine you use under a deadline</h1>
+    <p class="mp-lede">
+        Live figures from the loaded SBE finance index. Look up a member or a bill,
+        then Watch, Ask, or Flag — this is not a leaderboard to browse.
+    </p>
+</header>
+
+{% if is_sample_scale %}
+<p class="mp-banner" role="status">
+    This install is running a <strong>sample-scale</strong> finance index, not a full
+    statewide ingest. Figures below are real receipts in the loaded window.
+    Try member {{ seed_member_id }} (Harmon) and bill {{ seed_bill }}.
+</p>
+{% endif %}
+
+{% if not finance_summary %}
+<div class="mp-empty" role="status">
+    <h2>No campaign-finance index loaded</h2>
+    <p>Ingest SBE Committees and Receipts, then restart the app. The demo reads the same index as the research engine.</p>
+</div>
+{% else %}
+
+<section class="mp-section" aria-labelledby="kpi-heading">
+    <h2 id="kpi-heading">Finance window</h2>
+    <div class="mp-kpis" role="group" aria-label="Campaign finance summary">
+        <div class="mp-kpi">
+            <span class="mp-kpi-value">{{ finance_summary.window_start }}</span>
+            <span class="mp-kpi-label">Window start</span>
+        </div>
+        <div class="mp-kpi">
+            <span class="mp-kpi-value">{{ finance_summary.window_end or "—" }}</span>
+            <span class="mp-kpi-label">Window end</span>
+        </div>
+        <div class="mp-kpi">
+            <span class="mp-kpi-value">{{ "%.1f"|format(finance_summary.match_rate_pct) }}%</span>
+            <span class="mp-kpi-label">Committee match rate</span>
+        </div>
+        <div class="mp-kpi">
+            <span class="mp-kpi-value">{{ finance_summary.members_matched }}</span>
+            <span class="mp-kpi-label">Members matched</span>
+        </div>
+        <div class="mp-kpi">
+            <span class="mp-kpi-value">{{ finance_summary.receipts_indexed }}</span>
+            <span class="mp-kpi-label">Receipts indexed</span>
+        </div>
+        <div class="mp-kpi">
+            <span class="mp-kpi-value">{{ finance_summary.accepted }}/{{ finance_summary.legislative_committees }}</span>
+            <span class="mp-kpi-label">Committees accepted</span>
+        </div>
+    </div>
+    <p class="mp-note" role="note">
+        Money is campaign receipts to matched candidate committees, not earmarked to a bill.
+        Source: Illinois State Board of Elections Campaign Disclosure files.
+        Moneyball is a separate legislative-effectiveness score.
+    </p>
+</section>
+
+<section class="mp-section" aria-labelledby="member-lookup-heading">
+    <h2 id="member-lookup-heading">Member lookup</h2>
+    <form class="mp-lookup" method="get" action="/money/demo" role="search">
+        <label for="mp-member-input">Member id or name</label>
+        <div class="mp-lookup-row">
+            <input id="mp-member-input" name="member" type="search" value="{{ member_query }}"
+                placeholder="e.g. 3268 or Harmon" autocomplete="off" spellcheck="false">
+            <button type="submit" class="mp-btn mp-btn--primary">Open trail</button>
+        </div>
+    </form>
+    {% if member_not_found %}
+    <p class="mp-empty-inline" role="status">No sitting member matched <strong>{{ member_query }}</strong>.</p>
+    {% endif %}
+
+    <h3 class="mp-subhead">Top funded this window</h3>
+    {% if funded_members %}
+    <div class="mp-table-wrap">
+        <table class="mp-table" aria-label="Members ranked by campaign receipts">
+            <thead>
+                <tr>
+                    <th scope="col">Member</th>
+                    <th scope="col">Chamber</th>
+                    <th scope="col">Receipts</th>
+                    <th scope="col">Total received</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in funded_members %}
+                <tr>
+                    <td><a href="/money/member/{{ m.member_id }}">{{ m.member_name }}</a></td>
+                    <td>{{ m.chamber }}</td>
+                    <td>{{ m.receipt_count }}</td>
+                    <td>{{ m.total_received_display }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="mp-empty-inline" role="status">No matched members in the current index.</p>
+    {% endif %}
+</section>
+
+<section class="mp-section" aria-labelledby="bill-lookup-heading">
+    <h2 id="bill-lookup-heading">Bill lookup</h2>
+    <p class="mp-note">Receipts shown for sponsors and voters are <strong>not earmarked to the bill</strong>.</p>
+    <form class="mp-lookup" method="get" action="/money/demo" role="search">
+        <label for="mp-bill-input">Bill number</label>
+        <div class="mp-lookup-row">
+            <input id="mp-bill-input" name="bill" type="text" value="{{ bill_query }}"
+                placeholder="e.g. {{ seed_bill }}" autocomplete="off" spellcheck="false">
+            <button type="submit" class="mp-btn mp-btn--primary">Look up funding</button>
+        </div>
+    </form>
+    {% if bill_not_found %}
+    <p class="mp-empty-inline" role="status">No bill found for <strong>{{ bill_query }}</strong>.</p>
+    {% elif bill_record %}
+    <p class="mp-inline-link">
+        Full bill view:
+        <a href="/money/bill/{{ bill_record.bill_number }}">{{ bill_record.bill_number }}</a>
+        — {{ bill_record.description }}
+    </p>
+    {% if bill_money %}
+    {% include "_money_portal_bill.html" %}
+    {% endif %}
+    {% endif %}
+</section>
+{% endif %}
+
+<section class="mp-section" id="do-next" aria-labelledby="do-next-heading">
+    <h2 id="do-next-heading">Do next</h2>
+    <ol class="mp-actions">
+        {% for step in do_next %}
+        <li class="mp-action">
+            <p class="mp-action-verb">{{ step.verb }}</p>
+            <h3>{{ step.title }}</h3>
+            <p>{{ step.body }}</p>
+            <a class="mp-btn mp-btn--ghost" href="{{ step.href }}">{{ step.cta }}</a>
+        </li>
+        {% endfor %}
+    </ol>
+</section>
+{% endblock %}

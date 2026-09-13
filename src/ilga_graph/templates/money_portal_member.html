@@ -1,0 +1,45 @@
+{% extends "money_portal_base.html" %}
+{% block title %}{% if member %}{{ member.name }} — {{ portal_name }}{% else %}Member — {{ portal_name }}{% endif %}{% endblock %}
+{% block body_class %}mp-page-member{% endblock %}
+
+{% block content %}
+<p class="mp-crumb"><a href="/money/demo">&larr; Demo</a></p>
+
+{% if not member %}
+<div class="mp-empty" role="status">
+    <h1>No legislator matches that id</h1>
+    <p>Try member {{ seed_member_id }} (Harmon) or look up a name from the <a href="/money/demo">demo</a>.</p>
+</div>
+{% else %}
+<header class="mp-page-head">
+    <p class="mp-kicker">{{ member.chamber }} · District {{ member.district }} · {{ member.party }}</p>
+    <h1>{{ member.name }}</h1>
+    <p class="mp-lede">
+        SBE campaign receipts to matched candidate committees. This is not Moneyball
+        and not a lobbyist-registration filing.
+    </p>
+</header>
+
+{% if is_sample_scale %}
+<p class="mp-banner" role="status">
+    Sample-scale finance index. Figures are real receipts in the loaded window, not a full statewide feed.
+</p>
+{% endif %}
+
+{% include "_money_portal_trail.html" %}
+
+<section class="mp-section" aria-labelledby="do-next-heading">
+    <h2 id="do-next-heading">Do next</h2>
+    <ol class="mp-actions">
+        {% for step in do_next %}
+        <li class="mp-action">
+            <p class="mp-action-verb">{{ step.verb }}</p>
+            <h3>{{ step.title }}</h3>
+            <p>{{ step.body }}</p>
+            <a class="mp-btn mp-btn--ghost" href="{{ step.href }}">{{ step.cta }}</a>
+        </li>
+        {% endfor %}
+    </ol>
+</section>
+{% endif %}
+{% endblock %}

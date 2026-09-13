@@ -26,6 +26,7 @@ from ilga_graph.money_leads import (
 from ilga_graph.routers import admin as admin_router_mod
 from ilga_graph.routers import auth as auth_router_mod
 from ilga_graph.routers import money as money_router_mod
+from ilga_graph.routers import money_portal as money_portal_mod
 from ilga_graph.security import CSRF_COOKIE_NAME, generate_csrf_token
 from tests.async_helpers import run_async
 
@@ -59,6 +60,7 @@ def _make_test_app(db_path: Path) -> FastAPI:
 
     app.include_router(auth_router_mod.router)
     app.include_router(money_router_mod.router, prefix="/intelligence")
+    app.include_router(money_portal_mod.router, prefix="/money")
     app.include_router(admin_router_mod.router)
     return app
 
@@ -109,6 +111,7 @@ def client(test_db_path: Path) -> TestClient:
         importlib.reload(auth_router_mod)
         importlib.reload(admin_router_mod)
         importlib.reload(money_router_mod)
+        importlib.reload(money_portal_mod)
         app = _make_test_app(test_db_path)
         with TestClient(app, raise_server_exceptions=True) as c:
             c.get("/auth/me")
@@ -165,16 +168,33 @@ class TestNormalizeRoles:
 
 class TestMoneyPages:
     def test_money_router_does_not_claim_engine_get(self, client: TestClient) -> None:
-        """Signup router must not steal GET /money (engine lives in intelligence.py)."""
+        """Signup router must not steal GET /intelligence/money (engine lives in intelligence.py)."""
         resp = client.get("/intelligence/money", headers={"Accept": "text/html"})
         assert resp.status_code == 404
 
+    def test_legacy_signup_get_redirects_to_portal(self, client: TestClient) -> None:
+        resp = client.get("/intelligence/money/signup", headers={"Accept": "text/html"}, follow_redirects=False)
+        assert resp.status_code == 302
+        assert resp.headers.get("location") == "/money/signup"
+
+    def test_legacy_signup_post_preserves_method(self, client: TestClient) -> None:
+        resp = client.post(
+            "/intelligence/money/signup",
+            data=_data_with_csrf(client, {"email": "redirect@firm.com"}),
+            follow_redirects=False,
+        )
+        assert resp.status_code == 307
+        assert resp.headers.get("location") == "/money/signup"
+
     def test_signup_page_returns_200_with_form(self, client: TestClient) -> None:
-        resp = client.get("/intelligence/money/signup", headers={"Accept": "text/html"})
+        resp = client.get("/money/signup", headers={"Accept": "text/html"})
         assert resp.status_code == 200
         assert 'name="email"' in resp.text
         assert 'id="money-signup-wrap"' in resp.text
-        assert "fixture" in resp.text.lower()
+        assert "Illinois Influence" in resp.text
+        assert "Land of Kei" not in resp.text
+        assert "advocacy-form" not in resp.text
+        assert "intelligence-dashboard" not in resp.text
         assert "SOS" not in resp.text
         assert "expenditure" not in resp.text.lower()
 
@@ -220,12 +240,13 @@ class TestMoneyEngineKeepsUi:
         assert "SOS" not in body
         assert "expenditure" not in body.lower()
         assert "Moneyball" in body
+        assert 'href="/money"' in body
 
 
 class TestMoneySignupPost:
     def test_success_creates_lead(self, client: TestClient, test_db_path: Path) -> None:
         resp = client.post(
-            "/intelligence/money/signup",
+            "/money/signup",
             data=_data_with_csrf(
                 client,
                 {
@@ -238,7 +259,7 @@ class TestMoneySignupPost:
             follow_redirects=False,
         )
         assert resp.status_code == 303
-        assert resp.headers.get("location") == "/intelligence/money/signup?status=ok"
+        assert resp.headers.get("location") == "/money/signup?status=ok"
 
         async def _check() -> None:
             async with db_mod.async_session_factory() as session:
@@ -256,7 +277,7 @@ class TestMoneySignupPost:
         self, client: TestClient, test_db_path: Path
     ) -> None:
         resp = client.post(
-            "/intelligence/money/signup",
+            "/money/signup",
             data=_data_with_csrf(client, {"email": "htmx@firm.com"}),
             headers={"HX-Request": "true"},
         )
@@ -268,20 +289,20 @@ class TestMoneySignupPost:
         self, client: TestClient, test_db_path: Path
     ) -> None:
         data = _data_with_csrf(client, {"email": "repeat@firm.com", "name": "First"})
-        first = client.post("/intelligence/money/signup", data=data, follow_redirects=False)
+        first = client.post("/money/signup", data=data, follow_redirects=False)
         assert first.status_code == 303
         assert "status=ok" in first.headers.get("location", "")
 
         again = client.post(
-            "/intelligence/money/signup",
+            "/money/signup",
             data=_data_with_csrf(client, {"email": "repeat@firm.com", "org": "Later LLP"}),
             follow_redirects=False,
         )
         assert again.status_code == 303
-        assert again.headers.get("location") == "/intelligence/money/signup?status=already"
+        assert again.headers.get("location") == "/money/signup?status=already"
 
         htmx = client.post(
-            "/intelligence/money/signup",
+            "/money/signup",
             data=_data_with_csrf(client, {"email": "repeat@firm.com"}),
             headers={"HX-Request": "true"},
         )
@@ -301,15 +322,15 @@ class TestMoneySignupPost:
 
     def test_failure_invalid_email(self, client: TestClient) -> None:
         resp = client.post(
-            "/intelligence/money/signup",
+            "/money/signup",
             data=_data_with_csrf(client, {"email": "not-an-email"}),
             follow_redirects=False,
         )
         assert resp.status_code == 303
-        assert resp.headers.get("location") == "/intelligence/money/signup?status=invalid"
+        assert resp.headers.get("location") == "/money/signup?status=invalid"
 
         htmx = client.post(
-            "/intelligence/money/signup",
+            "/money/signup",
             data=_data_with_csrf(client, {"email": "nope"}),
             headers={"HX-Request": "true"},
         )
@@ -319,7 +340,7 @@ class TestMoneySignupPost:
 
     def test_failure_csrf(self, client: TestClient) -> None:
         resp = client.post(
-            "/intelligence/money/signup",
+            "/money/signup",
             data={"email": "ok@firm.com", "csrf_token": "bad"},
             follow_redirects=False,
         )
@@ -327,7 +348,7 @@ class TestMoneySignupPost:
         assert "status=csrf" in resp.headers.get("location", "")
 
         htmx = client.post(
-            "/intelligence/money/signup",
+            "/money/signup",
             data={"email": "ok@firm.com", "csrf_token": "bad"},
             headers={"HX-Request": "true"},
         )
@@ -336,11 +357,11 @@ class TestMoneySignupPost:
 
     def test_failure_rate_limit(self, client: TestClient) -> None:
         with patch(
-            "ilga_graph.routers.money.rate_limit_money_lead",
+            "ilga_graph.routers.money_portal.rate_limit_money_lead",
             return_value=False,
         ):
             resp = client.post(
-                "/intelligence/money/signup",
+                "/money/signup",
                 data=_data_with_csrf(client, {"email": "rate@firm.com"}),
                 follow_redirects=False,
             )
@@ -348,7 +369,7 @@ class TestMoneySignupPost:
             assert "status=rate" in resp.headers.get("location", "")
 
             htmx = client.post(
-                "/intelligence/money/signup",
+                "/money/signup",
                 data=_data_with_csrf(client, {"email": "rate@firm.com"}),
                 headers={"HX-Request": "true"},
             )
@@ -363,7 +384,7 @@ class TestMoneyLeadExport:
 
     def test_csv_success_lists_leads(self, admin_client: TestClient, test_db_path: Path) -> None:
         admin_client.post(
-            "/intelligence/money/signup",
+            "/money/signup",
             data=_data_with_csrf(
                 admin_client,
                 {"email": "export@firm.com", "name": "Export Me", "role": ["nonprofit"]},
@@ -379,7 +400,7 @@ class TestMoneyLeadExport:
 
     def test_admin_page_lists_leads(self, admin_client: TestClient) -> None:
         admin_client.post(
-            "/intelligence/money/signup",
+            "/money/signup",
             data=_data_with_csrf(admin_client, {"email": "listed@firm.com"}),
             follow_redirects=False,
         )

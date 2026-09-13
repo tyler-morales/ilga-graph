@@ -92,18 +92,19 @@ SSR pages (same Jinja2 + HTMX stack as the rest of Intelligence):
 
 | Path | What it shows |
 |------|----------------|
-| `/intelligence/money` | Follow-the-money hub: window, match rate, top-funded members, bill lookup |
+| `/money` | **Buyer portal** (Illinois Influence): landing, demo, member/bill views, waitlist. Own layout — not the advocacy or Intelligence chrome. |
+| `/intelligence/money` | Follow-the-money **research engine**: window, match rate, top-funded members, bill lookup |
 | `/intelligence/member/{id}` | Member money trail (committees, top donors, recent receipts) |
 | `/intelligence/bill/{number-or-id}` | Bill money context (sponsor/voter trails + overlapping donors) |
 | `/intelligence/` | Summary teaser with window / match-rate KPIs |
 
-**Local (`make dev`):** http://127.0.0.1:8000/intelligence/money — uses `mocks/dev/campaign_finance.json`. Try member `3268` (Don Harmon) and bill `SB0341`.
+**Local (`make dev`):** http://127.0.0.1:8000/money — buyer portal (demo, member `3268`, bill `SB0341`). Research engine: http://127.0.0.1:8000/intelligence/money — uses `mocks/dev/campaign_finance.json`.
 
-**Production (landofkei.org):** https://landofkei.org/intelligence/money — same paths after deploy, once the prod data dir has `campaign_finance.json` or `processed/campaign_finance/index.json`.
+**Production (landofkei.org):** https://landofkei.org/money and https://landofkei.org/intelligence/money — same paths after deploy, once the prod data dir has `campaign_finance.json` or `processed/campaign_finance/index.json`.
 
 Copy on these pages states that receipts are **not earmarked to a bill**, and that this layer is **not Moneyball** (effectiveness scoring). Per Hardball Ch 3 (`docs/hardball-spec/04-ch3-decision-making.md`), campaign money is the medium of access.
 
-A lobbyist/buyer **waitlist CTA** lives on this page (and at `/intelligence/money/signup`). That is email capture only — not the SOS/lobbyist disclosure join. See [Money intel waitlist](money-intel-signup.md). Fixture / dev-scale banner and bill-hint copy is shown only when the loaded `finance_summary` is sample-scale (under 50 matched members or 1,000 indexed receipts). A statewide ingest hides that copy.
+A lobbyist/buyer **waitlist** lives on the portal at `/money/signup` (old `/intelligence/money/signup` redirects). Email capture only — not a lobbyist-registration join. See [Money intel waitlist](money-intel-signup.md) and [Buyer portal](money-portal.md). A sample-scale banner is shown when `is_sample_scale_finance` is true (under 50 matched members or 1,000 indexed receipts). A statewide ingest hides that copy.
 
 ---
 
