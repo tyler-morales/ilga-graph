@@ -151,6 +151,25 @@ class TestAPIKeyAuth:
         assert resp.status_code == 200
         assert "Invalid or missing API key" not in resp.text
 
+    def test_money_portal_htmx_exempt_from_auth(self) -> None:
+        """Portal HTMX (Accept */*) must not 401 — same prefix exempt as /intelligence."""
+        secured = _make_client(ILGA_API_KEY="secret-key-123")
+        resp = secured.get(
+            "/money/signup",
+            headers={"Accept": "*/*", "HX-Request": "true"},
+        )
+        assert resp.status_code != 401
+        assert resp.status_code == 200
+
+    def test_money_portal_post_exempt_from_auth(self) -> None:
+        secured = _make_client(ILGA_API_KEY="secret-key-123")
+        resp = secured.post(
+            "/money/signup",
+            data={"email": "buyer@firm.com"},
+            headers={"Accept": "*/*", "HX-Request": "true"},
+        )
+        assert resp.status_code != 401
+
 
 # ── GraphQL queries (against empty state) ─────────────────────────────────────
 

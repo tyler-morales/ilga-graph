@@ -2,8 +2,8 @@
 {% if status_is_error and status_message %}
 <p class="subscribe-email-error" role="alert">{{ status_message }}</p>
 {% endif %}
-<form action="/intelligence/money/signup" method="post" class="money-signup-form account-form"
-    hx-post="/intelligence/money/signup" hx-target="#money-signup-wrap" hx-swap="innerHTML"
+<form action="/money/signup" method="post" class="money-signup-form account-form"
+    hx-post="/money/signup" hx-target="#money-signup-wrap" hx-swap="innerHTML"
     aria-label="Sign up for Illinois follow-the-money intel">
     <input type="hidden" name="csrf_token" value="{{ (request.state.csrf_token or '') if request is defined else '' }}">
     <div class="account-field">

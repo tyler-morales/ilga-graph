@@ -106,7 +106,7 @@ def campaign_finance_summary_view(index: Any) -> dict[str, Any] | None:
         return None
     stats = getattr(index, "match_stats", {}) or {}
     match_rate = float(stats.get("match_rate") or 0.0)
-    return {
+    view = {
         "source": getattr(index, "source", ""),
         "window_start": getattr(index, "window_start", ""),
         "window_end": getattr(index, "window_end", ""),
@@ -119,6 +119,8 @@ def campaign_finance_summary_view(index: Any) -> dict[str, Any] | None:
         "members_matched": int(stats.get("members_matched") or 0),
         "receipts_indexed": int(stats.get("receipts_indexed") or 0),
     }
+    view["is_sample_scale"] = is_sample_scale_finance(view)
+    return view
 
 
 # Bundled mocks/dev is 15 members / 140 receipts. Statewide ingest is on the
@@ -304,3 +306,47 @@ def top_funded_member_rows(
         )
     rows.sort(key=lambda r: r["total_received"], reverse=True)
     return rows[:limit]
+
+
+def lookup_bill_record(bill_id: str) -> Bill | None:
+    """Resolve a Bill from lookup tables by bill number or leg_id."""
+    found = getattr(state, "bill_lookup", {}).get(bill_id)
+    if found:
+        return found
+    found = getattr(state, "bills_lookup", {}).get(bill_id)
+    if found:
+        return found
+    needle = (bill_id or "").strip().upper()
+    if not needle:
+        return None
+    for bill in getattr(state, "bills", []) or []:
+        if bill.bill_number.upper() == needle or bill.leg_id == bill_id:
+            return bill
+    return None
+
+
+def lookup_member_record(member_id: str) -> Member | None:
+    """Resolve a sitting member by id."""
+    found = getattr(state, "member_lookup_by_id", {}).get(member_id)
+    if found:
+        return found
+    return getattr(state, "member_lookup", {}).get(member_id)
+
+
+def lookup_member_query(query: str) -> Member | None:
+    """Resolve a member by id or case-insensitive name fragment."""
+    q = (query or "").strip()
+    if not q:
+        return None
+    by_id = lookup_member_record(q)
+    if by_id:
+        return by_id
+    needle = q.lower()
+    matches: list[Member] = []
+    for member in getattr(state, "members", []) or []:
+        name = (member.name or "").lower()
+        if needle == name or needle in name:
+            matches.append(member)
+    if len(matches) == 1:
+        return matches[0]
+    return None

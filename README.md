@@ -90,7 +90,8 @@ The app serves several user-facing pages in addition to the GraphQL API:
 | `/` (redirects to `/advocacy`) | Landing page |
 | `/advocacy` | **Advocacy tool** — enter a ZIP code to find your senator, representative, and a high-impact power broker. Opens a call or email drawer with a pre-written script. Tracks outreach actions in the database (requires sign-in). |
 | `/intelligence` | **Intelligence dashboard** — bill analytics, win-probability predictions, voting coalitions, witness slip heat, True Influence scores, and anomaly detection. |
-| `/intelligence/money` | **Follow the money** — SBE campaign-finance engine (member trails, bill sponsor funding context, KPIs). Waitlist CTA on the page; shareable form at `/intelligence/money/signup`. |
+| `/money` | **Illinois Influence** — buyer portal for SBE campaign-finance (landing, demo, member/bill views, waitlist). Own layout, not the advocacy site. |
+| `/intelligence/money` | **Follow the money** — research-engine campaign-finance UI (member trails, bill sponsor funding context, KPIs). Unchanged. |
 | `/intelligence/member/<name>` | Deep-dive page for a single legislator (full scorecard, Moneyball profile, vote history). |
 | `/intelligence/bill/<number>` | Deep-dive page for a single bill (timeline, vote events, witness slips). |
 | `/explore` | **Legislative Power Map** — interactive visualization of member influence and network relationships. |
@@ -139,7 +140,8 @@ ilga-graph/
 │   ├── routers/              # FastAPI route groups
 │   │   ├── advocacy.py       #   /advocacy — landing, search, drawer
 │   │   ├── intelligence.py   #   /intelligence — dashboard + deep-dives
-│   │   ├── money.py          #   /intelligence/money/signup — waitlist only
+│   │   ├── money.py          #   /intelligence/money/signup — redirect to /money/signup
+│   │   ├── money_portal.py   #   /money — buyer portal (landing, demo, waitlist)
 │   │   ├── explore.py        #   /explore — Legislative Power Map
 │   │   ├── bills.py          #   /bills — bill SHAP / analytics endpoints
 │   │   ├── outreach.py       #   /outreach — stats aggregation
