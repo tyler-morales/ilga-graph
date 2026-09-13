@@ -108,8 +108,7 @@ _ACTION_DO_PASS = re.compile(r"Do Pass(?=[A-Z])")
 def is_sample_scale_finance(members_matched: int, receipts_indexed: int) -> bool:
     """True when the loaded index is fixture/sample-scale, not statewide."""
     return (
-        members_matched <= _SAMPLE_SCALE_MEMBER_MAX
-        or receipts_indexed <= _SAMPLE_SCALE_RECEIPT_MAX
+        members_matched <= _SAMPLE_SCALE_MEMBER_MAX or receipts_indexed <= _SAMPLE_SCALE_RECEIPT_MAX
     )
 
 
@@ -397,9 +396,7 @@ def bill_money_context_view(
         "total_received_across_sponsors_display": format_usd(ctx.total_received_across_sponsors),
         "sponsor_trails": sponsor_trails,
         "overlapping_donors": overlapping,
-        "top_donors_across_sponsors": [
-            _donor_dict(d) for d in ctx.top_donors_across_sponsors
-        ],
+        "top_donors_across_sponsors": [_donor_dict(d) for d in ctx.top_donors_across_sponsors],
         "match_notes": ctx.match_notes,
     }
 
