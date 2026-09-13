@@ -393,21 +393,22 @@ The workflow runs `cd ~/ilga-graph && bash scripts/deploy-on-server.sh`. If your
 
 ## Manual SBE money ingest (GitHub Actions)
 
-To refresh campaign-finance data on the production Pi without SSH, dispatch the **CI** workflow. This does **not** run on push to `main`.
+To refresh campaign-finance data on the production Pi without SSH: **Actions → CI → Run workflow**. This does **not** run on push to `main`.
 
 1. Open the repo on GitHub → **Actions**.
-2. In the left sidebar, click **CI**.
-3. Click **Run workflow** (right side of the workflow bar).
-4. Leave `since` as `2025-01-01` unless you need a different YYYY-MM-DD window. Optional `note` is logged only (it does not dry-run or skip ingest).
-5. Click the green **Run workflow** button.
+2. Left sidebar → **CI**.
+3. **Run workflow** (right side of the workflow bar).
+4. Leave `since` as `2025-01-01` unless you need a different YYYY-MM-DD window.
+5. Leave **deploy_first** unchecked if prod is already on `main`. Check it only to run `scripts/deploy-on-server.sh` first (git pull + install + restart).
+6. Green **Run workflow**.
 
 Job `ingest-sbe-money` SSHs with the same `DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_SSH_KEY` secrets as deploy, then on the server:
 
 ```bash
 cd ~/ilga-graph
-source .venv/bin/activate
-test -f cache/members.json
-make ingest-sbe-money ALSO_DATA_DIR=1 SINCE=<since>
+# if deploy_first: bash scripts/deploy-on-server.sh
+# fail clearly if cache/members.json is missing
+source .venv/bin/activate && make ingest-sbe-money ALSO_DATA_DIR=1 SINCE=<since>
 sudo systemctl restart ilga-graph
 ```
 

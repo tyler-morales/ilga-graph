@@ -1,4 +1,6 @@
+# Manual SBE money ingest: Actions → CI → Run workflow (dispatch only; never on push).
 name: CI
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('SBE money ingest since {0} — Actions → CI → Run workflow', github.event.inputs.since) || github.workflow }}
 
 on:
   push:
@@ -12,11 +14,11 @@ on:
         required: false
         default: "2025-01-01"
         type: string
-      note:
-        description: "Optional note (logged only; does not skip ingest)."
+      deploy_first:
+        description: "Run scripts/deploy-on-server.sh first (git pull + install + restart). Leave off if prod is already on main."
         required: false
-        default: ""
-        type: string
+        default: false
+        type: boolean
 
 jobs:
   lint-and-test:
@@ -69,7 +71,7 @@ jobs:
             cd ~/ilga-graph && git pull origin main && bash scripts/deploy-on-server.sh
 
   ingest-sbe-money:
-    name: Ingest SBE money (prod)
+    name: Ingest SBE money (Actions → CI → Run workflow)
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
     steps:
@@ -79,10 +81,9 @@ jobs:
             echo "::error::DEPLOY_HOST is not set. Add it (and DEPLOY_USER, DEPLOY_SSH_KEY) under Settings → Secrets and variables → Actions."
             exit 1
           fi
-      - name: Validate since and log note
+      - name: Validate since
         env:
           SINCE_INPUT: ${{ github.event.inputs.since }}
-          INGEST_NOTE: ${{ github.event.inputs.note }}
         run: |
           SINCE="${SINCE_INPUT:-2025-01-01}"
           if ! [[ "$SINCE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
@@ -90,21 +91,27 @@ jobs:
             exit 1
           fi
           echo "SINCE=$SINCE" >> "$GITHUB_ENV"
-          echo "Ingest window since=$SINCE"
-          if [ -n "$INGEST_NOTE" ]; then
-            echo "Note: $INGEST_NOTE"
-          fi
+          echo "Ingest window since=$SINCE deploy_first=${{ github.event.inputs.deploy_first }}"
       - name: Ingest SBE money via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          SINCE: ${{ env.SINCE }}
+          DEPLOY_FIRST: ${{ github.event.inputs.deploy_first }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script_stop: true
           command_timeout: 60m
+          envs: SINCE,DEPLOY_FIRST
           script: |
             cd ~/ilga-graph
-            source .venv/bin/activate
-            test -f cache/members.json
-            make ingest-sbe-money ALSO_DATA_DIR=1 SINCE=${{ env.SINCE }}
+            if [ "${DEPLOY_FIRST}" = "true" ]; then
+              bash scripts/deploy-on-server.sh
+            fi
+            if [ ! -f cache/members.json ]; then
+              echo "ERROR: cache/members.json is missing on this server. Prod scrape cache is required before SBE money ingest." >&2
+              exit 1
+            fi
+            source .venv/bin/activate && make ingest-sbe-money ALSO_DATA_DIR=1 SINCE="${SINCE:-2025-01-01}"
             sudo systemctl restart ilga-graph

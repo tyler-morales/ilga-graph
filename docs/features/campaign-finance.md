@@ -40,7 +40,7 @@ Make target: `make ingest-sbe-money` (optional `SINCE=2024-01-01`, `FROM_DIR=...
 
 Requires `members.json` in the current data dir (`cache/` in prod, `mocks/dev` in a clean dev tree).
 
-**Production (no laptop SSH):** GitHub Actions → **CI** workflow → **Run workflow**. Leave `since` as `2025-01-01` (or set a YYYY-MM-DD). Optional `note` is logged only and does not skip ingest. That starts job `ingest-sbe-money` on the prod Pi (`make ingest-sbe-money ALSO_DATA_DIR=1` then `sudo systemctl restart ilga-graph`). Dispatch only — not on push to `main`. See [Vultr deployment guide](../reference/vultr-deployment-guide.md#manual-sbe-money-ingest-github-actions).
+**Production (no laptop SSH):** Actions → **CI** → **Run workflow**. Leave `since` as `2025-01-01` (or set a YYYY-MM-DD). Leave **deploy_first** unchecked unless you need `scripts/deploy-on-server.sh` first (prod is usually already on main). Job `ingest-sbe-money` then checks `cache/members.json`, runs `make ingest-sbe-money ALSO_DATA_DIR=1`, and `sudo systemctl restart ilga-graph`. Dispatch only — not on push to `main`. See [Vultr deployment guide](../reference/vultr-deployment-guide.md#manual-sbe-money-ingest-github-actions).
 
 **Writes**
 
