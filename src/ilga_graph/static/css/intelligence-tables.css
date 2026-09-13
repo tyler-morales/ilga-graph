@@ -308,10 +308,17 @@
   overflow: hidden;
 }
 
+.member-profile-influence-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4em 0.75em;
+  margin: 0.35em 0 0;
+}
+
 .member-profile-rank {
   font-size: var(--font-size-label);
   color: #666;
-  margin-left: 8px;
 }
 
 .member-narrative {
@@ -1431,6 +1438,29 @@
   font-size: var(--font-size-label);
   color: #334155;
   line-height: 1.45;
+}
+
+.money-intel-scale-banner {
+  margin: 0 0 1em;
+  padding: 0.7em 0.9em;
+  background: #fffbeb;
+  border: 1px solid #fbbf24;
+  border-radius: 4px;
+  color: #78350f;
+  font-size: var(--font-size-label);
+  line-height: 1.45;
+}
+
+.money-intel-self-label {
+  display: inline-block;
+  margin-left: 0.35em;
+  padding: 0 0.4em;
+  border: 1px solid #0f766e;
+  border-radius: 3px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: #0f766e;
+  letter-spacing: 0.02em;
 }
 
 .money-intel-kpis {

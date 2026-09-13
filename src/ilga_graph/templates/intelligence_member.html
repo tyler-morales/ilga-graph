@@ -31,8 +31,10 @@
                  style="width: {{ influence.score }}%"></div>
             <span class="story-score-text">Influence: {{ "%.0f"|format(influence.score) }} / 100</span>
         </div>
-        <span class="intel-trust-badge intel-trust-{{ influence.label|lower }}">{{ influence.label }} Influence</span>
-        <span class="member-profile-rank">#{{ influence.rank_overall }} overall &middot; #{{ influence.rank_chamber }} in {{ member.chamber }}</span>
+        <p class="member-profile-influence-meta">
+            <span class="intel-trust-badge intel-trust-{{ influence.label|lower }}">{{ influence.label }} influence</span>
+            <span class="member-profile-rank">#{{ influence.rank_overall }} overall &middot; #{{ influence.rank_chamber }} in {{ member.chamber }}</span>
+        </p>
         {% endif %}
     </div>
 

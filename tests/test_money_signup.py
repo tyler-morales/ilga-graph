@@ -206,7 +206,7 @@ class TestMoneyEngineKeepsUi:
         assert "Top funded members" in body
         assert 'name="email"' in body
         assert "lobbyist" in body.lower()
-        assert "fixture" in body.lower() or "dev-scale" in body.lower()
+        assert "sample-scale" in body.lower() or "fixture" in body.lower()
         assert "SOS" not in body
         assert "expenditure" not in body.lower()
         assert "Moneyball" in body

@@ -9,7 +9,7 @@
     </div>
 
     {% if money_context is none %}
-    <p class="intel-empty-inline" role="status">Campaign-finance index is not loaded. Run <code>make ingest-sbe-money</code> or use the dev fixture at <code>mocks/dev/campaign_finance.json</code>.</p>
+    <p class="intel-empty-inline" role="status">Campaign-finance index is not loaded. Sample-scale or statewide SBE receipts will appear here once an index is attached.</p>
     {% elif not money_context.sponsor_trails %}
     <p class="intel-empty-inline" role="status">No matched SBE receipts for sponsors or voters on this bill{% if money_context.window_start %} ({{ money_context.window_start }} – {{ money_context.window_end }}){% endif %}.</p>
     {% else %}
@@ -53,7 +53,7 @@
                     <td>{{ s.total_received_display }}</td>
                     <td>
                         {% for d in s.top_donors[:3] %}
-                        {{ d.name }} ({{ d.total_amount_display }}){% if not loop.last %}; {% endif %}
+                        {{ d.name }}{% if d.is_self %} <span class="money-intel-self-label" title="Contributor name matches this member">Self-transfer</span>{% endif %} ({{ d.total_amount_display }}){% if not loop.last %}; {% endif %}
                         {% else %}—{% endfor %}
                     </td>
                 </tr>

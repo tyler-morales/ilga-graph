@@ -16,18 +16,13 @@
         Official Illinois State Board of Elections campaign receipts matched to sitting
         legislators. This is campaign finance — not Moneyball (legislative-effectiveness scoring).
     </p>
-    <p class="money-intel-fixture-note" role="note">
-        Figures and lookup seeds on this page are <strong>fixture / dev-scale</strong>
-        (bundled sample: member 3268 Don Harmon, bill SB0341). Not a full statewide,
-        buyer-ready ingest.
-    </p>
 
     {% if not finance_summary %}
     <div class="intel-empty" role="status">
         <h2>No campaign-finance index loaded</h2>
         <p>Ingest SBE Committees + Receipts, then restart the app.</p>
         <p>Local: <code>make ingest-sbe-money FROM_DIR=tests/fixtures/sbe ALSO_DATA_DIR=1</code></p>
-        <p>Dev already ships <code>mocks/dev/campaign_finance.json</code> — if you are seeing this, the index did not load.</p>
+        <p>Until a statewide SBE ingest is attached, this surface needs a sample-scale or full index.</p>
     </div>
     {% else %}
 
@@ -57,6 +52,14 @@
             <span class="money-intel-kpi-label">Committees accepted</span>
         </div>
     </div>
+    {% if finance_summary.sample_scale %}
+    <p class="money-intel-scale-banner" role="status">
+        <strong>Sample-scale index</strong> — not a statewide disclosure graph.
+        This window currently shows {{ finance_summary.members_matched }} matched members
+        and {{ finance_summary.receipts_indexed }} receipts.
+        Full SBE ingest is not loaded yet.
+    </p>
+    {% endif %}
     <p class="money-intel-disclaimer" role="note">
         Money is campaign receipts to matched candidate committees, not earmarked to a bill.
         Source: Illinois State Board of Elections Campaign Disclosure files.
@@ -72,7 +75,10 @@
                 aria-describedby="money-bill-hint">
             <button type="submit" class="money-intel-lookup-btn">Look up funding</button>
         </form>
-        <p id="money-bill-hint" class="money-intel-muted">Try SB0341 on the dev fixture (Don Harmon).</p>
+        <p id="money-bill-hint" class="money-intel-muted">
+            Try SB0341 (a CIVIL LAW-TECH shell — sample bill with Don Harmon as sponsor).
+            Receipts are not earmarked to this bill.
+        </p>
 
         {% if bill_not_found %}
         <p class="intel-empty-inline" role="status">No bill found for <strong>{{ bill_query }}</strong>.</p>
@@ -127,7 +133,7 @@
             </table>
         </div>
         {% else %}
-        <p class="intel-empty-inline" role="status">No matched members in the current index.</p>
+        <p class="intel-empty-inline" role="status">No members with receipts in this window.</p>
         {% endif %}
     </section>
     {% endif %}

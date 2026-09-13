@@ -19,6 +19,8 @@ from ..intelligence_helpers import (
     bill_money_context_view,
     campaign_finance_summary_view,
     canonical_organization_name,
+    format_ilga_action_text,
+    member_glance_narrative,
     member_money_trail_view,
     top_funded_member_rows,
 )
@@ -1654,35 +1656,16 @@ async def intelligence_member_detail(request: Request, member_id: str):
             "badges": mb.badges,
         }
 
-    narrative_parts = []
-    if ip:
-        narrative_parts.append(
-            f"{member.name} ranks #{ip.rank_overall} overall in the Illinois General Assembly"
-        )
-        if ip.influence_label == "High":
-            narrative_parts.append("with high legislative influence")
-        elif ip.influence_label == "Moderate":
-            narrative_parts.append("with moderate influence")
-
-    if mb:
-        if mb.laws_passed > 0:
-            narrative_parts.append(
-                f"They have passed {mb.laws_passed} law{'s' if mb.laws_passed != 1 else ''} "
-                f"with a {mb.effectiveness_rate:.0%} effectiveness rate"
-            )
-        if mb.unique_collaborators > 20:
-            narrative_parts.append(
-                f"and collaborate with {mb.unique_collaborators} different legislators"
-            )
-        if mb.bridge_score > 0.3:
-            narrative_parts.append(
-                f"({mb.bridge_score:.0%} of their laws have cross-party co-sponsors)"
-            )
-
-    if ip and ip.influence_signals:
-        narrative_parts.append(". " + ip.influence_signals[0])
-
-    narrative = ", ".join(narrative_parts) + "." if narrative_parts else None
+    narrative = member_glance_narrative(
+        member.name,
+        rank_overall=ip.rank_overall if ip else None,
+        influence_label=ip.influence_label if ip else "",
+        laws_passed=mb.laws_passed if mb else 0,
+        effectiveness_rate=mb.effectiveness_rate if mb else 0.0,
+        unique_collaborators=mb.unique_collaborators if mb else 0,
+        bridge_score=mb.bridge_score if mb else 0.0,
+        influence_signal=(ip.influence_signals[0] if ip and ip.influence_signals else ""),
+    )
 
     top_bills = []
     ml = state.ml
@@ -1931,7 +1914,7 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
             action_history.append(
                 {
                     "date": ae.date,
-                    "action": ae.action,
+                    "action": format_ilga_action_text(ae.action),
                     "chamber": ae.chamber,
                     "action_category": ae.action_category or "other",
                     "action_category_label": ae.action_category_label or "Other",

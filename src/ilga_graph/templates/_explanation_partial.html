@@ -33,11 +33,11 @@
 {% endif %}
 
 {% elif reason == 'not_available' %}
-<p class="intel-explanation-msg" style="color: #5b7c99;">
-    Prediction drivers are not available. Install ML dependencies in the server environment (<code>make ml-setup</code> or <code>pip install -e ".[ml]"</code>), run the pipeline (<code>make ml-run</code>), then <strong>restart the app server</strong>.
+<p class="intel-explanation-msg" role="status">
+    Prediction drivers are not available for this bill.
 </p>
 {% elif reason == 'bill_not_found' %}
-<p class="intel-explanation-msg" style="color: #999; font-style: italic;">
+<p class="intel-explanation-msg" role="status">
     Prediction drivers are not available for this bill.
 </p>
 {% elif reason == 'error' %}

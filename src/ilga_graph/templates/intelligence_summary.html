@@ -20,6 +20,12 @@
         SBE campaign receipts matched to sitting members — campaign finance, not Moneyball
         (legislative-effectiveness scoring). Money is not earmarked to a bill.
     </p>
+    {% if finance_summary and finance_summary.sample_scale %}
+    <p class="money-intel-scale-banner" role="status">
+        Sample-scale index — {{ finance_summary.members_matched }} matched members
+        and {{ finance_summary.receipts_indexed }} receipts, not a statewide disclosure graph.
+    </p>
+    {% endif %}
     {% if finance_summary %}
     <div class="money-intel-kpis money-intel-kpis--compact" role="group" aria-label="Campaign finance summary">
         <div class="money-intel-kpi">
