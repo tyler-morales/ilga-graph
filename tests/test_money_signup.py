@@ -99,6 +99,8 @@ def client(test_db_path: Path) -> TestClient:
         "ILGA_PROFILE": "dev",
         "ILGA_ADMIN_EMAILS": _ADMIN_EMAIL,
         "ILGA_RATE_LIMIT_SUBSCRIBE_EMAIL_PER_HOUR": "100",
+        "ILGA_RATE_LIMIT_VERIFY_CODE_PER_15MIN": "100",
+        "ILGA_RATE_LIMIT_REQUEST_CODE_PER_15MIN": "100",
     }
     with patch.dict(os.environ, env, clear=False):
         importlib.reload(cfg_mod)
@@ -115,15 +117,20 @@ def client(test_db_path: Path) -> TestClient:
 
 @pytest.fixture
 def admin_client(client: TestClient, test_db_path: Path) -> TestClient:
+    """Authenticate as admin. Bypass the process-global verify-code rate limit
+    so a full-suite run (default 10/IP) cannot leave export tests unauthenticated.
+    """
     code = "111222"
     with patch.dict(os.environ, {"ILGA_DB_PATH": str(test_db_path)}, clear=False):
         importlib.reload(cfg_mod)
         importlib.reload(db_mod)
         run_async(_add_auth_code(_ADMIN_EMAIL, code))
-    client.post(
-        "/auth/verify-code",
-        data=_data_with_csrf(client, {"email": _ADMIN_EMAIL, "code": code}),
-    )
+    with patch("ilga_graph.routers.auth.rate_limit_verify_code", return_value=True):
+        login = client.post(
+            "/auth/verify-code",
+            data=_data_with_csrf(client, {"email": _ADMIN_EMAIL, "code": code}),
+        )
+    assert login.status_code == 200, login.text
     return client
 
 
