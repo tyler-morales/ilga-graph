@@ -19,6 +19,7 @@ def _candidate_paths(data_dir: Path) -> list[Path]:
     return [
         data_dir / "campaign_finance.json",
         Path("processed/campaign_finance/index.json"),
+        Path("mocks/dev/campaign_finance.json"),
     ]
 
 

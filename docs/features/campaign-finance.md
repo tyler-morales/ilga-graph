@@ -84,9 +84,29 @@ Examples: `graphql/member_money_trail.graphql`, `graphql/bill_money_context.grap
 
 ---
 
+## Intelligence UI
+
+SSR pages (same Jinja2 + HTMX stack as the rest of Intelligence):
+
+| Path | What it shows |
+|------|----------------|
+| `/intelligence/money` | Follow-the-money hub: window, match rate, top-funded members, bill lookup |
+| `/intelligence/member/{id}` | Member money trail (committees, top donors, recent receipts) |
+| `/intelligence/bill/{number-or-id}` | Bill money context (sponsor/voter trails + overlapping donors) |
+| `/intelligence/` | Summary teaser with window / match-rate KPIs |
+
+**Local (`make dev`):** http://127.0.0.1:8000/intelligence/money — uses `mocks/dev/campaign_finance.json`. Try member `3268` (Don Harmon) and bill `SB0341`.
+
+**Production (landofkei.org):** https://landofkei.org/intelligence/money — same paths after deploy, once the prod data dir has `campaign_finance.json` or `processed/campaign_finance/index.json`.
+
+Copy on these pages states that receipts are **not earmarked to a bill**, and that this layer is **not Moneyball** (effectiveness scoring). Per Hardball Ch 3 (`docs/hardball-spec/04-ch3-decision-making.md`), campaign money is the medium of access.
+
+Lobbyist email signup is **not** on this surface.
+
+---
+
 ## Gaps (not this slice)
 
 - Expenditures
 - Lobbyist / SOS entity join
-- Intelligence UI page (schema is ready)
 - Independent expenditure / 527 / federal overlays

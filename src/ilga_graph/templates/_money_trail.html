@@ -1,0 +1,128 @@
+{# Member SBE campaign-finance trail. Expects money_trail dict or none. #}
+<section class="money-intel" aria-labelledby="{{ heading_id|default('money-trail-heading') }}">
+    <div class="money-intel-header">
+        <h2 id="{{ heading_id|default('money-trail-heading') }}">Campaign finance</h2>
+        <p class="money-intel-vs-moneyball">
+            This is <strong>SBE campaign receipts</strong>, not Moneyball.
+            Moneyball scores legislative effectiveness. These figures are donations
+            to matched candidate committees in the disclosure window.
+        </p>
+    </div>
+
+    {% if money_trail is none %}
+    <p class="intel-empty-inline" role="status">Campaign-finance index is not loaded. Run <code>make ingest-sbe-money</code> or use the dev fixture at <code>mocks/dev/campaign_finance.json</code>.</p>
+    {% elif money_trail.receipt_count == 0 %}
+    <p class="intel-empty-inline" role="status">No matched SBE receipts in this window{% if money_trail.window_start %} ({{ money_trail.window_start }} – {{ money_trail.window_end }}){% endif %}. {{ money_trail.match_notes }}</p>
+    {% else %}
+    <p class="story-subtitle">
+        {{ money_trail.window_start }} – {{ money_trail.window_end }}.
+        {{ money_trail.match_notes }}
+    </p>
+    <div class="money-intel-kpis" role="group" aria-label="Campaign finance totals">
+        <div class="money-intel-kpi">
+            <span class="money-intel-kpi-value">{{ money_trail.total_received_display }}</span>
+            <span class="money-intel-kpi-label">Total received</span>
+        </div>
+        <div class="money-intel-kpi">
+            <span class="money-intel-kpi-value">{{ money_trail.receipt_count }}</span>
+            <span class="money-intel-kpi-label">Receipts</span>
+        </div>
+        <div class="money-intel-kpi">
+            <span class="money-intel-kpi-value">{{ money_trail.committee_count }}</span>
+            <span class="money-intel-kpi-label">Committees</span>
+        </div>
+    </div>
+
+    {% if money_trail.committees %}
+    <h3>Committees</h3>
+    <div class="intel-table-scroll-wrap">
+        <table class="intel-table money-intel-table" aria-label="Matched campaign committees">
+            <thead>
+                <tr>
+                    <th scope="col">Committee</th>
+                    <th scope="col">Party</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Match</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in money_trail.committees %}
+                <tr>
+                    <td><strong>{{ c.name }}</strong> <span class="money-intel-muted">{{ c.sbe_committee_id }}</span></td>
+                    <td>{{ c.party or "—" }}</td>
+                    <td>{{ c.status_label }}</td>
+                    <td>{{ c.match_method_label }} ({{ c.match_confidence_pct }}%)</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if money_trail.top_donors %}
+    <h3>Top donors</h3>
+    <div class="intel-table-scroll-wrap">
+        <table class="intel-table money-intel-table" aria-label="Top donors to this member">
+            <thead>
+                <tr>
+                    <th scope="col">Donor</th>
+                    <th scope="col">Occupation</th>
+                    <th scope="col">Employer</th>
+                    <th scope="col">Receipts</th>
+                    <th scope="col">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in money_trail.top_donors %}
+                <tr>
+                    <td>
+                        {% if d.contributor_member_id %}
+                        <a href="/intelligence/member/{{ d.contributor_member_id }}">{{ d.name }}</a>
+                        {% else %}
+                        {{ d.name }}
+                        {% endif %}
+                    </td>
+                    <td>{{ d.occupation or "—" }}</td>
+                    <td>{{ d.employer or "—" }}</td>
+                    <td>{{ d.receipt_count }}</td>
+                    <td>{{ d.total_amount_display }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if money_trail.recent_receipts %}
+    <h3>Recent receipts</h3>
+    <div class="intel-table-scroll-wrap">
+        <table class="intel-table money-intel-table" aria-label="Recent campaign receipts">
+            <thead>
+                <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Contributor</th>
+                    <th scope="col">Committee</th>
+                    <th scope="col">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in money_trail.recent_receipts %}
+                <tr>
+                    <td>{{ r.received_date }}</td>
+                    <td>
+                        {{ r.contributor_name }}
+                        {% if r.occupation or r.employer %}
+                        <span class="money-intel-muted">{{ r.occupation }}{% if r.occupation and r.employer %} · {% endif %}{{ r.employer }}</span>
+                        {% endif %}
+                        {% if r.location %}<span class="money-intel-muted">{{ r.location }}</span>{% endif %}
+                    </td>
+                    <td>{{ r.committee_name }}</td>
+                    <td>{{ r.amount_display }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    {% endif %}
+</section>

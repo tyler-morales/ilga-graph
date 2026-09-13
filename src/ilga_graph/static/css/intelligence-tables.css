@@ -1390,3 +1390,136 @@
   background: #f1f5f9;
   color: #475569;
 }
+
+/* Campaign finance (SBE money) — distinct from Moneyball effectiveness cards */
+.money-intel,
+.money-intel-teaser,
+.money-intel-page {
+  --money-intel-accent: #0f766e;
+  --money-intel-bg: #f0fdfa;
+  --money-intel-border: #99f6e4;
+}
+
+.money-intel,
+.money-intel-teaser {
+  margin: 1.5em 0;
+  padding: 1em 1.1em;
+  background: var(--money-intel-bg);
+  border: 1px solid var(--money-intel-border);
+  border-left: 4px solid var(--money-intel-accent);
+  border-radius: 6px;
+}
+
+.money-intel-kicker {
+  margin: 0 0 0.25em;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--money-intel-accent);
+}
+
+.money-intel-header h2,
+.money-intel-teaser h2,
+.money-intel-page h2 {
+  margin: 0 0 0.35em;
+}
+
+.money-intel-vs-moneyball,
+.money-intel-disclaimer {
+  margin: 0 0 0.8em;
+  font-size: var(--font-size-label);
+  color: #334155;
+  line-height: 1.45;
+}
+
+.money-intel-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75em;
+  margin: 0.75em 0 1em;
+}
+
+.money-intel-kpi {
+  text-align: center;
+  padding: 0.7em 0.5em;
+  background: #fff;
+  border: 1px solid var(--money-intel-border);
+  border-radius: 4px;
+}
+
+.money-intel-kpi-value {
+  display: block;
+  font-size: 1.15em;
+  font-weight: 700;
+  color: #115e59;
+}
+
+.money-intel-kpi-label {
+  display: block;
+  margin-top: 0.2em;
+  font-size: var(--font-size-xs);
+  color: #64748b;
+}
+
+.money-intel-muted {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: #64748b;
+}
+
+.money-intel-table a {
+  color: #0f766e;
+}
+
+.money-intel-table a:focus-visible,
+.money-intel-lookup-btn:focus-visible,
+.money-intel-lookup input:focus-visible,
+.money-intel-filter input:focus-visible,
+.money-intel a:focus-visible,
+.money-intel-teaser a:focus-visible {
+  outline: 3px solid #0f766e;
+  outline-offset: 2px;
+}
+
+.money-intel-lookup,
+.money-intel-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5em 0.75em;
+  margin: 0.75em 0 1em;
+}
+
+.money-intel-lookup label,
+.money-intel-filter label {
+  font-weight: 600;
+  font-size: var(--font-size-label);
+}
+
+.money-intel-lookup input,
+.money-intel-filter input {
+  min-width: 12rem;
+  padding: 0.45em 0.6em;
+  border: 1px solid #94a3b8;
+  border-radius: 4px;
+}
+
+.money-intel-lookup-btn {
+  padding: 0.45em 0.9em;
+  background: #0f766e;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.money-intel-lookup-btn:hover {
+  background: #0d5f59;
+}
+
+.member-moneyball {
+  border-top: 1px dashed #d4d4d4;
+  padding-top: 0.25em;
+}

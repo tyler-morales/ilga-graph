@@ -6,12 +6,44 @@
 <div class="intel-nav">
     <a href="/explore">&larr; Power Map</a> &middot;
     <a href="/advocacy">Advocacy Portal</a> &middot;
+    <a href="/intelligence/money">Follow the money</a> &middot;
     <a href="/intelligence/recruitment">Issue Recruiter</a> &middot;
     <a href="/intelligence/productive-days">Most Productive Days</a> &middot;
     <a href="/intelligence/raw">Raw Data Tables &rarr;</a>
 </div>
 <h1>Legislative Intelligence</h1>
 <p class="intel-subtitle">What's happening in the Illinois General Assembly right now.</p>
+
+<section class="story-section money-intel-teaser" aria-labelledby="follow-money-heading">
+    <h2 id="follow-money-heading">Follow the money</h2>
+    <p class="story-subtitle">
+        SBE campaign receipts matched to sitting members — campaign finance, not Moneyball
+        (legislative-effectiveness scoring). Money is not earmarked to a bill.
+    </p>
+    {% if finance_summary %}
+    <div class="money-intel-kpis money-intel-kpis--compact" role="group" aria-label="Campaign finance summary">
+        <div class="money-intel-kpi">
+            <span class="money-intel-kpi-value">{{ finance_summary.window_start }}–{{ finance_summary.window_end }}</span>
+            <span class="money-intel-kpi-label">Disclosure window</span>
+        </div>
+        <div class="money-intel-kpi">
+            <span class="money-intel-kpi-value">{{ "%.1f"|format(finance_summary.match_rate_pct) }}%</span>
+            <span class="money-intel-kpi-label">Match rate</span>
+        </div>
+        <div class="money-intel-kpi">
+            <span class="money-intel-kpi-value">{{ finance_summary.members_matched }}</span>
+            <span class="money-intel-kpi-label">Members matched</span>
+        </div>
+        <div class="money-intel-kpi">
+            <span class="money-intel-kpi-value">{{ finance_summary.receipts_indexed }}</span>
+            <span class="money-intel-kpi-label">Receipts</span>
+        </div>
+    </div>
+    {% else %}
+    <p class="intel-empty-inline" role="status">Campaign-finance index is not loaded.</p>
+    {% endif %}
+    <p><a class="story-footer-link" href="/intelligence/money">Open money intel &rarr;</a></p>
+</section>
 
 {% if not available %}
 <div class="intel-empty">
@@ -254,6 +286,8 @@
 {% endif %}
 
 <div class="story-footer">
+    <a href="/intelligence/money" class="story-footer-link">Follow the money</a>
+    <span class="story-footer-detail"> &middot; </span>
     <a href="/intelligence/productive-days" class="story-footer-link">Session calendar (most productive days)</a>
     <span class="story-footer-detail"> &middot; </span>
     <a href="/intelligence/raw" class="story-footer-link">View raw data tables &rarr;</a>

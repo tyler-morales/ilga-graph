@@ -16,7 +16,11 @@ from ..constants import KEI_STATUS_OPTIONS
 from ..date_parse import parse_action_date
 from ..intelligence_helpers import (
     bill_description_for_slip_bill_number,
+    bill_money_context_view,
+    campaign_finance_summary_view,
     canonical_organization_name,
+    member_money_trail_view,
+    top_funded_member_rows,
 )
 from ..ml.rule_engine import get_bill_to_law_process
 from ..models import Bill
@@ -570,17 +574,57 @@ def _get_day_details(date_str: str) -> dict:
     }
 
 
+def _finance_summary() -> dict | None:
+    return campaign_finance_summary_view(state.campaign_finance)
+
+
+def _money_trail_for_member(member) -> dict | None:
+    return member_money_trail_view(state.campaign_finance, member)
+
+
+def _money_context_for_bill(bill: Bill) -> dict | None:
+    return bill_money_context_view(
+        state.campaign_finance,
+        bill,
+        state.member_lookup_by_id,
+        vote_events=state.vote_lookup.get(bill.bill_number, []),
+    )
+
+
+def _lookup_bill_record(bill_id: str) -> Bill | None:
+    """Resolve a Bill from lookup tables by bill number or leg_id."""
+    found = state.bill_lookup.get(bill_id)
+    if found:
+        return found
+    found = getattr(state, "bills_lookup", {}).get(bill_id)
+    if found:
+        return found
+    needle = (bill_id or "").strip().upper()
+    if not needle:
+        return None
+    for bill in state.bills:
+        if bill.bill_number.upper() == needle or bill.leg_id == bill_id:
+            return bill
+    return None
+
+
 @router.get("/")
 async def intelligence_summary(request: Request):
     """Executive summary: narrative-driven intelligence overview."""
     ml = state.ml
     available = ml and ml.available
+    finance_summary = _finance_summary()
 
     if not available:
         return templates.TemplateResponse(
             request,
             "intelligence_summary.html",
-            {"request": request, "title": "Intelligence", "available": False},
+            {
+                "request": request,
+                "title": "Intelligence",
+                "available": False,
+                "finance_summary": finance_summary,
+            },
         )
 
     trust_level = ml.quality.get("trust_assessment", {}).get("overall", "")
@@ -773,6 +817,36 @@ async def intelligence_summary(request: Request):
             "committee_workload": hearing_insights["committee_workload"],
             "bills_no_hearing": hearing_insights["bills_no_hearing"],
             "last_run": ml.last_run_date,
+            "finance_summary": finance_summary,
+        },
+    )
+
+
+@router.get("/money")
+async def intelligence_money(request: Request, bill: str = ""):
+    """Illinois Influence Graph money intel: SBE campaign finance, not Moneyball."""
+    finance_summary = _finance_summary()
+    funded_members = top_funded_member_rows(
+        state.campaign_finance,
+        state.member_lookup_by_id,
+        limit=40,
+    )
+    bill_query = (bill or "").strip()
+    bill_record = _lookup_bill_record(bill_query) if bill_query else None
+    bill_money = _money_context_for_bill(bill_record) if bill_record else None
+    bill_not_found = bool(bill_query) and bill_record is None
+    return templates.TemplateResponse(
+        request,
+        "intelligence_money.html",
+        {
+            "request": request,
+            "title": "Follow the money",
+            "finance_summary": finance_summary,
+            "funded_members": funded_members,
+            "bill_query": bill_query,
+            "bill_record": bill_record,
+            "bill_money": bill_money,
+            "bill_not_found": bill_not_found,
         },
     )
 
@@ -1538,6 +1612,7 @@ async def intelligence_member_detail(request: Request, member_id: str):
                 "top_bills": [],
                 "coalition": None,
                 "value": None,
+                "money_trail": None,
             },
         )
 
@@ -1669,6 +1744,7 @@ async def intelligence_member_detail(request: Request, member_id: str):
             "top_bills": top_bills,
             "coalition": coalition,
             "value": value_dict,
+            "money_trail": _money_trail_for_member(member),
         },
     )
 
@@ -1684,7 +1760,8 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
                 bill = s
                 break
 
-    if not bill:
+    bill_obj_fallback = None if bill else _lookup_bill_record(bill_id)
+    if not bill and not bill_obj_fallback:
         try:
             bill_to_law_process = get_bill_to_law_process()
         except Exception:
@@ -1707,15 +1784,25 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
                 "witness_slips": [],
                 "bill_hearings": [],
                 "session_dates": session_dates,
+                "money_context": None,
             },
         )
 
+    if bill:
+        sponsor_name = bill.sponsor
+    elif bill_obj_fallback:
+        sponsor_name = bill_obj_fallback.primary_sponsor
+    else:
+        sponsor_name = ""
     sponsor_influence = None
     sponsor_member = None
-    for m in state.members:
-        if m.name and bill.sponsor and m.name in bill.sponsor:
-            sponsor_member = m
-            break
+    if bill_obj_fallback and bill_obj_fallback.sponsor_ids:
+        sponsor_member = state.member_lookup_by_id.get(bill_obj_fallback.sponsor_ids[0])
+    if sponsor_member is None:
+        for m in state.members:
+            if m.name and sponsor_name and m.name in sponsor_name:
+                sponsor_member = m
+                break
 
     if sponsor_member:
         ip = state.influence.get(sponsor_member.id)
@@ -1777,17 +1864,55 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
             self.forecast_score = getattr(score, "forecast_score", 0.0)
             self.forecast_confidence = getattr(score, "forecast_confidence", "")
             self.sponsor_id = extras.get("sponsor_id")
+            self.has_prediction = True
 
-    bill_ctx = _BillCtx(bill, bill_dict_extra)
+        @classmethod
+        def from_record(cls, record: Bill, extras: dict) -> _BillCtx:
+            ctx = object.__new__(cls)
+            ctx.bill_id = record.leg_id or record.bill_number
+            ctx.bill_number = record.bill_number
+            ctx.description = record.description
+            ctx.synopsis = record.synopsis or ""
+            ctx.sponsor = record.primary_sponsor
+            ctx.prob_advance = 0.0
+            ctx.prob_law = 0.0
+            ctx.predicted_outcome = ""
+            ctx.predicted_destination = ""
+            ctx.confidence = 0.0
+            ctx.label_reliable = False
+            ctx.chamber_origin = "Senate" if record.chamber == "S" else "House"
+            ctx.introduction_date = ""
+            ctx.current_stage = ""
+            ctx.stage_progress = 0.0
+            ctx.stage_label = ""
+            ctx.days_since_action = 0
+            ctx.last_action_text = record.last_action
+            ctx.last_action_date = record.last_action_date
+            ctx.stuck_status = ""
+            ctx.stuck_reason = ""
+            ctx.lifecycle_status = ""
+            ctx.rule_context = ""
+            ctx.forecast_score = 0.0
+            ctx.forecast_confidence = ""
+            ctx.sponsor_id = extras.get("sponsor_id")
+            ctx.has_prediction = False
+            return ctx
+
+    if bill:
+        bill_ctx = _BillCtx(bill, bill_dict_extra)
+    else:
+        bill_ctx = _BillCtx.from_record(bill_obj_fallback, bill_dict_extra)
 
     action_history = []
-    bill_obj = None
-    if hasattr(state, "bills_lookup"):
+    bill_obj = bill_obj_fallback
+    if bill_obj is None and hasattr(state, "bills_lookup"):
         bill_obj = state.bills_lookup.get(bill_id)
     if bill_obj is None and hasattr(state, "bill_lookup"):
-        bill_obj = state.bill_lookup.get(bill.bill_number)
+        bill_obj = state.bill_lookup.get(bill_ctx.bill_number)
     if bill_obj is None and hasattr(state, "bills_lookup") and state.bills_lookup:
-        candidates = [b for b in state.bills_lookup.values() if b.bill_number == bill.bill_number]
+        candidates = [
+            b for b in state.bills_lookup.values() if b.bill_number == bill_ctx.bill_number
+        ]
         if candidates:
 
             def _latest_action_date(b: Bill) -> datetime:
@@ -1826,15 +1951,15 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
     except Exception:
         bill_to_law_process = []
 
-    bill_votes = _vote_events_for_bill(bill.bill_number)
-    witness_slips = _witness_slips_for_bill(bill.bill_number)
+    bill_votes = _vote_events_for_bill(bill_ctx.bill_number)
+    witness_slips = _witness_slips_for_bill(bill_ctx.bill_number)
     bill_hearings = list(getattr(bill_obj, "bill_hearings", [])) if bill_obj else []
-    next_hearings = _upcoming_hearings_for_bill(bill.bill_number)
+    next_hearings = _upcoming_hearings_for_bill(bill_ctx.bill_number)
     has_no_hearing = (
         not bill_hearings
         and not next_hearings
-        and not state.hearings_by_bill.get(bill.bill_number)
-        and bill.current_stage in ("FILED", "IN_COMMITTEE")
+        and not state.hearings_by_bill.get(bill_ctx.bill_number)
+        and bill_ctx.current_stage in ("FILED", "IN_COMMITTEE")
     )
     try:
         session_dates = get_session_dates_set()
@@ -1846,7 +1971,10 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
         ilga_bill_url = bill_obj.status_url
     else:
         leg_id = getattr(bill_obj, "leg_id", None) if bill_obj else None
-        ilga_bill_url = _ilga_bill_url(bill.bill_number, leg_id)
+        ilga_bill_url = _ilga_bill_url(bill_ctx.bill_number, leg_id)
+
+    money_record = bill_obj or _lookup_bill_record(bill_ctx.bill_number)
+    money_context = _money_context_for_bill(money_record) if money_record else None
 
     return templates.TemplateResponse(
         request,
@@ -1865,5 +1993,6 @@ async def intelligence_bill_detail(request: Request, bill_id: str):
             "next_hearings": next_hearings,
             "has_no_hearing": has_no_hearing,
             "session_dates": session_dates,
+            "money_context": money_context,
         },
     )

@@ -1,14 +1,21 @@
 {% extends "base.html" %}
 
-{% block title %}{{ member.name }} — Influence Profile{% endblock %}
+{% block title %}{{ member.name if member else 'Member' }} — Influence Profile{% endblock %}
 
 {% block content %}
 <div class="intel-nav">
     <a href="/intelligence">&larr; Intelligence Overview</a> &middot;
+    <a href="/intelligence/money">Follow the money</a> &middot;
     <a href="/intelligence/recruitment">Issue Recruiter</a> &middot;
     <a href="/intelligence/raw">Raw Data Tables</a>
 </div>
 
+{% if not member %}
+<div class="intel-empty" role="status">
+    <h1>Member not found</h1>
+    <p>No legislator matches that ID. <a href="/intelligence/money">Browse campaign-finance trails</a>.</p>
+</div>
+{% else %}
 <div class="member-profile">
     {% set _name_parts = member.name.split() %}
     {% set _first_name = _name_parts[0] if _name_parts else member.name %}
@@ -90,6 +97,9 @@
         </ul>
     </div>
     {% endif %}
+
+    {# ── Campaign finance (SBE receipts; not Moneyball) ── #}
+    {% include "_money_trail.html" %}
 
     {# ── Moneyball breakdown ── #}
     {% if moneyball %}
@@ -229,4 +239,5 @@
     </div>
     {% endif %}
 </div>
+{% endif %}
 {% endblock %}
