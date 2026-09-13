@@ -10,7 +10,7 @@
     </div>
 
     {% if money_trail is none %}
-    <p class="intel-empty-inline" role="status">Campaign-finance index is not loaded. Run <code>make ingest-sbe-money</code> or use the dev fixture at <code>mocks/dev/campaign_finance.json</code>.</p>
+    <p class="intel-empty-inline" role="status">Campaign-finance index is not loaded. Sample-scale or statewide SBE receipts will appear here once an index is attached.</p>
     {% elif money_trail.receipt_count == 0 %}
     <p class="intel-empty-inline" role="status">No matched SBE receipts in this window{% if money_trail.window_start %} ({{ money_trail.window_start }} – {{ money_trail.window_end }}){% endif %}. {{ money_trail.match_notes }}</p>
     {% else %}
@@ -81,6 +81,9 @@
                         {% else %}
                         {{ d.name }}
                         {% endif %}
+                        {% if d.is_self %}
+                        <span class="money-intel-self-label" title="Contributor name matches this member">Self-transfer</span>
+                        {% endif %}
                     </td>
                     <td>{{ d.occupation or "—" }}</td>
                     <td>{{ d.employer or "—" }}</td>
@@ -111,6 +114,9 @@
                     <td>{{ r.received_date }}</td>
                     <td>
                         {{ r.contributor_name }}
+                        {% if r.is_self %}
+                        <span class="money-intel-self-label" title="Contributor name matches this member">Self-transfer</span>
+                        {% endif %}
                         {% if r.occupation or r.employer %}
                         <span class="money-intel-muted">{{ r.occupation }}{% if r.occupation and r.employer %} · {% endif %}{{ r.employer }}</span>
                         {% endif %}

@@ -95,13 +95,13 @@ SSR pages (same Jinja2 + HTMX stack as the rest of Intelligence):
 | `/intelligence/bill/{number-or-id}` | Bill money context (sponsor/voter trails + overlapping donors) |
 | `/intelligence/` | Summary teaser with window / match-rate KPIs |
 
-**Local (`make dev`):** http://127.0.0.1:8000/intelligence/money — uses `mocks/dev/campaign_finance.json`. Try member `3268` (Don Harmon) and bill `SB0341`.
+**Local (`make dev`):** http://127.0.0.1:8000/intelligence/money — uses `mocks/dev/campaign_finance.json` (sample-scale; labeled as such). Try member `3268` (Don Harmon) and bill `SB0341` (CIVIL LAW-TECH shell example).
 
-**Production (landofkei.org):** https://landofkei.org/intelligence/money — same paths after deploy, once the prod data dir has `campaign_finance.json` or `processed/campaign_finance/index.json`.
+**Production (landofkei.org):** https://landofkei.org/intelligence/money — same paths. Until Vultr full ingest, prod may still serve the sample-scale index (a small member/receipt set). Copy must say **sample-scale**, not buyer-ready statewide data.
 
-Copy on these pages states that receipts are **not earmarked to a bill**, and that this layer is **not Moneyball** (effectiveness scoring). Per Hardball Ch 3 (`docs/hardball-spec/04-ch3-decision-making.md`), campaign money is the medium of access.
+Copy on these pages states that receipts are **not earmarked to a bill**, that this layer is **not Moneyball** (effectiveness scoring), and that a small index is fixture/sample-scale. Per Hardball Ch 3 (`docs/hardball-spec/04-ch3-decision-making.md`), campaign money is the medium of access.
 
-A lobbyist/buyer **waitlist CTA** lives on this page (and at `/intelligence/money/signup`). That is email capture only — not the SOS/lobbyist disclosure join. See [Money intel waitlist](money-intel-signup.md). Current Harmon/SB0341 seeds are fixture / dev-scale.
+A lobbyist/buyer **waitlist CTA** lives on this page (and at `/intelligence/money/signup`). That is email capture only — not the SOS/lobbyist disclosure join. See [Money intel waitlist](money-intel-signup.md). Current Harmon/SB0341 seeds are sample-scale.
 
 ---
 

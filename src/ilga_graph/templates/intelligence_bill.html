@@ -115,13 +115,6 @@
         </div>
     </div>
 
-    {# ── Prediction Drivers (SHAP) ── #}
-    <div class="bill-prediction-drivers"
-        style="margin-top: 16px; padding: 14px 18px; background: #fafafa; border: 1px solid #e5e5e5; border-radius: 4px;"
-        hx-get="/api/bills/{{ bill.bill_id }}/explanation" hx-trigger="load" hx-swap="innerHTML">
-        <p style="color: #999; font-style: italic; font-size: 0.95rem;">Calculating prediction drivers...</p>
-    </div>
-
     {# ── Pipeline progress ── #}
     {% set pipeline_stages = ['Filed', 'In Committee', 'Passed Committee', 'Floor Vote', 'Crossed Chambers', 'Passed
     Both Houses', 'Signed into Law'] %}
@@ -157,6 +150,18 @@
     </div>
     {% endif %}
 
+    {% if bill %}
+    {# Finished empty state when SHAP never loads; HTMX replaces this when a prediction exists. #}
+    <div class="bill-prediction-drivers"
+        style="margin-top: 16px; padding: 14px 18px; background: #fafafa; border: 1px solid #e5e5e5; border-radius: 4px;"
+        {% if bill.has_prediction %}
+        hx-get="/api/bills/{{ bill.bill_id }}/explanation" hx-trigger="load" hx-swap="innerHTML"
+        hx-timeout="8000"
+        {% endif %}>
+        <p class="intel-explanation-msg" role="status">Prediction drivers are not available for this bill.</p>
+    </div>
+    {% endif %}
+
     {# ── How a bill becomes law (from reference model) ── #}
     {% if bill_to_law_process %}
     <details class="bill-to-law-process"
@@ -182,8 +187,11 @@
             <a href="/intelligence/member/{{ sponsor_influence.member_id }}">
                 <strong>{{ bill.sponsor }}</strong>
             </a>
-            <span class="intel-trust-badge intel-trust-{{ sponsor_influence.label|lower }}">
-                {{ sponsor_influence.label }} Influence (#{{ sponsor_influence.rank }})
+            <span class="member-profile-influence-meta">
+                <span class="intel-trust-badge intel-trust-{{ sponsor_influence.label|lower }}">
+                    {{ sponsor_influence.label }} influence
+                </span>
+                <span class="member-profile-rank">#{{ sponsor_influence.rank }}</span>
             </span>
             {% if sponsor_influence.signals %}
             <div class="story-card-signals">

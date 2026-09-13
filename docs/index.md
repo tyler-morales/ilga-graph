@@ -48,6 +48,6 @@ Documentation for the **ILGA Graph** proof-of-concept: Illinois General Assembly
 | Component playground (dev) | `/dev/playground` |
 | Power Map (graph) | `/explore` |
 | ML Intelligence | `/intelligence` |
-| Follow the money (SBE campaign finance) | `/intelligence/money` |
+| Follow the money (SBE campaign finance; sample-scale until full ingest) | `/intelligence/money` |
 | Money intel waitlist | `/intelligence/money` (CTA on engine page), `/intelligence/money/signup` |
 | GraphQL playground | `/graphql` |
