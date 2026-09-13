@@ -16,11 +16,13 @@
         Official Illinois State Board of Elections campaign receipts matched to sitting
         legislators. This is campaign finance — not Moneyball (legislative-effectiveness scoring).
     </p>
+    {% if is_sample_scale_finance|default(true) %}
     <p class="money-intel-fixture-note" role="note">
         Figures and lookup seeds on this page are <strong>fixture / dev-scale</strong>
         (bundled sample: member 3268 Don Harmon, bill SB0341). Not a full statewide,
         buyer-ready ingest.
     </p>
+    {% endif %}
 
     {% if not finance_summary %}
     <div class="intel-empty" role="status">
@@ -72,7 +74,11 @@
                 aria-describedby="money-bill-hint">
             <button type="submit" class="money-intel-lookup-btn">Look up funding</button>
         </form>
+        {% if is_sample_scale_finance|default(true) %}
         <p id="money-bill-hint" class="money-intel-muted">Try SB0341 on the dev fixture (Don Harmon).</p>
+        {% else %}
+        <p id="money-bill-hint" class="money-intel-muted">Enter an Illinois bill number (for example SB0341).</p>
+        {% endif %}
 
         {% if bill_not_found %}
         <p class="intel-empty-inline" role="status">No bill found for <strong>{{ bill_query }}</strong>.</p>

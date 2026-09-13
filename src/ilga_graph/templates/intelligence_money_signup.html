@@ -18,10 +18,12 @@
         funding. For lobbyists, lawyers, and nonprofits who need that picture as the graph grows.
         Moneyball on this site is a separate legislative-power score, not a finance product.
     </p>
+    {% if is_sample_scale_finance|default(true) %}
     <p class="money-intel-fixture-note" role="note">
         Live lookup seeds (member 3268 Don Harmon, bill SB0341) are <strong>fixture / dev-scale</strong>,
         not a full statewide buyer-ready ingest.
     </p>
+    {% endif %}
     {% set dedicated = true %}
     {% include "_money_signup_section.html" %}
 </div>

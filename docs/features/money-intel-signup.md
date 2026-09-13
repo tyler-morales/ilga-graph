@@ -6,7 +6,7 @@ The Follow-the-money **engine** stays at `/intelligence/money` (SBE KPIs, bill l
 
 This is **not** the SOS/lobbyist disclosure data join, not an expenditure feed, and not Moneyball-as-finance. Moneyball on this site remains a legislative-power score.
 
-Current lookup seeds (member 3268 Don Harmon, bill SB0341) are **fixture / dev-scale**, not a full statewide buyer-ready ingest.
+Fixture / dev-scale lookup-seed copy (Harmon / SB0341) is shown only when the loaded campaign-finance index is sample-scale. A statewide ingest hides that banner.
 
 Aligns with Hardball Ch 7 (listservs created by website subscribe) and Founding Sales Ch 6 (short inbound form, light qualification). Single opt-in for MVP: the address is stored when the form is submitted.
 

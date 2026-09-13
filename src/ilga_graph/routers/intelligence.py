@@ -19,6 +19,7 @@ from ..intelligence_helpers import (
     bill_money_context_view,
     campaign_finance_summary_view,
     canonical_organization_name,
+    is_sample_scale_finance,
     member_money_trail_view,
     top_funded_member_rows,
 )
@@ -844,6 +845,7 @@ async def intelligence_money(request: Request, bill: str = ""):
             "request": request,
             "title": "Follow the money",
             "finance_summary": finance_summary,
+            "is_sample_scale_finance": is_sample_scale_finance(finance_summary),
             "funded_members": funded_members,
             "bill_query": bill_query,
             "bill_record": bill_record,

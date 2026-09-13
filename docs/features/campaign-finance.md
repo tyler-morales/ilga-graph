@@ -103,7 +103,7 @@ SSR pages (same Jinja2 + HTMX stack as the rest of Intelligence):
 
 Copy on these pages states that receipts are **not earmarked to a bill**, and that this layer is **not Moneyball** (effectiveness scoring). Per Hardball Ch 3 (`docs/hardball-spec/04-ch3-decision-making.md`), campaign money is the medium of access.
 
-A lobbyist/buyer **waitlist CTA** lives on this page (and at `/intelligence/money/signup`). That is email capture only — not the SOS/lobbyist disclosure join. See [Money intel waitlist](money-intel-signup.md). Current Harmon/SB0341 seeds are fixture / dev-scale.
+A lobbyist/buyer **waitlist CTA** lives on this page (and at `/intelligence/money/signup`). That is email capture only — not the SOS/lobbyist disclosure join. See [Money intel waitlist](money-intel-signup.md). Fixture / dev-scale banner and bill-hint copy is shown only when the loaded `finance_summary` is sample-scale (under 50 matched members or 1,000 indexed receipts). A statewide ingest hides that copy.
 
 ---
 
