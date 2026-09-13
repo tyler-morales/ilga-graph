@@ -364,8 +364,16 @@ def test_bill_page_demo_action_spacing_and_drivers(client: TestClient) -> None:
     assert resp.status_code == 200
     body = resp.text
     assert "Calculating prediction drivers" not in body
-    assert "Prediction drivers are not available" in body or "Prediction Drivers" in body
+    assert "Prediction drivers are not available" in body
     assert "bySen." not in body
     assert "toAssignments" not in body
     assert "Do PassExecutive" not in body
     assert "by Sen." in body or "to Assignments" in body or "Do Pass Executive" in body
+
+
+def test_bill_explanation_fragment_finished_empty(client: TestClient) -> None:
+    resp = client.get("/api/bills/SB0341/explanation", headers={"Accept": "text/html"})
+    assert resp.status_code == 200
+    assert "Calculating prediction drivers" not in resp.text
+    assert "Prediction drivers are not available" in resp.text
+    assert "pip install" not in resp.text

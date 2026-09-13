@@ -115,14 +115,6 @@
         </div>
     </div>
 
-    {# ── Prediction Drivers (SHAP) ── #}
-    <div class="bill-prediction-drivers"
-        style="margin-top: 16px; padding: 14px 18px; background: #fafafa; border: 1px solid #e5e5e5; border-radius: 4px;"
-        hx-get="/api/bills/{{ bill.bill_id }}/explanation" hx-trigger="load" hx-swap="innerHTML"
-        hx-timeout="8000">
-        <p class="intel-explanation-msg" role="status">Prediction drivers are not available for this bill.</p>
-    </div>
-
     {# ── Pipeline progress ── #}
     {% set pipeline_stages = ['Filed', 'In Committee', 'Passed Committee', 'Floor Vote', 'Crossed Chambers', 'Passed
     Both Houses', 'Signed into Law'] %}
@@ -155,6 +147,18 @@
             &middot; <span class="stuck-badge stuck-{{ bill.stuck_status|lower }}">{{ bill.stuck_status }}</span>
             {% endif %}
         </p>
+    </div>
+    {% endif %}
+
+    {% if bill %}
+    {# Finished empty state when SHAP never loads; HTMX replaces this when a prediction exists. #}
+    <div class="bill-prediction-drivers"
+        style="margin-top: 16px; padding: 14px 18px; background: #fafafa; border: 1px solid #e5e5e5; border-radius: 4px;"
+        {% if bill.has_prediction %}
+        hx-get="/api/bills/{{ bill.bill_id }}/explanation" hx-trigger="load" hx-swap="innerHTML"
+        hx-timeout="8000"
+        {% endif %}>
+        <p class="intel-explanation-msg" role="status">Prediction drivers are not available for this bill.</p>
     </div>
     {% endif %}
 
