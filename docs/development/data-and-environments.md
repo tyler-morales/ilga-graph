@@ -56,7 +56,9 @@ flowchart LR
 | `cache/dev/` | Dev app (when populated) | `make dev-cache` or manual copy |
 | `mocks/dev/` | Dev app (when `cache/dev/` empty) | You (commit) or `make snapshot-mocks` |
 | `data/ilga_dev.db` | Dev app (outreach) | App (record call/email), `make seed-outreach` |
-| `data/ilga.db` | Prod app (outreach) | App, `make seed-outreach` (backlog) |
+| `data/ilga.db` | Prod app (outreach + SBE money tables) | App, `make seed-outreach`, `make ingest-sbe-money` |
+| `processed/campaign_finance/` | App startup (money GraphQL) | `make ingest-sbe-money` |
+| `mocks/dev/campaign_finance.json` | Dev GraphQL when no processed index | `ingest_sbe_money.py --also-write-data-dir` |
 
 ---
 
@@ -71,6 +73,7 @@ flowchart LR
 | `make dev-cache` | Copy `cache/` into `cache/dev/` so `make dev` uses full scraped data. Run after `make scrape`. |
 | `make snapshot-mocks` | Sample `cache/` into `mocks/dev/` (subset of members, bills, votes, etc.). Commit result to refresh dev seed. |
 | `make seed-outreach` | Seed the outreach DB: backlog for funky_mama11@gmail.com; in dev only, mock advocates for heat-pill demo. Use same profile as the app. |
+| `make ingest-sbe-money` | Ingest official SBE Committees + Receipts onto Member IDs. See [Campaign finance](../features/campaign-finance.md). |
 
 ---
 

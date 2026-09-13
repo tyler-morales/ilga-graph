@@ -38,6 +38,8 @@ Copy queries into the playground or send them via your client with variables as 
 
 - **Members / bills / leaderboard:** `member(name)`, `members(...)`, `bills(...)`, `moneyballLeaderboard(...)` with sort and filter options.
 
+- **Campaign finance (SBE):** `memberMoneyTrail(memberId)` — recent receipts to a member's matched candidate committee(s). `billMoneyContext(billNumber)` — sponsor/voter money context and overlapping donors. `campaignFinanceSummary` — ingest window and match rate. Examples: `graphql/member_money_trail.graphql`, `graphql/bill_money_context.graphql`. See [Campaign finance](../features/campaign-finance.md).
+
 - **Search:** Free-text search across members, bills, and committees with relevance and entity-type filtering.
 
 ---

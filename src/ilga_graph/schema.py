@@ -587,6 +587,110 @@ class MemberType:
         )
 
 
+# ── Campaign finance (SBE money layer) ────────────────────────────────────────
+
+
+@strawberry.type
+class CampaignCommitteeType:
+    """SBE candidate committee linked to a sitting member."""
+
+    sbe_committee_id: str
+    name: str
+    type_of_committee: str = ""
+    status: str = ""
+    party: str = ""
+    match_method: str = ""
+    match_confidence: float = 0.0
+    member_id: str | None = None
+
+
+@strawberry.type
+class CampaignDonorType:
+    name: str
+    total_amount: float
+    receipt_count: int
+    occupation: str = ""
+    employer: str = ""
+    contributor_member_id: str | None = None
+
+
+@strawberry.type
+class CampaignReceiptType:
+    sbe_receipt_id: str
+    received_date: str
+    amount: float
+    contributor_name: str
+    occupation: str = ""
+    employer: str = ""
+    city: str = ""
+    state: str = ""
+    committee_id: str
+    committee_name: str
+    contributor_member_id: str | None = None
+
+
+@strawberry.type
+class MemberMoneyTrailType:
+    """Recent SBE receipts to a member's matched candidate committee(s)."""
+
+    member_id: str
+    member_name: str
+    window_start: str
+    window_end: str
+    committee_count: int
+    receipt_count: int
+    total_received: float
+    committees: list[CampaignCommitteeType] = strawberry.field(default_factory=list)
+    top_donors: list[CampaignDonorType] = strawberry.field(default_factory=list)
+    recent_receipts: list[CampaignReceiptType] = strawberry.field(default_factory=list)
+    match_notes: str = ""
+
+
+@strawberry.type
+class MemberMoneyTrailSummaryType:
+    member_id: str
+    member_name: str
+    role: str
+    total_received: float
+    receipt_count: int
+    top_donors: list[CampaignDonorType] = strawberry.field(default_factory=list)
+
+
+@strawberry.type
+class SharedDonorType:
+    name: str
+    total_amount: float
+    member_ids: list[str]
+
+
+@strawberry.type
+class BillMoneyContextType:
+    """Campaign-finance context for a bill's sponsors (and optional voters)."""
+
+    bill_number: str
+    description: str
+    window_start: str
+    window_end: str
+    total_received_across_sponsors: float
+    sponsor_trails: list[MemberMoneyTrailSummaryType] = strawberry.field(default_factory=list)
+    overlapping_donors: list[SharedDonorType] = strawberry.field(default_factory=list)
+    top_donors_across_sponsors: list[CampaignDonorType] = strawberry.field(default_factory=list)
+    match_notes: str = ""
+
+
+@strawberry.type
+class CampaignFinanceSummaryType:
+    source: str
+    window_start: str
+    window_end: str
+    legislative_committees: int
+    accepted: int
+    review: int
+    match_rate: float
+    members_matched: int
+    receipts_indexed: int
+
+
 # ── Paginated connection types ────────────────────────────────────────────────
 
 

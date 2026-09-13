@@ -49,6 +49,7 @@ The unified pipeline fetches each bill's BillStatus page **once** and reuses the
 | `make ml-resolve` | Entity resolution only. `AUTO=1` for non-interactive; `STATS=1` for stats. |
 | `make ml-predict` | Bill outcome prediction only. |
 | `make ml-embed` | Node2Vec graph embeddings (co-sponsorship network). |
+| `make ingest-sbe-money` | Download/parse SBE Committees + Receipts (default since 2025-01-01) and join onto Member IDs. `SINCE=2024-01-01`, `FROM_DIR=tests/fixtures/sbe`, `ALSO_DATA_DIR=1`. |
 
 ---
 

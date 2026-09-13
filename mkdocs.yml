@@ -32,6 +32,7 @@ nav:
   - Getting started: getting-started.md
   - Features:
     - App overview: features/app-overview.md
+    - Campaign finance: features/campaign-finance.md
   - User guide:
     - Advocacy Test Mode: user-guide/advocacy-test-mode.md
   - Reference:

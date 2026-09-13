@@ -12,27 +12,37 @@ from .analytics import (
     lobbyist_alignment,
 )
 from .app_state import state
+from .campaign_finance.service import bill_money_context as _bill_money_ctx
+from .campaign_finance.service import member_money_trail as _member_money_trail
 from .date_parse import parse_bill_date, safe_parse_date
 from .models import Member, WitnessSlip
 from .schema import (
     BillAdvancementAnalyticsType,
     BillConnection,
+    BillMoneyContextType,
     BillSlipAnalyticsType,
     BillSortField,
     BillType,
     BillVoteTimelineType,
+    CampaignCommitteeType,
+    CampaignDonorType,
+    CampaignFinanceSummaryType,
+    CampaignReceiptType,
     Chamber,
     CommitteeConnection,
     CommitteeType,
     LeaderboardSortField,
     LobbyistAlignmentEntryType,
     MemberConnection,
+    MemberMoneyTrailSummaryType,
+    MemberMoneyTrailType,
     MemberSortField,
     MemberType,
     PageInfo,
     SearchConnection,
     SearchEntityType,
     SearchResultType,
+    SharedDonorType,
     SortOrder,
     VoteEventConnection,
     VoteEventType,
@@ -241,6 +251,59 @@ def _bill_score_to_type(s) -> BillPredictionType:
     )
 
 
+def _money_trail_type(trail) -> MemberMoneyTrailType:
+    return MemberMoneyTrailType(
+        member_id=trail.member_id,
+        member_name=trail.member_name,
+        window_start=trail.window_start,
+        window_end=trail.window_end,
+        committee_count=trail.committee_count,
+        receipt_count=trail.receipt_count,
+        total_received=trail.total_received,
+        committees=[
+            CampaignCommitteeType(
+                sbe_committee_id=c.sbe_committee_id,
+                name=c.name,
+                type_of_committee=c.type_of_committee,
+                status=c.status,
+                party=c.party,
+                match_method=c.match_method,
+                match_confidence=c.match_confidence,
+                member_id=c.member_id,
+            )
+            for c in trail.committees
+        ],
+        top_donors=[
+            CampaignDonorType(
+                name=d.name,
+                total_amount=d.total_amount,
+                receipt_count=d.receipt_count,
+                occupation=d.occupation,
+                employer=d.employer,
+                contributor_member_id=d.contributor_member_id,
+            )
+            for d in trail.top_donors
+        ],
+        recent_receipts=[
+            CampaignReceiptType(
+                sbe_receipt_id=r.sbe_receipt_id,
+                received_date=r.received_date,
+                amount=r.amount,
+                contributor_name=r.contributor_name,
+                occupation=r.occupation,
+                employer=r.employer,
+                city=r.city,
+                state=r.state,
+                committee_id=r.committee_id,
+                committee_name=r.committee_name,
+                contributor_member_id=r.contributor_member_id,
+            )
+            for r in trail.recent_receipts
+        ],
+        match_notes=trail.match_notes,
+    )
+
+
 # ── Query ───────────────────────────────────────────────────────────────────
 
 
@@ -390,6 +453,115 @@ class Query:
         return VoteEventConnection(
             items=[VoteEventType.from_model(v) for v in page],
             page_info=page_info,
+        )
+
+    @strawberry.field(
+        description=(
+            "Recent SBE campaign receipts for a sitting member's matched "
+            "candidate committee(s). Money is not earmarked to a bill."
+        ),
+    )
+    def member_money_trail(
+        self,
+        member_id: str,
+        limit: int = 25,
+    ) -> MemberMoneyTrailType | None:
+        member = state.member_lookup_by_id.get(member_id)
+        if member is None:
+            return None
+        trail = _member_money_trail(state.campaign_finance, member, limit=limit)
+        if trail is None:
+            return None
+        return _money_trail_type(trail)
+
+    @strawberry.field(
+        description=(
+            "Campaign-finance context for a bill: sponsor (and voter) money "
+            "trails plus donors who gave to more than one of those members."
+        ),
+    )
+    def bill_money_context(
+        self,
+        bill_number: str,
+        limit: int = 25,
+    ) -> BillMoneyContextType | None:
+        bill = state.bill_lookup.get(bill_number)
+        if bill is None:
+            return None
+        ctx = _bill_money_ctx(
+            state.campaign_finance,
+            bill,
+            state.member_lookup_by_id,
+            vote_events=state.vote_lookup.get(bill_number, []),
+            limit=limit,
+        )
+        if ctx is None:
+            return None
+        return BillMoneyContextType(
+            bill_number=ctx.bill_number,
+            description=ctx.description,
+            window_start=ctx.window_start,
+            window_end=ctx.window_end,
+            total_received_across_sponsors=ctx.total_received_across_sponsors,
+            sponsor_trails=[
+                MemberMoneyTrailSummaryType(
+                    member_id=s.member_id,
+                    member_name=s.member_name,
+                    role=s.role,
+                    total_received=s.total_received,
+                    receipt_count=s.receipt_count,
+                    top_donors=[
+                        CampaignDonorType(
+                            name=d.name,
+                            total_amount=d.total_amount,
+                            receipt_count=d.receipt_count,
+                            occupation=d.occupation,
+                            employer=d.employer,
+                            contributor_member_id=d.contributor_member_id,
+                        )
+                        for d in s.top_donors
+                    ],
+                )
+                for s in ctx.sponsor_trails
+            ],
+            overlapping_donors=[
+                SharedDonorType(
+                    name=d.name,
+                    total_amount=d.total_amount,
+                    member_ids=d.member_ids,
+                )
+                for d in ctx.overlapping_donors
+            ],
+            top_donors_across_sponsors=[
+                CampaignDonorType(
+                    name=d.name,
+                    total_amount=d.total_amount,
+                    receipt_count=d.receipt_count,
+                    occupation=d.occupation,
+                    employer=d.employer,
+                    contributor_member_id=d.contributor_member_id,
+                )
+                for d in ctx.top_donors_across_sponsors
+            ],
+            match_notes=ctx.match_notes,
+        )
+
+    @strawberry.field(description="SBE money-layer ingest stats (match rate, window, source).")
+    def campaign_finance_summary(self) -> CampaignFinanceSummaryType | None:
+        index = state.campaign_finance
+        if index is None:
+            return None
+        stats = getattr(index, "match_stats", {}) or {}
+        return CampaignFinanceSummaryType(
+            source=getattr(index, "source", ""),
+            window_start=getattr(index, "window_start", ""),
+            window_end=getattr(index, "window_end", ""),
+            legislative_committees=int(stats.get("legislative_committees") or 0),
+            accepted=int(stats.get("accepted") or 0),
+            review=int(stats.get("review") or 0),
+            match_rate=float(stats.get("match_rate") or 0.0),
+            members_matched=int(stats.get("members_matched") or 0),
+            receipts_indexed=int(stats.get("receipts_indexed") or 0),
         )
 
     @strawberry.field(description="Look up a single bill by bill number (e.g. 'SB1527').")

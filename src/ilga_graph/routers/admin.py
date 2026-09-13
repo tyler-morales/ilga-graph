@@ -443,6 +443,11 @@ async def health() -> dict:
         "bills": len(state.bills),
         "committees": len(state.committees),
         "vote_events": len(state.vote_events),
+        "campaign_finance_members": (
+            len(getattr(state.campaign_finance, "matches_by_member", {}) or {})
+            if state.campaign_finance
+            else 0
+        ),
     }
 
 

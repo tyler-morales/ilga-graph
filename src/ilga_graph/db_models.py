@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -285,6 +285,83 @@ class KeiInterestStatement(Base):
     admin_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class SbeCommittee(Base):
+    """Illinois SBE campaign committee (not an ILGA legislative committee)."""
+
+    __tablename__ = "sbe_committees"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    name: Mapped[str] = mapped_column(String(512), nullable=False)
+    type_of_committee: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    status: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    party: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    purpose: Mapped[str | None] = mapped_column(Text, nullable=True)
+    city: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    state: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    refer_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+
+class SbeReceipt(Base):
+    """One SBE campaign disclosure receipt (contribution) in the ingest window."""
+
+    __tablename__ = "sbe_receipts"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    committee_id: Mapped[str] = mapped_column(
+        String(32), ForeignKey("sbe_committees.id"), nullable=False, index=True
+    )
+    received_date: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
+    amount: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    last_only_name: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    first_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    occupation: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    employer: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    city: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    state: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    d2_part: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    __table_args__ = (Index("ix_sbe_receipts_committee_date", "committee_id", "received_date"),)
+
+
+class SbeMemberMatch(Base):
+    """Committee → sitting ILGA member match (accepted or review)."""
+
+    __tablename__ = "sbe_member_matches"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    committee_id: Mapped[str] = mapped_column(
+        String(32), ForeignKey("sbe_committees.id"), nullable=False, index=True
+    )
+    member_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    match_method: Mapped[str] = mapped_column(String(64), nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    candidate_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    candidate_name: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    office: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    district: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class SbeIngestRun(Base):
+    """One SBE money-layer ingest run (audit / match-rate history)."""
+
+    __tablename__ = "sbe_ingest_runs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    source_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    window_start: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    committees_loaded: Mapped[int] = mapped_column(Integer, default=0)
+    receipts_loaded: Mapped[int] = mapped_column(Integer, default=0)
+    members_matched: Mapped[int] = mapped_column(Integer, default=0)
+    match_rate: Mapped[float] = mapped_column(Float, default=0.0)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class BugReport(Base):

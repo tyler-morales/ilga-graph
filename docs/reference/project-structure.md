@@ -42,6 +42,7 @@ Where to find things in the repo.
 | `etl.py` | Load/scrape orchestration, vault export. |
 | `analytics.py` | Scorecards, committee stats, advancement analytics. |
 | `moneyball.py` | Moneyball profiles, power badges, cosponsor edges. |
+| `campaign_finance/` | SBE Committees + Receipts ingest, member matching, money-trail queries. |
 | `influence.py` | Influence scoring (betweenness, sponsor pull, etc.). |
 | `zip_crosswalk.py` | ZIP → district lookup for advocacy. |
 | `templates/` | Jinja2 HTML (advocacy, explore, intelligence, drawer partials). Letter and logs are standalone (no base). |

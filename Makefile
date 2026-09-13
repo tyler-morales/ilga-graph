@@ -1,4 +1,4 @@
-.PHONY: scrape scrape-full dev serve dev-reset install test smoke-outreach lint lint-fix pre-commit clean help minify ml-setup ml-run ml-pipeline ml-resolve ml-predict ml-embed scrape-fulltext scrape-members scrape-full-members snapshot-mocks logs docs docs-serve deactivate-campaigns
+.PHONY: scrape scrape-full dev serve dev-reset install test smoke-outreach lint lint-fix pre-commit clean help minify ml-setup ml-run ml-pipeline ml-resolve ml-predict ml-embed scrape-fulltext scrape-members scrape-full-members snapshot-mocks logs docs docs-serve deactivate-campaigns ingest-sbe-money
 
 # ── Virtual environment ─────────────────────────────────────────────────────
 VENV ?= $(or $(wildcard .venv), $(wildcard venv), $(wildcard src/ilga_graph/.venv))
@@ -144,6 +144,12 @@ scrape-fulltext: ## Scrape full bill text PDFs (incremental, resumable)
 
 snapshot-mocks: ## Sample cache/ into mocks/dev/ (run after scrape; commit result to refresh dev seed)
 	$(PYTHON) scripts/snapshot_mocks.py
+
+ingest-sbe-money: ## Ingest SBE Committees + Receipts (recent window) and join onto Member IDs
+	PYTHONPATH=src $(PYTHON) scripts/ingest_sbe_money.py \
+		$(if $(SINCE),--since $(SINCE)) \
+		$(if $(FROM_DIR),--from-dir $(FROM_DIR)) \
+		$(if $(ALSO_DATA_DIR),--also-write-data-dir)
 
 # ── Utilities ──────────────────────────────────────────────────────────────────
 
