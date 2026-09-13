@@ -57,16 +57,40 @@ Only **Active Candidate** committees linked to `State Senator` / `State Represen
 | Method | Confidence | Rule |
 |--------|------------|------|
 | `gold` | 1.00 | `docs/canonical/sbe_committee_member_gold.json` override |
-| `office_district_name` | 0.85–0.95 | Chamber + district + last name (first-name overlap preferred) |
+| `office_district_name` | 0.95 | Chamber + district + last name **and** first-name overlap (quoted nicknames + a short alias table: Steve/Steven, Bill/William, …) |
+| `office_district_name` | 0.85 | Chamber + district + last name, exactly one sitting member; first name not confirmed |
 | `name_chamber` | 0.80 | Unique first+last in that chamber when district is missing or stale |
-| `unresolved` | 0 | Written to `unmatched.json` for review |
+| `unresolved` | 0 | Written to `unmatched.json` for review. No guessed links. |
+
+First-name overlap is exact token intersection after suffix strip, quoted-nickname extract, and the alias table. There is no edit-distance / fuzzy last-name match.
+
+**Unmatched review**
+
+`processed/campaign_finance/unmatched.json` (and `make review-sbe-unmatched`) is the review queue. Each row includes:
+
+| Field | Meaning |
+|-------|---------|
+| `unmatched_reason` | `no_sitting_member` / `near_miss` / `ambiguous` / `no_usable_candidate` |
+| `notes` | Why the rules did not accept a link |
+| `near_misses` | Sitting members with the same last name, plus the blocker (district, chamber, or first name) |
+| `candidates_considered` | SBE office rows on this committee (historical House vs sitting Senate, etc.) |
+| `gold_stub` | Object to append to `docs/canonical/sbe_committee_member_gold.json` **after** you confirm the ILGA `member_id`. `member_id` is filled only when there is exactly one last-name near-miss; otherwise leave it blank. Do not guess. |
+| `how_to_promote` | The confirm-then-append steps |
+
+```bash
+# Rematch the fixture extract against the current data-dir roster
+PYTHONPATH=src python scripts/review_sbe_unmatched.py --from-dir tests/fixtures/sbe
+
+# Or read a previously written review file
+PYTHONPATH=src python scripts/review_sbe_unmatched.py --unmatched-json processed/campaign_finance/unmatched.json
+```
 
 **Known limits**
 
 - Districts in SBE files have trailing spaces and historical rows (e.g. Syverson 34 vs 35). We prefer the row that matches the **sitting** member.
-- Ambiguous last names (Harris, Jones, Anderson) require first name or district.
-- Nicknames (`Emanuel "Chris" Welch`) and suffixes (`Emil Jones, III`) are normalized.
-- Match rate is for *active legislative candidate committees*, not all 34k SBE committees or dissolved history. A 2025+ run against the 50-member `mocks/dev` roster matched **45/50 sitting members** and indexed thousands of real receipts. Unmatched review rows are mostly former members or district changes (e.g. Regan Deering 88 vs sitting 95).
+- Ambiguous last names (Harris, Jones, Anderson) require first name or district. Two sitting members who share last name after nickname expansion stay unmatched (`ambiguous`).
+- Nicknames (`Emanuel "Chris" Welch`, Steve/Steven) and suffixes (`Emil Jones, III`, SBE last name `Jones III`) are normalized. Trailing punctuation in first names (`Julie.`) is stripped.
+- Match rate is for *active legislative candidate committees*, not all 34k SBE committees or dissolved history. Against the official fixture extract in `tests/fixtures/sbe` and the 50-member `mocks/dev` roster, the matcher accepted **15/16** committees (`match_rate=0.9375`). The leftover row is `39451` Regan for Illinois: last name Deering is not in that 50-member roster (`no_sitting_member`). If a sitting Regan Deering is present at a later district, `name_chamber` accepts at 0.80. Do not gold-link Deering until that member id is in the roster.
 - Contributor → member is best-effort (self-receipts / transfers) and will miss most individual donors.
 - Money is **not earmarked to a bill**. `billMoneyContext` is “who funded these sponsors/voters,” not “who paid for this bill.”
 

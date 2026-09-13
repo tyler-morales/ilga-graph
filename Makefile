@@ -1,4 +1,4 @@
-.PHONY: scrape scrape-full dev serve dev-reset install test smoke-outreach lint lint-fix pre-commit clean help minify ml-setup ml-run ml-pipeline ml-resolve ml-predict ml-embed scrape-fulltext scrape-members scrape-full-members snapshot-mocks logs docs docs-serve deactivate-campaigns ingest-sbe-money
+.PHONY: scrape scrape-full dev serve dev-reset install test smoke-outreach lint lint-fix pre-commit clean help minify ml-setup ml-run ml-pipeline ml-resolve ml-predict ml-embed scrape-fulltext scrape-members scrape-full-members snapshot-mocks logs docs docs-serve deactivate-campaigns ingest-sbe-money review-sbe-unmatched
 
 # ── Virtual environment ─────────────────────────────────────────────────────
 VENV ?= $(or $(wildcard .venv), $(wildcard venv), $(wildcard src/ilga_graph/.venv))
@@ -150,6 +150,10 @@ ingest-sbe-money: ## Ingest SBE Committees + Receipts (recent window) and join o
 		$(if $(SINCE),--since $(SINCE)) \
 		$(if $(FROM_DIR),--from-dir $(FROM_DIR)) \
 		$(if $(ALSO_DATA_DIR),--also-write-data-dir)
+
+review-sbe-unmatched: ## Print unmatched SBE committees and gold stubs (no invented links)
+	PYTHONPATH=src $(PYTHON) scripts/review_sbe_unmatched.py \
+		$(if $(UNMATCHED_JSON),--unmatched-json $(UNMATCHED_JSON),--from-dir $(or $(FROM_DIR),tests/fixtures/sbe))
 
 # ── Utilities ──────────────────────────────────────────────────────────────────
 

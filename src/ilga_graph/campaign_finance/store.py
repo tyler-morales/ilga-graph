@@ -11,7 +11,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from ..db_models import Base, SbeCommittee, SbeIngestRun, SbeMemberMatch, SbeReceipt
-from .match import MatchReport
+from .match import MatchReport, unmatched_review_rows
 from .parse import ParsedSbeData, SbeCommitteeRow, SbeReceiptRow
 
 
@@ -132,21 +132,7 @@ def write_json_index(index_payload: dict[str, Any], index_path: Path) -> None:
 
 def write_unmatched(report: MatchReport, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    rows = [
-        {
-            "committee_id": m.committee_id,
-            "committee_name": m.committee_name,
-            "candidate_id": m.candidate_id,
-            "candidate_name": m.candidate_name,
-            "office": m.office,
-            "district": m.district,
-            "method": m.method,
-            "notes": m.notes,
-            "status": m.status,
-        }
-        for m in report.unmatched
-    ]
-    path.write_text(json.dumps(rows, indent=2), encoding="utf-8")
+    path.write_text(json.dumps(unmatched_review_rows(report), indent=2), encoding="utf-8")
 
 
 def today_iso() -> str:
