@@ -6,6 +6,7 @@
 {% block content %}
 <div class="intel-nav">
     <a href="/intelligence">&larr; Intelligence Overview</a> &middot;
+    <a href="/intelligence/money">Follow the money</a> &middot;
     <a href="/intelligence/raw">Raw Data Tables</a>
 </div>
 
@@ -25,12 +26,13 @@
             {% endif %}
         </div>
         <p class="bill-profile-desc">{{ bill.description if bill else '' }}</p>
-        {% if bill.synopsis %}
+        {% if bill and bill.synopsis %}
         <section class="bill-synopsis" aria-labelledby="synopsis-heading">
             <h2 id="synopsis-heading" class="bill-synopsis-heading">What this bill does</h2>
             <p class="bill-synopsis-text">{{ bill.synopsis }}</p>
         </section>
         {% endif %}
+        {% if bill %}
         <div class="bill-profile-meta">
             <span>Sponsor: <strong>
                     {% if bill.sponsor_id %}
@@ -45,8 +47,10 @@
                     is_session_date(bill.introduction_date, session_dates) %}title="Session day (House/Senate calendar)"
                     {% endif %}>{{ bill.introduction_date }}</span>{% else %}Unknown{% endif %}</span>
         </div>
+        {% endif %}
     </div>
 
+    {% if bill and bill.has_prediction %}
     {# ── Prediction card ── #}
     <div class="bill-prediction-card">
         <div class="bill-prediction-main">
@@ -151,6 +155,7 @@
             {% endif %}
         </p>
     </div>
+    {% endif %}
 
     {# ── How a bill becomes law (from reference model) ── #}
     {% if bill_to_law_process %}
@@ -196,6 +201,9 @@
         </div>
     </div>
     {% endif %}
+
+    {# ── Campaign finance (SBE receipts; not earmarked to this bill) ── #}
+    {% include "_bill_money_context.html" %}
 
     {# ── Witness slip summary ── #}
     {% if anomaly %}
@@ -465,35 +473,38 @@
 {% if bill %}
 <script>
     (function () {
-        var STARRED_BILLS_KEY = 'int        gence_starred_bills';
-                   n getS                ) {
+        var STARRED_BILLS_KEY = 'intelligence_starred_bills';
+        function getStarredBills() {
             try {
-                var raw = loc                tItem(STARRED_BILLS_KEY);
-                     eturn raw ? JS                ) : [];
-                }        ch         {
+                var raw = localStorage.getItem(STARRED_BILLS_KEY);
+                return raw ? JSON.parse(raw) : [];
+            } catch (e) {
                 return [];
-                }
-                      function setStarredBills(ids) {
-            try {
-                    localStorage. se        m(        RED_BILLS_KEY, JSON.stringify(ids));
-            } ca        (e) { }
+            }
         }
-            var btn = document.querySelector('.bill-pag        ar');
-        if (!bt        eturn;
-        var billId = btn.g        tribute('data-bill-id');
-        if (!billId) re        ;
+        function setStarredBills(ids) {
+            try {
+                localStorage.setItem(STARRED_BILLS_KEY, JSON.stringify(ids));
+            } catch (e) { }
+        }
+        var btn = document.querySelector('.bill-page-star');
+        if (!btn) return;
+        var billId = btn.getAttribute('data-bill-id');
+        if (!billId) return;
         var starred = getStarredBills();
-        var isStarred        tarred.indexOf(billId) !== -1;
-        btn.setAttri        ('aria-pressed', isStarred ? 'true' : 'false');
-        btn.textContent =         arred ? '\u2605' : '\u2606';
-        btn.tit            tarred ? 'Unstar' : 'Star to b            (saved in browser)';
-        btn            tListener('click', function () {
-                var list = getStarredBil                      var idx = lis            f(billId);
-            if (id            ) list.push(billId);
+        var isStarred = starred.indexOf(billId) !== -1;
+        btn.setAttribute('aria-pressed', isStarred ? 'true' : 'false');
+        btn.textContent = isStarred ? '\u2605' : '\u2606';
+        btn.title = isStarred ? 'Unstar' : 'Star to bookmark (saved in browser)';
+        btn.addEventListener('click', function () {
+            var list = getStarredBills();
+            var idx = list.indexOf(billId);
+            if (idx === -1) list.push(billId);
             else list.splice(idx, 1);
-                  tStarredBills(list);
-            var nowStarred = id            ;
-            btn.setAttribute('aria-pressed', nowStarred ? 'true' : 'false                        t = nowStarred ? '\u2605' : '\u2606';
+            setStarredBills(list);
+            var nowStarred = idx === -1;
+            btn.setAttribute('aria-pressed', nowStarred ? 'true' : 'false');
+            btn.textContent = nowStarred ? '\u2605' : '\u2606';
             btn.title = nowStarred ? 'Unstar' : 'Star to bookmark (saved in browser)';
         });
     })();

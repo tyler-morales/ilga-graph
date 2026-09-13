@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} — Illinois Influence Graph{% endblock %}
+
+{% block content %}
+<div class="intel-nav">
+    <a href="/intelligence">&larr; Intelligence Overview</a> &middot;
+    <a href="/intelligence/recruitment">Issue Recruiter</a> &middot;
+    <a href="/intelligence/raw">Raw Data Tables</a>
+</div>
+
+<div class="money-intel-page">
+    <p class="money-intel-kicker">Illinois Influence Graph</p>
+    <h1>Follow the money</h1>
+    <p class="intel-subtitle">
+        Official Illinois State Board of Elections campaign receipts matched to sitting
+        legislators. This is campaign finance — not Moneyball (legislative-effectiveness scoring).
+    </p>
+
+    {% if not finance_summary %}
+    <div class="intel-empty" role="status">
+        <h2>No campaign-finance index loaded</h2>
+        <p>Ingest SBE Committees + Receipts, then restart the app.</p>
+        <p>Local: <code>make ingest-sbe-money FROM_DIR=tests/fixtures/sbe ALSO_DATA_DIR=1</code></p>
+        <p>Dev already ships <code>mocks/dev/campaign_finance.json</code> — if you are seeing this, the index did not load.</p>
+    </div>
+    {% else %}
+
+    <div class="money-intel-kpis money-intel-kpis--summary" role="group" aria-label="Campaign finance summary">
+        <div class="money-intel-kpi">
+            <span class="money-intel-kpi-value">{{ finance_summary.window_start }}</span>
+            <span class="money-intel-kpi-label">Window start</span>
+        </div>
+        <div class="money-intel-kpi">
+            <span class="money-intel-kpi-value">{{ finance_summary.window_end or "—" }}</span>
+            <span class="money-intel-kpi-label">Window end</span>
+        </div>
+        <div class="money-intel-kpi">
+            <span class="money-intel-kpi-value">{{ "%.1f"|format(finance_summary.match_rate_pct) }}%</span>
+            <span class="money-intel-kpi-label">Committee match rate</span>
+        </div>
+        <div class="money-intel-kpi">
+            <span class="money-intel-kpi-value">{{ finance_summary.members_matched }}</span>
+            <span class="money-intel-kpi-label">Members matched</span>
+        </div>
+        <div class="money-intel-kpi">
+            <span class="money-intel-kpi-value">{{ finance_summary.receipts_indexed }}</span>
+            <span class="money-intel-kpi-label">Receipts indexed</span>
+        </div>
+        <div class="money-intel-kpi">
+            <span class="money-intel-kpi-value">{{ finance_summary.accepted }}/{{ finance_summary.legislative_committees }}</span>
+            <span class="money-intel-kpi-label">Committees accepted</span>
+        </div>
+    </div>
+    <p class="money-intel-disclaimer" role="note">
+        Money is campaign receipts to matched candidate committees, not earmarked to a bill.
+        Source: Illinois State Board of Elections Campaign Disclosure files.
+    </p>
+
+    <section class="story-section" aria-labelledby="money-bill-lookup-heading">
+        <h2 id="money-bill-lookup-heading">Bill money context</h2>
+        <p class="story-subtitle">Look up who funded the sponsors and voters on a bill. Receipts are not earmarked to that bill.</p>
+        <form class="money-intel-lookup" method="get" action="/intelligence/money" role="search">
+            <label for="money-bill-input">Bill number</label>
+            <input id="money-bill-input" name="bill" type="text" value="{{ bill_query }}"
+                placeholder="e.g. SB0341" autocomplete="off" spellcheck="false"
+                aria-describedby="money-bill-hint">
+            <button type="submit" class="money-intel-lookup-btn">Look up funding</button>
+        </form>
+        <p id="money-bill-hint" class="money-intel-muted">Try SB0341 on the dev fixture (Don Harmon).</p>
+
+        {% if bill_not_found %}
+        <p class="intel-empty-inline" role="status">No bill found for <strong>{{ bill_query }}</strong>.</p>
+        {% elif bill_money %}
+        {% set money_context = bill_money %}
+        <p class="money-intel-bill-link">
+            Full bill page:
+            <a href="/intelligence/bill/{{ bill_record.leg_id or bill_record.bill_number }}">{{ bill_record.bill_number }}</a>
+            — {{ bill_record.description }}
+        </p>
+        {% include "_bill_money_context.html" %}
+        {% endif %}
+    </section>
+
+    <section class="story-section" aria-labelledby="money-leaderboard-heading">
+        <h2 id="money-leaderboard-heading">Top funded members</h2>
+        <p class="story-subtitle">Sitting members with matched candidate committees, ranked by receipts in this window.</p>
+        <div class="money-intel-filter">
+            <label for="money-member-filter">Filter members</label>
+            <input id="money-member-filter" type="search" placeholder="Name, party, or chamber"
+                aria-controls="money-member-table">
+        </div>
+        {% if funded_members %}
+        <div class="intel-table-scroll-wrap">
+            <table id="money-member-table" class="intel-table money-intel-table" aria-label="Members ranked by campaign receipts">
+                <thead>
+                    <tr>
+                        <th scope="col">Member</th>
+                        <th scope="col">Chamber</th>
+                        <th scope="col">Party</th>
+                        <th scope="col">District</th>
+                        <th scope="col">Committees</th>
+                        <th scope="col">Receipts</th>
+                        <th scope="col">Total received</th>
+                        <th scope="col">Top donor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in funded_members %}
+                    <tr data-money-filter="{{ m.member_name }} {{ m.party }} {{ m.chamber }} {{ m.district }}">
+                        <td><a href="/intelligence/member/{{ m.member_id }}">{{ m.member_name }}</a></td>
+                        <td>{{ m.chamber }}</td>
+                        <td>{{ m.party }}</td>
+                        <td>{{ m.district }}</td>
+                        <td>{{ m.committee_count }}</td>
+                        <td>{{ m.receipt_count }}</td>
+                        <td>{{ m.total_received_display }}</td>
+                        <td>{{ m.top_donor or "—" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="intel-empty-inline" role="status">No matched members in the current index.</p>
+        {% endif %}
+    </section>
+    {% endif %}
+</div>
+
+<script>
+    (function () {
+        var input = document.getElementById('money-member-filter');
+        var table = document.getElementById('money-member-table');
+        if (!input || !table) return;
+        input.addEventListener('input', function () {
+            var q = (input.value || '').toLowerCase();
+            table.querySelectorAll('tbody tr').forEach(function (row) {
+                var hay = (row.getAttribute('data-money-filter') || '').toLowerCase();
+                row.hidden = q.length > 0 && hay.indexOf(q) === -1;
+            });
+        });
+    })();
+</script>
+{% endblock %}

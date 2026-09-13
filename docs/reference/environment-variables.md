@@ -65,7 +65,7 @@ The app loads `.env` from the project root via `python-dotenv`. Copy `.env.examp
 | `ILGA_CSP_ENFORCE` | `0` | When `1`, the app sends **Content-Security-Policy** (enforcing). When `0` (default), it sends **Content-Security-Policy-Report-Only** so violations are reported but not blocked. Use report-only first, then switch to enforce once the policy is validated. |
 | `ILGA_HSTS_ENABLED` | `0` | When `1` (and `ILGA_PROFILE=prod`), the app sends `Strict-Transport-Security: max-age=31536000; includeSubDomains`. **Only enable when the entire site is served over HTTPS** (e.g. behind a reverse proxy that terminates TLS). Do not enable for local dev or HTTP-only deployments. |
 
-**Sitemap and robots:** The app serves `/sitemap.xml` (key pages: `/`, `/advocacy`, `/intelligence`, `/explore`) and `/robots.txt` (allow all, with a `Sitemap:` line). Both use `ILGA_APP_BASE_URL` for absolute URLs, so set it in production for correct discovery by search engines.
+**Sitemap and robots:** The app serves `/sitemap.xml` (key pages: `/`, `/advocacy`, `/intelligence`, `/intelligence/money`, `/explore`) and `/robots.txt` (allow all, with a `Sitemap:` line). Both use `ILGA_APP_BASE_URL` for absolute URLs, so set it in production for correct discovery by search engines.
 
 ---
 

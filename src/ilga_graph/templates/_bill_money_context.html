@@ -1,0 +1,126 @@
+{# Bill-level campaign-finance context. Expects money_context dict or none. #}
+<section class="money-intel" aria-labelledby="{{ heading_id|default('bill-money-heading') }}">
+    <div class="money-intel-header">
+        <h2 id="{{ heading_id|default('bill-money-heading') }}">Campaign finance</h2>
+        <p class="money-intel-vs-moneyball">
+            This is <strong>SBE campaign receipts</strong> to the people on this bill,
+            not Moneyball and <strong>not earmarked to the bill</strong>.
+        </p>
+    </div>
+
+    {% if money_context is none %}
+    <p class="intel-empty-inline" role="status">Campaign-finance index is not loaded. Run <code>make ingest-sbe-money</code> or use the dev fixture at <code>mocks/dev/campaign_finance.json</code>.</p>
+    {% elif not money_context.sponsor_trails %}
+    <p class="intel-empty-inline" role="status">No matched SBE receipts for sponsors or voters on this bill{% if money_context.window_start %} ({{ money_context.window_start }} – {{ money_context.window_end }}){% endif %}.</p>
+    {% else %}
+    <p class="money-intel-disclaimer" role="note">
+        {{ money_context.match_notes }}
+        Window {{ money_context.window_start }} – {{ money_context.window_end }}.
+    </p>
+    <div class="money-intel-kpis" role="group" aria-label="Bill money context totals">
+        <div class="money-intel-kpi">
+            <span class="money-intel-kpi-value">{{ money_context.total_received_across_sponsors_display }}</span>
+            <span class="money-intel-kpi-label">Across sponsors / voters</span>
+        </div>
+        <div class="money-intel-kpi">
+            <span class="money-intel-kpi-value">{{ money_context.sponsor_trails|length }}</span>
+            <span class="money-intel-kpi-label">Members with trails</span>
+        </div>
+        <div class="money-intel-kpi">
+            <span class="money-intel-kpi-value">{{ money_context.overlapping_donors|length }}</span>
+            <span class="money-intel-kpi-label">Overlapping donors</span>
+        </div>
+    </div>
+
+    <h3>Sponsor and voter funding</h3>
+    <div class="intel-table-scroll-wrap">
+        <table class="intel-table money-intel-table" aria-label="Funding trails for sponsors and voters">
+            <thead>
+                <tr>
+                    <th scope="col">Member</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Receipts</th>
+                    <th scope="col">Total received</th>
+                    <th scope="col">Top donors</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in money_context.sponsor_trails %}
+                <tr>
+                    <td><a href="/intelligence/member/{{ s.member_id }}">{{ s.member_name }}</a></td>
+                    <td>{{ s.role_label }}</td>
+                    <td>{{ s.receipt_count }}</td>
+                    <td>{{ s.total_received_display }}</td>
+                    <td>
+                        {% for d in s.top_donors[:3] %}
+                        {{ d.name }} ({{ d.total_amount_display }}){% if not loop.last %}; {% endif %}
+                        {% else %}—{% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if money_context.overlapping_donors %}
+    <h3>Overlapping donors</h3>
+    <p class="story-subtitle">Donors who gave to more than one sponsor or voter on this bill. Still not earmarked to the bill.</p>
+    <div class="intel-table-scroll-wrap">
+        <table class="intel-table money-intel-table" aria-label="Donors who gave to more than one member">
+            <thead>
+                <tr>
+                    <th scope="col">Donor</th>
+                    <th scope="col">Members</th>
+                    <th scope="col">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in money_context.overlapping_donors %}
+                <tr>
+                    <td>{{ d.name }}</td>
+                    <td>
+                        {% for mid in d.member_ids %}
+                        {% if loop.index0 < d.member_names|length %}
+                        <a href="/intelligence/member/{{ mid }}">{{ d.member_names[loop.index0] }}</a>{% if not loop.last %}, {% endif %}
+                        {% else %}
+                        <a href="/intelligence/member/{{ mid }}">{{ mid }}</a>{% if not loop.last %}, {% endif %}
+                        {% endif %}
+                        {% endfor %}
+                    </td>
+                    <td>{{ d.total_amount_display }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if money_context.top_donors_across_sponsors %}
+    <h3>Top donors across these members</h3>
+    <div class="intel-table-scroll-wrap">
+        <table class="intel-table money-intel-table" aria-label="Top donors across sponsors and voters">
+            <thead>
+                <tr>
+                    <th scope="col">Donor</th>
+                    <th scope="col">Occupation</th>
+                    <th scope="col">Employer</th>
+                    <th scope="col">Receipts</th>
+                    <th scope="col">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in money_context.top_donors_across_sponsors %}
+                <tr>
+                    <td>{{ d.name }}</td>
+                    <td>{{ d.occupation or "—" }}</td>
+                    <td>{{ d.employer or "—" }}</td>
+                    <td>{{ d.receipt_count }}</td>
+                    <td>{{ d.total_amount_display }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    {% endif %}
+</section>
