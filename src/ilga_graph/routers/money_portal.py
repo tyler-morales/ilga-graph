@@ -149,6 +149,7 @@ def _htmx_message(text: str, *, error: bool) -> HTMLResponse:
     )
 
 
+@router.get("", include_in_schema=False)
 @router.get("/", include_in_schema=False)
 def money_landing(request: Request) -> Any:
     """Product landing: job-to-be-done, not a donor-table teaser."""

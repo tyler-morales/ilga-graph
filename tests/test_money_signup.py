@@ -168,12 +168,16 @@ class TestNormalizeRoles:
 
 class TestMoneyPages:
     def test_money_router_does_not_claim_engine_get(self, client: TestClient) -> None:
-        """Signup router must not steal GET /intelligence/money (engine lives in intelligence.py)."""
+        """Signup router must not steal GET /intelligence/money."""
         resp = client.get("/intelligence/money", headers={"Accept": "text/html"})
         assert resp.status_code == 404
 
     def test_legacy_signup_get_redirects_to_portal(self, client: TestClient) -> None:
-        resp = client.get("/intelligence/money/signup", headers={"Accept": "text/html"}, follow_redirects=False)
+        resp = client.get(
+            "/intelligence/money/signup",
+            headers={"Accept": "text/html"},
+            follow_redirects=False,
+        )
         assert resp.status_code == 302
         assert resp.headers.get("location") == "/money/signup"
 
@@ -199,14 +203,11 @@ class TestMoneyPages:
         assert "expenditure" not in resp.text.lower()
 
     def test_signup_page_hides_fixture_note_when_statewide(self, client: TestClient) -> None:
-        statewide = {"members_matched": 170, "receipts_indexed": 31729}
-        with patch.object(
-            money_router_mod, "campaign_finance_summary_view", return_value=statewide
-        ):
-            resp = client.get("/intelligence/money/signup", headers={"Accept": "text/html"})
+        with patch.object(money_portal_mod, "is_sample_scale_finance", return_value=False):
+            resp = client.get("/money/signup", headers={"Accept": "text/html"})
         assert resp.status_code == 200
+        assert "sample-scale" not in resp.text.lower()
         assert "fixture / dev-scale" not in resp.text
-        assert "Current seeds are fixture / dev-scale" not in resp.text
 
 
 class TestMoneyEngineKeepsUi:

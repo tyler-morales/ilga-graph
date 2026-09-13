@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -79,24 +78,27 @@ def test_demo_sample_banner_when_sample_scale(client: TestClient) -> None:
 
 
 def test_demo_statewide_copy_omits_sample_banner(client: TestClient) -> None:
-    from ilga_graph.app_state import state as app_state
-
-    statewide = SimpleNamespace(
-        match_stats={
-            "legislative_committees": 200,
-            "accepted": 180,
-            "review": 5,
-            "match_rate": 0.9,
-            "members_matched": 160,
-            "receipts_indexed": 40_000,
-        },
-        source="https://downloads.elections.il.gov",
-        window_start="2025-01-01",
-        window_end="2026-09-13",
-        generated_at="2026-09-13T00:00:00+00:00",
-        matches_by_member=getattr(app_state.campaign_finance, "matches_by_member", {}),
-    )
-    with patch.object(app_state, "campaign_finance", statewide):
+    statewide = {
+        "source": "https://downloads.elections.il.gov",
+        "window_start": "2025-01-01",
+        "window_end": "2026-09-13",
+        "generated_at": "2026-09-13T00:00:00+00:00",
+        "legislative_committees": 200,
+        "accepted": 180,
+        "review": 5,
+        "match_rate": 0.9,
+        "match_rate_pct": 90.0,
+        "members_matched": 160,
+        "receipts_indexed": 40_000,
+        "is_sample_scale": False,
+    }
+    with (
+        patch(
+            "ilga_graph.routers.money_portal.campaign_finance_summary_view",
+            return_value=statewide,
+        ),
+        patch("ilga_graph.routers.money_portal.is_sample_scale_finance", return_value=False),
+    ):
         resp = client.get("/money/demo", headers={"Accept": "text/html"})
     assert resp.status_code == 200
     assert "sample-scale" not in resp.text.lower()
