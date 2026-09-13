@@ -1,0 +1,39 @@
+# Campaign-finance context for a bill's sponsors (and voters when vote data exists).
+# Variables: { "billNumber": "SB0001" }
+
+query BillMoneyContext($billNumber: String!) {
+  campaignFinanceSummary {
+    source
+    windowStart
+    matchRate
+    membersMatched
+    receiptsIndexed
+  }
+  billMoneyContext(billNumber: $billNumber, limit: 15) {
+    billNumber
+    description
+    totalReceivedAcrossSponsors
+    matchNotes
+    sponsorTrails {
+      memberId
+      memberName
+      role
+      totalReceived
+      receiptCount
+      topDonors {
+        name
+        totalAmount
+      }
+    }
+    overlappingDonors {
+      name
+      totalAmount
+      memberIds
+    }
+    topDonorsAcrossSponsors {
+      name
+      totalAmount
+      receiptCount
+    }
+  }
+}

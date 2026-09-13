@@ -1,0 +1,24 @@
+ID	LastName	FirstName	Address1	Address2	City	State	Zip	Office	DistrictType	District	ResidenceCounty	PartyAffiliation	RedactionRequested
+28155	Anderson	Neil	2531 23rd Ave		Rock Island	IL	61201	State Senator	Senate	36 	Rock Island	Republican	False
+45936	Anderson	Neil	Redaction Requested					State Senator	Senate	47	Rock Island	Republican	True
+26293	Cunningham	Bill	10037 S Bell Ave		Chicago	IL	60643	State Senator	Senate	18 	Cook	Democratic	False
+24968	Cunningham	Bill	10037 S Bell Ave		Chicago	IL	60643	State Representative	Representative	35 	Cook	Democratic	False
+47172	Deering	Regan	Redaction Requested					State Representative	Representative	88	Macon	Republican	True
+16940	Harmon	Don	814 N Elmwood Ave		Oak Park	IL	60302	State Senator	Senate	39 	Cook	Democratic	False
+16939	Harmon	Don	814 N Elmwood Ave		Oak Park	IL	60302	Committeeman	Township	Oak Park	Cook	Democratic	False
+26294	Harris	Napoleon	1405 Dunfries St		Flossmoor	IL	60422	State Senator	Senate	15 	Cook	Democratic	False
+26419	Hastings	Michael E	PO Box 162		Tinley Park	IL	60477	State Senator	Senate	19	Cook	Democratic	False
+20857	Holmes	Linda	PO Box 6374		Aurora	IL	60598-0374	State Senator	Senate	42	Kane	Democratic	False
+18164	Hunter	Mattie	5604 S Prairie Ave		Chicago	IL	60637	State Senator	Senate	3  	Cook	Democratic	False
+22613	Jones III	Emil	11357 S Lowe		Chicago	IL	60628	State Senator	Senate	14 	Cook	Democratic	False
+13548	Lightford	Kimberly A	1712 S 6th Ave		Maywood	IL	60153	State Senator	Senate	4  	Cook	Democratic	False
+12034	Lightford	Kimberly A	1712 S 6th Ave		Maywood	IL	60153	Trustee	Village	Maywood	Cook	Democratic	False
+26009	Morrison	Julie.	PO Box 646		Deerfield	IL	60015	State Senator	Senate	29	Lake	Democratic	False
+21987	Rezin	Sue	5395 N Crescent Green Ct		Morris	IL	60450	State Representative	Representative	75 	Grundy	Republican	False
+26303	Rezin	Sue	5395 Crescent Green Ct		Morris	IL	60450	State Senator	Senate	38	Grundy	Republican	False
+26309	Rose	Chapin	Redaction Requested					State Senator	Senate	51 	Champaign	Republican	True
+17233	Rose	Chapin	Redaction Requested					State Representative	Representative	110	Champaign	Republican	True
+26451	Stadelman	Steven "Steve"	PO Box 1551		Rockford	IL	61107	State Senator	Senate	34 	Winnebago	Democratic	False
+4532	Syverson	Dave	7301 Wallingford Way		Rockford	IL	61107	State Senator	Senate	34 	Winnebago	Republican	False
+26302	Syverson	Dave	Redaction Requested					State Senator	Senate	35	Winnebago	Republican	True
+20580	Welch	Emanuel "Chris"	Redaction Requested					State Representative	Representative	7	Cook	Democratic	True

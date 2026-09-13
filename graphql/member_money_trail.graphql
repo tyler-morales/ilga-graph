@@ -1,0 +1,34 @@
+# Recent SBE receipts for one sitting member's matched candidate committee(s).
+# Variables: { "memberId": "3268" }
+
+query MemberMoneyTrail($memberId: String!) {
+  memberMoneyTrail(memberId: $memberId, limit: 15) {
+    memberId
+    memberName
+    windowStart
+    windowEnd
+    committeeCount
+    receiptCount
+    totalReceived
+    matchNotes
+    committees {
+      sbeCommitteeId
+      name
+      matchMethod
+      matchConfidence
+    }
+    topDonors {
+      name
+      totalAmount
+      receiptCount
+      occupation
+      employer
+    }
+    recentReceipts {
+      receivedDate
+      amount
+      contributorName
+      committeeName
+    }
+  }
+}

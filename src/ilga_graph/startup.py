@@ -261,6 +261,12 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     state.member_lookup = {m.name: m for m in state.members}
     state.member_lookup_by_id = {m.id: m for m in state.members}
+    try:
+        from .campaign_finance.load import attach_index, load_campaign_finance_index
+
+        attach_index(state, load_campaign_finance_index(get_data_dir()))
+    except Exception:
+        LOGGER.exception("Campaign finance index load failed; money queries will be empty.")
     state.bill_lookup = _collect_unique_bills_by_number(data.bills_lookup)
     state.twitter_follower_counts = load_follower_counts()
     _merge_legislator_twitter_handles()

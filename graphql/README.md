@@ -10,6 +10,8 @@ Example queries for the ILGA Graph API at `POST /graphql`. Copy into the GraphQL
 | `bill_vote_timeline.graphql` | Full vote timeline (committee → floor) and member journeys per chamber. |
 | `paginated_queries.graphql` | Members, bills, committees, witness slips, vote events with pagination. |
 | `votes_with_counts.graphql` | Vote events with counts. |
+| `member_money_trail.graphql` | SBE receipts for one member's matched candidate committee(s). |
+| `bill_money_context.graphql` | Sponsor/voter money context and overlapping donors. |
 
 ## Bill + votes + witness slips (recommended)
 

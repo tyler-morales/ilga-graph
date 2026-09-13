@@ -79,6 +79,7 @@ select = ["E", "F", "I", "W", "UP"]
 # Scripts: path must be set before project imports
 "scripts/refresh_member_photos.py" = ["E402"]
 "scripts/seed_outreach.py" = ["E402", "E501"]
+"scripts/ingest_sbe_money.py" = ["E402"]
 # Alembic: path and dotenv before app imports
 "alembic/env.py" = ["E402"]
 # Tests: long docstrings, selectors, and skip reasons

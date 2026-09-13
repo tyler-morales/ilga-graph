@@ -42,6 +42,8 @@ class AppState:
         self.hearings_by_bill: dict[str, list[Hearing]] = {}
         # username -> followers_count for Legislator Twitter tab (from cache, refreshed by script).
         self.twitter_follower_counts: dict[str, int] = {}
+        # SBE campaign-finance index (donor → committee → member). None until ingest.
+        self.campaign_finance: object | None = None
 
 
 state = AppState()
