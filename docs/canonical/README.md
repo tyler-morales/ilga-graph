@@ -55,11 +55,16 @@ All canonical copy and strategy books live under **`docs/canonical/`**. Brief te
 - **Where:** `content.py` — `BRIEF_STATE_STATUS`, `BRIEF_BILLS_PASSED`, `BRIEF_BILLS_CURRENT`, `BRIEF_SOURCES`, `BRIEF_DOCUMENTS`
 - **Rule:** Any state/bill/source list or doc link must come from these. Do not invent states, bill titles, or URLs.
 
-### 8. Legislator Twitter / X handles — reference data
+### 8. SBE committee → member gold overrides — reference data
+
+- **Where:** `docs/canonical/sbe_committee_member_gold.json` — JSON list of `{committee_id, member_id}` objects (optional `notes`). Used only by campaign-finance matching when office+district+name / name+chamber cannot uniquely accept a sitting member.
+- **Rule:** Append a row only after a human confirms the ILGA member id. The unmatched review file and `scripts/review_sbe_unmatched.py` emit a `gold_stub`; do not guess `member_id`. See `docs/features/campaign-finance.md`.
+
+### 9. Legislator Twitter / X handles — reference data
 
 - **Where:** `docs/canonical/legislator_twitter_handles.json` — JSON object mapping `member_id` (ILGA member id) to X/Twitter username (no `@`). Merged into `Member.twitter_handle` at app startup. Used by the Intelligence Raw Data tab "Legislator Twitter" for the follower-rank table. Refresh follower counts with `TWITTER_BEARER_TOKEN` set and `make refresh-twitter-followers` (or `scripts/refresh_twitter_followers.py`).
 
-### 9. Session schedule (House/Senate) — reference data
+### 10. Session schedule (House/Senate) — reference data
 
 - **Where:** `reference/session_schedule.json` — single source of truth for Illinois General Assembly session dates, deadlines, and holidays (104th GA Spring 2026). Loaded at runtime by `src/ilga_graph/session_schedule.py` (`load_schedule()`, `get_all_deadlines()`, `session_label()`, etc.).
 - **Used on:** The Issue page (FAQ “Session calendar & deadlines” and key-deadlines list), the **Timeline page** (`/timeline` — "Key session deadlines" section), and any future reminders or date-driven copy.
@@ -73,6 +78,7 @@ All canonical copy and strategy books live under **`docs/canonical/`**. Brief te
 - **Fact sheet:** Edit `FACT_SHEET_ISSUE`, `FACT_SHEET_POSITION`, `FACT_SHEET_KEI_DEFINITION`, `FACT_SHEET_AT_A_GLANCE` in content.py. The `/fact-sheet` page renders this; for the sidebar document, place a PDF at `src/ilga_graph/static/advocacy/Kei_Registration_Fact_Sheet.pdf` (e.g. print /fact-sheet to PDF).
 - **FAQs:** Edit `FAQ_LAW`, `FAQ_ADVOCACY`, `FAQ_SESSION`, and `FAQ_LEGISLATORS` in content.py.
 - **Session schedule:** Edit `reference/session_schedule.json`. Code reads it via `ilga_graph.session_schedule`; do not duplicate dates in content.py or templates.
+- **SBE gold overrides:** Edit `docs/canonical/sbe_committee_member_gold.json` only with confirmed committee_id → member_id rows. Use the unmatched review stub; do not guess.
 
 ## When to use which (agents / skills)
 

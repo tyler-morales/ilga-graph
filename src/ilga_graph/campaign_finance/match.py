@@ -16,6 +16,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from ..models import Member
 from .parse import ParsedSbeData, SbeCandidateRow, SbeCommitteeRow
@@ -31,6 +32,35 @@ LEGISLATIVE_OFFICES = {
 
 CANDIDATE_COMMITTEE_TYPES = {"candidate", ""}
 
+# Bidirectional legal-name / nickname pairs. Applied only to first-token
+# overlap, never as a standalone match. Keep this short so confidence stays
+# honest (no fuzzy string scores).
+FIRST_NAME_ALIASES: dict[str, frozenset[str]] = {
+    "bill": frozenset({"william", "will", "wm"}),
+    "william": frozenset({"bill", "will", "wm"}),
+    "will": frozenset({"william", "bill"}),
+    "wm": frozenset({"william", "bill"}),
+    "bob": frozenset({"robert"}),
+    "robert": frozenset({"bob"}),
+    "chris": frozenset({"christopher", "christian"}),
+    "christopher": frozenset({"chris"}),
+    "christian": frozenset({"chris"}),
+    "dave": frozenset({"david"}),
+    "david": frozenset({"dave"}),
+    "liz": frozenset({"elizabeth"}),
+    "lisa": frozenset({"elizabeth"}),
+    "elizabeth": frozenset({"liz", "lisa"}),
+    "mike": frozenset({"michael"}),
+    "michael": frozenset({"mike"}),
+    "steve": frozenset({"steven"}),
+    "steven": frozenset({"steve"}),
+    "sue": frozenset({"susan", "suzanne"}),
+    "susan": frozenset({"sue"}),
+    "suzanne": frozenset({"sue"}),
+}
+
+GOLD_PATH_HINT = "docs/canonical/sbe_committee_member_gold.json"
+
 
 @dataclass
 class MemberMatch:
@@ -43,9 +73,15 @@ class MemberMatch:
     status: str  # accepted | review
     candidate_id: str = ""
     candidate_name: str = ""
+    candidate_last: str = ""
     office: str = ""
     district: str = ""
     notes: str = ""
+    unmatched_reason: str = ""
+    near_misses: list[dict[str, str]] = field(default_factory=list)
+    candidates_considered: list[dict[str, str]] = field(default_factory=list)
+    how_to_promote: str = ""
+    gold_stub: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -77,12 +113,19 @@ def _nicknames(text: str) -> list[str]:
     return [n.lower() for n in _NICKNAME_RE.findall(text)]
 
 
+def _expand_first_tokens(tokens: set[str]) -> set[str]:
+    out = set(tokens)
+    for token in tokens:
+        out.update(FIRST_NAME_ALIASES.get(token, ()))
+    return out
+
+
 def _first_tokens(first_name: str) -> set[str]:
     cleaned = _NICKNAME_RE.sub(" ", first_name)
     toks = set(_tokens(_strip_suffix(cleaned)))
     toks.update(_nicknames(first_name))
     # drop lone initials
-    return {t for t in toks if len(t) > 1}
+    return _expand_first_tokens({t for t in toks if len(t) > 1})
 
 
 def _last_key(last_name: str) -> str:
@@ -114,14 +157,11 @@ def _member_index(members: list[Member]) -> dict[tuple[str, str, str], list[Memb
     """(chamber_lower, district, last) -> members."""
     index: dict[tuple[str, str, str], list[Member]] = {}
     for member in members:
-        first, last, _suffix = _split_member_name(member.name)
+        _first, last, _suffix = _split_member_name(member.name)
         key = (member.chamber.lower(), _district_key(member.district), _last_key(last))
         index.setdefault(key, []).append(member)
-        # also index without district for name+chamber fallback
         loose = (member.chamber.lower(), "", _last_key(last))
         index.setdefault(loose, []).append(member)
-        # nickname last stays the same; first handled at compare time
-        _ = first
     return index
 
 
@@ -208,6 +248,19 @@ def match_committees_to_members(
     return report
 
 
+def _candidate_display(cand: SbeCandidateRow) -> str:
+    return f"{cand.first_name} {cand.last_name}".strip()
+
+
+def _candidate_brief(cand: SbeCandidateRow) -> dict[str, str]:
+    return {
+        "candidate_id": cand.candidate_id,
+        "candidate_name": _candidate_display(cand),
+        "office": cand.office,
+        "district": _district_key(cand.district),
+    }
+
+
 def _best_match(
     committee: SbeCommitteeRow,
     cands: list[SbeCandidateRow],
@@ -215,6 +268,8 @@ def _best_match(
     index: dict[tuple[str, str, str], list[Member]],
     gold: dict[str, str],
 ) -> MemberMatch:
+    considered = [_candidate_brief(c) for c in cands]
+    sitting = list(members_by_id.values())
     if committee.committee_id in gold:
         member = members_by_id.get(gold[committee.committee_id])
         if member:
@@ -227,6 +282,7 @@ def _best_match(
                 confidence=1.0,
                 status="accepted",
                 notes="canonical gold override",
+                candidates_considered=considered,
             )
 
     scored: list[MemberMatch] = []
@@ -236,7 +292,7 @@ def _best_match(
             continue
         last = _last_key(cand.last_name)
         district = _district_key(cand.district)
-        display = f"{cand.first_name} {cand.last_name}".strip()
+        display = _candidate_display(cand)
         exact_hits = index.get((chamber.lower(), district, last), [])
         if len(exact_hits) == 1 and _first_overlap(exact_hits[0], cand):
             member = exact_hits[0]
@@ -251,8 +307,10 @@ def _best_match(
                     status="accepted",
                     candidate_id=cand.candidate_id,
                     candidate_name=display,
+                    candidate_last=cand.last_name,
                     office=cand.office,
                     district=district,
+                    candidates_considered=considered,
                 )
             )
             continue
@@ -269,9 +327,11 @@ def _best_match(
                     status="accepted",
                     candidate_id=cand.candidate_id,
                     candidate_name=display,
+                    candidate_last=cand.last_name,
                     office=cand.office,
                     district=district,
                     notes="district+last; first name not confirmed",
+                    candidates_considered=considered,
                 )
             )
             continue
@@ -292,15 +352,14 @@ def _best_match(
                     status="accepted",
                     candidate_id=cand.candidate_id,
                     candidate_name=display,
+                    candidate_last=cand.last_name,
                     office=cand.office,
                     district=district,
                     notes="district missing or mismatched; unique name+chamber",
+                    candidates_considered=considered,
                 )
             )
             continue
-        if _committee_name_hit(committee.name, cand, members_by_id.values()):
-            # handled below via committee-name fallback
-            pass
         scored.append(
             MemberMatch(
                 committee_id=committee.committee_id,
@@ -312,9 +371,11 @@ def _best_match(
                 status="review",
                 candidate_id=cand.candidate_id,
                 candidate_name=display,
+                candidate_last=cand.last_name,
                 office=cand.office,
                 district=district,
                 notes="no unique sitting-member match",
+                candidates_considered=considered,
             )
         )
 
@@ -323,33 +384,201 @@ def _best_match(
         accepted.sort(key=lambda m: m.confidence, reverse=True)
         return accepted[0]
     if scored:
-        return scored[0]
-    return MemberMatch(
-        committee_id=committee.committee_id,
-        committee_name=committee.name,
-        member_id=None,
-        member_name=None,
-        method="unresolved",
-        confidence=0.0,
-        status="review",
-        notes="legislative candidate link present but no usable candidate row",
+        return _explain_unmatched(_pick_unresolved(scored, sitting), cands, sitting)
+    return _explain_unmatched(
+        MemberMatch(
+            committee_id=committee.committee_id,
+            committee_name=committee.name,
+            member_id=None,
+            member_name=None,
+            method="unresolved",
+            confidence=0.0,
+            status="review",
+            notes="legislative candidate link present but no usable candidate row",
+            unmatched_reason="no_usable_candidate",
+            candidates_considered=considered,
+        ),
+        cands,
+        sitting,
     )
 
 
-def _committee_name_hit(
-    committee_name: str, cand: SbeCandidateRow, members: list[Member] | None = None
-) -> bool:
-    name = _norm(committee_name)
-    last = _last_key(cand.last_name)
-    firsts = _first_tokens(cand.first_name)
-    if last and last in name and any(f in name for f in firsts):
-        return True
-    if members:
-        for member in members:
-            _first, last_m, _s = _split_member_name(member.name)
-            if _last_key(last_m) in name and any(t in name for t in _first_tokens(_first)):
-                return True
-    return False
+def _pick_unresolved(scored: list[MemberMatch], members: list[Member]) -> MemberMatch:
+    """Prefer the candidate row whose chamber has a same-last sitting member."""
+
+    def _rank(row: MemberMatch) -> tuple[int, int]:
+        last = _last_key(row.candidate_last)
+        chamber = _chamber_from_office(row.office, "")
+        same_last = [m for m in members if _last_key(_split_member_name(m.name)[1]) == last]
+        chamber_hits = sum(1 for m in same_last if chamber and m.chamber == chamber)
+        sitting_chamber = 1 if chamber and any(m.chamber == chamber for m in members) else 0
+        return (chamber_hits, sitting_chamber)
+
+    return max(scored, key=_rank)
+
+
+def _near_misses_for(
+    cands: list[SbeCandidateRow], members: list[Member]
+) -> list[dict[str, str]]:
+    last_keys = {_last_key(c.last_name) for c in cands if c.last_name}
+    hits: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for member in members:
+        _first, last, _suffix = _split_member_name(member.name)
+        if _last_key(last) not in last_keys:
+            continue
+        if member.id in seen:
+            continue
+        seen.add(member.id)
+        blockers: list[str] = []
+        for cand in cands:
+            if _last_key(cand.last_name) != _last_key(last):
+                continue
+            chamber = _chamber_from_office(cand.office, cand.district_type)
+            sbe_district = _district_key(cand.district)
+            if chamber and chamber != member.chamber:
+                blockers.append(
+                    f"SBE {chamber} {sbe_district} vs sitting {member.chamber} {member.district}"
+                )
+            elif sbe_district and sbe_district != _district_key(member.district):
+                blockers.append(
+                    f"SBE district {sbe_district} vs sitting {member.district}"
+                )
+            if not _first_overlap(member, cand):
+                blockers.append(
+                    f"first names do not overlap (sbe={cand.first_name!r} member={_first!r})"
+                )
+        hits.append(
+            {
+                "member_id": member.id,
+                "member_name": member.name,
+                "chamber": member.chamber,
+                "district": member.district,
+                "blocker": "; ".join(dict.fromkeys(blockers)) or "not unique under match rules",
+            }
+        )
+    return hits
+
+
+def _gold_stub(committee_id: str, committee_name: str, near_misses: list[dict[str, str]]) -> dict[str, str]:
+    member_id = ""
+    if len(near_misses) == 1:
+        member_id = near_misses[0]["member_id"]
+    return {
+        "committee_id": committee_id,
+        "member_id": member_id,
+        "committee_name": committee_name,
+        "notes": (
+            "Confirm this sitting member owns the Active Candidate committee, "
+            f"then append this object to {GOLD_PATH_HINT}. Leave member_id empty "
+            "until confirmed. Do not guess."
+        ),
+    }
+
+
+def _how_to_promote(gold_stub: dict[str, str]) -> str:
+    if gold_stub.get("member_id"):
+        return (
+            f"If the near-miss sitting member is correct, append {gold_stub} to "
+            f"{GOLD_PATH_HINT} and re-run ingest. Confirm the ILGA member_id first."
+        )
+    return (
+        f"If this Active Candidate committee belongs to a sitting member, set "
+        f"member_id on the gold_stub, append it to {GOLD_PATH_HINT}, and re-run "
+        "ingest. Do not guess member_id."
+    )
+
+
+def _explain_unmatched(
+    match: MemberMatch,
+    cands: list[SbeCandidateRow],
+    members: list[Member],
+) -> MemberMatch:
+    near = _near_misses_for(cands, members)
+    last_labels = sorted({_strip_suffix(c.last_name) for c in cands if c.last_name})
+    last_text = ", ".join(last_labels) or "(missing last name)"
+    if not cands:
+        reason = "no_usable_candidate"
+        notes = "legislative candidate link present but no usable candidate row"
+    elif not near:
+        reason = "no_sitting_member"
+        notes = f"No sitting member with last name {last_text} in the current roster."
+    elif len(near) > 1:
+        reason = "ambiguous"
+        notes = (
+            f"Multiple sitting members share last name {last_text}; "
+            "no unique office+district or name+chamber hit."
+        )
+    else:
+        reason = "near_miss"
+        notes = f"Sitting member near-miss for {last_text}: {near[0]['blocker']}"
+    stub = _gold_stub(match.committee_id, match.committee_name, near)
+    match.unmatched_reason = reason
+    match.notes = notes
+    match.near_misses = near
+    match.gold_stub = stub
+    match.how_to_promote = _how_to_promote(stub)
+    if not match.candidates_considered:
+        match.candidates_considered = [_candidate_brief(c) for c in cands]
+    return match
+
+
+def unmatched_review_rows(report: MatchReport) -> list[dict[str, Any]]:
+    """Actionable unmatched payload for unmatched.json and the review CLI."""
+    rows: list[dict[str, Any]] = []
+    for match in report.unmatched:
+        rows.append(
+            {
+                "committee_id": match.committee_id,
+                "committee_name": match.committee_name,
+                "candidate_id": match.candidate_id,
+                "candidate_name": match.candidate_name,
+                "office": match.office,
+                "district": match.district,
+                "method": match.method,
+                "status": match.status,
+                "unmatched_reason": match.unmatched_reason,
+                "notes": match.notes,
+                "near_misses": match.near_misses,
+                "candidates_considered": match.candidates_considered,
+                "how_to_promote": match.how_to_promote,
+                "gold_stub": match.gold_stub or _gold_stub(
+                    match.committee_id, match.committee_name, match.near_misses
+                ),
+            }
+        )
+    return rows
+
+
+def format_unmatched_review(rows: list[dict[str, Any]]) -> str:
+    """Human-readable unmatched review. No disclosure amounts."""
+    if not rows:
+        return "No unmatched Active Candidate legislative committees.\n"
+    lines = [f"Unmatched committees: {len(rows)}", ""]
+    for row in rows:
+        lines.append(f"{row.get('committee_id')}  {row.get('committee_name')}")
+        lines.append(
+            f"  candidate: {row.get('candidate_name')}  "
+            f"{row.get('office')} {row.get('district')}"
+        )
+        lines.append(f"  reason: {row.get('unmatched_reason')}")
+        lines.append(f"  why: {row.get('notes')}")
+        near = row.get("near_misses") or []
+        if near:
+            lines.append("  near misses:")
+            for hit in near:
+                lines.append(
+                    f"    {hit.get('member_id')} {hit.get('member_name')} "
+                    f"({hit.get('chamber')} {hit.get('district')}) "
+                    f"— {hit.get('blocker')}"
+                )
+        else:
+            lines.append("  near misses: none")
+        lines.append(f"  promote: {row.get('how_to_promote')}")
+        stub = row.get("gold_stub") or {}
+        lines.append(f"  gold stub: {json.dumps(stub, sort_keys=True)}")
+        lines.append("")
+    return "\n".join(lines)
 
 
 def resolve_contributor_member_id(

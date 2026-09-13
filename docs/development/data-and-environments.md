@@ -74,6 +74,7 @@ flowchart LR
 | `make snapshot-mocks` | Sample `cache/` into `mocks/dev/` (subset of members, bills, votes, etc.). Commit result to refresh dev seed. |
 | `make seed-outreach` | Seed the outreach DB: backlog for funky_mama11@gmail.com; in dev only, mock advocates for heat-pill demo. Use same profile as the app. |
 | `make ingest-sbe-money` | Ingest official SBE Committees + Receipts onto Member IDs. See [Campaign finance](../features/campaign-finance.md). |
+| `make review-sbe-unmatched` | Print unmatched Active Candidate committees and gold stubs. Does not invent member links. |
 
 ---
 
