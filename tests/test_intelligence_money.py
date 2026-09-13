@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import patch
 
@@ -57,8 +58,17 @@ def finance_index(sitting_members: list[Member]):
     return build_index(parsed, report, window_start="2025-01-01")
 
 
-@pytest.fixture
-def client() -> TestClient:
+def _money_test_client() -> Iterator[TestClient]:
+    """Yield a client with lifespan, then restore leaked AppState fields.
+
+    TestClient context runs startup, which assigns ``state.zip_to_district``.
+    Later poll tests treat any 5-digit ZIP as valid only when that map is empty;
+    leaking the mock crosswalk makes ZIP 60001 fail (not in mocks/dev).
+    """
+    from ilga_graph.app_state import state as app_state
+
+    prior_zip = dict(app_state.zip_to_district)
+    prior_cf = app_state.campaign_finance
     with patch.dict(os.environ, {"ILGA_PROFILE": "dev", "ILGA_API_KEY": ""}, clear=False):
         import importlib
 
@@ -67,13 +77,40 @@ def client() -> TestClient:
 
         importlib.reload(_cfg_mod)
         importlib.reload(_main_mod)
-        with TestClient(_main_mod.app, raise_server_exceptions=False) as test_client:
-            from ilga_graph.app_state import state as app_state
-            from ilga_graph.campaign_finance.load import attach_index, load_campaign_finance_index
+        try:
+            with TestClient(_main_mod.app, raise_server_exceptions=False) as test_client:
+                from ilga_graph.campaign_finance.load import (
+                    attach_index,
+                    load_campaign_finance_index,
+                )
 
-            if app_state.campaign_finance is None:
-                attach_index(app_state, load_campaign_finance_index(Path("mocks/dev")))
-            yield test_client
+                if app_state.campaign_finance is None:
+                    attach_index(app_state, load_campaign_finance_index(Path("mocks/dev")))
+                yield test_client
+        finally:
+            app_state.zip_to_district = prior_zip
+            app_state.campaign_finance = prior_cf
+
+
+@pytest.fixture
+def client() -> Iterator[TestClient]:
+    yield from _money_test_client()
+
+
+def test_money_client_restores_zip_to_district() -> None:
+    """Lifespan must not leave zip_to_district populated for later modules."""
+    from ilga_graph.app_state import state as app_state
+    from ilga_graph.routers.updates import _normalize_poll_zip
+
+    prior = dict(app_state.zip_to_district)
+    loaded_during = None
+    for _client in _money_test_client():
+        loaded_during = dict(app_state.zip_to_district)
+        assert loaded_during, "dev lifespan should load the ZIP crosswalk"
+        assert "60001" not in loaded_during
+    assert app_state.zip_to_district == prior
+    assert _normalize_poll_zip("60001") == "60001"
+    assert loaded_during is not None
 
 
 def test_campaign_finance_summary_view_success(finance_index) -> None:
