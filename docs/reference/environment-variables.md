@@ -33,7 +33,7 @@ The app loads `.env` from the project root via `python-dotenv`. Copy `.env.examp
 | `ILGA_TEST_MEMBER_URL` | *(empty)* | Optional single member URL for testing. |
 | `ILGA_TEST_MEMBER_CHAMBER` | `Senate` | Chamber for the test member URL. |
 | `ILGA_CORS_ORIGINS` | *profile* | Comma-separated CORS origins. |
-| `ILGA_API_KEY` | *(empty)* | If set, non-exempt routes require `X-API-Key` header. |
+| `ILGA_API_KEY` | *(empty)* | If set, non-exempt routes require `X-API-Key` header. Browser pages, `/api/graph`, `/api/dev`, and `/api/bills` (HTMX bill explanation fragment) are exempt; `/graphql` is not. |
 | `ILGA_APP_BASE_URL` | `http://127.0.0.1:8000` | Public URL of this app; used in the startup banner, logs, canonical URL, and Open Graph tags. **Required for share cards:** set in production to your public HTTPS URL (e.g. `https://landofkei.org`) so `og:image` is reachable by social crawlers; otherwise the default points to localhost and the image will be reported as invalid/unreachable. In production the site should be served over HTTPS and this value **must** use `https://`. |
 | `ILGA_DOCS_BASE_URL` | *(empty)* | Optional docs site URL for the startup banner when different from the app. |
 | `ILGA_SITE_NAME` | `The Land of Kei` | Advocacy group / site brand used in the browser tab title, UI, footer, Open Graph and Twitter cards, and verification email subject. |
