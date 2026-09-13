@@ -205,6 +205,31 @@ def test_money_page_shows_dev_fixture_summary(client: TestClient) -> None:
     assert "2025-01-01" in body
     assert "not earmarked" in body.lower()
     assert "Lightford" in body or "Harmon" in body
+    assert "fixture / dev-scale" in body
+    assert "Try SB0341 on the dev fixture (Don Harmon)." in body
+    assert "Current seeds are fixture / dev-scale" in body
+
+
+def test_money_page_hides_fixture_copy_when_summary_is_statewide(client: TestClient) -> None:
+    statewide = {
+        "window_start": "2025-01-01",
+        "window_end": "2026-09-13",
+        "match_rate_pct": 90.0,
+        "members_matched": 170,
+        "receipts_indexed": 31729,
+        "accepted": 200,
+        "legislative_committees": 220,
+    }
+    with patch("ilga_graph.routers.intelligence._finance_summary", return_value=statewide):
+        resp = client.get("/intelligence/money", headers={"Accept": "text/html"})
+    assert resp.status_code == 200
+    body = resp.text
+    assert ">170<" in body
+    assert ">31729<" in body
+    assert "fixture / dev-scale" not in body
+    assert "dev fixture" not in body
+    assert "Current seeds are fixture / dev-scale" not in body
+    assert "Enter an Illinois bill number (for example SB0341)." in body
 
 
 def test_money_page_bill_query_shows_context(client: TestClient) -> None:
