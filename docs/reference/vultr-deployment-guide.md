@@ -391,6 +391,31 @@ The workflow runs `cd ~/ilga-graph && bash scripts/deploy-on-server.sh`. If your
 
 ---
 
+## Manual SBE money ingest (GitHub Actions)
+
+To refresh campaign-finance data on the production Pi without SSH: **Actions → CI → Run workflow**. This does **not** run on push to `main`.
+
+1. Open the repo on GitHub → **Actions**.
+2. Left sidebar → **CI**.
+3. **Run workflow** (right side of the workflow bar).
+4. Leave `since` as `2025-01-01` unless you need a different YYYY-MM-DD window.
+5. Leave **deploy_first** unchecked if prod is already on `main`. Check it only to run `scripts/deploy-on-server.sh` first (git pull + install + restart).
+6. Green **Run workflow**.
+
+Job `ingest-sbe-money` SSHs with the same `DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_SSH_KEY` secrets as deploy, then on the server:
+
+```bash
+cd ~/ilga-graph
+# if deploy_first: bash scripts/deploy-on-server.sh
+# fail clearly if cache/members.json is missing
+source .venv/bin/activate && make ingest-sbe-money ALSO_DATA_DIR=1 SINCE=<since>
+sudo systemctl restart ilga-graph
+```
+
+Receipts download is large (~50MB+ tail); the SSH step allows 60 minutes. The app loads `campaign_finance.json` at startup, so the restart is required. See [Campaign finance](../features/campaign-finance.md).
+
+---
+
 ## Automated daily scrape (offload from your Mac)
 
 You can run the incremental scrape on the Vultr server on a schedule so you don’t have to run it on your Mac.
@@ -443,6 +468,7 @@ Adjust paths if your project lives elsewhere (e.g. `/home/YOUR_USER/ilga-graph`)
 |------|--------|
 | Restart the app | `sudo systemctl restart ilga-graph` |
 | Run scrape once (then restart) | `cd ~/ilga-graph && ./scripts/scrape-on-server.sh` |
+| SBE money ingest (no SSH) | GitHub → Actions → CI → Run workflow (`ingest-sbe-money`) |
 | View scrape log (if cron configured) | `tail -f ~/ilga-graph/logs/scrape.log` |
 | View app logs (live) | `sudo journalctl -u ilga-graph -f` |
 | Last 80 log lines | `sudo journalctl -u ilga-graph -n 80 --no-pager` |
