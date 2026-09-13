@@ -402,17 +402,21 @@ To refresh campaign-finance data on the production Pi without SSH: **Actions →
 5. Leave **deploy_first** unchecked if prod is already on `main`. Check it only to run `scripts/deploy-on-server.sh` first (git pull + install + restart).
 6. Green **Run workflow**.
 
-Job `ingest-sbe-money` SSHs with the same `DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_SSH_KEY` secrets as deploy, then on the server:
+Job `ingest-sbe-money` uses the same `DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_SSH_KEY` secrets as deploy. Downloads run on the GitHub-hosted runner (not the Pi). Cloudflare returns HTTP 403 for Range requests from the Pi.
+
+1. Runner: `pip install -e .` then `download_sbe_files(cache/sbe, since=...)` (Receipts offset binary-search still runs here).
+2. Runner rsyncs `cache/sbe/` to `~/ilga-graph/cache/sbe/` on the Pi.
+3. SSH on the Pi:
 
 ```bash
 cd ~/ilga-graph
 # if deploy_first: bash scripts/deploy-on-server.sh
-# fail clearly if cache/members.json is missing
-source .venv/bin/activate && make ingest-sbe-money ALSO_DATA_DIR=1 SINCE=<since>
+# fail clearly if cache/members.json or cache/sbe/Receipts.txt is missing
+source .venv/bin/activate && make ingest-sbe-money ALSO_DATA_DIR=1 FROM_DIR=cache/sbe SINCE=<since>
 sudo systemctl restart ilga-graph
 ```
 
-Receipts download is large (~50MB+ tail); the SSH step allows 60 minutes. The app loads `campaign_finance.json` at startup, so the restart is required. See [Campaign finance](../features/campaign-finance.md).
+The job allows 60 minutes. The app loads `campaign_finance.json` at startup, so the restart is required. Local `make ingest-sbe-money` still downloads when the network allows. See [Campaign finance](../features/campaign-finance.md).
 
 ---
 

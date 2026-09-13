@@ -74,6 +74,7 @@ jobs:
     name: Ingest SBE money (Actions → CI → Run workflow)
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
+    timeout-minutes: 60
     steps:
       - name: Check deploy secrets
         run: |
@@ -92,6 +93,50 @@ jobs:
           fi
           echo "SINCE=$SINCE" >> "$GITHUB_ENV"
           echo "Ingest window since=$SINCE deploy_first=${{ github.event.inputs.deploy_first }}"
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install package
+        run: pip install -e .
+      - name: Download SBE files on the runner
+        timeout-minutes: 45
+        env:
+          SINCE: ${{ env.SINCE }}
+        run: |
+          python - <<'PY'
+          import os
+          from datetime import date
+          from pathlib import Path
+
+          from ilga_graph.campaign_finance.download import download_sbe_files
+
+          dest = Path("cache/sbe")
+          download_sbe_files(dest, since=date.fromisoformat(os.environ["SINCE"]))
+          for name in (
+              "Candidates.txt",
+              "Committees.txt",
+              "CmteCandidateLinks.txt",
+              "Receipts.txt",
+          ):
+              path = dest / name
+              print(f"{name} {path.stat().st_size} bytes")
+          PY
+      - name: Copy SBE files to the Pi
+        timeout-minutes: 15
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts || true
+          RSH="ssh -i $HOME/.ssh/id_deploy -o StrictHostKeyChecking=accept-new"
+          $RSH "${DEPLOY_USER}@${DEPLOY_HOST}" "mkdir -p ~/ilga-graph/cache/sbe"
+          rsync -avz -e "$RSH" cache/sbe/ "${DEPLOY_USER}@${DEPLOY_HOST}:~/ilga-graph/cache/sbe/"
       - name: Ingest SBE money via SSH
         uses: appleboy/ssh-action@v1.0.3
         env:
@@ -113,5 +158,9 @@ jobs:
               echo "ERROR: cache/members.json is missing on this server. Prod scrape cache is required before SBE money ingest." >&2
               exit 1
             fi
-            source .venv/bin/activate && make ingest-sbe-money ALSO_DATA_DIR=1 SINCE="${SINCE:-2025-01-01}"
+            if [ ! -s cache/sbe/Receipts.txt ]; then
+              echo "ERROR: cache/sbe is missing Receipts.txt. Runner download/rsync must succeed first." >&2
+              exit 1
+            fi
+            source .venv/bin/activate && make ingest-sbe-money ALSO_DATA_DIR=1 FROM_DIR=cache/sbe SINCE="${SINCE:-2025-01-01}"
             sudo systemctl restart ilga-graph
