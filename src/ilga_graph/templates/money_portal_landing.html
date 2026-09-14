@@ -5,7 +5,7 @@
 
 {% block content %}
 <section class="mp-hero mp-hero--desk" aria-labelledby="mp-promise">
-    <h1 id="mp-promise">Illinois money trails, matched to sitting members</h1>
+    <h1 id="mp-promise">Sitting-member money trails, matched to ILGA legislators</h1>
     <div id="money-signup-wrap">
         {% if status in ('ok', 'already') and status_message %}
         <p class="mp-alert mp-alert--ok" role="status">{{ status_message }}</p>
@@ -13,6 +13,6 @@
         {% include "_money_portal_signup_form.html" %}
         {% endif %}
     </div>
-    <p class="mp-whisper"><a href="/money/demo">See one member</a></p>
+    <p class="mp-whisper"><a href="/money/member/{{ seed_member_id }}">{{ seed_member_name }}</a></p>
 </section>
 {% endblock %}
