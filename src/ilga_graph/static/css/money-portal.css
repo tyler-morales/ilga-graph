@@ -84,6 +84,7 @@ body.mp-body {
     letter-spacing: -0.02em;
     text-decoration: none;
     color: inherit;
+    white-space: nowrap;
 }
 
 .mp-wordmark:focus-visible,
@@ -328,8 +329,10 @@ h3,
 .mp-lookup input,
 .mp-form input[type="email"],
 .mp-form input[type="text"] {
-    flex: 1 1 14rem;
+    flex: 1 1 auto;
+    min-width: min(14rem, 100%);
     min-height: 2.75rem;
+    height: 2.75rem;
     padding: 0.55rem 0.8rem;
     border: 1px solid var(--mp-line);
     border-radius: 8px;
