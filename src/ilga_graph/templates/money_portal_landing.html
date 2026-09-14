@@ -1,56 +1,18 @@
 {% extends "money_portal_base.html" %}
-{% block title %}{{ portal_name }} — Illinois campaign finance for people who have to decide{% endblock %}
+{% block title %}{{ portal_name }}{% endblock %}
 {% block og_title %}{{ portal_name }}{% endblock %}
 {% block body_class %}mp-page-landing{% endblock %}
 
 {% block content %}
-<section class="mp-hero">
-    <p class="mp-kicker">Illinois campaign finance</p>
-    <h1>Who funded the people in the room — before the vote, the hearing, or the client call.</h1>
-    <p class="mp-lede">
-        {{ portal_name }} joins official Illinois campaign receipts to sitting legislators.
-        Built for lobbyists, lawyers, and nonprofits who have a decision under a deadline —
-        not a donor table to admire.
-    </p>
-    <div class="mp-cta-row">
-        <a class="mp-btn mp-btn--primary" href="/money/demo">Open the demo</a>
-        <a class="mp-btn mp-btn--ghost" href="/money/signup">Join the waitlist</a>
+<section class="mp-hero mp-hero--desk" aria-labelledby="mp-promise">
+    <h1 id="mp-promise">Illinois money trails, matched to sitting members</h1>
+    <div id="money-signup-wrap">
+        {% if status in ('ok', 'already') and status_message %}
+        <p class="mp-alert mp-alert--ok" role="status">{{ status_message }}</p>
+        {% else %}
+        {% include "_money_portal_signup_form.html" %}
+        {% endif %}
     </div>
-</section>
-
-<section class="mp-section" aria-labelledby="job-heading">
-    <h2 id="job-heading">The job</h2>
-    <p>
-        Campaign money is the medium of access. When a hearing is tomorrow or a client
-        asks who funded the sponsors on a bill, you need the sitting-member picture —
-        not a spreadsheet of every receipt in the state.
-    </p>
-    <ul class="mp-list">
-        <li>Look up a legislator and see matched candidate-committee receipts.</li>
-        <li>Look up a bill and see who funded the sponsors and voters on it.</li>
-        <li>Decide what to Watch, Ask, or Flag before you walk in.</li>
-    </ul>
-</section>
-
-<section class="mp-section" aria-labelledby="honest-heading">
-    <h2 id="honest-heading">What this is — and is not</h2>
-    <dl class="mp-caveats">
-        <div>
-            <dt>SBE campaign receipts only</dt>
-            <dd>Official Illinois State Board of Elections Committees and Receipts, matched to sitting member IDs.</dd>
-        </div>
-        <div>
-            <dt>Not earmarked to bills</dt>
-            <dd>Bill views show who funded the people on the bill. They do not say who paid for the bill.</dd>
-        </div>
-        <div>
-            <dt>Moneyball is a different product</dt>
-            <dd>Moneyball on this site is a legislative-effectiveness score. It is not campaign finance.</dd>
-        </div>
-        <div>
-            <dt>No lobbyist-registration overlay</dt>
-            <dd>This portal does not claim lobbyist filings, expenditures, independent expenditures, 527s, or federal money.</dd>
-        </div>
-    </dl>
+    <p class="mp-whisper"><a href="/money/demo">See one member</a></p>
 </section>
 {% endblock %}

@@ -26,12 +26,20 @@ def test_landing_returns_200_and_is_its_own_product(client: TestClient) -> None:
     assert resp.status_code == 200
     body = resp.text
     assert "Illinois Influence" in body
-    assert "decision under a deadline" in body
-    assert "Open the demo" in body
-    assert "Join the waitlist" in body
+    assert "Illinois money trails, matched to sitting members" in body
+    assert "Request access" in body
+    assert 'name="email"' in body
+    assert 'id="money-signup-wrap"' in body
+    assert 'name="role"' not in body
+    assert 'name="org"' not in body
+    assert "Open the demo" not in body
+    assert "Join the waitlist" not in body
+    assert "decision under a deadline" not in body
+    assert "Top funded" not in body
+    assert "lobbyist" not in body.lower()
     assert "not earmarked" in body.lower()
     assert "Moneyball" in body
-    assert "lobbyist-registration" in body
+    assert "Illinois State Board of Elections" in body
     assert "Land of Kei" not in body
     assert "kei vehicle" not in body.lower()
     assert "advocacy-form" not in body
@@ -39,20 +47,25 @@ def test_landing_returns_200_and_is_its_own_product(client: TestClient) -> None:
     assert "message-marquee" not in body
     assert "/static/css/money-portal" in body
     assert "SOS" not in body
+    assert "AI insights" not in body
+    assert "artificial intelligence" not in body.lower()
 
 
-def test_demo_returns_200_with_live_kpis(client: TestClient) -> None:
+def test_demo_returns_200_with_seed_paths(client: TestClient) -> None:
     resp = client.get("/money/demo", headers={"Accept": "text/html"})
     assert resp.status_code == 200
     body = resp.text
-    assert "2025-01-01" in body
     assert "not earmarked" in body.lower()
     assert "Watch" in body
     assert "Ask" in body
     assert "Flag" in body
     assert "sample-scale" in body.lower()
     assert "Harmon" in body or "3268" in body
+    assert "SB0341" in body
     assert "/money/member/" in body
+    assert "Committee match rate" not in body
+    assert "Finance window" not in body
+    assert "match_rate" not in body.lower()
 
 
 def test_demo_bill_query_shows_not_earmarked_context(client: TestClient) -> None:
@@ -102,8 +115,8 @@ def test_demo_statewide_copy_omits_sample_banner(client: TestClient) -> None:
         resp = client.get("/money/demo", headers={"Accept": "text/html"})
     assert resp.status_code == 200
     assert "sample-scale" not in resp.text.lower()
-    assert "40000" in resp.text.replace(",", "")
-    assert "160" in resp.text
+    assert "Committee match rate" not in resp.text
+    assert "Finance window" not in resp.text
 
 
 def test_member_page_reuses_trail_for_harmon(client: TestClient) -> None:

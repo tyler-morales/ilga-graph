@@ -6,12 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
     <title>{% block title %}{{ title }} — {{ portal_name }}{% endblock %}</title>
-    <meta name="description" content="{% block meta_description %}Illinois campaign-finance joined to sitting legislators. For lobbyists, lawyers, and nonprofits who have to decide under a deadline.{% endblock %}">
+    <meta name="description" content="{% block meta_description %}Illinois money trails, matched to sitting members.{% endblock %}">
     <link rel="canonical" href="{{ app_base_url }}{{ request.url.path }}">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="{{ portal_name }}">
     <meta property="og:title" content="{% block og_title %}{{ portal_name }}{% endblock %}">
-    <meta property="og:description" content="{% block og_description %}Illinois campaign-finance joined to sitting legislators.{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Illinois money trails, matched to sitting members.{% endblock %}">
     <meta property="og:url" content="{{ app_base_url }}{{ request.url.path }}">
     <link rel="stylesheet" href="/static/css/money-portal{{ _min }}.css">
     {% if umami_enabled %}
@@ -26,14 +26,9 @@
     <a class="mp-skip" href="#main">Skip to content</a>
     <header class="mp-header">
         <div class="mp-header-inner">
-            <a class="mp-wordmark" href="/money">
-                <span class="mp-wordmark-kicker">Follow the money</span>
-                <span class="mp-wordmark-name">{{ portal_name }}</span>
-            </a>
+            <a class="mp-wordmark" href="/money">{{ portal_name }}</a>
             <nav class="mp-nav" aria-label="Product">
-                <a href="/money" {% if request.url.path == '/money' or request.url.path == '/money/' %}aria-current="page"{% endif %}>Product</a>
                 <a href="/money/demo" {% if request.url.path.startswith('/money/demo') or request.url.path.startswith('/money/member') or request.url.path.startswith('/money/bill') %}aria-current="page"{% endif %}>Demo</a>
-                <a href="/money/signup" {% if request.url.path.startswith('/money/signup') %}aria-current="page"{% endif %}>Waitlist</a>
             </nav>
         </div>
     </header>
@@ -41,15 +36,9 @@
         {% block content %}{% endblock %}
     </main>
     <footer class="mp-footer">
-        <p>
-            {{ portal_name }} is a campaign-finance product: Illinois State Board of Elections
-            receipts joined to sitting legislators. It is not Moneyball, not lobbyist-registration
-            filings, and not independent-spend or federal overlays.
-        </p>
+        <p>Illinois State Board of Elections filings. Not earmarked to bills. Moneyball is a different product.</p>
         <p class="mp-footer-links">
-            <a href="/money/signup">Waitlist</a>
             <a href="/privacy">Privacy</a>
-            <a href="/intelligence/money">Research engine</a>
         </p>
     </footer>
 </body>

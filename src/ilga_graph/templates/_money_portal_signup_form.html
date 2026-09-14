@@ -1,37 +1,17 @@
-{% set selected_roles = form_roles or [] %}
 {% if status_is_error and status_message %}
 <p class="mp-alert mp-alert--error" role="alert">{{ status_message }}</p>
 {% endif %}
-<form action="/money/signup" method="post" class="mp-form"
+<form action="/money/signup" method="post" class="mp-form mp-form--access"
     hx-post="/money/signup" hx-target="#money-signup-wrap" hx-swap="innerHTML"
-    aria-label="Join the Illinois Influence waitlist">
+    aria-label="Request access">
     <input type="hidden" name="csrf_token" value="{{ (request.state.csrf_token or '') if request is defined else '' }}">
-    <div class="mp-field">
-        <label for="money-signup-email">Email <span class="mp-req">(required)</span></label>
+    <div class="mp-access-row">
+        <label for="money-signup-email" class="mp-visually-hidden">Email</label>
         <input type="email" id="money-signup-email" name="email" required
-            autocomplete="email" inputmode="email" maxlength="320" value="{{ form_email }}"
+            autocomplete="email" inputmode="email" maxlength="320"
+            placeholder="Email" value="{{ form_email|default('') }}"
             {% if status == 'invalid' %}aria-invalid="true" aria-describedby="money-signup-email-hint"{% endif %}>
-        <p id="money-signup-email-hint" class="mp-hint">We’ll only use this for money-product updates. Single opt-in; unsubscribe from any email.</p>
+        <button type="submit" class="mp-btn mp-btn--primary">Request access</button>
     </div>
-    <div class="mp-field">
-        <label for="money-signup-name">Name <span class="mp-opt">(optional)</span></label>
-        <input type="text" id="money-signup-name" name="name" autocomplete="name"
-            maxlength="120" value="{{ form_name }}">
-    </div>
-    <div class="mp-field">
-        <label for="money-signup-org">Organization or firm <span class="mp-opt">(optional)</span></label>
-        <input type="text" id="money-signup-org" name="org" autocomplete="organization"
-            maxlength="200" value="{{ form_org }}">
-    </div>
-    <fieldset class="mp-field">
-        <legend>Role <span class="mp-opt">(optional)</span></legend>
-        {% for slug, label in role_choices %}
-        <label class="mp-check">
-            <input type="checkbox" name="role" value="{{ slug }}"
-                {% if slug in selected_roles %}checked{% endif %}>
-            <span>{{ label }}</span>
-        </label>
-        {% endfor %}
-    </fieldset>
-    <button type="submit" class="mp-btn mp-btn--primary">Join the waitlist</button>
+    <p id="money-signup-email-hint" class="mp-hint">We’ll email you. Nothing else.</p>
 </form>

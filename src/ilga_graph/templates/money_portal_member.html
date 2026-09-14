@@ -8,15 +8,14 @@
 {% if not member %}
 <div class="mp-empty" role="status">
     <h1>No legislator matches that id</h1>
-    <p>Try member {{ seed_member_id }} (Harmon) or look up a name from the <a href="/money/demo">demo</a>.</p>
+    <p>Try member {{ seed_member_id }} ({{ seed_member_name }}) or look up a name from the <a href="/money/demo">demo</a>.</p>
 </div>
 {% else %}
 <header class="mp-page-head">
     <p class="mp-kicker">{{ member.chamber }} · District {{ member.district }} · {{ member.party }}</p>
     <h1>{{ member.name }}</h1>
     <p class="mp-lede">
-        SBE campaign receipts to matched candidate committees. This is not Moneyball
-        and not a lobbyist-registration filing.
+        Campaign receipts to matched candidate committees. Not Moneyball.
     </p>
 </header>
 

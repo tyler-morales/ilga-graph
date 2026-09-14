@@ -17,7 +17,7 @@ Aligns with Hardball Ch 7 (listservs created by website subscribe) and Founding 
 | **Local** (`make dev`) | http://127.0.0.1:8000/intelligence/money | http://127.0.0.1:8000/money · `/money/demo` · `/money/signup` |
 | **Prod** (landofkei.org) | https://landofkei.org/intelligence/money | https://landofkei.org/money · `/money/demo` · `/money/signup` |
 
-Form fields: required email; optional name, organization/firm, role checkboxes (lobbyist / lawyer / nonprofit).
+Form fields: **portal** (`/money`, `/money/signup`) is email only (CTA **Request access**). **Engine CTA** on `/intelligence/money` still has optional name, organization/firm, and role checkboxes (lobbyist / lawyer / nonprofit). Both POST to the same `money_intel_leads` store.
 
 States: success, already on the list, invalid email, CSRF, rate limit.
 

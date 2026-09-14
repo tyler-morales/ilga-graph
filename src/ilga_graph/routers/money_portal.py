@@ -54,40 +54,30 @@ templates.env.globals["umami_script_url"] = cfg.UMAMI_SCRIPT_URL
 
 PORTAL_NAME = "Illinois Influence"
 SEED_MEMBER_ID = "3268"
+SEED_MEMBER_NAME = "Don Harmon"
 SEED_BILL = "SB0341"
 
 _DO_NEXT = (
     {
         "verb": "Watch",
-        "title": "Watch a member before you walk in",
-        "body": (
-            "Open a sitting member’s receipt trail before a hearing or a vote. "
-            "You are looking at campaign receipts to matched candidate committees, "
-            "not a promise of how they will vote."
-        ),
+        "title": SEED_MEMBER_NAME,
+        "body": "The money trail for a sitting member.",
         "href": f"/money/member/{SEED_MEMBER_ID}",
-        "cta": "Open the Harmon seed",
+        "cta": "Open",
     },
     {
         "verb": "Ask",
-        "title": "Ask who funded the people on the bill",
-        "body": (
-            "Look up a bill and see who funded its sponsors and voters. "
-            "Those receipts are not earmarked to the bill."
-        ),
+        "title": SEED_BILL,
+        "body": "Who funded the people on this bill. Not earmarked.",
         "href": f"/money/bill/{SEED_BILL}",
-        "cta": f"Open {SEED_BILL}",
+        "cta": "Open",
     },
     {
         "verb": "Flag",
-        "title": "Flag a match before you brief a client",
-        "body": (
-            "Mark a committee match or an overlapping donor for a human to review. "
-            "This product does not include lobbyist-registration filings or "
-            "independent-expenditure overlays."
-        ),
-        "href": "/money/demo#do-next",
-        "cta": "See the demo spine",
+        "title": "Note a match",
+        "body": "When something needs a human look before you brief.",
+        "href": f"/money/member/{SEED_MEMBER_ID}",
+        "cta": "Open",
     },
 )
 
@@ -129,6 +119,7 @@ def _portal_shell(request: Request, title: str, **extra: Any) -> dict[str, Any]:
         "portal_name": PORTAL_NAME,
         "is_sample_scale": _sample_scale(),
         "seed_member_id": SEED_MEMBER_ID,
+        "seed_member_name": SEED_MEMBER_NAME,
         "seed_bill": SEED_BILL,
         **extra,
     }
@@ -152,17 +143,18 @@ def _htmx_message(text: str, *, error: bool) -> HTMLResponse:
 @router.get("", include_in_schema=False)
 @router.get("/", include_in_schema=False)
 def money_landing(request: Request) -> Any:
-    """Product landing: job-to-be-done, not a donor-table teaser."""
+    """Product landing: one promise, one email field."""
+    status = request.query_params.get("status")
     return templates.TemplateResponse(
         request,
         "money_portal_landing.html",
-        _portal_shell(request, PORTAL_NAME),
+        _portal_shell(request, PORTAL_NAME, **signup_form_context(status=status)),
     )
 
 
 @router.get("/demo", include_in_schema=False)
 def money_demo(request: Request, bill: str = "", member: str = "") -> Any:
-    """Buyer demo spine: KPIs, member shortlist, bill lookup, do-next prompts."""
+    """Buyer demo: one member, one bill, Watch / Ask / Flag. Browse is below."""
     member_query = (member or "").strip()
     if member_query:
         found = lookup_member_query(member_query)
@@ -236,7 +228,7 @@ def money_bill(request: Request, bill: str) -> Any:
 
 @router.get("/signup", include_in_schema=False)
 def money_signup_page(request: Request) -> Any:
-    """Canonical buyer waitlist."""
+    """Canonical one-field access form (same store as the landing box)."""
     status = request.query_params.get("status")
     return templates.TemplateResponse(
         request,
