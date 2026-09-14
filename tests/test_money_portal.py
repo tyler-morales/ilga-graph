@@ -26,19 +26,28 @@ def test_landing_returns_200_and_is_its_own_product(client: TestClient) -> None:
     assert resp.status_code == 200
     body = resp.text
     assert "Illinois Influence" in body
-    assert "Illinois money trails, matched to sitting members" in body
-    assert "Request access" in body
+    assert "Sitting-member money trails, matched to ILGA legislators" in body
     assert 'name="email"' in body
     assert 'id="money-signup-wrap"' in body
+    assert 'type="submit"' in body
+    assert "Don Harmon" in body
+    assert "/money/member/3268" in body
     assert 'name="role"' not in body
     assert 'name="org"' not in body
-    assert "Open the demo" not in body
+    assert "Request access" not in body
     assert "Join the waitlist" not in body
+    assert "We'll email you" not in body
+    assert "See one member" not in body
+    assert "Open the demo" not in body
     assert "decision under a deadline" not in body
     assert "Top funded" not in body
+    assert "Watch one member" not in body
     assert "lobbyist" not in body.lower()
-    assert "not earmarked" in body.lower()
-    assert "Moneyball" in body
+    assert "allocator" not in body.lower()
+    assert "Moneyball" not in body
+    assert "not earmarked" not in body.lower()
+    assert "A-1" not in body
+    assert "D-2" not in body
     assert "Illinois State Board of Elections" in body
     assert "Land of Kei" not in body
     assert "kei vehicle" not in body.lower()
@@ -49,33 +58,19 @@ def test_landing_returns_200_and_is_its_own_product(client: TestClient) -> None:
     assert "SOS" not in body
     assert "AI insights" not in body
     assert "artificial intelligence" not in body.lower()
+    assert 'class="mp-nav"' not in body
 
 
-def test_demo_returns_200_with_seed_paths(client: TestClient) -> None:
-    resp = client.get("/money/demo", headers={"Accept": "text/html"})
-    assert resp.status_code == 200
-    body = resp.text
-    assert "not earmarked" in body.lower()
-    assert "Watch" in body
-    assert "Ask" in body
-    assert "Flag" in body
-    assert "sample-scale" in body.lower()
-    assert "Harmon" in body or "3268" in body
-    assert "SB0341" in body
-    assert "/money/member/" in body
-    assert "Committee match rate" not in body
-    assert "Finance window" not in body
-    assert "match_rate" not in body.lower()
+def test_demo_redirects_to_harmon_trail(client: TestClient) -> None:
+    resp = client.get("/money/demo", follow_redirects=False)
+    assert resp.status_code == 302
+    assert resp.headers.get("location") == "/money/member/3268"
 
 
-def test_demo_bill_query_shows_not_earmarked_context(client: TestClient) -> None:
-    resp = client.get("/money/demo?bill=SB0341", headers={"Accept": "text/html"})
-    assert resp.status_code == 200
-    body = resp.text
-    assert "SB0341" in body
-    assert "not earmarked" in body.lower()
-    assert "Harmon" in body or "Don Harmon" in body
-    assert "/money/bill/SB0341" in body
+def test_demo_bill_query_redirects_to_bill_page(client: TestClient) -> None:
+    resp = client.get("/money/demo?bill=SB0341", follow_redirects=False)
+    assert resp.status_code == 302
+    assert resp.headers.get("location") == "/money/bill/SB0341"
 
 
 def test_demo_member_query_redirects_to_member_page(client: TestClient) -> None:
@@ -84,13 +79,13 @@ def test_demo_member_query_redirects_to_member_page(client: TestClient) -> None:
     assert resp.headers.get("location") == "/money/member/3268"
 
 
-def test_demo_sample_banner_when_sample_scale(client: TestClient) -> None:
-    resp = client.get("/money/demo", headers={"Accept": "text/html"})
+def test_member_page_shows_sample_banner_when_sample_scale(client: TestClient) -> None:
+    resp = client.get("/money/member/3268", headers={"Accept": "text/html"})
     assert resp.status_code == 200
     assert "sample-scale" in resp.text.lower()
 
 
-def test_demo_statewide_copy_omits_sample_banner(client: TestClient) -> None:
+def test_member_page_statewide_copy_omits_sample_banner(client: TestClient) -> None:
     statewide = {
         "source": "https://downloads.elections.il.gov",
         "window_start": "2025-01-01",
@@ -112,7 +107,7 @@ def test_demo_statewide_copy_omits_sample_banner(client: TestClient) -> None:
         ),
         patch("ilga_graph.routers.money_portal.is_sample_scale_finance", return_value=False),
     ):
-        resp = client.get("/money/demo", headers={"Accept": "text/html"})
+        resp = client.get("/money/member/3268", headers={"Accept": "text/html"})
     assert resp.status_code == 200
     assert "sample-scale" not in resp.text.lower()
     assert "Committee match rate" not in resp.text
@@ -128,7 +123,7 @@ def test_member_page_reuses_trail_for_harmon(client: TestClient) -> None:
     assert "not Moneyball" in body or "Moneyball" in body
     assert "Citizens for Harmon" in body or "Friends of Don Harmon" in body or "Harmon" in body
     assert "Land of Kei" not in body
-    assert "/money/demo" in body
+    assert "Do next" not in body
 
 
 def test_bill_page_reuses_context_for_sb0341(client: TestClient) -> None:
@@ -139,6 +134,7 @@ def test_bill_page_reuses_context_for_sb0341(client: TestClient) -> None:
     assert "not earmarked" in body.lower()
     assert "Harmon" in body or "Don Harmon" in body
     assert "Land of Kei" not in body
+    assert "Do next" not in body
 
 
 def test_intelligence_engine_still_200(client: TestClient) -> None:

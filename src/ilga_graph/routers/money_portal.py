@@ -27,7 +27,6 @@ from ..intelligence_helpers import (
     lookup_member_query,
     lookup_member_record,
     member_money_trail_view,
-    top_funded_member_rows,
 )
 from ..money_leads import (
     MONEY_LEAD_ROLES,
@@ -56,30 +55,6 @@ PORTAL_NAME = "Illinois Influence"
 SEED_MEMBER_ID = "3268"
 SEED_MEMBER_NAME = "Don Harmon"
 SEED_BILL = "SB0341"
-
-_DO_NEXT = (
-    {
-        "verb": "Watch",
-        "title": SEED_MEMBER_NAME,
-        "body": "The money trail for a sitting member.",
-        "href": f"/money/member/{SEED_MEMBER_ID}",
-        "cta": "Open",
-    },
-    {
-        "verb": "Ask",
-        "title": SEED_BILL,
-        "body": "Who funded the people on this bill. Not earmarked.",
-        "href": f"/money/bill/{SEED_BILL}",
-        "cta": "Open",
-    },
-    {
-        "verb": "Flag",
-        "title": "Note a match",
-        "body": "When something needs a human look before you brief.",
-        "href": f"/money/member/{SEED_MEMBER_ID}",
-        "cta": "Open",
-    },
-)
 
 
 def _client_ip(request: Request) -> str:
@@ -153,40 +128,19 @@ def money_landing(request: Request) -> Any:
 
 
 @router.get("/demo", include_in_schema=False)
-def money_demo(request: Request, bill: str = "", member: str = "") -> Any:
-    """Buyer demo: one member, one bill, Watch / Ask / Flag. Browse is below."""
+def money_demo(bill: str = "", member: str = "") -> Any:
+    """Trail proof, not a marketing page. Default: Harmon. Optional member/bill query."""
     member_query = (member or "").strip()
     if member_query:
         found = lookup_member_query(member_query)
-        if found:
-            return RedirectResponse(f"/money/member/{found.id}", status_code=302)
-
-    finance_summary = _finance_summary()
-    funded_members = top_funded_member_rows(
-        state.campaign_finance,
-        state.member_lookup_by_id,
-        limit=12,
-    )
+        target = found.id if found else member_query
+        return RedirectResponse(f"/money/member/{target}", status_code=302)
     bill_query = (bill or "").strip()
-    bill_record = lookup_bill_record(bill_query) if bill_query else None
-    bill_money = _money_context_for_bill(bill_record) if bill_record else None
-    return templates.TemplateResponse(
-        request,
-        "money_portal_demo.html",
-        _portal_shell(
-            request,
-            "Demo",
-            finance_summary=finance_summary,
-            funded_members=funded_members,
-            bill_query=bill_query,
-            bill_record=bill_record,
-            bill_money=bill_money,
-            bill_not_found=bool(bill_query) and bill_record is None,
-            member_query=member_query,
-            member_not_found=bool(member_query),
-            do_next=_DO_NEXT,
-        ),
-    )
+    if bill_query:
+        found = lookup_bill_record(bill_query)
+        target = found.bill_number if found else bill_query
+        return RedirectResponse(f"/money/bill/{target}", status_code=302)
+    return RedirectResponse(f"/money/member/{SEED_MEMBER_ID}", status_code=302)
 
 
 @router.get("/member/{member_id}", include_in_schema=False)
@@ -202,7 +156,6 @@ def money_member(request: Request, member_id: str) -> Any:
             member.name if member else "Member",
             member=member,
             money_trail=money_trail,
-            do_next=_DO_NEXT,
         ),
     )
 
@@ -221,7 +174,6 @@ def money_bill(request: Request, bill: str) -> Any:
             bill_query=bill,
             bill_record=bill_record,
             bill_money=bill_money,
-            do_next=_DO_NEXT,
         ),
     )
 
@@ -235,7 +187,7 @@ def money_signup_page(request: Request) -> Any:
         "money_portal_signup.html",
         _portal_shell(
             request,
-            "Waitlist",
+            PORTAL_NAME,
             **signup_form_context(status=status),
         ),
     )
@@ -275,7 +227,7 @@ async def money_signup_post(
                 {
                     **_portal_shell(
                         request,
-                        "Waitlist",
+                        PORTAL_NAME,
                         **signup_form_context(
                             status="invalid",
                             form_values={

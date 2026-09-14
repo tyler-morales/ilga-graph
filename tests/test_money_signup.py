@@ -195,8 +195,10 @@ class TestMoneyPages:
         assert resp.status_code == 200
         assert 'name="email"' in resp.text
         assert 'id="money-signup-wrap"' in resp.text
-        assert "Request access" in resp.text
+        assert "Sitting-member money trails, matched to ILGA legislators" in resp.text
         assert "Illinois Influence" in resp.text
+        assert "Request access" not in resp.text
+        assert "We'll email you" not in resp.text
         assert 'name="role"' not in resp.text
         assert 'name="org"' not in resp.text
         assert "Land of Kei" not in resp.text

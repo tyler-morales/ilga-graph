@@ -1,17 +1,2 @@
-{% extends "money_portal_base.html" %}
-{% block title %}Request access — {{ portal_name }}{% endblock %}
-{% block meta_description %}Request access to {{ portal_name }}. Illinois money trails, matched to sitting members.{% endblock %}
-{% block body_class %}mp-page-signup{% endblock %}
-
-{% block content %}
-<section class="mp-hero mp-hero--desk" aria-labelledby="mp-promise">
-    <h1 id="mp-promise">Request access</h1>
-    <div id="money-signup-wrap">
-        {% if status in ('ok', 'already') and status_message %}
-        <p class="mp-alert mp-alert--ok" role="status">{{ status_message }}</p>
-        {% else %}
-        {% include "_money_portal_signup_form.html" %}
-        {% endif %}
-    </div>
-</section>
-{% endblock %}
+{% extends "money_portal_landing.html" %}
+{% block title %}{{ portal_name }}{% endblock %}

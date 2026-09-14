@@ -6,12 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
     <title>{% block title %}{{ title }} — {{ portal_name }}{% endblock %}</title>
-    <meta name="description" content="{% block meta_description %}Illinois money trails, matched to sitting members.{% endblock %}">
+    <meta name="description" content="{% block meta_description %}Sitting-member money trails, matched to ILGA legislators.{% endblock %}">
     <link rel="canonical" href="{{ app_base_url }}{{ request.url.path }}">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="{{ portal_name }}">
     <meta property="og:title" content="{% block og_title %}{{ portal_name }}{% endblock %}">
-    <meta property="og:description" content="{% block og_description %}Illinois money trails, matched to sitting members.{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Sitting-member money trails, matched to ILGA legislators.{% endblock %}">
     <meta property="og:url" content="{{ app_base_url }}{{ request.url.path }}">
     <link rel="stylesheet" href="/static/css/money-portal{{ _min }}.css">
     {% if umami_enabled %}
@@ -27,16 +27,13 @@
     <header class="mp-header">
         <div class="mp-header-inner">
             <a class="mp-wordmark" href="/money">{{ portal_name }}</a>
-            <nav class="mp-nav" aria-label="Product">
-                <a href="/money/demo" {% if request.url.path.startswith('/money/demo') or request.url.path.startswith('/money/member') or request.url.path.startswith('/money/bill') %}aria-current="page"{% endif %}>Demo</a>
-            </nav>
         </div>
     </header>
     <main id="main" class="mp-main">
         {% block content %}{% endblock %}
     </main>
     <footer class="mp-footer">
-        <p>Illinois State Board of Elections filings. Not earmarked to bills. Moneyball is a different product.</p>
+        <p>Illinois State Board of Elections filings.</p>
         <p class="mp-footer-links">
             <a href="/privacy">Privacy</a>
         </p>

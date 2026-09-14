@@ -3,15 +3,14 @@
 {% endif %}
 <form action="/money/signup" method="post" class="mp-form mp-form--access"
     hx-post="/money/signup" hx-target="#money-signup-wrap" hx-swap="innerHTML"
-    aria-label="Request access">
+    aria-label="Submit email">
     <input type="hidden" name="csrf_token" value="{{ (request.state.csrf_token or '') if request is defined else '' }}">
     <div class="mp-access-row">
         <label for="money-signup-email" class="mp-visually-hidden">Email</label>
         <input type="email" id="money-signup-email" name="email" required
             autocomplete="email" inputmode="email" maxlength="320"
             placeholder="Email" value="{{ form_email|default('') }}"
-            {% if status == 'invalid' %}aria-invalid="true" aria-describedby="money-signup-email-hint"{% endif %}>
-        <button type="submit" class="mp-btn mp-btn--primary">Request access</button>
+            {% if status == 'invalid' %}aria-invalid="true"{% endif %}>
+        <button type="submit" class="mp-btn mp-btn--quiet">Submit</button>
     </div>
-    <p id="money-signup-email-hint" class="mp-hint">We’ll email you. Nothing else.</p>
 </form>
