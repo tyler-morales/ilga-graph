@@ -141,7 +141,7 @@ ilga-graph/
 │   │   ├── advocacy.py       #   /advocacy — landing, search, drawer
 │   │   ├── intelligence.py   #   /intelligence — dashboard + deep-dives
 │   │   ├── money.py          #   /intelligence/money/signup — redirect to /money/signup
-│   │   ├── money_portal.py   #   /money — buyer portal (landing, demo, waitlist)
+│   │   ├── money_portal.py   #   /money — buyer portal (landing email, demo, access)
 │   │   ├── explore.py        #   /explore — Legislative Power Map
 │   │   ├── bills.py          #   /bills — bill SHAP / analytics endpoints
 │   │   ├── outreach.py       #   /outreach — stats aggregation

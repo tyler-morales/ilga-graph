@@ -195,12 +195,16 @@ class TestMoneyPages:
         assert resp.status_code == 200
         assert 'name="email"' in resp.text
         assert 'id="money-signup-wrap"' in resp.text
+        assert "Request access" in resp.text
         assert "Illinois Influence" in resp.text
+        assert 'name="role"' not in resp.text
+        assert 'name="org"' not in resp.text
         assert "Land of Kei" not in resp.text
         assert "advocacy-form" not in resp.text
         assert "intelligence-dashboard" not in resp.text
         assert "SOS" not in resp.text
         assert "expenditure" not in resp.text.lower()
+        assert "lobbyist" not in resp.text.lower()
 
     def test_signup_page_hides_fixture_note_when_statewide(self, client: TestClient) -> None:
         with patch.object(money_portal_mod, "is_sample_scale_finance", return_value=False):

@@ -68,10 +68,6 @@ body.mp-body {
     top: 0.75rem;
 }
 
-.mp-header {
-    border-bottom: 1px solid var(--mp-line);
-}
-
 .mp-header-inner {
     display: flex;
     align-items: center;
@@ -79,13 +75,13 @@ body.mp-body {
     gap: 1.5rem;
     max-width: var(--mp-wide);
     margin: 0 auto;
-    padding: 1.25rem 1.5rem;
+    padding: 1.75rem 1.5rem 0.5rem;
 }
 
 .mp-wordmark {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
+    font-family: var(--mp-display);
+    font-size: 1.05rem;
+    letter-spacing: -0.02em;
     text-decoration: none;
     color: inherit;
 }
@@ -102,22 +98,10 @@ body.mp-body {
 .mp-crumb a:focus-visible,
 .mp-inline-link a:focus-visible,
 .mp-empty a:focus-visible,
-.mp-check input:focus-visible {
+.mp-whisper a:focus-visible,
+.mp-browse summary:focus-visible {
     outline: 2px solid var(--mp-focus);
     outline-offset: 3px;
-}
-
-.mp-wordmark-kicker {
-    font-size: 0.7rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--mp-muted);
-}
-
-.mp-wordmark-name {
-    font-family: var(--mp-display);
-    font-size: 1.2rem;
-    letter-spacing: -0.02em;
 }
 
 .mp-nav {
@@ -142,15 +126,41 @@ body.mp-body {
     padding: 3.5rem 1.5rem 5rem;
 }
 
+.mp-page-landing .mp-main,
+.mp-page-signup .mp-main {
+    max-width: 36rem;
+    padding-top: clamp(4.5rem, 18vh, 9rem);
+    padding-bottom: 6rem;
+}
+
 .mp-hero,
 .mp-page-head {
     max-width: var(--mp-max);
     margin-bottom: 3.5rem;
 }
 
-.mp-page-head--narrow,
-.mp-section--narrow {
-    max-width: 28rem;
+.mp-hero--desk {
+    margin-bottom: 0;
+}
+
+.mp-hero--desk h1 {
+    margin-bottom: 2.25rem;
+    font-size: clamp(2.15rem, 6vw, 3.35rem);
+}
+
+.mp-whisper {
+    margin: 2.25rem 0 0;
+    font-size: 0.92rem;
+}
+
+.mp-whisper a {
+    color: var(--mp-muted);
+    text-decoration: none;
+    border-bottom: 1px solid var(--mp-line);
+}
+
+.mp-whisper a:hover {
+    color: var(--mp-text);
 }
 
 .mp-kicker {
@@ -196,12 +206,6 @@ h3,
     font-size: 1.15rem;
 }
 
-.mp-cta-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-}
-
 .mp-btn {
     display: inline-flex;
     align-items: center;
@@ -240,39 +244,14 @@ h3,
     padding-top: 0.25rem;
 }
 
-.mp-list {
-    margin: 1rem 0 0;
-    padding-left: 1.15rem;
-    color: var(--mp-muted);
-}
-
-.mp-list li + li {
-    margin-top: 0.45rem;
-}
-
-.mp-caveats {
-    display: grid;
-    gap: 1.25rem;
-    margin: 1.25rem 0 0;
-}
-
-.mp-caveats dt {
-    font-weight: 600;
-    margin-bottom: 0.25rem;
-}
-
-.mp-caveats dd {
-    margin: 0;
-    color: var(--mp-muted);
-}
-
 .mp-banner {
-    margin: 0 0 2rem;
-    padding: 0.95rem 1.1rem;
-    border: 1px solid var(--mp-line);
-    border-left: 3px solid var(--mp-accent);
-    background: var(--mp-bg-elev);
-    color: var(--mp-text);
+    max-width: var(--mp-max);
+    margin: 2rem 0 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--mp-muted);
+    font-size: 0.92rem;
 }
 
 .mp-note,
@@ -281,6 +260,10 @@ h3,
 .mp-crumb {
     color: var(--mp-muted);
     font-size: 0.92rem;
+}
+
+.mp-hint {
+    margin: 0.7rem 0 0;
 }
 
 .mp-crumb {
@@ -328,18 +311,18 @@ h3,
     margin: 1rem 0 1.25rem;
 }
 
-.mp-lookup label,
-.mp-field label,
-.mp-field legend {
+.mp-lookup label {
     display: block;
     margin-bottom: 0.4rem;
     font-size: 0.9rem;
 }
 
-.mp-lookup-row {
+.mp-lookup-row,
+.mp-access-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.6rem;
+    gap: 0.65rem;
+    align-items: stretch;
 }
 
 .mp-lookup input,
@@ -353,6 +336,54 @@ h3,
     background: var(--mp-bg-elev);
     color: var(--mp-text);
     font: inherit;
+}
+
+.mp-form--access {
+    display: block;
+}
+
+.mp-paths {
+    max-width: var(--mp-max);
+    margin: 4rem 0 0;
+}
+
+.mp-path {
+    padding: 2.75rem 0;
+    border-top: 1px solid var(--mp-line);
+}
+
+.mp-path h2 {
+    margin: 0 0 0.45rem;
+    font-size: clamp(1.7rem, 4vw, 2.35rem);
+}
+
+.mp-path p {
+    margin: 0 0 1.25rem;
+    color: var(--mp-muted);
+}
+
+.mp-browse {
+    max-width: var(--mp-max);
+    margin: 5.5rem 0 0;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--mp-line);
+    color: var(--mp-muted);
+}
+
+.mp-browse summary {
+    cursor: pointer;
+    font-size: 0.92rem;
+    color: var(--mp-muted);
+    list-style: none;
+}
+
+.mp-browse summary::-webkit-details-marker {
+    display: none;
+}
+
+.mp-browse[open] summary {
+    margin-bottom: 1.5rem;
+    color: var(--mp-text);
 }
 
 .mp-table-wrap {
@@ -429,32 +460,6 @@ h3,
     gap: 1.1rem;
 }
 
-.mp-field {
-    margin: 0;
-    border: 0;
-    padding: 0;
-}
-
-.mp-check {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0.4rem 0;
-    cursor: pointer;
-}
-
-.mp-check input {
-    width: 1.1rem;
-    height: 1.1rem;
-    accent-color: var(--mp-accent);
-}
-
-.mp-req,
-.mp-opt {
-    color: var(--mp-muted);
-    font-weight: 400;
-}
-
 .mp-alert {
     margin: 0 0 1rem;
     padding: 0.85rem 1rem;
@@ -486,9 +491,15 @@ h3,
 .mp-footer {
     max-width: var(--mp-wide);
     margin: 0 auto;
-    padding: 0 1.5rem 3.5rem;
+    padding: 2.5rem 1.5rem 4.5rem;
     color: var(--mp-muted);
-    font-size: 0.88rem;
+    font-size: 0.82rem;
+    letter-spacing: 0.01em;
+}
+
+.mp-page-landing .mp-footer,
+.mp-page-signup .mp-footer {
+    max-width: 36rem;
 }
 
 .mp-footer-links {
@@ -498,24 +509,27 @@ h3,
 }
 
 @media (max-width: 720px) {
-    .mp-header-inner {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
     .mp-main {
         padding-top: 2.25rem;
     }
 
-    h1 {
+    .mp-page-landing .mp-main,
+    .mp-page-signup .mp-main {
+        padding-top: 3.5rem;
+    }
+
+    h1,
+    .mp-hero--desk h1 {
         font-size: 2rem;
     }
 
-    .mp-lookup-row {
+    .mp-lookup-row,
+    .mp-access-row {
         flex-direction: column;
     }
 
     .mp-lookup input,
+    .mp-access-row input,
     .mp-btn {
         width: 100%;
     }

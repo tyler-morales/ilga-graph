@@ -92,7 +92,7 @@ SSR pages (same Jinja2 + HTMX stack as the rest of Intelligence):
 
 | Path | What it shows |
 |------|----------------|
-| `/money` | **Buyer portal** (Illinois Influence): landing, demo, member/bill views, waitlist. Own layout — not the advocacy or Intelligence chrome. |
+| `/money` | **Buyer portal** (Illinois Influence): one-line landing + email access, quiet demo, member/bill views. Own layout — not the advocacy or Intelligence chrome. |
 | `/intelligence/money` | Follow-the-money **research engine**: window, match rate, top-funded members, bill lookup |
 | `/intelligence/member/{id}` | Member money trail (committees, top donors, recent receipts) |
 | `/intelligence/bill/{number-or-id}` | Bill money context (sponsor/voter trails + overlapping donors) |
@@ -104,7 +104,7 @@ SSR pages (same Jinja2 + HTMX stack as the rest of Intelligence):
 
 Copy on these pages states that receipts are **not earmarked to a bill**, and that this layer is **not Moneyball** (effectiveness scoring). Per Hardball Ch 3 (`docs/hardball-spec/04-ch3-decision-making.md`), campaign money is the medium of access.
 
-A lobbyist/buyer **waitlist** lives on the portal at `/money/signup` (old `/intelligence/money/signup` redirects). Email capture only — not a lobbyist-registration join. See [Money intel waitlist](money-intel-signup.md) and [Buyer portal](money-portal.md). A sample-scale banner is shown when `is_sample_scale_finance` is true (under 50 matched members or 1,000 indexed receipts). A statewide ingest hides that copy.
+A buyer **access list** lives on the portal at `/money` (email box) and `/money/signup` (old `/intelligence/money/signup` redirects). Email capture only — not a lobbyist-registration join. See [Money intel waitlist](money-intel-signup.md) and [Buyer portal](money-portal.md). A sample-scale banner is shown when `is_sample_scale_finance` is true (under 50 matched members or 1,000 indexed receipts). A statewide ingest hides that copy.
 
 ---
 
