@@ -1,12 +1,16 @@
-# Manual SBE money ingest: Actions → CI → Run workflow (dispatch only; never on push).
+# SBE money ingest: daily schedule after the morning dump, or Actions → CI → Run workflow.
+# Never on push or pull_request.
 name: CI
-run-name: ${{ github.event_name == 'workflow_dispatch' && format('SBE money ingest since {0} — Actions → CI → Run workflow', github.event.inputs.since) || github.workflow }}
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('SBE money ingest since {0} — Actions → CI → Run workflow', github.event.inputs.since) || github.event_name == 'schedule' && 'SBE money ingest since 2025-01-01 — daily schedule' || github.workflow }}
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  # After the ~08:10 America/Chicago SBE dump. 14:30 UTC ≈ 09:30 CDT (08:30 CST).
+  schedule:
+    - cron: "30 14 * * *"
   workflow_dispatch:
     inputs:
       since:
@@ -23,7 +27,7 @@ on:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_dispatch'
+    if: github.event_name != 'workflow_dispatch' && github.event_name != 'schedule'
     strategy:
       matrix:
         python-version: ["3.10", "3.12"]
@@ -71,9 +75,9 @@ jobs:
             cd ~/ilga-graph && git pull origin main && bash scripts/deploy-on-server.sh
 
   ingest-sbe-money:
-    name: Ingest SBE money (Actions → CI → Run workflow)
+    name: Ingest SBE money
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     timeout-minutes: 60
     steps:
       - name: Check deploy secrets
@@ -85,14 +89,22 @@ jobs:
       - name: Validate since
         env:
           SINCE_INPUT: ${{ github.event.inputs.since }}
+          DEPLOY_FIRST_INPUT: ${{ github.event.inputs.deploy_first }}
         run: |
+          # schedule has no workflow inputs; same defaults as workflow_dispatch.
           SINCE="${SINCE_INPUT:-2025-01-01}"
           if ! [[ "$SINCE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
             echo "::error::since must be YYYY-MM-DD (got: $SINCE)"
             exit 1
           fi
+          if [ "$DEPLOY_FIRST_INPUT" = "true" ]; then
+            DEPLOY_FIRST=true
+          else
+            DEPLOY_FIRST=false
+          fi
           echo "SINCE=$SINCE" >> "$GITHUB_ENV"
-          echo "Ingest window since=$SINCE deploy_first=${{ github.event.inputs.deploy_first }}"
+          echo "DEPLOY_FIRST=$DEPLOY_FIRST" >> "$GITHUB_ENV"
+          echo "Ingest window since=$SINCE deploy_first=$DEPLOY_FIRST"
       - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -141,7 +153,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           SINCE: ${{ env.SINCE }}
-          DEPLOY_FIRST: ${{ github.event.inputs.deploy_first }}
+          DEPLOY_FIRST: ${{ env.DEPLOY_FIRST }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}

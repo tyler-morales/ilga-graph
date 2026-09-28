@@ -393,7 +393,11 @@ The workflow runs `cd ~/ilga-graph && bash scripts/deploy-on-server.sh`. If your
 
 ## Manual SBE money ingest (GitHub Actions)
 
-To refresh campaign-finance data on the production Pi without SSH: **Actions → CI → Run workflow**. This does **not** run on push to `main`.
+Campaign-finance data on the production Pi refreshes without laptop SSH. Job `ingest-sbe-money` runs on a daily schedule and from **Actions → CI → Run workflow**. It does **not** run on push or pull request to `main`.
+
+**Schedule.** Cron `30 14 * * *` (14:30 UTC ≈ 09:30 CDT / 08:30 CST), after the typical ~08:10 America/Chicago dump. Scheduled runs have no workflow inputs, so `since` is `2025-01-01` and `deploy_first` is false (the job does not run `scripts/deploy-on-server.sh`).
+
+**Manual run** (same job; inputs override those defaults):
 
 1. Open the repo on GitHub → **Actions**.
 2. Left sidebar → **CI**.
@@ -472,7 +476,7 @@ Adjust paths if your project lives elsewhere (e.g. `/home/YOUR_USER/ilga-graph`)
 |------|--------|
 | Restart the app | `sudo systemctl restart ilga-graph` |
 | Run scrape once (then restart) | `cd ~/ilga-graph && ./scripts/scrape-on-server.sh` |
-| SBE money ingest (no SSH) | GitHub → Actions → CI → Run workflow (`ingest-sbe-money`) |
+| SBE money ingest (no SSH) | Daily 14:30 UTC, or GitHub → Actions → CI → Run workflow (`ingest-sbe-money`) |
 | View scrape log (if cron configured) | `tail -f ~/ilga-graph/logs/scrape.log` |
 | View app logs (live) | `sudo journalctl -u ilga-graph -f` |
 | Last 80 log lines | `sudo journalctl -u ilga-graph -n 80 --no-pager` |

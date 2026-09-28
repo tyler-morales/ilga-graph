@@ -114,7 +114,12 @@ def test_download_range_sends_browser_accept_and_user_agent(
 def test_ci_ingest_job_downloads_on_runner_and_parses_from_dir_on_pi() -> None:
     text = CI_WORKFLOW.read_text(encoding="utf-8")
     assert "workflow_dispatch:" in text
-    assert "if: github.event_name == 'workflow_dispatch'" in text
+    assert "schedule:" in text
+    assert 'cron: "30 14 * * *"' in text
+    assert "09:30 CDT" in text
+    assert "if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'" in text
+    assert "github.event_name != 'workflow_dispatch' && github.event_name != 'schedule'" in text
+    assert "github.event_name == 'push' && github.ref == 'refs/heads/main'" in text
     assert "timeout-minutes: 60" in text
     assert "download_sbe_files" in text
     assert "pip install -e ." in text
@@ -124,3 +129,10 @@ def test_ci_ingest_job_downloads_on_runner_and_parses_from_dir_on_pi() -> None:
     assert "FROM_DIR=cache/sbe" in ssh
     assert "download_sbe_files" not in ssh
     assert "elections.il.gov" not in ssh
+    validate = text.split("name: Validate since", 1)[1].split(
+        "name: Download SBE files on the runner", 1
+    )[0]
+    assert 'SINCE="${SINCE_INPUT:-2025-01-01}"' in validate
+    assert '[ "$DEPLOY_FIRST_INPUT" = "true" ]' in validate
+    assert "DEPLOY_FIRST=false" in validate
+    assert "DEPLOY_FIRST: ${{ env.DEPLOY_FIRST }}" in text
